@@ -20,11 +20,10 @@ public class ProductManagerTests
     {
         _mockProductRepository = new Mock<IRepository<Product>>();
         _productManager = new ProductManager<Product>(_mockProductRepository.Object);
-        
         // Create test products with various properties
         _testProducts = new List<Product>
         {
-            new Product { Id = 1, Name = "Apple iPhone", Price = 999.99m, Description = "Smartphone" },
+            new Product { Id = 1, Name = "Apple iPhone", Price = 999.99m, Description ="Smartphone"},
             new Product { Id = 2, Name = "Samsung Galaxy", Price = 799.99m, Description = "Android phone" },
             new Product { Id = 3, Name = "Apple iPad", Price = 599.99m, Description = "Tablet device" },
             new Product { Id = 4, Name = "Dell Laptop", Price = 1299.99m, Description = "Gaming laptop" },
