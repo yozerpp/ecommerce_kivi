@@ -23,27 +23,36 @@ public class ProductManagerTests
         // Create test products with various properties
         _testProducts = new List<Product>
         {
-            new Product { Id = 1, Name = "Apple iPhone", Price = 999.99m, Description ="Smartphone"},
-            new Product { Id = 2, Name = "Samsung Galaxy", Price = 799.99m, Description = "Android phone" },
-            new Product { Id = 3, Name = "Apple iPad", Price = 599.99m, Description = "Tablet device" },
-            new Product { Id = 4, Name = "Dell Laptop", Price = 1299.99m, Description = "Gaming laptop" },
-            new Product { Id = 5, Name = "HP Printer", Price = 199.99m, Description = "Inkjet printer" }
+            new Product { Id = 1, Name = "Apple iPhone", CategoryId = 1, Description ="Smartphone"},
+            new Product { Id = 2, Name = "Samsung Galaxy", CategoryId = 1, Description = "Android phone" },
+            new Product { Id = 3, Name = "Apple iPad", CategoryId = 2, Description = "Tablet device" },
+            new Product { Id = 4, Name = "Dell Laptop", CategoryId = 3, Description = "Gaming laptop" },
+            new Product { Id = 5, Name = "HP Printer", CategoryId = 4, Description = "Inkjet printer" }
         };
+    }
+
+    private void SetupMockRepository()
+    {
+        _mockProductRepository.Setup(r => r.Where(
+            It.IsAny<Expression<Func<Product, bool>>>(), 
+            It.IsAny<int>(), 
+            It.IsAny<int>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>()))
+            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
+                _testProducts.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
     }
 
     [Test]
     public void Search_EqualsOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
             new SearchPredicate { PropName = "Name", Value = "Apple iPhone", Operator = SearchPredicate.OperatorType.Equals }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
@@ -57,15 +66,12 @@ public class ProductManagerTests
     public void Search_LikeOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
             new SearchPredicate { PropName = "Name", Value = "Apple", Operator = SearchPredicate.OperatorType.Like }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
@@ -78,102 +84,84 @@ public class ProductManagerTests
     public void Search_GreaterThanOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "800", Operator = SearchPredicate.OperatorType.GreaterThan }
+            new SearchPredicate { PropName = "CategoryId", Value = "2", Operator = SearchPredicate.OperatorType.GreaterThan }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(2)); // iPhone and Dell Laptop
+        Assert.That(result.Count, Is.EqualTo(2)); // Dell Laptop and HP Printer (CategoryId 3 and 4)
     }
 
     [Test]
     public void Search_GreaterThanOrEqualOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "799.99", Operator = SearchPredicate.OperatorType.GreaterThanOrEqual }
+            new SearchPredicate { PropName = "CategoryId", Value = "2", Operator = SearchPredicate.OperatorType.GreaterThanOrEqual }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(3)); // Samsung, iPhone, Dell Laptop
+        Assert.That(result.Count, Is.EqualTo(3)); // Apple iPad, Dell Laptop, HP Printer (CategoryId 2, 3, 4)
     }
 
     [Test]
     public void Search_LessThanOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "600", Operator = SearchPredicate.OperatorType.LessThan }
+            new SearchPredicate { PropName = "CategoryId", Value = "3", Operator = SearchPredicate.OperatorType.LessThan }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(1)); // HP Printer
+        Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
     }
 
     [Test]
     public void Search_LessThanOrEqualOperator_ReturnsMatchingProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "599.99", Operator = SearchPredicate.OperatorType.LessThanOrEqual }
+            new SearchPredicate { PropName = "CategoryId", Value = "2", Operator = SearchPredicate.OperatorType.LessThanOrEqual }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(2)); // iPad and HP Printer
+        Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
     }
 
     [Test]
     public void Search_InvalidNumberFormat_ThrowsArgumentException()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "invalid_number", Operator = SearchPredicate.OperatorType.GreaterThan }
+            new SearchPredicate { PropName = "CategoryId", Value = "invalid_number", Operator = SearchPredicate.OperatorType.GreaterThan }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-            {
-                // This will trigger the exception when the predicate is evaluated
-                return _testProducts.Where(predicate).ToList();
-            });
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() => _productManager.Search(predicates, ordering));
@@ -185,64 +173,63 @@ public class ProductManagerTests
         // Arrange
         var productsWithNull = new List<Product>
         {
-            new Product { Id = 1, Name = "Test Product", Price = null, Description = "Test" }
+            new Product { Id = 1, Name = "Test Product", CategoryId = 0, Description = "Test" }
         };
 
         var predicates = new List<SearchPredicate>
         {
-            new SearchPredicate { PropName = "Price", Value = "100", Operator = SearchPredicate.OperatorType.GreaterThan }
+            new SearchPredicate { PropName = "CategoryId", Value = "100", Operator = SearchPredicate.OperatorType.GreaterThan }
         };
         var ordering = new List<SearchOrder>();
 
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                productsWithNull.Where(predicate).ToList());
+        _mockProductRepository.Setup(r => r.Where(
+            It.IsAny<Expression<Func<Product, bool>>>(), 
+            It.IsAny<int>(), 
+            It.IsAny<int>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>()))
+            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
+                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(0)); // Null values should not match numeric comparisons
+        Assert.That(result.Count, Is.EqualTo(0)); // CategoryId 0 is not greater than 100
     }
 
     [Test]
     public void Search_MultiplePredicates_ReturnsProductsMatchingAllConditions()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>
         {
             new SearchPredicate { PropName = "Name", Value = "Apple", Operator = SearchPredicate.OperatorType.Like },
-            new SearchPredicate { PropName = "Price", Value = "700", Operator = SearchPredicate.OperatorType.GreaterThan }
+            new SearchPredicate { PropName = "CategoryId", Value = "1", Operator = SearchPredicate.OperatorType.GreaterThanOrEqual }
         };
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
 
         // Assert
-        Assert.That(result.Count, Is.EqualTo(1)); // Only Apple iPhone matches both conditions
-        Assert.That(result[0].Name, Is.EqualTo("Apple iPhone"));
+        Assert.That(result.Count, Is.EqualTo(2)); // Apple iPhone and Apple iPad match both conditions
+        Assert.That(result.All(p => p.Name.Contains("Apple")), Is.True);
     }
 
     [Test]
     public void Search_WithOrdering_FiltersInvalidOrderingProperties()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>();
         var ordering = new List<SearchOrder>
         {
             new SearchOrder { PropName = "Name", Ascending = true },
             new SearchOrder { PropName = "InvalidProperty", Ascending = false }, // This should be filtered out
-            new SearchOrder { PropName = "Price", Ascending = false }
+            new SearchOrder { PropName = "CategoryId", Ascending = false }
         };
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
@@ -256,14 +243,11 @@ public class ProductManagerTests
     public void Search_WithPagination_ReturnsCorrectPageAndSize()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>();
         var ordering = new List<SearchOrder>();
         int page = 1;
         int pageSize = 2;
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), page * pageSize, (page + 1) * pageSize, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Skip(offset).Take(limit - offset).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering, page, pageSize);
@@ -276,12 +260,9 @@ public class ProductManagerTests
     public void Search_EmptyPredicatesAndOrdering_ReturnsAllProducts()
     {
         // Arrange
+        SetupMockRepository();
         var predicates = new List<SearchPredicate>();
         var ordering = new List<SearchOrder>();
-
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                _testProducts.Where(predicate).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
@@ -296,7 +277,7 @@ public class ProductManagerTests
         // Arrange
         var productsWithNull = new List<Product>
         {
-            new Product { Id = 1, Name = null, Price = 100m, Description = "Test" }
+            new Product { Id = 1, Name = null, CategoryId = 1, Description = "Test" }
         };
 
         var predicates = new List<SearchPredicate>
@@ -305,9 +286,14 @@ public class ProductManagerTests
         };
         var ordering = new List<SearchOrder>();
 
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                productsWithNull.Where(predicate).ToList());
+        _mockProductRepository.Setup(r => r.Where(
+            It.IsAny<Expression<Func<Product, bool>>>(), 
+            It.IsAny<int>(), 
+            It.IsAny<int>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>()))
+            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
+                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);
@@ -322,7 +308,7 @@ public class ProductManagerTests
         // Arrange
         var productsWithNull = new List<Product>
         {
-            new Product { Id = 1, Name = null, Price = 100m, Description = "Test" }
+            new Product { Id = 1, Name = null, CategoryId = 1, Description = "Test" }
         };
 
         var predicates = new List<SearchPredicate>
@@ -331,9 +317,14 @@ public class ProductManagerTests
         };
         var ordering = new List<SearchOrder>();
 
-        _mockProductRepository.Setup(r => r.Where(It.IsAny<System.Func<Product, bool>>(), 0, 20, It.IsAny<System.Func<Product, object>>()))
-            .Returns((System.Func<Product, bool> predicate, int offset, int limit, System.Func<Product, object> orderBy) =>
-                productsWithNull.Where(predicate).ToList());
+        _mockProductRepository.Setup(r => r.Where(
+            It.IsAny<Expression<Func<Product, bool>>>(), 
+            It.IsAny<int>(), 
+            It.IsAny<int>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>(), 
+            It.IsAny<Expression<Func<Product, object>>[]>()))
+            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
+                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.Search(predicates, ordering);

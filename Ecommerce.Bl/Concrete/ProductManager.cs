@@ -15,47 +15,74 @@ public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
     }
     public List<TP> Search(ICollection<SellerManager.SearchPredicate> predicates, ICollection<SellerManager.SearchOrder> ordering, int page=0, int pageSize=20)
     {
-        ordering = ordering.Where(o => typeof(Product).GetProperty(o.PropName) != null).ToList();
-        return _productRepository.Where(p =>
+        // Filter out invalid ordering properties
+        var validOrdering = ordering.Where(o => typeof(TP).GetProperty(o.PropName) != null).ToList();
+        
+        // Build the predicate expression
+        Expression<Func<TP, bool>> predicate = p => true;
+        
+        foreach (var searchPredicate in predicates)
         {
-            bool matches = true;
-            var t = p.GetType();
-            foreach (var predicate in predicates)
+            var propName = searchPredicate.PropName;
+            var value = searchPredicate.Value;
+            var op = searchPredicate.Operator;
+            
+            // Get property info to validate it exists
+            var propInfo = typeof(TP).GetProperty(propName);
+            if (propInfo == null) continue;
+            
+            Expression<Func<TP, bool>> currentPredicate = null;
+            
+            if (op == SellerManager.SearchPredicate.OperatorType.Equals)
             {
-                var v = t.GetProperty(predicate.PropName)?.GetValue(p);
-                bool m = false;
-                if (SellerManager.SearchPredicate.OperatorType.Equals == predicate.Operator)
-                    m = predicate.Value.Equals(v);
-                else if (SellerManager.SearchPredicate.OperatorType.Like == predicate.Operator)
-                {
-                    m = predicate.Value.Contains(v?.ToString() ?? string.Empty);
-                }
-                else
-                {
-                    if (v == null) m = false;
-                    else if (decimal.TryParse(predicate.Value, out var val))
-                        throw new ArgumentException("Search filter " + predicate.PropName + " is not a valid number: " +
-                                                    predicate.Value);
-                    else
-                    {
-                        switch (predicate.Operator)
-                        {
-                            case SellerManager.SearchPredicate.OperatorType.Equals: m = val == (decimal)v; break;
-                            case SellerManager.SearchPredicate.OperatorType.GreaterThan: m = val > (decimal)v; break;
-                            case SellerManager.SearchPredicate.OperatorType.LessThan: m = val < (decimal)v; break;
-                            case SellerManager.SearchPredicate.OperatorType.GreaterThanOrEqual : m = val >= (decimal)v; break;
-                            case SellerManager.SearchPredicate.OperatorType.LessThanOrEqual: m = val <= (decimal)v; break;
-                        }
-                    }
-                }
-
-                matches = matches && m;
+                currentPredicate = p => propInfo.GetValue(p) != null && propInfo.GetValue(p).ToString() == value;
             }
-
-            return matches;
-        }, page * pageSize, (page+1)*pageSize,p =>
+            else if (op == SellerManager.SearchPredicate.OperatorType.Like)
+            {
+                currentPredicate = p => propInfo.GetValue(p) != null && propInfo.GetValue(p).ToString().Contains(value);
+            }
+            else
+            {
+                // Numeric comparisons
+                if (!decimal.TryParse(value, out var numValue))
+                    throw new ArgumentException("Search filter " + propName + " is not a valid number: " + value);
+                
+                switch (op)
+                {
+                    case SellerManager.SearchPredicate.OperatorType.GreaterThan:
+                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) > numValue;
+                        break;
+                    case SellerManager.SearchPredicate.OperatorType.LessThan:
+                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) < numValue;
+                        break;
+                    case SellerManager.SearchPredicate.OperatorType.GreaterThanOrEqual:
+                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) >= numValue;
+                        break;
+                    case SellerManager.SearchPredicate.OperatorType.LessThanOrEqual:
+                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) <= numValue;
+                        break;
+                }
+            }
+            
+            if (currentPredicate != null)
+            {
+                var oldPredicate = predicate;
+                predicate = p => oldPredicate.Compile()(p) && currentPredicate.Compile()(p);
+            }
+        }
+        
+        // Build ordering expressions
+        Expression<Func<TP, object>>[] orderByExpressions = null;
+        if (validOrdering.Any())
         {
-            return ordering.Select(o => p.GetType().GetProperty(o.PropName)!.GetValue(p));
-        });
+            orderByExpressions = validOrdering.Select(o =>
+            {
+                var propInfo = typeof(TP).GetProperty(o.PropName);
+                Expression<Func<TP, object>> expr = p => propInfo.GetValue(p);
+                return expr;
+            }).ToArray();
+        }
+        
+        return _productRepository.Where(predicate, page * pageSize, pageSize, orderByExpressions);
     }
 }
