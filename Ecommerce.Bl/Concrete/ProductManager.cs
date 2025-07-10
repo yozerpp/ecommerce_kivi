@@ -2,6 +2,7 @@
 using Ecommerce.Dao.Iface;
 using Ecommerce.Entity;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -18,8 +19,9 @@ public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
         // Filter out invalid ordering properties
         var validOrdering = ordering.Where(o => typeof(TP).GetProperty(o.PropName) != null).ToList();
         
-        // Build the predicate expression
-        Expression<Func<TP, bool>> predicate = p => true;
+        // Build the predicate expression tree
+        var parameter = Expression.Parameter(typeof(TP), "p");
+        Expression combinedExpression = Expression.Constant(true);
         
         foreach (var searchPredicate in predicates)
         {
@@ -31,15 +33,49 @@ public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
             var propInfo = typeof(TP).GetProperty(propName);
             if (propInfo == null) continue;
             
-            Expression<Func<TP, bool>> currentPredicate = null;
+            // Create property access expression
+            var propertyAccess = Expression.Property(parameter, propInfo);
+            Expression currentExpression = null;
             
             if (op == SellerManager.SearchPredicate.OperatorType.Equals)
             {
-                currentPredicate = p => propInfo.GetValue(p) != null && propInfo.GetValue(p).ToString() == value;
+                // Handle string equality
+                if (propInfo.PropertyType == typeof(string))
+                {
+                    var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null, typeof(string)));
+                    var equalsCheck = Expression.Equal(propertyAccess, Expression.Constant(value));
+                    currentExpression = Expression.AndAlso(nullCheck, equalsCheck);
+                }
+                else
+                {
+                    // Convert property to string and compare
+                    var toStringMethod = typeof(object).GetMethod("ToString");
+                    var propertyAsString = Expression.Call(Expression.Convert(propertyAccess, typeof(object)), toStringMethod);
+                    var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null));
+                    var equalsCheck = Expression.Equal(propertyAsString, Expression.Constant(value));
+                    currentExpression = Expression.AndAlso(nullCheck, equalsCheck);
+                }
             }
             else if (op == SellerManager.SearchPredicate.OperatorType.Like)
             {
-                currentPredicate = p => propInfo.GetValue(p) != null && propInfo.GetValue(p).ToString().Contains(value);
+                // Handle string contains
+                if (propInfo.PropertyType == typeof(string))
+                {
+                    var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null, typeof(string)));
+                    var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) });
+                    var containsCheck = Expression.Call(propertyAccess, containsMethod, Expression.Constant(value));
+                    currentExpression = Expression.AndAlso(nullCheck, containsCheck);
+                }
+                else
+                {
+                    // Convert property to string and check contains
+                    var toStringMethod = typeof(object).GetMethod("ToString");
+                    var propertyAsString = Expression.Call(Expression.Convert(propertyAccess, typeof(object)), toStringMethod);
+                    var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null));
+                    var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) });
+                    var containsCheck = Expression.Call(propertyAsString, containsMethod, Expression.Constant(value));
+                    currentExpression = Expression.AndAlso(nullCheck, containsCheck);
+                }
             }
             else
             {
@@ -47,29 +83,52 @@ public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
                 if (!decimal.TryParse(value, out var numValue))
                     throw new ArgumentException("Search filter " + propName + " is not a valid number: " + value);
                 
+                var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null));
+                
+                // Convert property to decimal for comparison
+                Expression propertyAsDecimal;
+                if (propInfo.PropertyType == typeof(decimal) || propInfo.PropertyType == typeof(decimal?))
+                {
+                    propertyAsDecimal = propertyAccess;
+                }
+                else
+                {
+                    var convertMethod = typeof(Convert).GetMethod("ToDecimal", new[] { typeof(object) });
+                    propertyAsDecimal = Expression.Call(convertMethod, Expression.Convert(propertyAccess, typeof(object)));
+                }
+                
+                var valueConstant = Expression.Constant(numValue);
+                Expression comparisonExpression = null;
+                
                 switch (op)
                 {
                     case SellerManager.SearchPredicate.OperatorType.GreaterThan:
-                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) > numValue;
+                        comparisonExpression = Expression.GreaterThan(propertyAsDecimal, valueConstant);
                         break;
                     case SellerManager.SearchPredicate.OperatorType.LessThan:
-                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) < numValue;
+                        comparisonExpression = Expression.LessThan(propertyAsDecimal, valueConstant);
                         break;
                     case SellerManager.SearchPredicate.OperatorType.GreaterThanOrEqual:
-                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) >= numValue;
+                        comparisonExpression = Expression.GreaterThanOrEqual(propertyAsDecimal, valueConstant);
                         break;
                     case SellerManager.SearchPredicate.OperatorType.LessThanOrEqual:
-                        currentPredicate = p => propInfo.GetValue(p) != null && Convert.ToDecimal(propInfo.GetValue(p)) <= numValue;
+                        comparisonExpression = Expression.LessThanOrEqual(propertyAsDecimal, valueConstant);
                         break;
+                }
+                
+                if (comparisonExpression != null)
+                {
+                    currentExpression = Expression.AndAlso(nullCheck, comparisonExpression);
                 }
             }
             
-            if (currentPredicate != null)
+            if (currentExpression != null)
             {
-                var oldPredicate = predicate;
-                predicate = p => oldPredicate.Compile()(p) && currentPredicate.Compile()(p);
+                combinedExpression = Expression.AndAlso(combinedExpression, currentExpression);
             }
         }
+        
+        var predicate = Expression.Lambda<Func<TP, bool>>(combinedExpression, parameter);
         
         // Build ordering expressions
         Expression<Func<TP, object>>[] orderByExpressions = null;
@@ -78,8 +137,10 @@ public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
             orderByExpressions = validOrdering.Select(o =>
             {
                 var propInfo = typeof(TP).GetProperty(o.PropName);
-                Expression<Func<TP, object>> expr = p => propInfo.GetValue(p);
-                return expr;
+                var param = Expression.Parameter(typeof(TP), "p");
+                var propertyAccess = Expression.Property(param, propInfo);
+                var converted = Expression.Convert(propertyAccess, typeof(object));
+                return Expression.Lambda<Func<TP, object>>(converted, param);
             }).ToArray();
         }
         
