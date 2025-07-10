@@ -13,4 +13,18 @@ public class Payment
     public DateTime PaymentDate { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
     public PaymentStatus Status { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is Payment other)
+        {
+            return Id == other.Id;
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }

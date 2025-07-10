@@ -20,4 +20,18 @@ public class User
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ulong SessionId { get; set; }
     public Session? Session { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is User other)
+        {
+            return Id == other.Id;
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }

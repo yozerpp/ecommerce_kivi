@@ -16,4 +16,18 @@ public class Order
     public User? User { get; set; }
     
     public Payment? Payment { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is Order other)
+        {
+            return Id == other.Id;
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }

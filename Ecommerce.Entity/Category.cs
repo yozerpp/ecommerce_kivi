@@ -13,4 +13,18 @@ public class Category
 
     public ISet<Category> Children { get; set; } = new HashSet<Category>();
     public ICollection<Product> Products { get; set; } = new List<Product>();
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is Category other)
+        {
+            return Id == other.Id;
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }
