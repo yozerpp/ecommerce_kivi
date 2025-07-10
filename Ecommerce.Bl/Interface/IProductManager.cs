@@ -4,7 +4,7 @@ using static Ecommerce.Bl.Concrete.SellerManager;
 
 namespace Ecommerce.Bl.Interface;
 
-public interface IProductManager
+public interface IProductManager<P> where P: Product, new()
 {
-    List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, int page = 0, int pageSize = 20);
+    List<P> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, int page = 0, int pageSize = 20);
 }

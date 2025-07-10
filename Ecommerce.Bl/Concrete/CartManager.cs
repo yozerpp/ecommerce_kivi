@@ -7,63 +7,80 @@ namespace Ecommerce.Bl.Concrete;
 
 public class CartManager : ICartManager
 {
-    private readonly IRepository<Cart, DbContext> _cartRepository;
-    private readonly IRepository<Session, DbContext> _sessionRepository;
-    private readonly IRepository<Order, DbContext> _orderRepository;
-    private readonly IRepository<User, DbContext> _userRepository;
-    private readonly IRepository<CartItem, DbContext> _cartItemRepository;
-    public CartManager(IRepository<Order, DbContext> orderRepository, IRepository<Cart, DbContext> cartRepository, IRepository<CartItem, DbContext> cartItemRepository, IRepository<User, DbContext> userRepository)
+    private readonly IRepository<Cart> _cartRepository;
+    private readonly IRepository<Session> _sessionRepository;
+    private readonly IRepository<Order> _orderRepository;
+    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<CartItem> _cartItemRepository;
+    public CartManager(IRepository<Order> orderRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository, IRepository<User> userRepository)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _orderRepository = orderRepository;
         _userRepository = userRepository;
     }
-    
-    public Cart newCart(User? user)
+    /**
+     * updates user too.
+     */
+    public Session newCart()
     {
-        Session session = new Session();
+        var session = new Session();
+        var user = ContextHolder.Session?.User;
         if (user!=null)
         {
             session.User = user;
             session.UserId = user.Id;
             _sessionRepository.Delete(s=>s.UserId==user.Id);
         }
-        var s =_sessionRepository.Add(session);
-        s.Cart = new Cart() { Session = s, SessionId = s.Id };
-        _cartRepository.Add(s.Cart);
-        _sessionRepository.Update(s);
-        if (user!=null)
-        {
-            user.SessionId = s.Id;
-            user.Session = s;
-            _userRepository.Update(user);
-        }
-        return CartContextHolder.Cart = s.Cart;
+        session.Cart = _cartRepository.Add(new Cart());
+        session.CartId = session.Cart.Id;
+        session = _sessionRepository.Add(session);
+        if (user == null) return session;
+        user.SessionId = session.Id;
+        user.Session = session;
+        _userRepository.Update(user);
+        ContextHolder.Session = session;
+        return session;
     }
-    public CartItem Add(ProductOffer offer)
+    public CartItem Add(ProductOffer offer, int amount = 1)
     {
         return Add(new CartItem()
         {
-            ProductId = offer.ProductId,SellerId = offer.SellerId,OrderId = offer.SellerId
+            ProductId = offer.ProductId,SellerId = offer.SellerId, Quantity = amount
         });
     }
     public CartItem Add(CartItem item)
     {
-        var cart = CartContextHolder.Cart!;
+        var cart = ContextHolder.Session!.Cart;
         item.Cart = cart;
         item.CartId = cart.Id;
+        if (item.Quantity<=0){
+            throw new ArgumentException("Quantity must be greater than 0.");
+        }
+        CartItem existing;
+        if ((existing = _cartItemRepository.Find(ci=>ci.CartId == cart.Id && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId))!=null){
+            existing.Quantity += item.Quantity;
+            return _cartItemRepository.Update(existing);
+        } 
         return _cartItemRepository.Add(item);
     }
 
-    public CartItem Decrement(ProductOffer productOffer)
+    public CartItem? Decrement(ProductOffer productOffer,int amount)
     {
-        var cart = CartContextHolder.Cart;
+        var cart = ContextHolder.Session!.Cart;
         var item = _cartItemRepository.Find(ci =>
                 ci.ProductId == productOffer.ProductId && ci.SellerId == productOffer.SellerId && ci.CartId == cart.Id);
         if (item == null) throw new ArgumentException("Offer is not in your cart.");
-        item.Quantity -= 1;
-        _cartItemRepository.Update(item);
+        item.Quantity -= amount;
+        if (item.Quantity<=0){
+            _cartItemRepository.Delete(item);
+            item = null;
+        } else item = _cartItemRepository.Update(item);
         return item;
+    }
+    public void Remove(ProductOffer offer) {
+        var cart = ContextHolder.Session!.Cart;
+        var item = new CartItem(){Cart = cart, CartId = cart.Id, ProductId = offer.ProductId, SellerId = offer.SellerId};
+        _cartItemRepository.Delete(item);
     }
 }

@@ -1,0 +1,314 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Default\\Ecommerce.Dao.Default.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Default\\Ecommerce.Dao.Default.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Default\\Ecommerce.Dao.Default.csproj",
+        "projectName": "Ecommerce.Dao.Default",
+        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Default\\Ecommerce.Dao.Default.csproj",
+        "packagesPath": "C:\\Users\\tipil\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Default\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\tipil\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj"
+              },
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj"
+              },
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\Ecommerce.Entity.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\Ecommerce.Entity.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.6, )"
+            },
+            "Microsoft.EntityFrameworkCore.Proxies": {
+              "target": "Package",
+              "version": "[9.0.6, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[9.0.6, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj",
+        "projectName": "Ecommerce.Dao",
+        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj",
+        "packagesPath": "C:\\Users\\tipil\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\tipil\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Bogus": {
+              "target": "Package",
+              "version": "[35.6.3, )"
+            },
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[12.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.6, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj",
+        "projectName": "Ecommerce.Entity.Common",
+        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj",
+        "packagesPath": "C:\\Users\\tipil\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\tipil\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\Ecommerce.Entity.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\Ecommerce.Entity.csproj",
+        "projectName": "Ecommerce.Entity",
+        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\Ecommerce.Entity.csproj",
+        "packagesPath": "C:\\Users\\tipil\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\tipil\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

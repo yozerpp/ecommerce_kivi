@@ -6,7 +6,7 @@ namespace Ecommerce.Bl.Interface;
 
 public interface ISellerManager
 {
-    void ListProduct(ProductOffer offer);
-    void updateOffer(ProductOffer offer);
+    ProductOffer ListProduct(ProductOffer offer);
+    ProductOffer updateOffer(ProductOffer offer, uint productId);
     void UnlistOffer(ProductOffer offer);
 }

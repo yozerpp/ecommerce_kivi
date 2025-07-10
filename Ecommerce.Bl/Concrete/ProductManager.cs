@@ -5,15 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
 
-public class ProductManager : IProductManager
+public class ProductManager<TP> : IProductManager<TP> where TP : Product, new()
 {
-    private readonly IRepository<Product, DbContext> _productRepository;
+    private readonly IRepository<TP> _productRepository;
 
-    public ProductManager(IRepository<Product, DbContext> productRepository)
+    public ProductManager(IRepository<TP> productRepository)
     {
         this._productRepository = productRepository;
     }
-    public List<Product> Search(ICollection<SellerManager.SearchPredicate> predicates, ICollection<SellerManager.SearchOrder> ordering, int page=0, int pageSize=20)
+    public List<TP> Search(ICollection<SellerManager.SearchPredicate> predicates, ICollection<SellerManager.SearchOrder> ordering, int page=0, int pageSize=20)
     {
         ordering = ordering.Where(o => typeof(Product).GetProperty(o.PropName) != null).ToList();
         return _productRepository.Where(p =>
@@ -40,11 +40,11 @@ public class ProductManager : IProductManager
                     {
                         switch (predicate.Operator)
                         {
-                            case SellerManager.SearchPredicate.OperatorType.Equals: m = val == (decimal)v!; break;
-                            case SellerManager.SearchPredicate.OperatorType.GreaterThan: m = val > (decimal)v!; break;
-                            case SellerManager.SearchPredicate.OperatorType.LessThan: m = val < (decimal)v!; break;
-                            case SellerManager.SearchPredicate.OperatorType.GreaterThanOrEqual : m = val >= (decimal)v!; break;
-                            case SellerManager.SearchPredicate.OperatorType.LessThanOrEqual: m = val <= (decimal)v!; break;
+                            case SellerManager.SearchPredicate.OperatorType.Equals: m = val == (decimal)v; break;
+                            case SellerManager.SearchPredicate.OperatorType.GreaterThan: m = val > (decimal)v; break;
+                            case SellerManager.SearchPredicate.OperatorType.LessThan: m = val < (decimal)v; break;
+                            case SellerManager.SearchPredicate.OperatorType.GreaterThanOrEqual : m = val >= (decimal)v; break;
+                            case SellerManager.SearchPredicate.OperatorType.LessThanOrEqual: m = val <= (decimal)v; break;
                         }
                     }
                 }
@@ -55,7 +55,7 @@ public class ProductManager : IProductManager
             return matches;
         }, page * pageSize, (page+1)*pageSize,p =>
         {
-            return ordering.Select(o => p.GetType().GetProperty(o.PropName).GetValue(p));
+            return ordering.Select(o => p.GetType().GetProperty(o.PropName)!.GetValue(p));
         });
     }
 }

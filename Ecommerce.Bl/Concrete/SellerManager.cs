@@ -7,18 +7,56 @@ namespace Ecommerce.Bl.Concrete;
 
 public class SellerManager : ISellerManager
 {
-    private readonly IRepository<Product, DbContext> _productRepository;
-    private readonly IRepository<Seller, DbContext> _sellerRepository;
-    private readonly IRepository<ProductOffer, DbContext> _productOfferRepository;
-    public SellerManager(IRepository<Product, DbContext> productRepository, IRepository<Seller, DbContext> sellerRepository, IRepository<ProductOffer, DbContext> productOfferRepository)
+    private readonly IRepository<Product> _productRepository;
+    private readonly IRepository<Seller> _sellerRepository;
+    private readonly IRepository<ProductOffer> _productOfferRepository;
+    public SellerManager(IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository)
     {
         _productRepository = productRepository;
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
-    public void ListProduct(ProductOffer offer)
+
+    public Seller Login() {
+        User user;
+        if ((user = ContextHolder.Session!.User)==null){
+            throw new UnauthorizedAccessException("You need to be logged in as a user to switch to seller account.");
+        }
+        Seller? seller;
+        if ((seller = _sellerRepository.Find(s => s.Id == user.Id)) == null){
+            throw new UnauthorizedAccessException("You need to be registered as a seller to switch to seller account.");
+        }
+        ContextHolder.Session.User = seller;
+        return seller;
+    }
+    public Seller CreateSeller(Seller seller) {
+        User user;
+        if ((user =ContextHolder.Session.User)==null){
+            throw new UnauthorizedAccessException("You need to be logged in as a user to create a seller account.");
+        }
+        foreach (var propertyInfo in user.GetType().GetProperties()){
+            if (propertyInfo.CanWrite)
+                propertyInfo.SetValue(seller, propertyInfo.GetValue(user));
+        }
+
+        return _sellerRepository.Add(seller);
+    }
+    //@param Seller should contain all the information
+    public void UpdateSeller(Seller seller) {
+        User user;
+        if ((user = ContextHolder.Session?.User)==null || user is not Seller){
+            throw new UnauthorizedAccessException("You have to be logged in as a Seller.");
+        }
+        var oldSeller = user as Seller;
+        oldSeller.Address = seller.Address;
+        oldSeller.ShopName = seller.ShopName;
+        oldSeller.Address = seller.Address;
+        oldSeller.SellerEmail = seller.SellerEmail;
+        oldSeller.SellerPhoneNumber = seller.SellerPhoneNumber;
+    }
+    public ProductOffer ListProduct(ProductOffer offer)
     {
-        if (UserContextHolder.User==null || !typeof(Seller).IsAssignableFrom(UserContextHolder.User.GetType()))
+        if (ContextHolder.Session.User==null || !typeof(Seller).IsAssignableFrom(ContextHolder.Session.User.GetType()))
         {
             throw new UnauthorizedAccessException("You do not have permission to list product offerings.");
         }
@@ -32,22 +70,27 @@ public class SellerManager : ISellerManager
         {
             throw new ArgumentException("An offer should be associated with a new or existing product.");
         }
-        _productOfferRepository.Add(offer);
+        offer.SellerId = ContextHolder.Session.User.Id;
+        return _productOfferRepository.Add(offer);
     }
     
-    public void updateOffer(ProductOffer offer)
+    public ProductOffer updateOffer(ProductOffer offer, uint productId)
     {
-        if (UserContextHolder.User==null || !typeof(Seller).IsAssignableFrom(UserContextHolder.User.GetType()) || UserContextHolder.User.Id != offer.SellerId)
+        if (ContextHolder.Session?.User==null || ContextHolder.Session.User is not Seller)
         {
-            throw new UnauthorizedAccessException("You do not have permission to alter this offer.");
+            throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
+        }
+        var existingOffer = _productOfferRepository.Find(o=>o.ProductId==productId && o.SellerId == ContextHolder.Session.User.Id);
+        if (existingOffer==null){
+            throw new ArgumentException("You don't have an offer for this product.");
         }
         if (offer.Product!=null && _productRepository.Exists(p=>p.Id==offer.ProductId))
         {
             offer.Product.Id = 0;
             offer.Product = _productRepository.Add(offer.Product);
             offer.ProductId = offer.Product.Id;
-            _productOfferRepository.Add(offer);
-        } else _productOfferRepository.Update(offer);
+            return _productOfferRepository.Add(offer);
+        } else return _productOfferRepository.Update(offer);
     }
 
     public void UnlistOffer(ProductOffer offer)
@@ -59,7 +102,6 @@ public class SellerManager : ISellerManager
             _productRepository.Delete(p);
         }
     }
-
     public struct SearchPredicate
     {
         public enum OperatorType
@@ -75,7 +117,6 @@ public class SellerManager : ISellerManager
         public string Value { get; set; }
         public OperatorType Operator { get; set; }
     }
-
     public struct SearchOrder
     {
         public string PropName { get; set; }

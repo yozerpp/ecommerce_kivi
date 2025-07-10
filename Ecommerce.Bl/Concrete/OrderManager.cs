@@ -8,18 +8,19 @@ namespace Ecommerce.Bl.Concrete;
 
 public class OrderManager : IOrderManager
 {
-    private readonly IRepository<Order, DbContext> _orderRepository;
-    private readonly IRepository<User, DbContext> _userRepository;
-    private readonly IRepository<Payment, DbContext> _paymentRepository;
-    private readonly IRepository<Cart, DbContext> _cartRepository;
-    private readonly IRepository<Session, DbContext> _sessionRepository;
-    public OrderManager(IRepository<Order, DbContext> orderRepository, IRepository<User, DbContext> userRepository,IRepository<Payment, DbContext> paymentRepository, IRepository<Session, DbContext> sessionRepository, IRepository<Cart, DbContext> cartRepository)
-    {
+    private readonly IRepository<Order> _orderRepository;
+    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Payment> _paymentRepository;
+    private readonly IRepository<Cart> _cartRepository;
+    private readonly IRepository<Session> _sessionRepository;
+    private readonly CartManager _cartManager;
+    public OrderManager(CartManager cartManager,IRepository<Order> orderRepository, IRepository<User> userRepository,IRepository<Payment> paymentRepository, IRepository<Session> sessionRepository, IRepository<Cart> cartRepository) {
+        _cartManager = cartManager;
         _orderRepository = orderRepository;
-        this._userRepository = userRepository;
+        _userRepository = userRepository;
         _paymentRepository = paymentRepository;
         _sessionRepository = sessionRepository;
-        this._cartRepository = cartRepository;
+        _cartRepository = cartRepository;
     }
     public bool isComplete(string transactionId)
     {
@@ -28,32 +29,27 @@ public class OrderManager : IOrderManager
     }
     public Order CreateOrder(Payment payment)
     {
+        if (ContextHolder.Session?.User == null){
+            throw new UnauthorizedAccessException("You must be logged in to Create an Order.");            
+        }
         if (payment.TransactionId == null || !isComplete(payment.TransactionId))
         {
             throw new UnauthorizedAccessException("Payment Incomplete.");
         }
-        var user = UserContextHolder.User;
+        var user = ContextHolder.Session.User;
         if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
-        var cart = CartContextHolder.Cart!;
+        var cart = ContextHolder.Session.Cart!;
         var o = _orderRepository.Add(new Order
         {
             Date = DateTime.Now, Id = 0, Cart = cart, PaymentId = payment.Id,Payment = payment,
             ShippingAddress = user.ShippingAddress,Status = OrderStatus.PENDING,
         });
-        _sessionRepository.Delete(s=>s.UserId==user.Id);
-        var s =_sessionRepository.Add( new Session{ User = user,UserId = user.Id});
-        s.Cart = new Cart() { Session = s, SessionId = s.Id };
-        _cartRepository.Add(s.Cart);
-        _sessionRepository.Update(s);
-        user.SessionId = s.Id;
-        user.Session = s;
-        _userRepository.Update(user);
-        CartContextHolder.Cart = s.Cart;
+        _cartManager.newCart();
         return o;
     }
     public Order CancelOrder(Order order)
     {
-        var user = UserContextHolder.User;
+        var user = ContextHolder.Session;
         if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
         if (user.Id != order.UserId)
         {
@@ -84,7 +80,7 @@ public class OrderManager : IOrderManager
         {
             throw new ArgumentException("Order with the given id doesn't exists");
         }
-        var user = UserContextHolder.User;
+        var user = ContextHolder.Session?.User;
         if (user == null || user.Id!=oldOrder.UserId)
         {
             throw new UnauthorizedAccessException("Order doesn't belong to this user.");
