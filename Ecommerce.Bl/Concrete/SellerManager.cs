@@ -1,7 +1,8 @@
-﻿using Ecommerce.Bl.Interface;
+﻿using System.Linq.Expressions;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Iface;
 using Ecommerce.Entity;
-using Microsoft.EntityFrameworkCore;
+using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -10,49 +11,37 @@ public class SellerManager : ISellerManager
     private readonly IRepository<Product> _productRepository;
     private readonly IRepository<Seller> _sellerRepository;
     private readonly IRepository<ProductOffer> _productOfferRepository;
-    public SellerManager(IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository)
-    {
+    public SellerManager(IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository) {
         _productRepository = productRepository;
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
-
-    public Seller Login() {
-        User user;
-        if ((user = ContextHolder.Session!.User)==null){
-            throw new UnauthorizedAccessException("You need to be logged in as a user to switch to seller account.");
-        }
-        Seller? seller;
-        if ((seller = _sellerRepository.Find(s => s.Id == user.Id)) == null){
-            throw new UnauthorizedAccessException("You need to be registered as a seller to switch to seller account.");
-        }
-        ContextHolder.Session.User = seller;
-        return seller;
+    public SellerWithAggregates? GetSellerWithAggregates(uint sellerId, bool includeOffers, bool includeReviews) {
+        return _sellerRepository.First(AggregateProjection,s=>s.Id == sellerId,
+            includes:GetIncludes(includeOffers,includeReviews));
     }
-    public Seller CreateSeller(Seller seller) {
-        User user;
-        if ((user =ContextHolder.Session.User)==null){
-            throw new UnauthorizedAccessException("You need to be logged in as a user to create a seller account.");
-        }
-        foreach (var propertyInfo in user.GetType().GetProperties()){
-            if (propertyInfo.CanWrite)
-                propertyInfo.SetValue(seller, propertyInfo.GetValue(user));
-        }
 
-        return _sellerRepository.Add(seller);
+    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews) {
+        return _sellerRepository.First(s => s.Id == sellerId, includes: GetIncludes(includeOffers, includeReviews));
     }
     //@param Seller should contain all the information
+    static string[][] GetIncludes(bool offer, bool reviews) {
+        ICollection<string[]> ret = new List<string[]>();
+        if(offer) ret.Add([nameof(Seller.Offers),nameof(ProductOffer.Product)]);
+        if (reviews) ret.Add([nameof(Seller.Offers), nameof(ProductOffer.Reviews)]);
+        return ret.ToArray();
+    }
     public void UpdateSeller(Seller seller) {
         User user;
         if ((user = ContextHolder.Session?.User)==null || user is not Seller){
             throw new UnauthorizedAccessException("You have to be logged in as a Seller.");
         }
         var oldSeller = user as Seller;
-        oldSeller.Address = seller.Address;
-        oldSeller.ShopName = seller.ShopName;
-        oldSeller.Address = seller.Address;
-        oldSeller.SellerEmail = seller.SellerEmail;
-        oldSeller.SellerPhoneNumber = seller.SellerPhoneNumber;
+        foreach (var property in typeof(Seller).GetProperties().Where(p=>p.DeclaringType == typeof(Seller))){
+            property.SetValue(oldSeller, property.GetValue(seller));
+        }
+
+        _sellerRepository.Update(oldSeller);
     }
     public ProductOffer ListProduct(ProductOffer offer)
     {
@@ -60,16 +49,17 @@ public class SellerManager : ISellerManager
         {
             throw new UnauthorizedAccessException("You do not have permission to list product offerings.");
         }
+        if (offer.ProductId==0 && offer.Product==null)
+        {
+            throw new ArgumentException("An offer should be associated with a new or existing product.");
+        }
         if (offer.Product!=null)
         {
             offer.Product.Id = 0;
             offer.Product = _productRepository.Add(offer.Product);
             offer.ProductId = offer.Product.Id;
         }
-        if (offer.ProductId==0)
-        {
-            throw new ArgumentException("An offer should be associated with a new or existing product.");
-        }
+   
         offer.SellerId = ContextHolder.Session.User.Id;
         return _productOfferRepository.Add(offer);
     }
@@ -80,7 +70,7 @@ public class SellerManager : ISellerManager
         {
             throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
         }
-        var existingOffer = _productOfferRepository.Find(o=>o.ProductId==productId && o.SellerId == ContextHolder.Session.User.Id);
+        var existingOffer = _productOfferRepository.First(o=>o.ProductId==productId && o.SellerId == ContextHolder.Session.User.Id);
         if (existingOffer==null){
             throw new ArgumentException("You don't have an offer for this product.");
         }
@@ -96,30 +86,48 @@ public class SellerManager : ISellerManager
     public void UnlistOffer(ProductOffer offer)
     {
         var o = _productOfferRepository.Delete(offer);
-        var p = _productRepository.Find(p=>p.Id == o.ProductId);
+        var p = _productRepository.First(p=>p.Id == o.ProductId);
         if (p?.Offers.Count==0)
         {
             _productRepository.Delete(p);
         }
     }
-    public struct SearchPredicate
-    {
-        public enum OperatorType
-        {
-            Equals,
-            GreaterThan,
-            GreaterThanOrEqual,
-            LessThan,
-            LessThanOrEqual,
-            Like
-        }
-        public string PropName { get; set; }
-        public string Value { get; set; }
-        public OperatorType Operator { get; set; }
-    }
-    public struct SearchOrder
-    {
-        public string PropName { get; set; }
-        public bool Ascending { get; set; }
-    }
+
+    private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjection = s =>
+        new SellerWithAggregates{
+            ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
+            ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
+// need to implement a OrderItem for this SaleCount =
+            Id = s.Id,
+            ShopAddress = s.ShopAddress,
+            ShopName = s.ShopName,
+            ShopEmail = s.ShopEmail,
+            ShopPhoneNumber = s.ShopPhoneNumber,
+            Offers = s.Offers,
+            Coupons = s.Coupons,
+        };
+    private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjectionWithUser = s =>
+        new SellerWithAggregates{
+            ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
+            ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
+// need to implement a OrderItem for this SaleCount =
+            Id = s.Id,
+            ShopAddress = s.ShopAddress,
+            ShopName = s.ShopName,
+            ShopEmail = s.ShopEmail,
+            ShopPhoneNumber = s.ShopPhoneNumber,
+            Offers = s.Offers,
+            Coupons = s.Coupons,
+            
+            FirstName = s.FirstName,
+            LastName = s.LastName,
+            Email = s.Email,
+            ShippingAddress = s.ShippingAddress,
+            PhoneNumber = s.PhoneNumber,
+            BillingAddress = s.BillingAddress,
+            Active = s.Active,
+            Orders = s.Orders,
+            SessionId = s.SessionId,
+            Session = s.Session,
+        };
 }
