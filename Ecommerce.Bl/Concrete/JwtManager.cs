@@ -1,6 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Linq.Expressions;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using Ecommerce.Dao.Iface;
 using Ecommerce.Entity;
 using Microsoft.IdentityModel.Tokens;
 
@@ -11,22 +14,34 @@ public class JwtManager
     private readonly SecurityKey _secretKey;
     private readonly JwtSecurityTokenHandler _tokenHandler = new();
     private readonly SigningCredentials _credentials ;
-    public JwtManager(string? secretKey = null) {
+    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Session> _sessionRepository;
+    private readonly IRepository<Seller> _sellerRepository;
+    public JwtManager(IRepository<User> userRepository, IRepository<Seller> sellerRepository, IRepository<Session> sessionRepository,string? secretKey = null) {
         if (secretKey==null){
              secretKey = "uDF$Gldpgl3*-4-ags";
         }
-        _secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        this._sellerRepository = sellerRepository;
+        this._userRepository = userRepository;
+        this._sessionRepository = sessionRepository;
+        _secretKey = new SymmetricSecurityKey(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(secretKey)));
         _credentials = new SigningCredentials(_secretKey, SecurityAlgorithms.HmacSha256);
     }
 
     public SecurityToken CreateToken(Session session) {
-        var claims = new List<Claim>(new[]{
-            new Claim("sessionId", session.Id.ToString()),
-        });
-        if (session.User != null){
-            if (session.User is Seller s){
+        var claims = new List<Claim>();
+        switch (session.User){
+            case Seller s:
                 claims.Add(new Claim("sellerId",s.Id.ToString()));
-            } else claims.Add(new Claim("userId",session.User.Id.ToString()));
+                break;
+            case User u:
+                claims.Add(new Claim("userId",u.Id.ToString()));
+                break;
+            case null:
+                claims.Add(new Claim("sessionId", session.Id.ToString()));
+                break;
+            default:
+            return null;
         }
         return _tokenHandler.CreateToken(new SecurityTokenDescriptor
         {
@@ -47,26 +62,22 @@ public class JwtManager
             session = null;
             return;
         }
-
-        string? id;
-        if ((id=principal.Claims.FirstOrDefault(c=>c.Type.Equals("sellerId"))?.Value)!=null){
-            user = new Seller();
-            user.Id = Convert.ToUInt32(id);
+        user= null;
+        uint id;
+        ulong sessionId;
+        if ((id= Convert.ToUInt32(principal.Claims.FirstOrDefault(c => c.Type.Equals("sellerId"))?.Value))!=0){
+            user = _sellerRepository.First(s => s.Id == id, includes:[[nameof(User.Session)]]);
             session = null;
         }
-        else if ((id=principal.Claims.FirstOrDefault(c=>c.Type.Equals("userId"))?.Value)!=null){
-            user = new User();
-            user.Id = Convert.ToUInt32(id);
+        else if ((id= Convert.ToUInt32(principal.Claims.FirstOrDefault(c => c.Type.Equals("userId"))?.Value))!=0){
+            user = _userRepository.First(u => u.Id == id, includes:[[nameof(User.Session)]]);
             session = null;
-        }
-        else if((id = principal.Claims.FirstOrDefault(c => c.Type.Equals("sessionId"))?.Value) != null){
-            user = null;
-            session = new Session();
-            session.Id = Convert.ToUInt32(id);
+        } else if ((sessionId = Convert.ToUInt64(principal.Claims.FirstOrDefault(c => c.Type.Equals("sessionId"))!.Value))!=0){
+            session = _sessionRepository.First(s => s.Id == sessionId);
         }
         else{
-            user = null;
             session = null;
+            user = null;
         }
     }
 }
