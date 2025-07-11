@@ -1,10 +1,12 @@
-﻿namespace Ecommerce.Entity.Common;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-public struct Address
+namespace Ecommerce.Entity.Common;
+[ComplexType]
+public class Address
 {
     public string Street { get; set; }
     public string City { get; set; }
-    public string state { get; set; }
-    public string neighborhood { get; set; }
+    public string State { get; set; }
+    public string Neighborhood { get; set; }
     public string ZipCode { get; set; }
  }

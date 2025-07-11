@@ -12,7 +12,7 @@ public class Product
     public string Description { get; set; }
     public uint CategoryId { get; set; }
     public Category Category { get; set; }
-    public ICollection<ProductOffer> Offers { get; set; }
+    public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public override bool Equals(object? obj)
     {
         if (obj is Product other)

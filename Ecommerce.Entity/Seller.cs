@@ -7,11 +7,11 @@ public class Seller : User
 {
     public string? ShopName { get; set; }
     [EmailAddress]
-    public string? SellerEmail { get; set; }
-    public PhoneNumber SellerPhoneNumber { get; set; }
-    public Address Address { get; set; }
+    public string? ShopEmail { get; set; }
+    public PhoneNumber ShopPhoneNumber { get; set; }
+    public Address ShopAddress { get; set; }
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
-
+    public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
     public override bool Equals(object? obj)
     {
         if (obj is Seller other)

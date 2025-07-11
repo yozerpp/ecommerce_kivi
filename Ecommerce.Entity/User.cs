@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
 
 namespace Ecommerce.Entity;
@@ -6,7 +7,6 @@ namespace Ecommerce.Entity;
 public class User
 {
     public uint Id { get; set; }
-    public string? Username { get; set; }
     [MaxLength(24),MinLength(12)]
     public string? PasswordHash { get; set; }
     [EmailAddress]

@@ -15,30 +15,19 @@ public class Order
     public decimal Total { get; set; }
     public OrderStatus? Status { get; set; }
     public Address ShippingAddress { get; set; }
-    public Cart? Cart { get; set; }
-    public User User { get; set; }
-    
+    public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public User? User { get; set; }
     public Payment? Payment { get; set; }
 
-    public override bool Equals(object? obj)
-    {
-        if (obj is Order other)
-        {
-            if (Id == default)
-            {
-                return base.Equals(obj);
-            }
-            return Id == other.Id;
-        }
-        return false;
+    public override bool Equals(object? obj) {
+        if (obj is not Order other) return false;
+        if (Id == default) return ReferenceEquals(this,obj);
+        return Id == other.Id;
     }
 
     public override int GetHashCode()
     {
-        if (Id == default)
-        {
-            return base.GetHashCode();
-        }
+        if (Id == default) return base.GetHashCode();
         return Id.GetHashCode();
     }
 }
