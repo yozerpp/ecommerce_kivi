@@ -7,9 +7,9 @@ public class User
 {
     public uint Id { get; set; }
     public string? Username { get; set; }
+    [MaxLength(24),MinLength(12)]
     public string? PasswordHash { get; set; }
     [EmailAddress]
-
     public string? Email { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }

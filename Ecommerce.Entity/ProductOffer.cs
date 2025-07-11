@@ -1,4 +1,6 @@
-﻿namespace Ecommerce.Entity;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Ecommerce.Entity;
 
 public class ProductOffer
 {
@@ -6,8 +8,10 @@ public class ProductOffer
     public uint SellerId { get; set; }
     public Product? Product { get; set; }
     public Seller? Seller { get; set; }
+    [Range(0,int.MaxValue)]
     public decimal Price { get; set; }
-    public int Stock { get; set; }
+    [Range(0, 1000000)]
+    public uint Stock { get; set; }
 
     public override bool Equals(object? obj)
     {

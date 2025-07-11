@@ -1,4 +1,5 @@
 using Ecommerce.Entity.Common;
+using Ecommerce.Entity.Common.Meta;
 
 namespace Ecommerce.Entity;
 
@@ -9,6 +10,7 @@ public class Payment
     public string? TransactionId { get; set; }
     public uint OrderId { get; set; }
     public Order Order { get; set; }
+    [Generated]
     public decimal Amount { get; set; }
     public DateTime PaymentDate { get; set; }
     public PaymentMethod PaymentMethod { get; set; }

@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
+using Ecommerce.Entity.Common.Meta;
 
 namespace Ecommerce.Entity;
 
@@ -9,11 +11,12 @@ public class Order
     public uint CartId { get; set; }
     public uint PaymentId { get; set; }
     public DateTime Date { get; set; } = DateTime.Now;
+    [Generated]
     public decimal Total { get; set; }
     public OrderStatus? Status { get; set; }
     public Address ShippingAddress { get; set; }
     public Cart? Cart { get; set; }
-    public User? User { get; set; }
+    public User User { get; set; }
     
     public Payment? Payment { get; set; }
 
