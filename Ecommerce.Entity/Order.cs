@@ -24,6 +24,10 @@ public class Order
     {
         if (obj is Order other)
         {
+            if (Id == default)
+            {
+                return base.Equals(obj);
+            }
             return Id == other.Id;
         }
         return false;
@@ -31,6 +35,10 @@ public class Order
 
     public override int GetHashCode()
     {
+        if (Id == default)
+        {
+            return base.GetHashCode();
+        }
         return Id.GetHashCode();
     }
 }

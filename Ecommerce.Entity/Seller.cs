@@ -16,6 +16,10 @@ public class Seller : User
     {
         if (obj is Seller other)
         {
+            if (Id == default)
+            {
+                return base.Equals(obj);
+            }
             return Id == other.Id;
         }
         return false;
@@ -23,6 +27,10 @@ public class Seller : User
 
     public override int GetHashCode()
     {
+        if (Id == default)
+        {
+            return base.GetHashCode();
+        }
         return Id.GetHashCode();
     }
 }

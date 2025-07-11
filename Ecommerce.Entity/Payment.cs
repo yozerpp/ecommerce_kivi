@@ -20,6 +20,10 @@ public class Payment
     {
         if (obj is Payment other)
         {
+            if (Id == default)
+            {
+                return base.Equals(obj);
+            }
             return Id == other.Id;
         }
         return false;
@@ -27,6 +31,10 @@ public class Payment
 
     public override int GetHashCode()
     {
+        if (Id == default)
+        {
+            return base.GetHashCode();
+        }
         return Id.GetHashCode();
     }
 }

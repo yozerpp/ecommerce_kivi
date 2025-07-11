@@ -12,6 +12,10 @@ public class Session
     {
         if (obj is Session other)
         {
+            if (Id == default)
+            {
+                return base.Equals(obj);
+            }
             return Id == other.Id;
         }
         return false;
@@ -19,6 +23,10 @@ public class Session
 
     public override int GetHashCode()
     {
+        if (Id == default)
+        {
+            return base.GetHashCode();
+        }
         return Id.GetHashCode();
     }
 }

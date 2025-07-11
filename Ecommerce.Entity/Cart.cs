@@ -14,6 +14,10 @@ public class Cart
     {
         if (obj is Cart other)
         {
+            if (Id == default)
+            {
+                return base.Equals(obj);
+            }
             return Id == other.Id;
         }
         return false;
@@ -21,6 +25,10 @@ public class Cart
 
     public override int GetHashCode()
     {
+        if (Id == default)
+        {
+            return base.GetHashCode();
+        }
         return Id.GetHashCode();
     }
 }
