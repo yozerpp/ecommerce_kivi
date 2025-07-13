@@ -5,6 +5,10 @@ using System.Linq.Expressions;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
+using Ecommerce.Entity.Common;
+using Microsoft.IdentityModel.Tokens;
+using NUnit.Framework.Legacy;
+using Product = Ecommerce.Entity.Product;
 
 namespace Ecommerce.Bl.Test;
 
@@ -13,6 +17,147 @@ public class ProductManagerTests
     private ProductManager _productManager;
     private Mock<IRepository<Product>> _mockProductRepository;
     private List<Product> _testProducts;
+
+    // Test data for aggregates
+    private Seller _testSeller;
+    private Product _productWithAggregates;
+    private ProductOffer _offer1;
+    private ProductOffer _offer2;
+    private User _buyerUser;
+    private User _reviewerUser;
+
+    [OneTimeSetUp]
+    public void OneTimeSetupAggregates()
+    {
+        // 1. Register and Login a Seller
+        _testSeller = new Seller
+        {
+            Email = "agg_seller@example.com",
+            PasswordHash = "sellerpass",
+            FirstName = "Agg",
+            LastName = "Seller",
+            ShopName = "AggTestShop",
+            ShopEmail = "aggshop@example.com",
+            ShopPhoneNumber = new PhoneNumber(),
+            ShopAddress = new Address()
+        };
+        _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
+        TestContext._sellerRepository.Flush();
+
+        // Login as the seller to list products
+        TestContext._userManager.LoginSeller(_testSeller.Email, _testSeller.PasswordHash, out SecurityToken sellerToken);
+        TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
+
+        // 2. Create a Product and multiple Offers for it
+        var category = TestContext._categoryRepository.First(_ => true);
+        _productWithAggregates = new Product { Name = "Aggregated Product", Description = "For aggregate testing", CategoryId = category.Id };
+
+        _offer1 = new ProductOffer
+        {
+            Product = _productWithAggregates,
+            Price = 100m,
+            Stock = 10,
+            SellerId = _testSeller.Id,
+            Discount = 0.1m // 10% discount
+        };
+        _offer1 = TestContext._sellerManager.ListProduct(_offer1); // This will add the product too
+        TestContext._offerRepository.Flush();
+
+        _offer2 = new ProductOffer
+        {
+            ProductId = _productWithAggregates.Id, // Link to the same product
+            Price = 120m,
+            Stock = 5,
+            SellerId = _testSeller.Id,
+            Discount = 0.0m // No discount
+        };
+        _offer2 = TestContext._sellerManager.ListProduct(_offer2);
+        TestContext._offerRepository.Flush();
+
+        // 3. Register Buyer User
+        _buyerUser = new User
+        {
+            Email = "agg_buyer@example.com",
+            PasswordHash = "buyerpass",
+            FirstName = "Agg",
+            LastName = "Buyer",
+            BillingAddress = new Address(),
+            ShippingAddress = new Address(),
+            PhoneNumber = new PhoneNumber()
+        };
+        _buyerUser = TestContext._userManager.Register(_buyerUser);
+        TestContext._userRepository.Flush();
+
+        // 4. Simulate Sales (Orders)
+        // Login as buyer
+        TestContext._userManager.LoginUser(_buyerUser.Email, _buyerUser.PasswordHash, out SecurityToken buyerToken);
+        TestContext._jwtmanager.UnwrapToken(buyerToken, out var buyerUser, out var buyerSession);
+
+        // Purchase from offer1
+        TestContext._cartManager.newCart(_buyerUser);
+        TestContext._cartManager.Add(_offer1, 2); // Buy 2 units
+        TestContext._cartRepository.Flush();
+        var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.CARD };
+        payment1 = TestContext._paymentRepository.Add(payment1);
+        TestContext._orderManager.CreateOrder(payment1);
+        TestContext._orderRepository.Flush();
+
+        // Purchase from offer2
+        TestContext._cartManager.newCart(_buyerUser);
+        TestContext._cartManager.Add(_offer2, 1); // Buy 1 unit
+        TestContext._cartRepository.Flush();
+        var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.CARD };
+        payment2 = TestContext._paymentRepository.Add(payment2);
+        TestContext._orderManager.CreateOrder(payment2);
+        TestContext._orderRepository.Flush();
+
+        // 5. Register Reviewer User
+        _reviewerUser = new User
+        {
+            Email = "agg_reviewer@example.com",
+            PasswordHash = "reviewerpass",
+            FirstName = "Agg",
+            LastName = "Reviewer",
+            BillingAddress = new Address(),
+            ShippingAddress = new Address(),
+            PhoneNumber = new PhoneNumber()
+        };
+        _reviewerUser = TestContext._userManager.Register(_reviewerUser);
+        TestContext._userRepository.Flush();
+
+        // 6. Simulate Reviews
+        // Login as reviewer
+        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken reviewerToken);
+        TestContext._jwtmanager.UnwrapToken(reviewerToken, out var rUser, out var rSession);
+
+        // Review for offer1
+        var review1 = new ProductReview
+        {
+            ProductId = _offer1.ProductId,
+            SellerId = _offer1.SellerId,
+            ReviewerId = _reviewerUser.Id,
+            Rating = 5,
+            Comment = "Excellent product!"
+        };
+        TestContext._reviewManager.LeaveReview(review1);
+        TestContext._reviewRepository.Flush();
+
+        // Review for offer2
+        var review2 = new ProductReview
+        {
+            ProductId = _offer2.ProductId,
+            SellerId = _offer2.SellerId,
+            ReviewerId = _reviewerUser.Id,
+            Rating = 3,
+            Comment = "It's okay."
+        };
+        TestContext._reviewManager.LeaveReview(review2);
+        TestContext._reviewRepository.Flush();
+
+        // Re-login as default user for other tests if needed
+        UserManagerTests.TestLogin();
+    }
+
 
     [SetUp]
     public void Setup()
@@ -33,13 +178,28 @@ public class ProductManagerTests
     private void SetupMockRepository()
     {
         _mockProductRepository.Setup(r => r.Where(
+            It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
             It.IsAny<Expression<Func<Product, bool>>>(), 
             It.IsAny<int>(), 
             It.IsAny<int>(), 
             It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
             It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
-                _testProducts.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
+                _testProducts.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
+
+        _mockProductRepository.Setup(r => r.First(
+                It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
+                It.IsAny<Expression<Func<Product, bool>>>(),
+                It.IsAny<string[][]>()))
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, string[][] includes) =>
+                _testProducts.Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
+
+        _mockProductRepository.Setup(r => r.First(
+                It.IsAny<Expression<Func<Product, Product>>>(), // For GetById
+                It.IsAny<Expression<Func<Product, bool>>>(),
+                It.IsAny<string[][]>()))
+            .Returns((Expression<Func<Product, Product>> select, Expression<Func<Product, bool>> predicate, string[][] includes) =>
+                _testProducts.Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
     }
 
     [Test]
@@ -182,13 +342,14 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
+                It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
                 It.IsAny<Expression<Func<Product, bool>>>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
-                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
@@ -286,13 +447,14 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
+                It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
                 It.IsAny<Expression<Func<Product, bool>>>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
-                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
@@ -317,18 +479,68 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
+                It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
                 It.IsAny<Expression<Func<Product, bool>>>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
-                productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // Null values should not equal non-null values
+    }
+
+    [Test]
+    public void GetByIdWithAggregates_CalculatesCorrectAggregates()
+    {
+        // Arrange
+        // The _productWithAggregates and its related data are set up in OneTimeSetupAggregates
+        // We need to mock the repository to return this specific product with its loaded offers, reviews, and bought items
+        _mockProductRepository.Setup(r => r.First(
+                It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(),
+                It.IsAny<Expression<Func<Product, bool>>>(),
+                It.IsAny<string[][]>()))
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, string[][] includes) =>
+            {
+                // Manually load related data for the mock to simulate EF Core behavior
+                _productWithAggregates.Offers = new List<ProductOffer> { _offer1, _offer2 };
+                _offer1.Reviews = TestContext._reviewRepository.Where(r => r.ProductId == _offer1.ProductId && r.SellerId == _offer1.SellerId).ToList();
+                _offer2.Reviews = TestContext._reviewRepository.Where(r => r.ProductId == _offer2.ProductId && r.SellerId == _offer2.SellerId).ToList();
+                _offer1.BoughtItems = TestContext._orderItemRepository.Where(oi => oi.ProductId == _offer1.ProductId && oi.SellerId == _offer1.SellerId).ToList();
+                _offer2.BoughtItems = TestContext._orderItemRepository.Where(oi => oi.ProductId == _offer2.ProductId && oi.SellerId == _offer2.SellerId).ToList();
+
+                if (predicate.Compile().Invoke(_productWithAggregates))
+                {
+                    return select.Compile().Invoke(_productWithAggregates);
+                }
+                return null;
+            });
+
+        // Act
+        var result = _productManager.GetByIdWithAggregates(_productWithAggregates.Id, fetchReviews: true, fetchImage: false);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Id, Is.EqualTo(_productWithAggregates.Id));
+
+        // SaleCount: 2 from offer1 + 1 from offer2 = 3
+        Assert.That(result.SaleCount, Is.EqualTo(3));
+
+        // ReviewCount: 1 from offer1 + 1 from offer2 = 2
+        Assert.That(result.ReviewCount, Is.EqualTo(2));
+
+        // ReviewAverage: (5 + 3) / 2 = 4.0
+        Assert.That(result.ReviewAverage, Is.EqualTo(4.0f));
+
+        // MinPrice: Should be the minimum price among offers (100m)
+        Assert.That(result.MinPrice, Is.EqualTo(100m));
+
+        // MaxPrice: Should be the maximum price among offers (120m)
+        Assert.That(result.MaxPrice, Is.EqualTo(120m));
     }
 }
