@@ -8,11 +8,9 @@ public class Order
 {
     public uint Id { get; set; }
     public uint UserId { get; set; }
-    public uint CartId { get; set; }
     public uint PaymentId { get; set; }
     public DateTime Date { get; set; } = DateTime.Now;
     [Generated]
-    public decimal Total { get; set; }
     public OrderStatus? Status { get; set; }
     public Address ShippingAddress { get; set; }
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();

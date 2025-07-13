@@ -3,8 +3,8 @@
 public class Session
 {
     public ulong Id { get; set; }
-    public uint? CartId { get; set; }
-    public Cart? Cart { get; set; }
+    public uint CartId { get; set; }
+    public Cart Cart { get; set; }
     public uint? UserId {get;set;}
     public User? User {get;set;}
 

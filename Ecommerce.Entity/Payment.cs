@@ -3,6 +3,7 @@ using Ecommerce.Entity.Common.Meta;
 
 namespace Ecommerce.Entity;
 
+//Not actually used meaningfully.
 public class Payment
 {
     public uint Id { get; set; }

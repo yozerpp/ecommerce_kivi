@@ -8,11 +8,11 @@ public class User
 {
     public uint Id { get; set; }
     [MaxLength(24),MinLength(12)]
-    public string? PasswordHash { get; set; }
+    public string PasswordHash { get; set; }
     [EmailAddress]
-    public string? Email { get; set; }
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
+    public string Email { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
     public Address ShippingAddress { get; set; }
     public Address BillingAddress { get; set; }
     public PhoneNumber PhoneNumber { get; set; }

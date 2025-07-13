@@ -8,11 +8,8 @@ public class ProductOffer
     public uint SellerId { get; set; }
     public Product? Product { get; set; }
     public Seller? Seller { get; set; }
-    [Range(0,int.MaxValue)]
     public decimal Price { get; set; }
-    [Range(0, 1)]
-    public float? Discount { get; set; }
-    [Range(0, 1000000)]
+    public float Discount { get; set; }
     public uint Stock { get; set; }
     public ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
     public ICollection<OrderItem> BoughtItems { get; init; } = new List<OrderItem>();

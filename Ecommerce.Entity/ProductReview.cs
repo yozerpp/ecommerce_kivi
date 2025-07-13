@@ -7,9 +7,11 @@ public class ProductReview
     public uint ReviewerId { get; set;}
     public float Rating { get; set; }
     public string? Comment { get; set; }
-    public int Upvotes { get; set; }
     public ProductOffer Offer { get; set; }
     public User Reviewer { get; set; }
+    public bool CensorName { get; set; }
+    public bool HasBought { get; set; }
+    public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     public ICollection<ReviewComment> Comments { get; set; } = new List<ReviewComment>();
     public override bool Equals(object? obj) {
         if (obj is not ProductReview review) return false;

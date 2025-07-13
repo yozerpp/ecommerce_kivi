@@ -18,8 +18,7 @@ public class OrderItem
     public uint ProductId { get; set; }
     public uint SellerId { get; set; }
     public uint OrderId { get; set; }
-    [Range(0, int.MaxValue)]
-    public int Quantity { get; set; }
+    public uint Quantity { get; set; }
     public ProductOffer ProductOffer { get; set; }
     public Order Order { get; set; }
     public string? CouponId { get; set; }
