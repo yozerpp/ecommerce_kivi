@@ -6,8 +6,9 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IUserManager
 {
-    User Login(string username, string password, out SecurityToken token);
-    User Register(User user);
+    User? LoginUser(string Email, string password, out SecurityToken? token);
+    Seller? LoginSeller(string Email, string password, out SecurityToken? token);
+    User Register(User newUser);
     void ChangePassword(string oldPassword, string newPassword);
     User Update(User user);
     void deactivate();

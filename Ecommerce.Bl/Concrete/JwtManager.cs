@@ -3,7 +3,8 @@ using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Ecommerce.Dao.Iface;
+using Ecommerce.Dao;
+using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Microsoft.IdentityModel.Tokens;
 
@@ -40,8 +41,6 @@ public class JwtManager
             case null:
                 claims.Add(new Claim("sessionId", session.Id.ToString()));
                 break;
-            default:
-            return null;
         }
         return _tokenHandler.CreateToken(new SecurityTokenDescriptor
         {

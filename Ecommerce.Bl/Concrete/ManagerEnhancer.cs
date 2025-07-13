@@ -1,10 +1,10 @@
 ﻿using System.Reflection;
 
-namespace Ecommerce.Bl;
+namespace Ecommerce.Bl.Concrete;
 
 public class ManagerEnhancer
 {
-
+    public ManagerEnhancer(){}
     /**
      * TM should be the manager interface, not implementation. 
      */

@@ -1,9 +1,8 @@
 ﻿using Ecommerce.Bl.Interface;
-using Ecommerce.Dao.Iface;
 using Ecommerce.Entity;
-using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-using System.Reflection;
+using Ecommerce.Dao;
+using Ecommerce.Dao.Spi;
 using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Concrete;
@@ -11,10 +10,13 @@ namespace Ecommerce.Bl.Concrete;
 public class ProductManager : IProductManager
 {
     private readonly IRepository<Product> _productRepository;
-    public ProductManager(IRepository<Product> productRepository)
-    {
+
+    public ProductManager(IRepository<Product> productRepository) {
         _productRepository = productRepository;
     }
+
+    //can be used to update the vote as well.
+
     public List<ProductWithAggregates> SearchWithAggregates(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, bool includeImage, bool fetchReviews = false, int page=1, int pageSize=20) {
         var offset = (page - 1) * pageSize;
         var limit = page*pageSize;
@@ -23,7 +25,6 @@ public class ProductManager : IProductManager
         return _productRepository.Where(GetAggregateProjection(includeImage), predicateExpr, offset, limit,
             orderBy: orderByExpr.ToArray(), includes: includes);
     }
-
     public List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering,
         int page = 1, int pageSize = 20) {
         var offset = (page - 1) * pageSize;
@@ -32,10 +33,8 @@ public class ProductManager : IProductManager
         return _productRepository.Where(ImageLessProjection, predicateExpr, offset, limit,
             orderBy: orderByExpr.ToArray());
     }
-
-
     public ProductWithAggregates? GetByIdWithAggregates(uint productId, bool fetchReviews = true, bool fetchImage=true) {
-        return _productRepository.First(GetAggregateProjection(fetchImage),p=>p.Id ==productId,includes:GetIncludes(fetchReviews) );
+        return _productRepository.First(GetAggregateProjection(fetchImage),p=>p.Id ==productId,includes:GetProductIncludes(fetchReviews) );
     }
     public Product? GetById(int id, bool fetchImage=true) {
         return _productRepository.First(fetchImage ? IdentityProjection : ImageLessProjection, p => p.Id == id);
@@ -45,7 +44,7 @@ public class ProductManager : IProductManager
         return p => new ProductWithAggregates{
             MaxPrice = p.Offers.Max(o => o.Price),
             MinPrice = p.Offers.Min(o => o.Price),
-            //SaleCount = Requires a new Entity Creation
+            SaleCount = p.Offers.SelectMany(o=>o.BoughtItems).Count() as uint? ??0,
             ReviewCount = (uint)p.Offers.SelectMany(o => o.Reviews).Count(),
             ReviewAverage = p.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
             Id = p.Id,
@@ -68,7 +67,7 @@ public class ProductManager : IProductManager
         Offers = p.Offers,
     };
 
-    private static string[][] GetIncludes(bool fetchReviews) {
+    private static string[][] GetProductIncludes(bool fetchReviews) {
         return fetchReviews
             ?[[nameof(Product.Offers), nameof(ProductOffer.Reviews)], [nameof(Product.Category)]]
             :[[nameof(Product.Category)]];

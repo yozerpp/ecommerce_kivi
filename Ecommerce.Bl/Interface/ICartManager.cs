@@ -5,9 +5,9 @@ namespace Ecommerce.Bl.Interface;
 
 public interface ICartManager
 {
-    Session newCart();
-    CartItem Add(ProductOffer offer, int amount = 1);
+    Session newCart(User? user=null);
+    CartItem Add(ProductOffer offer, uint amount = 1);
     CartItem Add(CartItem item);
-    CartItem? Decrement(ProductOffer productOffer, int amount = 1);
+    CartItem? Decrement(ProductOffer productOffer, uint amount = 1);
     void Remove(ProductOffer offer);
 }

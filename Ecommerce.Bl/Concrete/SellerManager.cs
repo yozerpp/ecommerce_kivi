@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Ecommerce.Bl.Interface;
-using Ecommerce.Dao.Iface;
+using Ecommerce.Dao;
+using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
 
@@ -11,8 +12,10 @@ public class SellerManager : ISellerManager
     private readonly IRepository<Product> _productRepository;
     private readonly IRepository<Seller> _sellerRepository;
     private readonly IRepository<ProductOffer> _productOfferRepository;
-    public SellerManager(IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository) {
+    private readonly IRepository<Coupon> _couponRepository;
+    public SellerManager(IRepository<Coupon> couponRepository,IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository) {
         _productRepository = productRepository;
+        _couponRepository = couponRepository;
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
@@ -24,16 +27,10 @@ public class SellerManager : ISellerManager
     public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews) {
         return _sellerRepository.First(s => s.Id == sellerId, includes: GetIncludes(includeOffers, includeReviews));
     }
-    //@param Seller should contain all the information
-    static string[][] GetIncludes(bool offer, bool reviews) {
-        ICollection<string[]> ret = new List<string[]>();
-        if(offer) ret.Add([nameof(Seller.Offers),nameof(ProductOffer.Product)]);
-        if (reviews) ret.Add([nameof(Seller.Offers), nameof(ProductOffer.Reviews)]);
-        return ret.ToArray();
-    }
+    //@param Seller should contain user information as well.
     public void UpdateSeller(Seller seller) {
         User user;
-        if ((user = ContextHolder.Session?.User)==null || user is not Seller){
+        if ((user = ContextHolder.Session!.User)==null || user is not Seller){
             throw new UnauthorizedAccessException("You have to be logged in as a Seller.");
         }
         var oldSeller = user as Seller;
@@ -45,7 +42,7 @@ public class SellerManager : ISellerManager
     }
     public ProductOffer ListProduct(ProductOffer offer)
     {
-        if (ContextHolder.Session.User==null || !typeof(Seller).IsAssignableFrom(ContextHolder.Session.User.GetType()))
+        if (ContextHolder.Session!.User==null || !typeof(Seller).IsAssignableFrom(ContextHolder.Session.User.GetType()))
         {
             throw new UnauthorizedAccessException("You do not have permission to list product offerings.");
         }
@@ -93,6 +90,17 @@ public class SellerManager : ISellerManager
         }
     }
 
+    public void CreateCoupon(Coupon coupon) {
+        
+        if (ContextHolder.Session!.User == null || ContextHolder.Session.User is not Seller seller)
+        {
+            throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
+        }
+        coupon.SellerId = seller.Id;
+        var couponCount = _sellerRepository.First(s=>s.Coupons.Count(), s=>s.Id==seller.Id,includes:[[nameof(Seller.Coupons)]]);
+        coupon.Id = seller.ShopName + (ushort)(coupon.DiscountRate * 100) ;
+        _couponRepository.Add(coupon);
+    }
     private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjection = s =>
         new SellerWithAggregates{
             ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
@@ -130,4 +138,10 @@ public class SellerManager : ISellerManager
             SessionId = s.SessionId,
             Session = s.Session,
         };
+    private static string[][] GetIncludes(bool offer, bool reviews) {
+        ICollection<string[]> ret = new List<string[]>();
+        if(offer) ret.Add([nameof(Seller.Offers),nameof(ProductOffer.Product)]);
+        if (reviews) ret.Add([nameof(Seller.Offers), nameof(ProductOffer.Reviews)]);
+        return ret.ToArray();
+    }
 }
