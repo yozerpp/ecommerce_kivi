@@ -10,6 +10,7 @@ public interface IUserManager
     Seller? LoginSeller(string Email, string password, out SecurityToken? token);
     User Register(User newUser);
     void ChangePassword(string oldPassword, string newPassword);
+    void Logout();
     User Update(User user);
     void deactivate();
 }
