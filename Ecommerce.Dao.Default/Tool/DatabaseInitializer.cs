@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Address = Ecommerce.Entity.Common.Address;
 using Enum = System.Enum;
 
-namespace Ecommerce.Dao.Spi.Tool;
+namespace Ecommerce.Dao.Default.Tool;
 
 public class DatabaseInitializer
 {
