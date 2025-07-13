@@ -2,6 +2,10 @@
 
 namespace Ecommerce.Bl;
 
+/// <summary>
+/// This store is the shared context between the container implementation (be it a web app or a desktop app)
+/// and the business layer components. Web app can set the session, from here.
+/// </summary>
 public static class ContextHolder
 {
     private static readonly ThreadLocal<Session> _session = new ThreadLocal<Session>();
@@ -10,5 +14,9 @@ public static class ContextHolder
     {
         get => _session.Value;
         set => _session.Value = value;
+    }
+
+    public static  User GetUserOrThrow() {
+        return Session?.User??throw new UnauthorizedAccessException("You aren't logged in.");
     }
 }
