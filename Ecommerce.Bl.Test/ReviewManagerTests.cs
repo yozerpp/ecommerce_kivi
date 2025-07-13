@@ -13,6 +13,7 @@ public class ReviewManagerTests
     private User _reviewerUser;
     private User _commenterUser;
     private User _voterUser;
+    private Seller _testSeller; // Declare a test seller
 
     [OneTimeSetUp]
     public void SetupUsersAndProducts()
@@ -59,10 +60,25 @@ public class ReviewManagerTests
         _voterUser = TestContext._userManager.Register(_voterUser);
         TestContext._userRepository.Flush();
 
+        // Register and Login as a Seller for product listing
+        _testSeller = new Seller
+        {
+            Email = "testseller@example.com",
+            PasswordHash = "sellerpass",
+            FirstName = "Test",
+            LastName = "Seller",
+            ShopName = "TestShop",
+            ShopEmail = "shop@example.com",
+            ShopPhoneNumber = new PhoneNumber(),
+            ShopAddress = new Address()
+        };
+        _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
+        TestContext._sellerRepository.Flush();
 
-        // Login as the main user to create a product offer
-        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Login as the seller to list the product offer
+        TestContext._userManager.LoginSeller(_testSeller.Email, _testSeller.PasswordHash, out SecurityToken sellerToken);
+        TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
+
 
         // Create a product and offer for testing reviews
         var category = TestContext._categoryRepository.First(_ => true);
@@ -72,12 +88,16 @@ public class ReviewManagerTests
             Product = product,
             Price = 100,
             Stock = 10,
-            SellerId = TestContext.Seller.Id // Assuming a seller is already set up in TestContext
+            SellerId = _testSeller.Id // Use the registered seller's ID
         };
         _testOffer = TestContext._sellerManager.ListProduct(_testOffer);
         TestContext._offerRepository.Flush();
 
         // Simulate a purchase by _reviewerUser for _testOffer
+        // First, login as the reviewer user
+        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken reviewerToken);
+        TestContext._jwtmanager.UnwrapToken(reviewerToken, out var reviewerUser, out var reviewerSession);
+
         TestContext._cartManager.newCart(_reviewerUser); // Set cart for reviewer
         TestContext._cartManager.Add(_testOffer, 1);
         TestContext._cartRepository.Flush();
