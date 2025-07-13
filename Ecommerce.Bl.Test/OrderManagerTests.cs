@@ -2,6 +2,7 @@
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Microsoft.IdentityModel.Tokens;
+using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Test;
 
@@ -110,5 +111,61 @@ public class OrderManagerTests
         Assert.That(fetchedOrder, Is.Not.Null);
         Assert.That(fetchedOrder.ShippingAddress.City, Is.EqualTo("NewCity"));
         Assert.That(fetchedOrder.ShippingAddress.ZipCode, Is.EqualTo("99999"));
+    }
+
+    [Test]
+    public void TestGetOrderWithItemsAggregates()
+    {
+        // Clear cart first to ensure a clean state for creating a new order
+        var currentCartItems = TestContext._cartItemRepository.Where(ci => ci.CartId == ContextHolder.Session.Cart.Id);
+        foreach (var item in currentCartItems)
+        {
+            TestContext._cartItemRepository.Delete(item);
+        }
+        TestContext._cartRepository.Flush();
+
+        // Add multiple items to the cart for the new order
+        var offer1 = TestContext._offerRepository.First(_ => true);
+        var offer2 = TestContext._offerRepository.Where(_ => true).Skip(1).FirstOrDefault();
+
+        if (offer1 == null || offer2 == null || offer1.Id == offer2.Id)
+        {
+            Assert.Inconclusive("Not enough distinct offers available for testing order aggregates.");
+        }
+
+        uint quantity1 = 2;
+        uint quantity2 = 3;
+
+        TestContext._cartManager.Add(offer1!, quantity1);
+        TestContext._cartManager.Add(offer2!, quantity2);
+        TestContext._cartRepository.Flush();
+
+        // Create the order
+        var payment = new Payment() { TransactionId = "ORDER_AGG_TEST", Amount = 100, PaymentMethod = PaymentMethod.CARD };
+        payment = TestContext._paymentRepository.Add(payment);
+        var createdOrder = TestContext._orderManager.CreateOrder(payment);
+        TestContext._orderRepository.Flush();
+
+        // Get the order with aggregates
+        var orderWithAggregates = TestContext._orderManager.GetOrderWithItems(createdOrder.Id);
+
+        Assert.IsNotNull(orderWithAggregates);
+
+        // Calculate expected values
+        decimal expectedBasePrice = (offer1!.Price * quantity1) + (offer2!.Price * quantity2);
+        decimal expectedDiscountedPrice = (offer1.Price * quantity1 * (decimal)offer1.Discount) +
+                                          (offer2.Price * quantity2 * (decimal)offer2.Discount);
+        decimal expectedCouponDiscountedPrice = expectedDiscountedPrice; // Assuming no coupons for simplicity
+        decimal expectedDiscountAmount = expectedBasePrice - expectedDiscountedPrice;
+        decimal expectedCouponDiscountAmount = expectedDiscountedPrice - expectedCouponDiscountedPrice; // Should be 0 if no coupons
+
+        // Assertions
+        Assert.That(orderWithAggregates.ItemCount, Is.EqualTo(2)); // Two distinct items
+        Assert.That(orderWithAggregates.BasePrice, Is.EqualTo(expectedBasePrice));
+        Assert.That(orderWithAggregates.DiscountedPrice, Is.EqualTo(expectedDiscountedPrice));
+        Assert.That(orderWithAggregates.CouponDiscountedPrice, Is.EqualTo(expectedCouponDiscountedPrice));
+        Assert.That(orderWithAggregates.DiscountAmount, Is.EqualTo(expectedDiscountAmount));
+        Assert.That(orderWithAggregates.CouponDiscountAmount, Is.EqualTo(expectedCouponDiscountAmount));
+        Assert.That(orderWithAggregates.Items.Count(), Is.EqualTo(2));
     }
 }
