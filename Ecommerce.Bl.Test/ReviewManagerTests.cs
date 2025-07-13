@@ -110,7 +110,7 @@ public class ReviewManagerTests
         var leftReview = TestContext._reviewManager.LeaveReview(_testReview);
         TestContext._reviewRepository.Flush();
 
-        Assert.IsNotNull(leftReview);
+        Assert.That(leftReview, Is.Not.Null);
         Assert.That(leftReview.ProductId, Is.EqualTo(_testReview.ProductId));
         Assert.That(leftReview.SellerId, Is.EqualTo(_testReview.SellerId));
         Assert.That(leftReview.ReviewerId, Is.EqualTo(_testReview.ReviewerId));
@@ -132,7 +132,7 @@ public class ReviewManagerTests
             r.SellerId == _testReview.SellerId &&
             r.ReviewerId == _testReview.ReviewerId);
 
-        Assert.IsNotNull(updatedReview);
+        Assert.That(updatedReview, Is.Not.Null);
         Assert.That(updatedReview.Rating, Is.EqualTo(4));
         Assert.That(updatedReview.Comment, Is.EqualTo("It's good, but not perfect."));
     }
@@ -145,16 +145,16 @@ public class ReviewManagerTests
 
         var comment = new ReviewComment
         {
-            ProductId = _testReview.ProductId,
-            SellerId = _testReview.SellerId,
-            ReviewerId = _testReview.ReviewerId,
+            ProductId = (uint)_testReview.ProductId,
+            SellerId = (uint)_testReview.SellerId,
+            ReviewerId = (uint)_testReview.ReviewerId,
             Comment = "I agree with this review!"
         };
 
         var addedComment = TestContext._reviewManager.CommentReview(comment);
         TestContext._reviewCommentRepository.Flush();
 
-        Assert.IsNotNull(addedComment);
+        Assert.That(addedComment, Is.Not.Null);
         Assert.That(addedComment.ProductId, Is.EqualTo(comment.ProductId));
         Assert.That(addedComment.CommenterId, Is.EqualTo(ContextHolder.Session.Id)); // CommenterId is Session.Id
         Assert.That(addedComment.Comment, Is.EqualTo(comment.Comment));
@@ -172,7 +172,7 @@ public class ReviewManagerTests
             c.ReviewerId == _testReview.ReviewerId &&
             c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
 
-        Assert.IsNotNull(commentToUpdate);
+        Assert.That(commentToUpdate, Is.Not.Null);
         commentToUpdate.Comment = "Actually, I strongly agree!";
         TestContext._reviewManager.UpdateComment(commentToUpdate);
         TestContext._reviewCommentRepository.Flush();
@@ -183,7 +183,7 @@ public class ReviewManagerTests
             c.ReviewerId == commentToUpdate.ReviewerId &&
             c.CommenterId == commentToUpdate.CommenterId);
 
-        Assert.IsNotNull(updatedComment);
+        Assert.That(updatedComment, Is.Not.Null);
         Assert.That(updatedComment.Comment, Is.EqualTo("Actually, I strongly agree!"));
     }
 
@@ -195,16 +195,16 @@ public class ReviewManagerTests
 
         var vote = new ReviewVote
         {
-            ProductId = _testReview.ProductId,
-            SellerId = _testReview.SellerId,
-            ReviewerId = _testReview.ReviewerId,
+            ProductId = (uint)_testReview.ProductId,
+            SellerId = (uint)_testReview.SellerId,
+            ReviewerId = (uint)_testReview.ReviewerId,
             Up = true
         };
 
         var addedVote = TestContext._reviewManager.Vote(vote);
         TestContext._reviewVoteRepository.Flush();
 
-        Assert.IsNotNull(addedVote);
+        Assert.That(addedVote, Is.Not.Null);
         Assert.That(addedVote.VoterId, Is.EqualTo(ContextHolder.Session.Id)); // VoterId is Session.Id
         Assert.That(addedVote.Up, Is.True);
     }
@@ -231,16 +231,16 @@ public class ReviewManagerTests
 
         var vote = new ReviewVote
         {
-            ProductId = _testReview.ProductId,
-            SellerId = _testReview.SellerId,
-            ReviewerId = _testReview.ReviewerId,
+            ProductId = (uint)_testReview.ProductId,
+            SellerId = (uint)_testReview.SellerId,
+            ReviewerId = (uint)_testReview.ReviewerId,
             Up = false
         };
 
         var addedVote = TestContext._reviewManager.Vote(vote);
         TestContext._reviewVoteRepository.Flush();
 
-        Assert.IsNotNull(addedVote);
+        Assert.That(addedVote, Is.Not.Null);
         Assert.That(addedVote.VoterId, Is.EqualTo(ContextHolder.Session.Id)); // VoterId is Session.Id
         Assert.That(addedVote.Up, Is.False);
     }
@@ -255,7 +255,7 @@ public class ReviewManagerTests
         var reviews = TestContext._reviewManager.GetReviewsWithAggregates(
             (int)_testReview.ProductId, (int)_testReview.SellerId, true);
 
-        Assert.IsNotNull(reviews);
+        Assert.That(reviews, Is.Not.Null);
         Assert.That(reviews.Count, Is.EqualTo(1));
 
         var reviewWithAggregates = reviews.First();
@@ -279,7 +279,7 @@ public class ReviewManagerTests
         Assert.That(reviewWithAggregates.Comments.Count(), Is.EqualTo(1));
         var commentWithAggregates = reviewWithAggregates.Comments.First();
 
-        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(TestContext._commenterUser.SessionId)); // CommenterId is Session.Id
+        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterUser.SessionId)); // CommenterId is Session.Id
         Assert.That(commentWithAggregates.Comment, Is.EqualTo("Actually, I strongly agree!"));
         Assert.That(commentWithAggregates.OwnVote, Is.EqualTo(0)); // _voterUser's session did not vote on this comment
         Assert.That(commentWithAggregates.Votes, Is.EqualTo(0)); // No votes on comment yet
@@ -293,9 +293,9 @@ public class ReviewManagerTests
 
         var vote = new ReviewVote
         {
-            ProductId = _testReview.ProductId,
-            SellerId = _testReview.SellerId,
-            ReviewerId = _testReview.ReviewerId,
+            ProductId = (uint)_testReview.ProductId,
+            SellerId = (uint)_testReview.SellerId,
+            ReviewerId = (uint)_testReview.ReviewerId,
             Up = true // This is the vote we want to remove
         };
 
@@ -322,7 +322,7 @@ public class ReviewManagerTests
             c.ReviewerId == _testReview.ReviewerId &&
             c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
 
-        Assert.IsNotNull(commentToDelete);
+        Assert.That(commentToDelete, Is.Not.Null);
         TestContext._reviewManager.DeleteComment(commentToDelete);
         TestContext._reviewCommentRepository.Flush();
 
@@ -372,7 +372,7 @@ public class ReviewManagerTests
         var reviews = TestContext._reviewManager.GetReviewsWithAggregates(
             (int)censoredReview.ProductId, (int)censoredReview.SellerId, false);
 
-        Assert.IsNotNull(reviews);
+        Assert.That(reviews, Is.Not.Null);
         Assert.That(reviews.Count, Is.EqualTo(1));
         var reviewWithAggregates = reviews.First();
 
