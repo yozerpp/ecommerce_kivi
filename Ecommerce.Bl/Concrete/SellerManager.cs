@@ -105,7 +105,8 @@ public class SellerManager : ISellerManager
         new SellerWithAggregates{
             ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
             ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
-// need to implement a OrderItem for this SaleCount =
+            SaleCount = (uint)s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => oi.Quantity),
+            ProductCount = (uint)s.Offers.Count(),
             Id = s.Id,
             ShopAddress = s.ShopAddress,
             ShopName = s.ShopName,
@@ -118,7 +119,8 @@ public class SellerManager : ISellerManager
         new SellerWithAggregates{
             ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
             ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
-// need to implement a OrderItem for this SaleCount =
+            SaleCount = (uint)s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => oi.Quantity),
+            ProductCount = (uint)s.Offers.Count(),
             Id = s.Id,
             ShopAddress = s.ShopAddress,
             ShopName = s.ShopName,
