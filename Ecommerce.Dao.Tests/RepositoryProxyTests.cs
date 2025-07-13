@@ -6,7 +6,7 @@ using NUnit.Framework.Legacy;
 
 namespace Ecommerce.Dao.Tests;
 
-public class RepositoryTests
+public class RepositoryProxyTests
 {
     private IRepository<Cart> _repo1, _repo2;
 

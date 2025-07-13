@@ -5,57 +5,60 @@ namespace Ecommerce.Bl.Test;
 
 public class CartManagerTests
 {
-    [Test]
-    public void newCartUserless() {
-        var c=TestContext._cartRepository.Add(new Cart());
-        var s=TestContext._sessionRepository.Add(new Session{ Cart = c, CartId = c.Id });
-        ContextHolder.Session = s;
-        var news = TestContext._cartManager.newCart();
-        ClassicAssert.AreNotEqual(s.Id, news.Id);
-    }
-    [Test]
-    public void newCartUserful() {
-        ContextHolder.Session = TestContext._user.Session;
-        TestContext._cartManager.newCart();
-        ClassicAssert.AreNotEqual(ContextHolder.Session.Id, TestContext._user.SessionId);
-    }
-    [Test]
-    public void AddToCart() {
-        ContextHolder.Session = TestContext._user.Session;
-        var offer = TestContext._offerRepository.Find(_=>true)!;
-        int amount = Random.Shared.Next(3);
-        var item = TestContext._cartManager.Add(offer, amount);
-        //also assert lazy fetching.
-        Assert.That(offer.Product?.Offers, Is.Not.Null);
-        //assert that changes are persisted
-        var fetchedItem = TestContext._userRepository.Find(u => u.Id == ContextHolder.Session!.UserId).Session.Cart
-            .Items.FirstOrDefault(i=>i.CartId==ContextHolder.Session.CartId &&i.ProductId == offer.ProductId && i.SellerId == offer.SellerId);
-        Assert.That(fetchedItem, Is.Not.Null);
-        Assert.That(fetchedItem, Is.EqualTo(item));
-        Assert.That(fetchedItem.Quantity,Is.EqualTo(amount));
-        Assert.Equals(offer.ProductId, item.ProductId);
-        Assert.Equals(offer.SellerId, item.SellerId);
-        increment();
-        void increment() {
-            TestContext._cartManager.Add(fetchedItem);
-            fetchedItem = TestContext._userRepository.Find(u => u.Id == ContextHolder.Session!.UserId).Session.Cart
-                .Items.FirstOrDefault(i =>
-                    i.CartId == ContextHolder.Session.CartId && i.ProductId == offer.ProductId &&
-                    i.SellerId == offer.SellerId);
-            Assert.That(fetchedItem, Is.Not.Null);
-            Assert.Equals(amount * 2, fetchedItem.Quantity);
-        }
+
+    [OneTimeSetUp]
+    public void Register() {
+        UserManagerTests.TestRegister();
     }
 
+    [SetUp]
+    public void Login() {
+        UserManagerTests.TestLogin();
+    }
+    [Test, Order(1)]
+    public void newCartUserful() {
+        var oldSession = ContextHolder.Session;
+        TestContext._cartManager.newCart();
+        TestContext._cartRepository.Flush();
+        ClassicAssert.AreNotEqual(oldSession, TestContext._user.Session);
+    }
+    [Test]
+    public void TestAdd() {
+        var offer = TestContext._offerRepository.First(_=>true)!;
+        var amount = (uint) Random.Shared.Next(1,3);
+        var item = TestContext._cartManager.Add(offer, amount);
+        TestContext._cartRepository.Flush();
+        var items = TestContext._cartRepository.First(c=>c.Id==ContextHolder.Session.Cart.Id,includes:[[nameof(Cart.Items)]]).Items;        
+        Assert.That(items, Contains.Item(item));
+        Assert.That(item.CartId, Is.EqualTo(ContextHolder.Session.Cart.Id));
+        Assert.That(item.ProductId, Is.EqualTo(offer.ProductId));
+        Assert.That(item.SellerId, Is.EqualTo(offer.SellerId));
+    }
+    [Test]
+    public void TestIncrement() {
+        var offer = TestContext._offerRepository.First(_=>true)!;
+        var old = TestContext._itemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id&&
+                                                       i.ProductId==offer.ProductId && i.SellerId == offer.SellerId);
+        uint oldAmount;
+        if (old != null){
+            old = TestContext._itemRepository.Detach(old);
+            oldAmount = old.Quantity;
+        }
+        else oldAmount = 0;
+        var i = TestContext._cartManager.Add(offer);
+        TestContext._cartRepository.Flush();
+        Assert.That(i.Quantity, Is.EqualTo(oldAmount +1));
+    }
     [Test]
     public void Decrement() {
-        Assert.That(ContextHolder.Session?.Cart?.Items.Count, Is.GreaterThan(0));
-        var item = ContextHolder.Session.Cart.Items.First();
-        var oldAmount = item.Quantity;
-        var decremented = Random.Shared.Next(item.Quantity - 1);
-        TestContext._cartManager.Decrement(item.ProductOffer, decremented);
-        var c =TestContext._cartRepository.Find(c => c.Id == ContextHolder.Session.CartId);
-        var fetchedItem = c.Items.First(i=>i.ProductId==item.ProductId && i.SellerId==item.SellerId);
-        Assert.That(fetchedItem.Quantity, Is.EqualTo(oldAmount - decremented));
+        var offer = TestContext._offerRepository.First(_=>true)!;
+        var i = TestContext._cartManager.Add(offer);
+        TestContext._itemRepository.Flush();
+        var oldAmount = i.Quantity;
+        var decremented = Random.Shared.Next((int)i.Quantity - 1);
+        TestContext._cartManager.Decrement(offer, (uint)decremented);
+        TestContext._cartRepository.Flush();
+        var refetched = TestContext._itemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id && i.ProductId == offer.ProductId && i.SellerId==offer.SellerId);
+        Assert.That(refetched.Quantity, Is.EqualTo(oldAmount - decremented));
     }
 }

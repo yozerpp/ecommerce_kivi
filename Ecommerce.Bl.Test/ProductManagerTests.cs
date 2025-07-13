@@ -1,18 +1,16 @@
 ﻿using Ecommerce.Bl.Concrete;
-using Ecommerce.Dao.Iface;
 using Ecommerce.Entity;
 using Moq;
-using NUnit.Framework;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using static Ecommerce.Bl.Concrete.SellerManager;
+using Ecommerce.Bl.Interface;
+using Ecommerce.Dao;
+using Ecommerce.Dao.Spi;
 
 namespace Ecommerce.Bl.Test;
 
 public class ProductManagerTests
 {
-    private ProductManager<Product> _productManager;
+    private ProductManager _productManager;
     private Mock<IRepository<Product>> _mockProductRepository;
     private List<Product> _testProducts;
 
@@ -20,7 +18,7 @@ public class ProductManagerTests
     public void Setup()
     {
         _mockProductRepository = new Mock<IRepository<Product>>();
-        _productManager = new ProductManager<Product>(_mockProductRepository.Object);
+        _productManager = new ProductManager(_mockProductRepository.Object);
         // Create test products with various properties
         _testProducts = new List<Product>
         {
@@ -38,8 +36,8 @@ public class ProductManagerTests
             It.IsAny<Expression<Func<Product, bool>>>(), 
             It.IsAny<int>(), 
             It.IsAny<int>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>()))
+            It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
+            It.IsAny<string[][]>()))
             .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
                 _testProducts.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
     }
@@ -56,7 +54,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(1));
@@ -75,7 +73,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Apple iPhone and Apple iPad
@@ -93,7 +91,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Dell Laptop and HP Printer (CategoryId 3 and 4)
@@ -111,7 +109,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPad, Dell Laptop, HP Printer (CategoryId 2, 3, 4)
@@ -129,7 +127,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
@@ -147,7 +145,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
@@ -165,7 +163,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => _productManager.Search(predicates, ordering));
+        Assert.Throws<ArgumentException>(() => _productManager.SearchWithAggregates(predicates, ordering));
     }
 
     [Test]
@@ -184,16 +182,16 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
-            It.IsAny<Expression<Func<Product, bool>>>(), 
-            It.IsAny<int>(), 
-            It.IsAny<int>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>()))
+                It.IsAny<Expression<Func<Product, bool>>>(), 
+                It.IsAny<int>(), 
+                It.IsAny<int>(), 
+                It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
+                It.IsAny<string[][]>()))
             .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
                 productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // CategoryId 0 is not greater than 100
@@ -212,7 +210,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Apple iPhone and Apple iPad match both conditions
@@ -233,7 +231,7 @@ public class ProductManagerTests
         };
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(5)); // All products should be returned
@@ -251,7 +249,7 @@ public class ProductManagerTests
         int pageSize = 2;
 
         // Act
-        var result = _productManager.Search(predicates, ordering, page, pageSize);
+        var result = _productManager.SearchWithAggregates(predicates, ordering, page:page,pageSize: pageSize);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Should return 2 products for page 1 with pageSize 2
@@ -266,7 +264,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(5)); // All test products should be returned
@@ -288,16 +286,16 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
-            It.IsAny<Expression<Func<Product, bool>>>(), 
-            It.IsAny<int>(), 
-            It.IsAny<int>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>()))
+                It.IsAny<Expression<Func<Product, bool>>>(), 
+                It.IsAny<int>(), 
+                It.IsAny<int>(), 
+                It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
+                It.IsAny<string[][]>()))
             .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
                 productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // Null values should not match Like operator
@@ -319,16 +317,16 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         _mockProductRepository.Setup(r => r.Where(
-            It.IsAny<Expression<Func<Product, bool>>>(), 
-            It.IsAny<int>(), 
-            It.IsAny<int>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>(), 
-            It.IsAny<Expression<Func<Product, object>>[]>()))
+                It.IsAny<Expression<Func<Product, bool>>>(), 
+                It.IsAny<int>(), 
+                It.IsAny<int>(), 
+                It.IsAny<(Expression<Func<Product, object>>,bool)[]>(), 
+                It.IsAny<string[][]>()))
             .Returns((Expression<Func<Product, bool>> predicate, int offset, int limit, Expression<Func<Product, object>>[] orderBy, Expression<Func<Product, object>>[] includes) =>
                 productsWithNull.Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.Search(predicates, ordering);
+        var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // Null values should not equal non-null values
