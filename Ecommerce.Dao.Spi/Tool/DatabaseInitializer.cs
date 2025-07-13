@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection;
 using Bogus;
 using Ecommerce.Entity.Common;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Address = Ecommerce.Entity.Common.Address;
 using Enum = System.Enum;
 
-namespace Ecommerce.Dao;
+namespace Ecommerce.Dao.Spi.Tool;
 
 public class DatabaseInitializer
 {
@@ -48,7 +49,7 @@ public class DatabaseInitializer
         return stack.Reverse().ToArray();
         void SortRecursive(IEntityType entityType) {
             visited.Add(entityType.Name);
-            foreach (var navigation in _requiredNavigations[entityType]){
+            foreach (var navigation in RequiredNavsInHierarchy(entityType)){
                 SortRecursive(navigation.TargetEntityType);
             }
             stack.Push(entityType);
@@ -146,14 +147,19 @@ public class DatabaseInitializer
             }
             _compositeKeyStore[enttiyType][keyNavs][entity] = keyValues;
         }
-        foreach (var navigation in _requiredNavigations[enttiyType])
+
+        var navsInHierarchy = RequiredNavsInHierarchy(enttiyType);
+        foreach (var navigation in navsInHierarchy)
         {
             from = null;
             if (navigation.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle??false)
             {
                 from = entity;
             }
-            navigation.PropertyInfo.SetValue(entity,RandomizeAndSave(navigation.TargetEntityType,null,navigation, from));
+
+            var val = RandomizeAndSave(navigation.TargetEntityType, null, navigation, from);
+            _uniqueStore[navigation.TargetEntityType][navigation].Add(val);
+            navigation.PropertyInfo.SetValue(entity,val);
         }
 
         try{
@@ -161,7 +167,7 @@ public class DatabaseInitializer
             _context.SaveChanges();
         }
         catch (Exception e){
-            Console.WriteLine(e);
+            Debug.WriteLine(e);
         }
         lock (_dictLock)
         {
@@ -169,8 +175,24 @@ public class DatabaseInitializer
         }
         return entity;
     }
-    private void InitContainers() {
 
+    private ISet<INavigation> RequiredNavsInHierarchy(IEntityType enttiyType) {
+        ISet<INavigation> navsInHierarchy = new HashSet<INavigation>();
+        IEntityType? tp=enttiyType;
+        while (tp!=null){
+            foreach (var nav1 in _requiredNavigations[tp]){
+                navsInHierarchy.Add(nav1);
+                
+            }
+
+            tp = tp.BaseType;
+        }
+
+        return navsInHierarchy;
+    }
+
+    private void InitContainers() {
+        
         foreach (var entityType in _entityTypes){
             _requiredNavigations[entityType] = new HashSet<INavigation>();
             _nonRequiredNavigations[entityType] = new HashSet<INavigation>();
@@ -192,9 +214,9 @@ public class DatabaseInitializer
                 _compositeKeys[entityType].Add(keyNavs);
                 _compositeKeyStore[entityType][keyNavs] = new Dictionary<object, EqualityComparableSet<object>>();
             }
-            foreach (var navigation in entityType.GetNavigationsInHierarchy().Where(n=>n.IsOnDependent&&n.DeclaringEntityType.IsAssignableFrom(entityType) &&
+            foreach (var navigation in entityType.GetNavigations().Where(n=>n.IsOnDependent&&n.DeclaringEntityType.IsAssignableFrom(entityType) &&
                          !_compositeKeys[entityType].Any(n1=>n1.Contains(n)))){
-                _uniqueStore[entityType][navigation] = new HashSet<object>();
+                _uniqueStore[navigation.TargetEntityType][navigation] = new HashSet<object>();
                 if (navigation.ForeignKey.IsRequired) 
                     _requiredNavigations[entityType].Add(navigation);
                 else _nonRequiredNavigations[entityType].Add(navigation);
@@ -226,14 +248,13 @@ public class DatabaseInitializer
         lock (_dictLock){
             var s = (_saved.GetValueOrDefault(targetType) ?? (_saved[targetType] = new HashSet<object>())).First(s=>!(_uniqueStore[targetType].GetValueOrDefault(nav)??
                 (_uniqueStore[targetType][nav] = new HashSet<object>())).Contains(s));
-            _uniqueStore[targetType][nav].Add(s);
             return s;
         }
     }
     private void RandomizeNavigationProperties(bool required) {
         foreach (var typeAndEntity in _saved){
             var entityType = typeAndEntity.Key;
-            var navs = entityType.GetNavigationsInHierarchy().Where(n =>
+            var navs = entityType.GetNavigations().Where(n =>
                 n.IsOnDependent && (n.DeclaringEntityType == entityType ||
                                     n.DeclaringEntityType.IsAssignableFrom(entityType)) && n.ForeignKey.IsRequired == required).ToArray();
             if (navs.Length==0) continue;
@@ -255,10 +276,13 @@ public class DatabaseInitializer
 
     public static object RandomizeValueProperties(IEntityType entityType) {
         var entity = entityType.ClrType.GetConstructor([])!.Invoke(null);
-        foreach (var prop in entityType.GetPropertiesInHierarchy().Where(p=> !p.IsShadowProperty() && !p.IsPrimaryKey() && !p.IsForeignKey()&&
-            (p.DeclaringType.Equals(entityType) || !entityType.IsAssignableFrom(p.DeclaringType))))
+        foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty() && !p.IsPrimaryKey() && !p.IsForeignKey()&&
+            (p.DeclaringType.Equals(entityType) || !entityType.IsAssignableFrom(p.DeclaringType))) )
         {
             var property = prop.PropertyInfo!;
+            if (property.GetCustomAttribute<GeneratedAttribute>()!=null){
+                continue;
+            }
             object? value = null;
             var propType = property.PropertyType;
             property.SetValue(entity, RandomizeValue(propType, property, value, prop));
@@ -266,8 +290,8 @@ public class DatabaseInitializer
 
         foreach (var complexProperty in entityType.GetComplexProperties()){
             var prop = complexProperty.PropertyInfo!;
-            object? value = null;
             var propType = prop.PropertyType;
+            object? value = null;
             prop.SetValue(entity, RandomizeValue(propType,prop, value, complexProperty));
         }
         return entity;
@@ -282,7 +306,8 @@ public class DatabaseInitializer
                 else{
                     int max =  (prop is IProperty ip?ip.GetMaxLength():(property.GetCustomAttribute<MaxLengthAttribute>()?.Length))??100;
                     int min = property.GetCustomAttribute<MinLengthAttribute>()?.Length ?? 0;
-                    value = new Bogus.Randomizer().Words(max / 5).Remove(new Bogus.Randomizer().Number(min,max));
+                    value = new Bogus.Randomizer().Words(max / 5);
+                    value= ((string)value).Remove(new Bogus.Randomizer().Number(min,Math.Min(max, ((string)value).Length)));
                 }
             } else if (property.GetCustomAttribute<ImageAttribute>()!=null){
                 var bytes = FetchImage();
@@ -296,8 +321,8 @@ public class DatabaseInitializer
                 } else value = new Faker().Phone.PhoneNumber();
             } else if(typeof(Address).IsAssignableFrom(propType)){
                 value = new Address{
-                    City = new Faker().Address.City(), neighborhood = new Faker().Address.County(),
-                    state = new Faker().Address.State(), Street = new Faker().Address.StreetName(),
+                    City = new Faker().Address.City(), Neighborhood = new Faker().Address.County(),
+                    State = new Faker().Address.State(), Street = new Faker().Address.StreetName(),
                     ZipCode = new Faker().Address.ZipCode()
                 };
             } else if (propType.IsEnum){
@@ -315,6 +340,12 @@ public class DatabaseInitializer
                     case TypeCode.Int16:
                         value = new Randomizer().Number(range?.Minimum as int? ?? Int16.MinValue,
                             range?.Maximum as int? ?? Int16.MaxValue);
+                        break;
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                    case TypeCode.UInt64:
+                        value =      new Randomizer().UInt(range?.Minimum as ushort? ?? UInt16.MinValue,
+                            range?.Maximum as ushort? ?? UInt16.MaxValue);       
                         break;
                     case TypeCode.Double:
                         value = new Randomizer().Double(range?.Minimum as double? ?? Double.MinValue,

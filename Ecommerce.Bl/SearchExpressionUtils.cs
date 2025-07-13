@@ -8,20 +8,20 @@ namespace Ecommerce.Bl;
 public static class SearchExpressionUtils
 {
     public static void Build<T>(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering,
-        out Expression<Func<T, bool>> predicateExpr, out ICollection<Expression<Func<T, object>>> orderByExpressions) {
+        out Expression<Func<T, bool>> predicateExpr, out ICollection<(Expression<Func<T, object>>,bool)> orderByExpressions) {
         var param = Expression.Parameter(typeof(T), "t");
         predicateExpr = PredicateExpression<T>(predicates, param);
         orderByExpressions = OrderByExpression<T>(ordering, param);
     }
-    public static ICollection<Expression<Func<T, object>>> OrderByExpression<T>(ICollection<SearchOrder> orders,
+    public static ICollection<(Expression<Func<T, object>>,bool)> OrderByExpression<T>(ICollection<SearchOrder> orders,
         ParameterExpression parameter) {
-        var ret = new List<Expression<Func<T, object>>>();
+        var ret = new List<(Expression<Func<T, object>>,bool)>();
         foreach (var searchOrder in orders){
             var property = typeof(Product).GetProperty(searchOrder.PropName);
             if (property == null) continue;
             var left = Expression.Property(parameter, property);
             Expression<Func<T, object>> orderByExpression = Expression.Lambda<Func<T, object>>(Expression.Convert(left, typeof(object)), parameter);
-            ret.Add(orderByExpression);
+            ret.Add((orderByExpression, searchOrder.Ascending));
         }
 
         return ret;

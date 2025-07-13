@@ -31,6 +31,7 @@ public class DefaultDbContext : DbContext
         // sellerBuilder.HasKey(s => s.Id);
         sellerBuilder.Property(s => s.ShopEmail).IsRequired();
         sellerBuilder.HasIndex(s => s.ShopEmail).IsUnique();
+        sellerBuilder.Property<string>(s => s.ShopName).HasMaxLength(ShopNameMaxLength);
         sellerBuilder.HasOne<User>().WithOne().HasForeignKey<Seller>(s => s.Id).HasPrincipalKey<User>(u=>u.Id).OnDelete(DeleteBehavior.Cascade);
         sellerBuilder.ComplexProperty<Address>(s => s.ShopAddress, nameof(Seller.ShopAddress)).IsRequired();
         sellerBuilder.ComplexProperty<PhoneNumber>(s => s.ShopPhoneNumber).IsRequired();
@@ -46,6 +47,9 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey(nameof(ProductOffer.ProductId), nameof(ProductOffer.SellerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
         productOfferBuilder.HasMany<OrderItem>(p=>p.BoughtItems).WithOne(o=>o.ProductOffer).HasForeignKey(nameof(OrderItem.ProductId), nameof(OrderItem.SellerId))
             .HasPrincipalKey(nameof(ProductOffer.ProductId), nameof(ProductOffer.SellerId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        productOfferBuilder.Property<float?>(p => p.Discount).HasPrecision(2, 2).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired(false).HasDefaultValue(1f);
+        productOfferBuilder.Property<decimal>(p => p.Price).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired();
+        productOfferBuilder.Property<uint>(p => p.Stock).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired();
         var cartItemBuilder = modelBuilder.Entity<CartItem>();
         cartItemBuilder.HasKey(nameof(CartItem.SellerId), nameof(CartItem.ProductId), nameof(CartItem.CartId));
         cartItemBuilder.HasOne<Cart>(ci => ci.Cart).WithMany(c => c.Items).HasForeignKey(ci=>ci.CartId).HasPrincipalKey(c=>c.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
@@ -53,6 +57,7 @@ public class DefaultDbContext : DbContext
             .HasForeignKey(nameof(CartItem.ProductId), nameof(CartItem.SellerId)).HasPrincipalKey(nameof(ProductOffer.SellerId), nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
         cartItemBuilder.HasOne<Coupon>(ci => ci.Coupon).WithMany().HasForeignKey(ci => ci.CouponId).HasPrincipalKey(c => c.Id)
             .IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        cartItemBuilder.Property<uint>(ci => ci.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired();
         var sessionBuilder = modelBuilder.Entity<Session>();
         sessionBuilder.HasKey(s => s.Id);
         sessionBuilder.Property(s => s.Id).ValueGeneratedOnAdd();
@@ -93,20 +98,12 @@ public class DefaultDbContext : DbContext
         categoryBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
         categoryBuilder.HasOne<Category>(c => c.Parent).WithMany(c => c.Children).HasForeignKey(c => c.ParentId)
             .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
-        var reviewBuilder = modelBuilder.Entity<ProductReview>();
-        reviewBuilder.HasKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId));
-        reviewBuilder.HasMany<ReviewComment>(r => r.Comments).WithOne(c => c.Review).HasForeignKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.RaterId))
-            .HasPrincipalKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
-        reviewBuilder.HasOne<ProductOffer>(r=>r.Offer).WithMany(o=>o.Reviews).HasForeignKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId))
-            .HasPrincipalKey(nameof(ProductOffer.ProductId), nameof(ProductOffer.SellerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
-        var commentBuilder = modelBuilder.Entity<ReviewComment>();
-        commentBuilder.HasKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.RaterId), nameof(ReviewComment.CommenterId));
-        commentBuilder.HasOne<ProductReview>(r=>r.Review).WithMany(r=>r.Comments).HasForeignKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.RaterId))
-            .HasPrincipalKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
         var couponBuilder = modelBuilder.Entity<Coupon>();
         couponBuilder.HasKey(c => c.Id);
         couponBuilder.HasOne<Seller>(c => c.Seller).WithMany(s => s.Coupons).HasForeignKey(c => c.SellerId)
             .HasPrincipalKey(s => s.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
+        couponBuilder.Property<string>(c => c.Id).HasMaxLength(ShopNameMaxLength + 3); //extra space for discount amount
+        couponBuilder.Property(c => c.DiscountRate).HasPrecision(2, 2).HasAnnotation(nameof(Annotations.Validation_Positive),true).IsRequired();
         var orderItemBuilder = modelBuilder.Entity<OrderItem>();
         orderItemBuilder.HasKey(nameof(OrderItem.ProductId), nameof(OrderItem.SellerId), nameof(OrderItem.OrderId));
         orderItemBuilder.HasOne<Order>(oi => oi.Order).WithMany(o => o.Items).HasForeignKey(o => o.OrderId)
@@ -114,5 +111,33 @@ public class DefaultDbContext : DbContext
         //This prevents delisting OrderItems.
         orderItemBuilder.HasOne<ProductOffer>(o=>o.ProductOffer).WithMany(of=>of.BoughtItems).HasForeignKey(nameof(OrderItem.ProductId), nameof(OrderItem.SellerId))
             .HasPrincipalKey(nameof(ProductOffer.ProductId), nameof(ProductOffer.SellerId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        orderItemBuilder.Property<uint>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired();
+        var reviewBuilder = modelBuilder.Entity<ProductReview>();
+        reviewBuilder.HasKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId));
+        reviewBuilder.HasMany<ReviewComment>(r => r.Comments).WithOne(c => c.Review).HasForeignKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.ReviewerId))
+            .HasPrincipalKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        reviewBuilder.HasOne<ProductOffer>(r=>r.Offer).WithMany(o=>o.Reviews).HasForeignKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId))
+            .HasPrincipalKey(nameof(ProductOffer.ProductId), nameof(ProductOffer.SellerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        reviewBuilder.HasMany<ReviewVote>(r=>r.Votes).WithOne(r=>r.ProductReview).HasForeignKey(nameof(ReviewVote.ProductId),nameof(ReviewVote.SellerId),nameof(ReviewVote.ReviewerId))
+            .HasPrincipalKey(nameof(ProductReview.ProductId),nameof(ProductReview.SellerId),nameof(ProductReview.ReviewerId)).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+        reviewBuilder.Property<float>(r => r.Rating).HasPrecision(3, 2).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired();
+        var commentBuilder = modelBuilder.Entity<ReviewComment>();
+        commentBuilder.HasKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.ReviewerId), nameof(ReviewComment.CommenterId));
+        commentBuilder.HasOne<ProductReview>(r=>r.Review).WithMany(r=>r.Comments).HasForeignKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.ReviewerId))
+            .HasPrincipalKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        commentBuilder.HasMany<ReviewVote>(r=>r.Votes).WithOne(r=>r.ReviewComment).HasForeignKey(nameof(ReviewVote.ProductId),nameof(ReviewVote.SellerId), nameof(ReviewVote.ReviewerId),nameof(ReviewVote.CommenterId))
+            .HasPrincipalKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.ReviewerId), nameof(ReviewComment.CommenterId)).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+        var voteBuilder = modelBuilder.Entity<ReviewVote>();
+        voteBuilder.HasKey(nameof(ReviewVote.ProductId), nameof(ReviewVote.SellerId), nameof(ReviewVote.ReviewerId), nameof(ReviewVote.VoterId));
+        voteBuilder.HasOne<ProductReview>(r=>r.ProductReview).WithMany(r=>r.Votes).HasForeignKey(nameof(ReviewVote.ProductId), nameof(ReviewVote.SellerId), nameof(ReviewVote.ReviewerId))
+            .HasPrincipalKey(nameof(ProductReview.ProductId), nameof(ProductReview.SellerId), nameof(ProductReview.ReviewerId)).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+        voteBuilder.HasOne<ReviewComment>(r=>r.ReviewComment).WithMany(r=>r.Votes).HasForeignKey(nameof(ReviewVote.ProductId),nameof(ReviewVote.SellerId), nameof(ReviewVote.ReviewerId),nameof(ReviewVote.CommenterId))
+            .HasPrincipalKey(nameof(ReviewComment.ProductId), nameof(ReviewComment.SellerId), nameof(ReviewComment.ReviewerId), nameof(ReviewComment.CommenterId)).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+    }
+    private static readonly int ShopNameMaxLength = 25;
+
+    public enum Annotations
+    {
+        Validation_Positive,
     }
 }
