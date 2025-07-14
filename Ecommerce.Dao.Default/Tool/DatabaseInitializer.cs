@@ -32,7 +32,6 @@ public class DatabaseInitializer
         _entityTypes = context.Model.GetEntityTypes().ToArray();
     }
     public void initialize() {
-        _context.Database.EnsureCreated();
         InitContainers();
         _entityTypes = Sort();
         CreateEntities();
@@ -91,7 +90,7 @@ public class DatabaseInitializer
             _context.Update(entity);
         }
         catch (Exception e){
-            Console.WriteLine(e);
+            Debug.WriteLine(e);
         }
     }
 
@@ -125,8 +124,7 @@ public class DatabaseInitializer
             EqualityComparableSet<object> keyValues = new();
             ICollection<ISet<object>> tried = new List<ISet<object>>();
             var enumerator = keyNavs.GetEnumerator();
-            enumerator.MoveNext();
-            while(true){
+            while(enumerator.MoveNext()){
                 var targetType = enumerator.Current.TargetEntityType;
                 //keyProperty is the id property.
                 var navProperty = enumerator.Current;
@@ -135,16 +133,16 @@ public class DatabaseInitializer
                     val = RetrieveKey(enttiyType, keyNavs, targetType, tried, keyValues.ToArray());
                     if (val == null){
                         tried.Add(keyValues);
+                        enumerator.Dispose();
                         enumerator = keyNavs.GetEnumerator();
-                        enumerator.MoveNext();
                         continue;
                     }
                 }
                 else val = RandomizeAndSave(targetType, keyNavs);
                 keyValues.Add(val);
                 navProperty.PropertyInfo.SetValue(entity, val);
-                if (!enumerator.MoveNext()) break;
             }
+            enumerator.Dispose();
             _compositeKeyStore[enttiyType][keyNavs][entity] = keyValues;
         }
 
@@ -165,13 +163,13 @@ public class DatabaseInitializer
         try{
             entity = _context.Add(entity).Entity;
             _context.SaveChanges();
+            lock (_dictLock)
+            {
+                _saved[enttiyType].Add(entity);
+            }
         }
         catch (Exception e){
             Debug.WriteLine(e);
-        }
-        lock (_dictLock)
-        {
-            _saved[enttiyType].Add(entity);
         }
         return entity;
     }
@@ -207,7 +205,7 @@ public class DatabaseInitializer
                 //don't allow composite keys that are subsets of other composite keys.
                 //navigations associated with this composite key
                 var navs = key.Properties.Select(p => p.GetContainingForeignKeys().ElementAt(0).GetNavigation(true))
-                    .ToHashSet();
+                    .Where(n=>n!=null) .ToHashSet();
                 if (_compositeKeys[entityType].Any(n=>navs.All(n.Contains)))
                     continue;                    
                 var keyNavs = new EqualityComparableSet<INavigation>(navs);
@@ -276,11 +274,12 @@ public class DatabaseInitializer
 
     public static object RandomizeValueProperties(IEntityType entityType) {
         var entity = entityType.ClrType.GetConstructor([])!.Invoke(null);
-        foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty() && !p.IsPrimaryKey() && !p.IsForeignKey()&&
+        foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty()  && !p.IsForeignKey()&&
             (p.DeclaringType.Equals(entityType) || !entityType.IsAssignableFrom(p.DeclaringType))) )
         {
             var property = prop.PropertyInfo!;
-            if (property.GetCustomAttribute<GeneratedAttribute>()!=null){
+            if (prop.ValueGenerated == ValueGenerated.OnAdd ||
+                prop.ValueGenerated == ValueGenerated.OnAddOrUpdate){
                 continue;
             }
             object? value = null;
@@ -296,24 +295,30 @@ public class DatabaseInitializer
         }
         return entity;
         object? RandomizeValue(Type propType, PropertyInfo property, object? value, IPropertyBase prop) {
-            if ( propType== typeof(string)) {
-                if (property.Name.Contains("username"))
-                    value = new Bogus.DataSets.Internet().UserName();
-                else if (property.Name.Contains("name")) 
-                    value = new Bogus.Person().FirstName;
-                else if (property.GetCustomAttribute<EmailAddressAttribute>() != null)
-                    value = new Bogus.Person().Email;
-                else{
-                    int max =  (prop is IProperty ip?ip.GetMaxLength():(property.GetCustomAttribute<MaxLengthAttribute>()?.Length))??100;
-                    int min = property.GetCustomAttribute<MinLengthAttribute>()?.Length ?? 0;
-                    value = new Bogus.Randomizer().Words(max / 5);
-                    value= ((string)value).Remove(new Bogus.Randomizer().Number(min,Math.Min(max, ((string)value).Length)));
-                }
-            } else if (property.GetCustomAttribute<ImageAttribute>()!=null){
+            if (property.GetCustomAttribute<ImageAttribute>()!=null){
                 var bytes = FetchImage();
                 if (typeof(string).IsAssignableFrom(property.PropertyType))
                     value = Convert.ToBase64String(bytes);
                 else if(typeof(byte[]) .IsAssignableFrom(property.PropertyType)) value = bytes;
+            }
+            else if ( propType== typeof(string)) {
+                if (property.Name.Contains("Username", StringComparison.OrdinalIgnoreCase))
+                    value = new Bogus.DataSets.Internet().UserName();
+                else if (property.Name.Contains("Name")) 
+                    value = new Person().FirstName;
+                else if (property.Name.Contains("Email")||property.GetCustomAttribute<EmailAddressAttribute>() != null)
+                    value = new Person().Email;
+                else{
+                    int max =  (prop is IProperty ip?ip.GetMaxLength():(property.GetCustomAttribute<MaxLengthAttribute>()?.Length))??100;
+                    int min = property.GetCustomAttribute<MinLengthAttribute>()?.Length ?? 0;
+                    if(prop is IProperty ip1&& ip1.IsKey())
+                        value = new Randomizer().String2(max, max);
+                    else{
+                        value = new Randomizer().Words(max / 5);
+                        value = ((string)value).Remove(new Randomizer().Number(min,
+                            Math.Min(max, ((string)value).Length)));
+                    }
+                }
             }
             else if (property.GetCustomAttribute<PhoneAttribute>() != null || typeof(PhoneNumber).IsAssignableFrom(propType)) {
                 if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
@@ -332,31 +337,46 @@ public class DatabaseInitializer
                 if (propType.GetCustomAttribute<BirthDate>() != null)
                     value = new Faker().Date.Past(50);
                 else value = new Faker().Date.Recent(60);
-            }else if (propType.IsPrimitive){
-                var range = property.GetCustomAttribute<RangeAttribute>();
+            } 
+            else{
+                var positiveAnnotation =
+                    ((IProperty)prop).FindAnnotation(nameof(DefaultDbContext.Annotations.Validation_Positive));
+                var intMin = Type.GetTypeCode(propType) is TypeCode.UInt16 or TypeCode.UInt32 or TypeCode.UInt64 || positiveAnnotation?.Value is true ? 0 : Int16.MinValue;
+                var intMax = positiveAnnotation?.Value is false? 0 : Int16.MaxValue;
+                var pres = ((IProperty)prop).GetPrecision();
+                var scale = ((IProperty)prop).GetScale();
+                decimal decimalMax;
+                if (pres != null && scale != null && pres >= scale)
+                    decimalMax = (decimal)Math.Pow(10, (int)(pres - scale)) - (decimal)Math.Pow(10, (int)(pres-scale-1));
+                else decimalMax = 9999999999999999.99m; //SQL Server creates decimal(18,2) clumns by default.
+                var decimalMin = intMin==0?0:(-decimalMax + 1000);
                 switch (Type.GetTypeCode(propType)){
                     case TypeCode.Int32:
                     case TypeCode.Int64:
                     case TypeCode.Int16:
-                        value = new Randomizer().Number(range?.Minimum as int? ?? Int16.MinValue,
-                            range?.Maximum as int? ?? Int16.MaxValue);
+                        value = new Randomizer().Number(intMin as int? ?? Int16.MinValue,
+                            intMax as int? ?? Int16.MaxValue);
                         break;
                     case TypeCode.UInt16:
                     case TypeCode.UInt32:
                     case TypeCode.UInt64:
-                        value =      new Randomizer().UInt(range?.Minimum as ushort? ?? UInt16.MinValue,
-                            range?.Maximum as ushort? ?? UInt16.MaxValue);       
+                        value =      new Randomizer().UInt((ushort)intMin,
+                            intMax as ushort? ?? UInt16.MaxValue);       
                         break;
                     case TypeCode.Double:
-                        value = new Randomizer().Double(range?.Minimum as double? ?? Double.MinValue,
-                            range?.Maximum as double? ?? Double.MaxValue);
+                        value = new Randomizer().Double((double)decimalMin,
+                            (double)decimalMax);
                         break;
                     case TypeCode.Boolean:
                         value = new Randomizer().Bool();
                         break;
+                    case TypeCode.Single:
+                        value = new Randomizer().Float((float)decimalMin,
+                            (float)decimalMax);
+                        break;
                     case TypeCode.Decimal:
-                        value = new Randomizer().Decimal(range?.Minimum as decimal? ?? Decimal.MinValue,
-                            range?.Maximum as decimal? ?? Decimal.MaxValue);
+                        value = Decimal.Round(new Randomizer().Decimal(decimalMin,
+                            decimalMax),scale??2);
                         break;
                     case TypeCode.Char:
                         value = new Randomizer().Char();
@@ -367,25 +387,28 @@ public class DatabaseInitializer
                     case TypeCode.SByte:
                         value = new Randomizer().SByte();
                         break;
+                    default:
+                        value = null;
+                        break;
                 }
             }
-            else value = null;
-
             return value;
         }
     }
-    public static string ImagesLocation = Path.Combine(AppContext.BaseDirectory, "Images");
-    public static string[] ImageFiles = Directory.GetFiles(ImagesLocation, "*.jpg", SearchOption.TopDirectoryOnly);
-    public static int _imageCount = ImageFiles.Length;
-    public static readonly int _maxImageCount = 50;
-    public static byte[] FetchImage() {
+
+    private static DirectoryInfo ImagesLocation = Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "Images"));
+    private static FileInfo[] ImageFiles = ImagesLocation.GetFiles( "*.jpg", SearchOption.TopDirectoryOnly);
+    private static int _imageCount = ImageFiles.Length;
+    private static readonly int _maxImageCount = 50;
+
+    private static byte[] FetchImage() {
         if (_imageCount >=_maxImageCount){
-            return File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Images", Random.Shared.Next(_imageCount ).ToString(), ".jpg"));
+            return File.ReadAllBytes(Path.Combine(ImagesLocation.FullName, Random.Shared.Next(_imageCount ) + ".jpg"));
         }
         var res = new HttpClient().GetAsync("https://picsum.photos/200/300").Result;
         MemoryStream ms = new MemoryStream();
         res.Content.CopyTo(ms,null, CancellationToken.None);
-        File.WriteAllBytes(Path.Combine(AppContext.BaseDirectory,"Images", _imageCount + ".jpg"),ms.ToArray());
+        File.WriteAllBytes(Path.Combine(ImagesLocation.FullName, _imageCount + ".jpg"),ms.ToArray());
         _imageCount++;
         return ms.ToArray();
     }
@@ -401,6 +424,7 @@ public class DatabaseInitializer
         public EqualityComparableSet(ICollection<T> collection) : base(collection) {
         }
         public bool Equals(IEnumerable<T>? other) {
+            if (other is null) return false;
             return this.SequenceEqual(other);
         }
         public override bool Equals(object? obj) {
