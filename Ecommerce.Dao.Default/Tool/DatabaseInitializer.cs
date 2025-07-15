@@ -24,20 +24,21 @@ public class DatabaseInitializer
     private readonly Dictionary<IEntityType,ISet<INavigation>> _requiredNavigations = new();
     private readonly Dictionary<IEntityType, ISet<EqualityComparableSet<INavigation>>> _compositeKeys = new();
     private ICollection<IEntityType> _entityTypes;
+    private readonly CompositeRandomizer _compositeRandomizer;
     //
     public DatabaseInitializer(DbContext context, Dictionary<Type, Int32?> typeCounts, Int32 defaultCount = 100) {
         this._context = context;
         this._defaultCount = defaultCount;
         this._typeCounts = typeCounts;
         _entityTypes = context.Model.GetEntityTypes().ToArray();
+        InitContainers();
+        _compositeRandomizer = new CompositeRandomizer(_saved);
     }
     public void initialize() {
-        InitContainers();
         _entityTypes = Sort();
         CreateEntities();
         PopulateNonRequiredRelations();
     }
-
     private ICollection<IEntityType> Sort() {
         var stack = new Stack<IEntityType>(_entityTypes.Count());
         var visited = new HashSet<string>(_entityTypes.Count());
@@ -45,16 +46,18 @@ public class DatabaseInitializer
             if (visited.Contains(entityType.Name)) continue;
             SortRecursive(entityType);
         }
+
         return stack.Reverse().ToArray();
         void SortRecursive(IEntityType entityType) {
+            var keys = _compositeRandomizer.GetNavigations(entityType);
+            keys.AddRange(RequiredNavsInHierarchy(entityType));
             visited.Add(entityType.Name);
-            foreach (var navigation in RequiredNavsInHierarchy(entityType)){
+            foreach (var navigation in keys){
                 SortRecursive(navigation.TargetEntityType);
             }
             stack.Push(entityType);
         }
     }
-    
     private void CreateEntities() {
         foreach (var type in _entityTypes){
             while( !IsFull(type))
@@ -94,17 +97,8 @@ public class DatabaseInitializer
         }
     }
 
-    private object? RetrieveKey(IEntityType entityType, EqualityComparableSet<INavigation> key, IEntityType targetType, ICollection<ISet<object>> prevTried, params object[] others) {
-         return _saved[targetType].FirstOrDefault(t => {
-            var s = new EqualityComparableSet<object>(others);
-            s.Add(t);
-            return !_compositeKeyStore[entityType][key].ContainsValue(s) &&
-                   !prevTried.Any(s1=>s1.Contains(t));
-        });
-    }
-    private object RandomizeAndSave(IEntityType enttiyType, EqualityComparableSet<INavigation>? kkey = null, INavigation? nav = null, object? from =null)
+    private object RandomizeAndSave(IEntityType enttiyType, INavigation? nav = null, object? from =null)
     {
-        if (kkey==null) // do not retrieve composite Keys from here, they are retrieved with RetrieveKey.
         lock (_dictLock)
         {
             if ( IsFull(enttiyType))
@@ -120,32 +114,11 @@ public class DatabaseInitializer
             }
         }
         var entity = RandomizeValueProperties(enttiyType);
-        foreach (var keyNavs in _compositeKeys[enttiyType]){
-            EqualityComparableSet<object> keyValues = new();
-            ICollection<ISet<object>> tried = new List<ISet<object>>();
-            var enumerator = keyNavs.GetEnumerator();
-            while(enumerator.MoveNext()){
-                var targetType = enumerator.Current.TargetEntityType;
-                //keyProperty is the id property.
-                var navProperty = enumerator.Current;
-                object? val;
-                if (IsFull(targetType)){
-                    val = RetrieveKey(enttiyType, keyNavs, targetType, tried, keyValues.ToArray());
-                    if (val == null){
-                        tried.Add(keyValues);
-                        enumerator.Dispose();
-                        enumerator = keyNavs.GetEnumerator();
-                        continue;
-                    }
-                }
-                else val = RandomizeAndSave(targetType, keyNavs);
-                keyValues.Add(val);
-                navProperty.PropertyInfo.SetValue(entity, val);
+        foreach (var compositeKey in _compositeRandomizer.GetCompositeKeys(enttiyType)){
+            foreach (var navAndKey in compositeKey.Item2){
+                navAndKey.Item1.PropertyInfo.SetValue(entity,navAndKey.Item2);
             }
-            enumerator.Dispose();
-            _compositeKeyStore[enttiyType][keyNavs][entity] = keyValues;
         }
-
         var navsInHierarchy = RequiredNavsInHierarchy(enttiyType);
         foreach (var navigation in navsInHierarchy)
         {
@@ -155,7 +128,7 @@ public class DatabaseInitializer
                 from = entity;
             }
 
-            var val = RandomizeAndSave(navigation.TargetEntityType, null, navigation, from);
+            var val = RandomizeAndSave(navigation.TargetEntityType, navigation, from);
             _uniqueStore[navigation.TargetEntityType][navigation].Add(val);
             navigation.PropertyInfo.SetValue(entity,val);
         }
@@ -163,13 +136,12 @@ public class DatabaseInitializer
         try{
             entity = _context.Add(entity).Entity;
             _context.SaveChanges();
-            lock (_dictLock)
-            {
-                _saved[enttiyType].Add(entity);
-            }
         }
         catch (Exception e){
             Debug.WriteLine(e);
+        }
+        lock (_dictLock){
+            _saved[enttiyType].Add(entity);
         }
         return entity;
     }
@@ -222,11 +194,6 @@ public class DatabaseInitializer
         }
     }
 
-    private void SaveToDict(IEntityType entityType, object entity) {
-        lock (_dictLock){
-            (_saved.GetValueOrDefault(entityType)?? (_saved[entityType] = new HashSet<object>())).Add(entity);
-        }
-    }
     private object RetrieveRandom(IEntityType type) {
         lock (_dictLock){
             var s = _saved.GetValueOrDefault(type)?? (_saved[type] = new HashSet<object>());
@@ -247,28 +214,6 @@ public class DatabaseInitializer
             var s = (_saved.GetValueOrDefault(targetType) ?? (_saved[targetType] = new HashSet<object>())).First(s=>!(_uniqueStore[targetType].GetValueOrDefault(nav)??
                 (_uniqueStore[targetType][nav] = new HashSet<object>())).Contains(s));
             return s;
-        }
-    }
-    private void RandomizeNavigationProperties(bool required) {
-        foreach (var typeAndEntity in _saved){
-            var entityType = typeAndEntity.Key;
-            var navs = entityType.GetNavigations().Where(n =>
-                n.IsOnDependent && (n.DeclaringEntityType == entityType ||
-                                    n.DeclaringEntityType.IsAssignableFrom(entityType)) && n.ForeignKey.IsRequired == required).ToArray();
-            if (navs.Length==0) continue;
-            foreach (var entity in typeAndEntity.Value){
-                foreach (var nav in navs){
-                    object target;
-                    if (nav.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle ?? false){
-                        target = RetrieveSelfReferencing(entityType, entity, nav.PropertyInfo)!;
-                    }
-                    else if (nav.ForeignKey.IsUnique){
-                        target = RetrieveUnique(entityType, nav);
-                    }
-                    else target = RetrieveRandom(nav.TargetEntityType);
-                    nav.PropertyInfo.SetValue(entity, target);
-                }
-            }
         }
     }
 
@@ -418,25 +363,26 @@ public class DatabaseInitializer
                    (_typeCounts.GetValueOrDefault(entityType1.ClrType) ?? _defaultCount);
         }
     }
-    private class EqualityComparableSet<T>: HashSet<T>, IEquatable<IEnumerable<T>>
-    {
-        public EqualityComparableSet(): base(){}
-        public EqualityComparableSet(ICollection<T> collection) : base(collection) {
-        }
-        public bool Equals(IEnumerable<T>? other) {
-            if (other is null) return false;
-            return this.SequenceEqual(other);
-        }
-        public override bool Equals(object? obj) {
-            if (obj is IEnumerable<T> enumerable){
-                return Equals(enumerable);
-            }
-            return base.Equals(obj);
-        }
-        public override int GetHashCode()
-        {
-            return this.Aggregate(0, (current, item) => current ^ item?.GetHashCode() ?? 0);
-        }
+}
 
+public class EqualityComparableSet<T>: HashSet<T>, IEquatable<IEnumerable<T>>
+{
+    public EqualityComparableSet(): base(){}
+    public EqualityComparableSet(ICollection<T> collection) : base(collection) {
     }
+    public bool Equals(IEnumerable<T>? other) {
+        if (other is null) return false;
+        return this.SequenceEqual(other);
+    }
+    public override bool Equals(object? obj) {
+        if (obj is IEnumerable<T> enumerable){
+            return Equals(enumerable);
+        }
+        return base.Equals(obj);
+    }
+    public override int GetHashCode()
+    {
+        return this.Aggregate(0, (current, item) => current ^ item?.GetHashCode() ?? 0);
+    }
+
 }
