@@ -4,6 +4,7 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using NUnit.Framework.Legacy;
 using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 
 namespace Ecommerce.Dao.Tests;
 
@@ -45,7 +46,7 @@ public class RepositoryProxyTests
         Assert.That(ex.Message, Is.EqualTo("Validation failed: Mock validation error"));
     }
 
-    public class MockRepository : DispatchProxy 
+    private class MockRepository : DispatchProxy 
     {
         public static IRepository<T> Create<T>() where T: class, new() {
             return DispatchProxy.Create<IRepository<T>, MockRepository>();
@@ -60,18 +61,37 @@ public class RepositoryProxyTests
     private class MockRepositoryInternal<T> : IRepository<T> where T : class, new()
     {
         public List<T> All(string[][]? includes = null) => new List<T>();
-        public List<TP> All<TP>(System.Linq.Expressions.Expression<Func<T, TP>> select, string[][]? includes = null) => new List<TP>();
-        public List<T> Where(System.Linq.Expressions.Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20) => new List<T>();
-        public List<TP> Where<TP>(System.Linq.Expressions.Expression<Func<T, TP>> select, System.Linq.Expressions.Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20) => new List<TP>();
-        public T? First(System.Linq.Expressions.Expression<Func<T, bool>> predicate, string[][]? includes = null, (System.Linq.Expressions.Expression<Func<T, object>>, bool)[]? orderBy = null) => null;
-        public TP? First<TP>(System.Linq.Expressions.Expression<Func<T, TP>> select, System.Linq.Expressions.Expression<Func<T, bool>> predicate, string[][]? includes = null, (System.Linq.Expressions.Expression<Func<T, object>>, bool)[]? orderBy = null) => default(TP);
-        public bool Exists(System.Linq.Expressions.Expression<Func<T, bool>> predicate, string[][]? includes = null) => false;
+        public List<TP> All<TP>(Expression<Func<T, TP>> select, string[][]? includes = null) => new List<TP>();
+
+        public List<T> Where(Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20, (Expression<Func<T, object>>, bool)[]? orderBy = null,
+            string[][]? includes = null) {
+            return[];
+        }
+
+        public List<TP> Where<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate, int offset = 0, int limit = 20,
+            (Expression<Func<TP, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
+            return[];
+        }
+
+
+        public T? First(Expression<Func<T, bool>> predicate, string[][]? includes = null, (Expression<Func<T, object>>, bool)[]? orderBy = null) => null;
+
+        public TP? First<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate, string[][]? includes = null,
+            (Expression<Func<TP, object>>, bool)[]? orderBy = null) {
+            return default(TP);
+        }
+
+        public bool Exists(Expression<Func<T, bool>> predicate, string[][]? includes = null) => false;
+        public bool Exists<T1>(Expression<Func<T1, bool>> predicate, Expression<Func<T, T1>> select, string[][]? includes = null) {
+            return true;
+        }
+
         public T Add(T entity) => entity;
         public T Save(T entity, bool flush = true) => entity;
         public T Update(T entity) => entity;
-        public int Update((System.Linq.Expressions.Expression<Func<T, object>>, object)[] memberAccessorsAndValues, System.Linq.Expressions.Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
+        public int UpdateExpr((Expression<Func<T, object>>, object)[] memberAccessorsAndValues, Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
         public T Delete(T entity) => entity;
-        public int Delete(System.Linq.Expressions.Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
+        public int Delete(Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
         public void Flush() { }
         public T Detach(T entity) => entity;
         public T Merge(T entity) => entity;

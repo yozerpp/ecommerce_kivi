@@ -19,13 +19,16 @@ public class SellerManager : ISellerManager
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
-    public SellerWithAggregates? GetSellerWithAggregates(uint sellerId, bool includeOffers, bool includeReviews) {
-        return _sellerRepository.First(AggregateProjection,s=>s.Id == sellerId,
-            includes:GetIncludes(includeOffers,includeReviews));
+    public SellerWithAggregates? GetSellerWithAggregates(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false, int offersPage = 1, int offersPageSize = 20) {
+        return _sellerRepository.First(GetAggregateProjection(offersPage, offersPageSize),s=>s.Id == sellerId,
+            includes:GetIncludes(includeOffers,includeReviews, includeCoupons));
     }
 
-    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews) {
-        return _sellerRepository.First(s => s.Id == sellerId, includes: GetIncludes(includeOffers, includeReviews));
+    public List<ProductOffer> GetOffers(uint sellerId, int page = 1, int pageSize = 20) {
+        return _productOfferRepository.Where(p => p.SellerId == sellerId, includes:[[nameof(ProductOffer.Product)]], offset: (page-1) * pageSize, limit: pageSize*page);
+    }
+    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false) {
+        return _sellerRepository.First(s => s.Id == sellerId, includes: GetIncludes(includeOffers, includeReviews, includeCoupons));
     }
     //@param Seller should contain user information as well.
     public void UpdateSeller(Seller seller) {
@@ -37,8 +40,8 @@ public class SellerManager : ISellerManager
         foreach (var property in typeof(Seller).GetProperties().Where(p=>p.DeclaringType == typeof(Seller))){
             property.SetValue(oldSeller, property.GetValue(seller));
         }
-
         _sellerRepository.Update(oldSeller);
+        _sellerRepository.Flush();
     }
     public ProductOffer ListProduct(ProductOffer offer)
     {
@@ -58,7 +61,10 @@ public class SellerManager : ISellerManager
         }
    
         offer.SellerId = ContextHolder.Session.User.Id;
-        return _productOfferRepository.Add(offer);
+        var ret = _productOfferRepository.Add(offer);
+        //this needs better transaction management.
+        _productOfferRepository.Flush();
+        return ret;
     }
     
     public ProductOffer updateOffer(ProductOffer offer, uint productId)
@@ -77,7 +83,10 @@ public class SellerManager : ISellerManager
             offer.Product = _productRepository.Add(offer.Product);
             offer.ProductId = offer.Product.Id;
             return _productOfferRepository.Add(offer);
-        } else return _productOfferRepository.Update(offer);
+        }
+        var ret = _productOfferRepository.Update(offer);
+        _productOfferRepository.Flush();
+        return ret;
     }
 
     public void UnlistOffer(ProductOffer offer)
@@ -88,6 +97,7 @@ public class SellerManager : ISellerManager
         {
             _productRepository.Delete(p);
         }
+        _productOfferRepository.Flush();
     }
 
     public void CreateCoupon(Coupon coupon) {
@@ -97,30 +107,35 @@ public class SellerManager : ISellerManager
             throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
         }
         coupon.SellerId = seller.Id;
-        var couponCount = _sellerRepository.First(s=>s.Coupons.Count(), s=>s.Id==seller.Id,includes:[[nameof(Seller.Coupons)]]);
-        coupon.Id = seller.ShopName + (ushort)(coupon.DiscountRate * 100) ;
+        var couponCount = _sellerRepository.First( s=>s.Id==seller.Id,includes:[[nameof(Seller.Coupons)]]).Coupons.Count;
+        coupon.Id = seller.ShopName + (ushort)couponCount ;
         _couponRepository.Add(coupon);
+        _couponRepository.Flush();
     }
-    private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjection = s =>
-        new SellerWithAggregates{
-            ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
-            ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
-            SaleCount = (uint)s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => oi.Quantity),
-            ProductCount = (uint)s.Offers.Count(),
-            Id = s.Id,
-            ShopAddress = s.ShopAddress,
-            ShopName = s.ShopName,
-            ShopEmail = s.ShopEmail,
-            ShopPhoneNumber = s.ShopPhoneNumber,
-            Offers = s.Offers,
-            Coupons = s.Coupons,
-        };
+
+    private static Expression<Func<Seller, SellerWithAggregates>> GetAggregateProjection(int offersPage, int offersPageSize) {
+        return s =>
+            new SellerWithAggregates{
+                ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
+                ReviewAverage = (float)(s.Offers.SelectMany(o => o.Reviews).Average(r => (decimal?)r.Rating) ?? 0m),
+                SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (int?)oi.Quantity) ?? 0),
+                OfferCount = (uint)s.Offers.Count,
+                Id = s.Id,
+                ShopAddress = s.ShopAddress,
+                ShopName = s.ShopName,
+                ShopEmail = s.ShopEmail,
+                ShopPhoneNumber = s.ShopPhoneNumber,
+                Offers = s.Offers,
+                Coupons = s.Coupons,
+            };
+    }
+
     private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjectionWithUser = s =>
         new SellerWithAggregates{
             ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
-            ReviewAverage = s.Offers.SelectMany(o => o.Reviews).Average(r => r.Rating),
-            SaleCount = (uint)s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => oi.Quantity),
-            ProductCount = (uint)s.Offers.Count(),
+            ReviewAverage = (float)(s.Offers.SelectMany(o => o.Reviews).Average(r => (decimal?)r.Rating)??0),
+            SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (decimal?)oi.Quantity)??0),
+            OfferCount = (uint)s.Offers.Count,
             Id = s.Id,
             ShopAddress = s.ShopAddress,
             ShopName = s.ShopName,
@@ -134,16 +149,16 @@ public class SellerManager : ISellerManager
             Email = s.Email,
             ShippingAddress = s.ShippingAddress,
             PhoneNumber = s.PhoneNumber,
-            BillingAddress = s.BillingAddress,
             Active = s.Active,
             Orders = s.Orders,
             SessionId = s.SessionId,
             Session = s.Session,
         };
-    private static string[][] GetIncludes(bool offer, bool reviews) {
+    private static string[][] GetIncludes(bool offer, bool reviews, bool coupons) {
         ICollection<string[]> ret = new List<string[]>();
-        if(offer) ret.Add([nameof(Seller.Offers),nameof(ProductOffer.Product)]);
+        if(offer) ret.Add([nameof(Seller.Offers),nameof(ProductOffer.Product), nameof(Product.Category)]);
         if (reviews) ret.Add([nameof(Seller.Offers), nameof(ProductOffer.Reviews)]);
+        if(coupons) ret.Add([nameof(Seller.Coupons)]);
         return ret.ToArray();
     }
 }

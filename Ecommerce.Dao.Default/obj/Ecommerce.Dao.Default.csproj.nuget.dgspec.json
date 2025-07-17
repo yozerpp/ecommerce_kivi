@@ -32,8 +32,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj": {
-                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj"
+              "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\Ecommerce.Dao.Spi.csproj": {
+                "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\Ecommerce.Dao.Spi.csproj"
               },
               "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj": {
                 "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Entity.Common\\Ecommerce.Entity.Common.csproj"
@@ -62,15 +62,15 @@
           "dependencies": {
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.18, )"
             },
             "Microsoft.EntityFrameworkCore.Proxies": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.18, )"
             },
             "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.18, )"
             }
           },
           "imports": [
@@ -93,14 +93,14 @@
         }
       }
     },
-    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj": {
+    "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\Ecommerce.Dao.Spi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj",
-        "projectName": "Ecommerce.Dao",
-        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\Ecommerce.Dao.csproj",
+        "projectUniqueName": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\Ecommerce.Dao.Spi.csproj",
+        "projectName": "Ecommerce.Dao.Spi",
+        "projectPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\Ecommerce.Dao.Spi.csproj",
         "packagesPath": "C:\\Users\\tipil\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao\\obj\\",
+        "outputPath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Dao.Spi\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -153,7 +153,7 @@
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.18, )"
             }
           },
           "imports": [

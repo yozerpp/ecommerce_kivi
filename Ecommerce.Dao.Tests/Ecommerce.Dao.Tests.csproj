@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Ecommerce.Dao.Default\Ecommerce.Dao.Default.csproj" />
+      <ProjectReference Include="..\Ecommerce.Dao.Spi\Ecommerce.Dao.Spi.csproj" />
     </ItemGroup>
 
 </Project>

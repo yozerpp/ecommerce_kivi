@@ -1,27 +1,58 @@
-﻿using Ecommerce.Bl.Interface;
+﻿using System.Linq.Expressions;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Projections;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Concrete;
 public class UserManager : IUserManager
 { 
-    private delegate string HashFunction(string input);
+    public delegate string HashFunction(string input);
     
     private readonly JwtManager _jwtManager;
     private readonly HashFunction _hashFunction;
     private readonly IRepository<User> _userRepository;
     private readonly IRepository<Seller> _sellerRepository;
     private readonly CartManager _cartManager;
-    public UserManager(JwtManager manager,IRepository<User> userRepository, IRepository<Seller> sellerRepository, Func<string,string> hashFunction, CartManager cartManager) {
+    public UserManager(JwtManager manager,IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, CartManager cartManager) {
         this._jwtManager = manager;
         this._userRepository = userRepository;
-        this._hashFunction = new HashFunction(hashFunction);
+        this._hashFunction = hashFunction;
         this._cartManager = cartManager;
         _sellerRepository = sellerRepository;
     }
-    
+
+    public User GetUser() {
+        return ContextHolder.GetUserOrThrow();
+    }
+
+    public UserWithAggregates GetWithAggregates() {
+        var id = ContextHolder.GetUserOrThrow().Id;
+        return _userRepository.First(UserAggregateProjection, u => u.Id == id, includes:[[nameof(User.Session)]]);
+    }
+    private static readonly Expression<Func<User, UserWithAggregates>> UserAggregateProjection = 
+        u => new UserWithAggregates {
+            Id = u.Id, 
+            Email = u.Email, 
+            FirstName = u.FirstName, 
+            LastName = u.LastName,
+            // TotalSpent = u.Orders.SelectMany(o=>o.Items).Sum(i=>
+                // (decimal?)((decimal?)i.Quantity * i.ProductOffer.Discount * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? i.Coupon.DiscountRate : 1m ) ))??0m,
+            // TotalOrders = ((int?)u.Orders.Count()) ?? 0,
+            // TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
+                // (decimal?)((decimal?)i.Quantity * (1m-i.ProductOffer.Discount) * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-i.Coupon.DiscountRate) : 0m)))??0m,
+            ShippingAddress = u.ShippingAddress,
+            PhoneNumber = u.PhoneNumber,
+            Active = u.Active, 
+            Session= u.Session,
+            SessionId = u.SessionId,
+            Orders = u.Orders,
+            Reviews = u.Reviews,
+            ReviewComments = u.ReviewComments,
+            
+        };
     public User? LoginUser(string email, string password, out SecurityToken? token)
     {
         return doLogin(email, password, false, out token);
@@ -47,7 +78,7 @@ public class UserManager : IUserManager
         return user;
     }
     public User Register(User newUser) {
-        var existingUser = ContextHolder.Session!.User;
+        var existingUser = ContextHolder.Session?.User;
         if (existingUser!=null&& newUser is not Seller){
             throw new ArgumentException("You are already logged in as a user. You can only register as a seller when you're logged in as a user.");
         }
@@ -57,6 +88,8 @@ public class UserManager : IUserManager
             ret  = _sellerRepository.Add(s);
         }
         else ret =  _userRepository.Add(newUser);
+        
+        _userRepository.Flush();
         return ret;
     }
     public void ChangePassword(string oldPassword, string newPassword) {
@@ -69,13 +102,20 @@ public class UserManager : IUserManager
         }
         user.PasswordHash = this._hashFunction(newPassword);
         _userRepository.Update(user);
+        _userRepository.Flush();
     }
+    /// <summary>
+    /// Ui layer should also clear the persisted login information. (Such as cookies)
+    /// </summary>
+    /// <exception cref="NotImplementedException"></exception>
     public void Logout() {
         throw new NotImplementedException("Logout should be handled by the controller/ui layer.");
     }
     public User Update(User user)
     {
-       return  _userRepository.Update(user);
+       var ret =  _userRepository.Update(user);
+       _userRepository.Flush();
+       return ret;
     }
     public void deactivate() {
         User? user;
@@ -84,6 +124,7 @@ public class UserManager : IUserManager
         }
         user.Active = false;
         _userRepository.Update(user);
+        _userRepository.Flush();
     }
 
 }

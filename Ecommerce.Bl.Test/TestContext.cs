@@ -17,7 +17,6 @@ public static class TestContext
     public static readonly ProductManager _productManager;
     public static readonly ReviewManager _reviewManager;
     public static User _user;
-    public static Session _session;
     public static readonly IRepository<Session> _sessionRepository;
     public static readonly IRepository<Cart> _cartRepository;
     public static readonly JwtManager _jwtmanager;
@@ -56,7 +55,7 @@ public static class TestContext
         _couponRepository= RepositoryFactory.Create<Coupon>(context);
         _jwtmanager = new JwtManager(_userRepository,_sellerRepository,_sessionRepository);
         _productManager = new ProductManager(_productRepository);
-        _cartManager = new CartManager(_sessionRepository, _cartRepository, _cartItemRepository);
+        _cartManager = new CartManager(_sessionRepository, _couponRepository, _cartRepository, _cartItemRepository);
         _orderManager = new OrderManager(_cartManager,_orderRepository);
         _userManager = new UserManager(_jwtmanager,_userRepository, _sellerRepository, s => s, _cartManager);
         _sellerManager = new SellerManager(_couponRepository,_productRepository,_sellerRepository, _offerRepository);

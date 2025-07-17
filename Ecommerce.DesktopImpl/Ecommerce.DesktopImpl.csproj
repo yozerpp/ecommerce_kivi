@@ -11,9 +11,19 @@
     <ItemGroup>
       <ProjectReference Include="..\Ecommerce.Bl\Ecommerce.Bl.csproj" />
       <ProjectReference Include="..\Ecommerce.Dao.Default\Ecommerce.Dao.Default.csproj" />
-      <ProjectReference Include="..\Ecommerce.Dao\Ecommerce.Dao.csproj" />
       <ProjectReference Include="..\Ecommerce.Entity.Common\Ecommerce.Entity.Common.csproj" />
       <ProjectReference Include="..\Ecommerce.Entity\Ecommerce.Entity.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Ninject" Version="3.3.6" />
+      <PackageReference Include="Ninject.Extensions.Conventions" Version="3.3.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="ReviewPage.cs">
+        <SubType>UserControl</SubType>
+      </Compile>
     </ItemGroup>
 
 </Project>

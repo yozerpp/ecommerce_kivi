@@ -18,10 +18,8 @@ public class JwtManager
     private readonly IRepository<User> _userRepository;
     private readonly IRepository<Session> _sessionRepository;
     private readonly IRepository<Seller> _sellerRepository;
-    public JwtManager(IRepository<User> userRepository, IRepository<Seller> sellerRepository, IRepository<Session> sessionRepository,string? secretKey = null) {
-        if (secretKey==null){
-             secretKey = "uDF$Gldpgl3*-4-ags";
-        }
+    public JwtManager(IRepository<User> userRepository, IRepository<Seller> sellerRepository, IRepository<Session> sessionRepository) {
+        const string secretKey = "uDF$Gldpgl3*-4-ags";
         this._sellerRepository = sellerRepository;
         this._userRepository = userRepository;
         this._sessionRepository = sessionRepository;
@@ -29,6 +27,21 @@ public class JwtManager
         _credentials = new SigningCredentials(_secretKey, SecurityAlgorithms.HmacSha256);
     }
 
+    public string Serialize(SecurityToken securityToken) {
+        return _tokenHandler.WriteToken(securityToken);
+    }
+
+    public void Deserialize(string token, out User? user, out Session? session) {
+        try{
+            var p = _tokenHandler.ValidateToken(token, GetTokenValidationParameters(), out _);
+            ParsePrincipal(out user, out session, p);
+        }
+        catch (SecurityTokenValidationException e){
+            user = null;
+            session = null;
+            return;
+        }
+    }
     public SecurityToken CreateToken(Session session) {
         var claims = new List<Claim>();
         switch (session.User){
@@ -49,13 +62,21 @@ public class JwtManager
             SigningCredentials = _credentials
         });
     }
-    public void UnwrapToken(SecurityToken token, out User? user, out Session? session) {
-        var principal = _tokenHandler.ValidateToken( _tokenHandler.WriteToken(token),new TokenValidationParameters(){
+
+    private TokenValidationParameters GetTokenValidationParameters() {
+        return new TokenValidationParameters(){
             ValidateIssuer = false,
             ValidateAudience = false,
             IssuerSigningKey = _secretKey,
-            ValidateLifetime = true,
-        }, out var _);
+            ValidateLifetime = true
+        };
+    }
+    public void UnwrapToken(SecurityToken token, out User? user, out Session? session) {
+        var principal = _tokenHandler.ValidateToken( _tokenHandler.WriteToken(token),GetTokenValidationParameters(), out var _);
+        ParsePrincipal(out user, out session, principal);
+    }
+
+    private void ParsePrincipal(out User? user, out Session? session, ClaimsPrincipal principal) {
         if (principal == null){ 
             user=null;
             session = null;

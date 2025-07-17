@@ -18,7 +18,7 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
         ((RepositoryProxy<TE>)proxy)._validators = validators;
         return (IRepository<TE>)proxy;
     }
-    private RepositoryProxy() {}
+    public RepositoryProxy() {}
         
     /// <summary>
     /// This serializes write and read operations on the table.
@@ -29,13 +29,13 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
     /// <returns></returns>
     /// <exception cref="ValidationException">If entity validation failed by _validator</exception>
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
-        bool isAddOrUpdate = targetMethod.Name.Equals("Add") || targetMethod.Name.Equals("Update");
+        bool isAddOrUpdate = targetMethod.Name.Equals("Add") || targetMethod.Name.Equals("UpdateExpr");
         if (isAddOrUpdate)
         {
-            if (_validators!=null){
+            if (_validators!=null && args[0] is  TE entity){
                 AbstractValidator<TE> a;
-                var errors = _validators.Select(v => v.Validate((TE)args[0]))
-                    .Where(r => r.ErrorMessage != null).ToList();
+                var errors = _validators.Select(v => v.Validate(entity))
+                    .Where(r => !string.IsNullOrEmpty(r.ErrorMessage)).ToList();
                 if (errors.Count>0){
                     throw new ValidationException(String.Join(',',errors.Select(e => e.ErrorMessage).ToList()));
                 }

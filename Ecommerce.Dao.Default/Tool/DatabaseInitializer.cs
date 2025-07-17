@@ -11,60 +11,74 @@ using Enum = System.Enum;
 
 namespace Ecommerce.Dao.Default.Tool;
 
-public class DatabaseInitializer
+public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
 {
-    private readonly DbContext _context;
-    private readonly Lock _dictLock = new();
-    private readonly Dictionary<IEntityType, ISet<object>> _saved = new ();
+    private readonly DbContext _defaultContext;
+    private readonly Dictionary<IEntityType, Lock> _dictLocks = new();
+    private readonly Dictionary<IEntityType, ISet<object>> _saved = new();
     private readonly Dictionary<IEntityType, Dictionary<INavigation, ISet<object> >> _uniqueStore = new();
-    private readonly Dictionary<IEntityType, Dictionary<EqualityComparableSet<INavigation>,Dictionary<object, EqualityComparableSet<object>>>> _compositeKeyStore = new();
-    private readonly Dictionary<Type, Int32?> _typeCounts = new();
-    private readonly Int32 _defaultCount;
+    private readonly Dictionary<Type, Int32?> _typeCounts;
+    private readonly int _defaultCount;
     private readonly Dictionary<IEntityType,ISet<INavigation>> _nonRequiredNavigations = new();
     private readonly Dictionary<IEntityType,ISet<INavigation>> _requiredNavigations = new();
     private readonly Dictionary<IEntityType, ISet<EqualityComparableSet<INavigation>>> _compositeKeys = new();
-    private ICollection<IEntityType> _entityTypes;
+    private readonly ICollection<IEntityType> _entityTypes;
     private readonly CompositeRandomizer _compositeRandomizer;
+    private readonly ICollection<(TC,ICollection<IEntityType>)> _lanes;
     //
-    public DatabaseInitializer(DbContext context, Dictionary<Type, Int32?> typeCounts, Int32 defaultCount = 100) {
-        this._context = context;
-        this._defaultCount = defaultCount;
-        this._typeCounts = typeCounts;
-        _entityTypes = context.Model.GetEntityTypes().ToArray();
+    public DatabaseInitializer(DbContextOptions<TC> options, Dictionary<Type, int?> typeCounts, int defaultCount = 100) {
+        _defaultCount = defaultCount;
+        _typeCounts = typeCounts;
+        _defaultContext = (TC) typeof(TC).GetConstructor([typeof(DbContextOptions<TC>)]).Invoke([options]);
+        _entityTypes=_defaultContext.Model.GetEntityTypes().ToArray();
         InitContainers();
-        _compositeRandomizer = new CompositeRandomizer(_saved);
+        _compositeRandomizer = new CompositeRandomizer(_saved, _dictLocks);
+        _lanes = Sort(options);
     }
     public void initialize() {
-        _entityTypes = Sort();
         CreateEntities();
         PopulateNonRequiredRelations();
     }
-    private ICollection<IEntityType> Sort() {
-        var stack = new Stack<IEntityType>(_entityTypes.Count());
+    private ICollection<(TC, ICollection<IEntityType>)> Sort(DbContextOptions<TC> options) {
         var visited = new HashSet<string>(_entityTypes.Count());
+        var lanes = new List<Stack<IEntityType>>();
         foreach (var entityType in _entityTypes){
             if (visited.Contains(entityType.Name)) continue;
-            SortRecursive(entityType);
+            var lane = new Stack<IEntityType>();
+            SortRecursive(entityType, lane);
+            lanes.Add(lane);
         }
-
-        return stack.Reverse().ToArray();
-        void SortRecursive(IEntityType entityType) {
+        return lanes.Select(l=>((TC)typeof(TC).GetConstructor([typeof(DbContextOptions<TC>)]).Invoke([options]),(ICollection<IEntityType>)l.Reverse().ToArray() )).ToArray();
+        void SortRecursive(IEntityType entityType, Stack<IEntityType> lane) {
             var keys = _compositeRandomizer.GetNavigations(entityType);
             keys.AddRange(RequiredNavsInHierarchy(entityType));
             visited.Add(entityType.Name);
             foreach (var navigation in keys){
-                SortRecursive(navigation.TargetEntityType);
+                SortRecursive(navigation.TargetEntityType, lane);
             }
-            stack.Push(entityType);
+            lane.Push(entityType);
         }
     }
+
+    private readonly ThreadLocal<TC> _contextThreadLocal = new();
     private void CreateEntities() {
-        foreach (var type in _entityTypes){
-            while( !IsFull(type))
-            {
-                RandomizeAndSave(type, null, null);
+        _lanes.AsParallel().ForAll(l => {
+            _contextThreadLocal.Value = l.Item1;
+            foreach (var entityType in l.Item2){
+                while (!IsFull(entityType)){
+                    _dictLocks[entityType].Enter();
+                    try{
+                        RandomizeAndSave(entityType);
+                    }
+                    catch (Exception e){
+                        Debug.WriteLine(e);
+                    }
+                    finally{
+                        _dictLocks[entityType].Exit();
+                    }
+                }
             }
-        }
+        });
     }
     private void PopulateNonRequiredRelations()
     {
@@ -90,62 +104,62 @@ public class DatabaseInitializer
             else navigation.PropertyInfo.SetValue(entity, RetrieveRandom(targetType));
         }
         try{
-            _context.Update(entity);
+            _defaultContext.Update(entity);
         }
         catch (Exception e){
             Debug.WriteLine(e);
         }
     }
 
-    private object RandomizeAndSave(IEntityType enttiyType, INavigation? nav = null, object? from =null)
+    private object RandomizeAndSave(IEntityType enttiyType)
     {
-        lock (_dictLock)
-        {
-            if ( IsFull(enttiyType))
-            {
-                if (from != null)
-                {
-                    return RetrieveSelfReferencing(enttiyType, from, nav!.PropertyInfo);
-                } else if (nav?.ForeignKey.IsUnique ?? false)
-                {
-                    return RetrieveUnique(enttiyType, nav);
-                }
-                else return RetrieveRandom(enttiyType);
-            }
-        }
-        var entity = RandomizeValueProperties(enttiyType);
+        var entity = CreateAndPopulatePrimitives(enttiyType);
         foreach (var compositeKey in _compositeRandomizer.GetCompositeKeys(enttiyType)){
-            foreach (var navAndKey in compositeKey.Item2){
-                navAndKey.Item1.PropertyInfo.SetValue(entity,navAndKey.Item2);
-            }
+            AssignForeignKeys(compositeKey.Item1, entity, compositeKey.Item2);
         }
         var navsInHierarchy = RequiredNavsInHierarchy(enttiyType);
         foreach (var navigation in navsInHierarchy)
         {
-            from = null;
-            if (navigation.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle??false)
-            {
-                from = entity;
+            _dictLocks[navigation.TargetEntityType].Enter();
+            try{
+                object val;
+                if ((val = GetSavedIfFull(navigation.TargetEntityType, navigation, 
+                        navigation.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle??false?entity:null
+                        )) == null)
+                    val = RandomizeAndSave(navigation.TargetEntityType);
+                AssignForeignKeys(navigation.ForeignKey, entity, val);
+                _uniqueStore[navigation.TargetEntityType][navigation].Add(val);
             }
-
-            var val = RandomizeAndSave(navigation.TargetEntityType, navigation, from);
-            _uniqueStore[navigation.TargetEntityType][navigation].Add(val);
-            navigation.PropertyInfo.SetValue(entity,val);
+            finally{
+                _dictLocks[navigation.TargetEntityType].Exit();
+            }
         }
-
-        try{
-            entity = _context.Add(entity).Entity;
-            _context.SaveChanges();
-        }
-        catch (Exception e){
-            Debug.WriteLine(e);
-        }
-        lock (_dictLock){
-            _saved[enttiyType].Add(entity);
-        }
+        var context = _contextThreadLocal.Value!;
+        entity = context.Add(entity).Entity;
+        context.SaveChanges();
+        _saved[enttiyType].Add(entity);
         return entity;
     }
 
+    private object GetSavedIfFull(IEntityType enttiyType, INavigation? nav, object? from) {
+        if ( IsFull(enttiyType)){
+            object ret;
+            if (from != null) ret = RetrieveSelfReferencing(enttiyType, from, nav!.PropertyInfo);
+            if (nav?.ForeignKey.IsUnique ?? false) ret = RetrieveUnique(enttiyType, nav);
+            else ret= RetrieveRandom(enttiyType);
+            return ret;
+        }
+
+        return null;
+    }
+
+    private void AssignForeignKeys(IForeignKey fk, object dependent, object principal) {
+        var propsInPrincipal = fk.PrincipalKey.Properties;
+        var propsIndependent = fk.Properties;
+        for (int i = 0; i < propsIndependent.Count; i++){
+            propsIndependent[i].PropertyInfo.SetValue(dependent, propsInPrincipal[i].PropertyInfo.GetValue(principal));
+        }
+    }
     private ISet<INavigation> RequiredNavsInHierarchy(IEntityType enttiyType) {
         ISet<INavigation> navsInHierarchy = new HashSet<INavigation>();
         IEntityType? tp=enttiyType;
@@ -169,7 +183,7 @@ public class DatabaseInitializer
             _saved[entityType] = new HashSet<object>();
             _uniqueStore[entityType] = new Dictionary<INavigation, ISet<object>>();
             _compositeKeys[entityType] = new HashSet<EqualityComparableSet<INavigation>>();
-            _compositeKeyStore[entityType] = new Dictionary<EqualityComparableSet<INavigation>, Dictionary<object, EqualityComparableSet<object>>>();
+            _dictLocks[entityType] = new Lock();
         }
         foreach (var entityType in _entityTypes){
             //this also gets the properties that reference to a single object. such as CartItem->ProductOffer.
@@ -182,7 +196,6 @@ public class DatabaseInitializer
                     continue;                    
                 var keyNavs = new EqualityComparableSet<INavigation>(navs);
                 _compositeKeys[entityType].Add(keyNavs);
-                _compositeKeyStore[entityType][keyNavs] = new Dictionary<object, EqualityComparableSet<object>>();
             }
             foreach (var navigation in entityType.GetNavigations().Where(n=>n.IsOnDependent&&n.DeclaringEntityType.IsAssignableFrom(entityType) &&
                          !_compositeKeys[entityType].Any(n1=>n1.Contains(n)))){
@@ -195,29 +208,25 @@ public class DatabaseInitializer
     }
 
     private object RetrieveRandom(IEntityType type) {
-        lock (_dictLock){
-            var s = _saved.GetValueOrDefault(type)?? (_saved[type] = new HashSet<object>());
-            return s.ElementAt(new Randomizer().Number(s.Count - 1));
-        }
+        var s = _saved[type];
+        var ret = s.ElementAt(new Randomizer().Number(s.Count - 1));
+        return ret;
     }
     //don't allow circular reference.
     private object? RetrieveSelfReferencing(IEntityType type, object current, PropertyInfo property) {
-        lock (_dictLock){
-            var s = (_saved.GetValueOrDefault(type) ?? (_saved[type] = new HashSet<object>())).Where(o =>
+        var s = _saved[type].Where(o =>
                 !property.GetValue(o)?.Equals(current) ?? false);
-            return s.ElementAtOrDefault(new Randomizer().Number(s.Count() - 1));
-        }
+            var ret = s.ElementAtOrDefault(new Randomizer().Number(s.Count() - 1));
+        return ret;
     }
 
-    private object RetrieveUnique(IEntityType targetType, INavigation nav) {
-        lock (_dictLock){
-            var s = (_saved.GetValueOrDefault(targetType) ?? (_saved[targetType] = new HashSet<object>())).First(s=>!(_uniqueStore[targetType].GetValueOrDefault(nav)??
-                (_uniqueStore[targetType][nav] = new HashSet<object>())).Contains(s));
-            return s;
-        }
+    private object RetrieveUnique(IEntityType targetType, INavigation nav) { 
+        var s = _saved[targetType]
+            .First(s=>!(_uniqueStore[targetType].GetValueOrDefault(nav)?.Contains(s) ?? false));
+        return s;
     }
 
-    public static object RandomizeValueProperties(IEntityType entityType) {
+    private static object CreateAndPopulatePrimitives(IEntityType entityType) {
         var entity = entityType.ClrType.GetConstructor([])!.Invoke(null);
         foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty()  && !p.IsForeignKey()&&
             (p.DeclaringType.Equals(entityType) || !entityType.IsAssignableFrom(p.DeclaringType))) )
@@ -286,56 +295,38 @@ public class DatabaseInitializer
             else{
                 var positiveAnnotation =
                     ((IProperty)prop).FindAnnotation(nameof(DefaultDbContext.Annotations.Validation_Positive));
-                var intMin = Type.GetTypeCode(propType) is TypeCode.UInt16 or TypeCode.UInt32 or TypeCode.UInt64 || positiveAnnotation?.Value is true ? 0 : Int16.MinValue;
-                var intMax = positiveAnnotation?.Value is false? 0 : Int16.MaxValue;
+                var maxAnnotation =
+                    ((IProperty)prop).FindAnnotation(nameof(DefaultDbContext.Annotations.Validation_MaxValue));
+                var minAnnotation =
+                    ((IProperty)prop).FindAnnotation(nameof(DefaultDbContext.Annotations.Validation_MinValue));
+                if (maxAnnotation == null || maxAnnotation.Value is not int intMax)
+                    intMax = positiveAnnotation?.Value is false ? 0 : Int16.MaxValue;
                 var pres = ((IProperty)prop).GetPrecision();
                 var scale = ((IProperty)prop).GetScale();
-                decimal decimalMax;
-                if (pres != null && scale != null && pres >= scale)
-                    decimalMax = (decimal)Math.Pow(10, (int)(pres - scale)) - (decimal)Math.Pow(10, (int)(pres-scale-1));
-                else decimalMax = 9999999999999999.99m; //SQL Server creates decimal(18,2) clumns by default.
-                var decimalMin = intMin==0?0:(-decimalMax + 1000);
-                switch (Type.GetTypeCode(propType)){
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Int16:
-                        value = new Randomizer().Number(intMin as int? ?? Int16.MinValue,
-                            intMax as int? ?? Int16.MaxValue);
-                        break;
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                        value =      new Randomizer().UInt((ushort)intMin,
-                            intMax as ushort? ?? UInt16.MaxValue);       
-                        break;
-                    case TypeCode.Double:
-                        value = new Randomizer().Double((double)decimalMin,
-                            (double)decimalMax);
-                        break;
-                    case TypeCode.Boolean:
-                        value = new Randomizer().Bool();
-                        break;
-                    case TypeCode.Single:
-                        value = new Randomizer().Float((float)decimalMin,
-                            (float)decimalMax);
-                        break;
-                    case TypeCode.Decimal:
-                        value = Decimal.Round(new Randomizer().Decimal(decimalMin,
-                            decimalMax),scale??2);
-                        break;
-                    case TypeCode.Char:
-                        value = new Randomizer().Char();
-                        break;
-                    case TypeCode.Byte:
-                        value = new Randomizer().Byte();
-                        break;
-                    case TypeCode.SByte:
-                        value = new Randomizer().SByte();
-                        break;
-                    default:
-                        value = null;
-                        break;
+                if (maxAnnotation == null ||  maxAnnotation.Value is not decimal decimalMax){
+                    if (pres != null && scale != null && pres >= scale)
+                        decimalMax = (decimal)Math.Pow(10, (int)(pres - scale)) -
+                                     (decimal)Math.Pow(10, (int)(pres - scale - 1));
+                    else decimalMax = 9999999999999999.99m; //SQL Server creates decimal(18,2) clumns by default.
                 }
+                if(minAnnotation == null ||minAnnotation.Value is not int intMin)
+                    intMin = Type.GetTypeCode(propType) is TypeCode.UInt16 or TypeCode.UInt32 or TypeCode.UInt64 || positiveAnnotation?.Value is true ? 0 : Int16.MinValue;
+                if(minAnnotation == null || minAnnotation.Value is not decimal decimalMin)
+                    decimalMin = intMin==0?0:(-decimalMax + 1000);
+                value = Type.GetTypeCode(propType) switch{
+                    TypeCode.Int32 or TypeCode.Int64 or TypeCode.Int16 => new Randomizer().Number(
+                        intMin as int? ?? Int16.MinValue, intMax as int? ?? Int16.MaxValue),
+                    TypeCode.UInt16 or TypeCode.UInt32 or TypeCode.UInt64 => new Randomizer().UInt((ushort)intMin,
+                        intMax as ushort? ?? UInt16.MaxValue),
+                    TypeCode.Double => new Randomizer().Double((double)decimalMin, (double)decimalMax),
+                    TypeCode.Boolean => new Randomizer().Bool(),
+                    TypeCode.Single => new Randomizer().Float((float)decimalMin, (float)decimalMax),
+                    TypeCode.Decimal => Decimal.Round(new Randomizer().Decimal(decimalMin, decimalMax), scale ?? 2),
+                    TypeCode.Char => new Randomizer().Char(),
+                    TypeCode.Byte => new Randomizer().Byte(),
+                    TypeCode.SByte => new Randomizer().SByte(),
+                    _ => null
+                };
             }
             return value;
         }
@@ -357,11 +348,19 @@ public class DatabaseInitializer
         _imageCount++;
         return ms.ToArray();
     }
-    bool IsFull(IEntityType entityType1) {
-        lock (_dictLock){
-            return (_saved.GetValueOrDefault(entityType1) ?? (_saved[entityType1] = new HashSet<object>())).Count >=
-                   (_typeCounts.GetValueOrDefault(entityType1.ClrType) ?? _defaultCount);
+
+    private bool IsFull(IEntityType entityType1) {
+        var ret = _saved[entityType1].Count >= (_typeCounts.GetValueOrDefault(entityType1.ClrType) ?? _defaultCount);
+        return ret;
+    }
+
+    public void Dispose() {
+        GC.SuppressFinalize(this);
+        _defaultContext.Dispose();
+        foreach (var dbContext in _lanes){
+            dbContext.Item1.Dispose();
         }
+        _contextThreadLocal.Dispose();
     }
 }
 

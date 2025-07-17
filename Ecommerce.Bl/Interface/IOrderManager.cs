@@ -7,11 +7,10 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IOrderManager
 {
-    bool isComplete(string transactionId);
-    Order CreateOrder(Payment payment);
-    Order CancelOrder(Order order);
-    Order complete(Order order);
-    Order UpdateOrder(Order order);
-    OrderWithAggregates? GetOrderWithItems( uint orderId);
-    List<OrderWithAggregates> getAllOrders(int page = 1, int pageSize = 10);
+    public Order CreateOrder();
+    public Order CancelOrder(Order order);
+    public Order complete(Order order);
+    public void UpdateOrder(Order order);
+    public OrderWithAggregates? GetOrderWithItems( uint orderId);
+    public List<OrderWithAggregates> getAllOrders(bool includeItems=false,int page = 1, int pageSize = 10);
 }

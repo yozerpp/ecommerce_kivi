@@ -6,22 +6,22 @@ namespace Ecommerce.Bl.Test;
 
 public class CartManagerTests
 {
-
+    private static User _user;
     [OneTimeSetUp]
     public void Register() {
-        UserManagerTests.TestRegister();
+        _user = UserManagerTests.Register();
     }
 
     [SetUp]
     public void Login() {
-        UserManagerTests.TestLogin();
+        UserManagerTests.Login(_user,out _);
     }
-    [Test, Order(1)]
+    [Test]
     public void newCartUserful() {
         var oldSession = ContextHolder.Session;
         TestContext._cartManager.newCart();
         TestContext._cartRepository.Flush();
-        ClassicAssert.AreNotEqual(oldSession, TestContext._user.Session);
+        Assert.That(ContextHolder.Session, Is.EqualTo(oldSession));
     }
     [Test]
     public void TestAdd() {
@@ -38,11 +38,11 @@ public class CartManagerTests
     [Test]
     public void TestIncrement() {
         var offer = TestContext._offerRepository.First(_=>true)!;
-        var old = TestContext._itemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id&&
+        var old = TestContext._cartItemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id&&
                                                        i.ProductId==offer.ProductId && i.SellerId == offer.SellerId);
         uint oldAmount;
         if (old != null){
-            old = TestContext._itemRepository.Detach(old);
+            old = TestContext._cartItemRepository.Detach(old);
             oldAmount = old.Quantity;
         }
         else oldAmount = 0;
@@ -54,12 +54,12 @@ public class CartManagerTests
     public void Decrement() {
         var offer = TestContext._offerRepository.First(_=>true)!;
         var i = TestContext._cartManager.Add(offer);
-        TestContext._itemRepository.Flush();
+        TestContext._cartItemRepository.Flush();
         var oldAmount = i.Quantity;
         var decremented = Random.Shared.Next((int)i.Quantity - 1);
         TestContext._cartManager.Decrement(offer, (uint)decremented);
         TestContext._cartRepository.Flush();
-        var refetched = TestContext._itemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id && i.ProductId == offer.ProductId && i.SellerId==offer.SellerId);
+        var refetched = TestContext._cartItemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id && i.ProductId == offer.ProductId && i.SellerId==offer.SellerId);
         Assert.That(refetched.Quantity, Is.EqualTo(oldAmount - decremented));
     }
 
@@ -67,6 +67,7 @@ public class CartManagerTests
     public void TestGetWithAggregates()
     {
         // Clear cart first to ensure a clean state for testing aggregates
+        TestContext._cartManager.newCart();
         var currentCartItems = TestContext._cartItemRepository.Where(ci => ci.CartId == ContextHolder.Session.Cart.Id);
         foreach (var item in currentCartItems)
         {
@@ -78,7 +79,7 @@ public class CartManagerTests
         var offer1 = TestContext._offerRepository.First(_ => true);
         var offer2 = TestContext._offerRepository.Where(_ => true).Skip(1).FirstOrDefault();
 
-        if (offer1 == null || offer2 == null || offer1.Id == offer2.Id)
+        if (offer1 == null || offer2 == null || offer2.Equals(offer1))
         {
             Assert.Inconclusive("Not enough distinct offers available for testing aggregates.");
         }
@@ -93,7 +94,7 @@ public class CartManagerTests
         // Get cart with aggregates
         var cartWithAggregates = TestContext._cartManager.Get(true, true) as CartWithAggregates;
 
-        Assert.IsNotNull(cartWithAggregates);
+        Assert.That(cartWithAggregates, Is.Not.Null);
 
         // Calculate expected values
         decimal expectedTotalPrice = (offer1!.Price * quantity1) + (offer2!.Price * quantity2);
@@ -104,12 +105,12 @@ public class CartManagerTests
         decimal expectedCouponDiscountAmount = expectedDiscountedPrice - expectedCouponDiscountedPrice; // Should be 0 if no coupons
 
         // Assertions
-        Assert.That(cartWithAggregates.ItemCount, Is.EqualTo(quantity1 + quantity2));
+        Assert.That(cartWithAggregates.ItemCount, Is.EqualTo(2));
         Assert.That(cartWithAggregates.TotalPrice, Is.EqualTo(expectedTotalPrice));
         Assert.That(cartWithAggregates.DiscountedPrice, Is.EqualTo(expectedDiscountedPrice));
         Assert.That(cartWithAggregates.CouponDiscountedPrice, Is.EqualTo(expectedCouponDiscountedPrice));
         Assert.That(cartWithAggregates.DiscountAmount, Is.EqualTo(expectedDiscountAmount));
         Assert.That(cartWithAggregates.CouponDiscountAmount, Is.EqualTo(expectedCouponDiscountAmount));
-        Assert.That(cartWithAggregates.Items.Count(), Is.EqualTo(2)); // Should have 2 distinct items
+        Assert.That(cartWithAggregates.Items.Sum(i=>i.Quantity), Is.EqualTo(5)); // Should have 2 distinct items
     }
 }

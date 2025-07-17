@@ -14,10 +14,11 @@ public class User
     public string FirstName { get; set; }
     public string LastName { get; set; }
     public Address ShippingAddress { get; set; }
-    public Address BillingAddress { get; set; }
     public PhoneNumber PhoneNumber { get; set; }
     public bool Active { get; set; }
     public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
+    public ICollection<ReviewComment> ReviewComments { get; set; } = new List<ReviewComment>();
     public ulong SessionId { get; set; }
     public Session? Session { get; set; }
 
@@ -25,21 +26,21 @@ public class User
     {
         if (obj is User other)
         {
-            if (Id == default)
+            if (Id == default && Email == default)
             {
                 return base.Equals(obj);
             }
-            return Id == other.Id;
+            return Id == other.Id&&Email == other.Email;
         }
         return false;
     }
 
     public override int GetHashCode()
     {
-        if (Id == default)
+        if (Id == default&&Email==default)
         {
             return base.GetHashCode();
         }
-        return Id.GetHashCode();
+        return HashCode.Combine(Id, Email);
     }
 }

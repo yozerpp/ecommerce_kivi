@@ -2,13 +2,14 @@
 
 public class ProductReview
 {
-    public uint ProductId { get; set; }
-    public uint SellerId { get; set;}
     public uint ReviewerId { get; set;}
-    public float Rating { get; set; }
+    public uint SellerId { get; set;}
+    public uint ProductId { get; set; }
+    public decimal Rating { get; set; }
     public string? Comment { get; set; }
-    public ProductOffer Offer { get; set; }
+    public Seller Seller { get; set; }
     public User Reviewer { get; set; }
+    public ProductOffer Offer { get; set; }
     public bool CensorName { get; set; }
     public bool HasBought { get; set; }
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();

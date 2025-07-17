@@ -2,11 +2,12 @@
 
 public class ReviewVote
 {
-    public int ProductId { get; set; }
-    public int SellerId { get; set; }
-    public int ReviewerId { get; set; }
+    public uint ProductId { get; set; }
+    public uint SellerId { get; set; }
+    public uint ReviewerId { get; set; }
     public ulong? CommenterId { get; set; }
     public ulong VoterId { get; set; }
+    public Session Voter { get; set; }    
     public bool Up { get; set; }
     public ProductReview? ProductReview { get; set; }
     public ReviewComment? ReviewComment { get; set; }

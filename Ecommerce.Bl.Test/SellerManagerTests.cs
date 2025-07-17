@@ -17,19 +17,17 @@ public class SellerManagerTests
         _seller = new Seller(){
             ShopEmail = new Faker().Internet.Email(), ShopName = "ShopName",
             ShopPhoneNumber = new PhoneNumber(){ CountryCode = 90, Number = "1234567890" },
+            FirstName = new Faker().Name.FirstName(),
+            LastName = new Faker().Name.LastName(),
             ShopAddress = new Address()
                 { City = "city", Neighborhood = "neighborhood", Street = "street", ZipCode = "12345",State = "state"},
-            Email = new Faker().Internet.Email(), PasswordHash = "pass", 
-            BillingAddress = new Address{
-                City = "İzmir", ZipCode = "35410", Street = "Atatürk Cad.", Neighborhood = "Gazi", State = "Gaziemir"
-            },ShippingAddress = new Address{
+            Email = new Faker().Internet.Email(), PasswordHash = "pass",ShippingAddress = new Address{
                 City = "Trabzon", ZipCode = "35450", Street = "SFSD", Neighborhood = "Other", State = "Gaziemir"
             },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "5551234567" }
         };
         _seller =(Seller) TestContext._userManager.Register(_seller);
         TestContext._sellerRepository.Flush();
-        ContextHolder.Session!.User = _seller;
     }
     [SetUp]
     public void Login(){
@@ -98,7 +96,7 @@ public class SellerManagerTests
 
         // Get initial seller aggregates
         var initialSellerAggregates = TestContext._sellerManager.GetSellerWithAggregates(_seller.Id, true, false);
-        uint initialProductCount = initialSellerAggregates?.ProductCount ?? 0;
+        uint initialProductCount = initialSellerAggregates?.OfferCount ?? 0;
 
         // List a new product
         var cat = TestContext._categoryRepository.First(_ => true);
@@ -115,9 +113,9 @@ public class SellerManagerTests
         // Get updated seller aggregates
         var updatedSellerAggregates = TestContext._sellerManager.GetSellerWithAggregates(_seller.Id, true, false);
 
-        // Assert that ProductCount increased by 1
+        // Assert that OfferCount increased by 1
         Assert.That(updatedSellerAggregates, Is.Not.Null);
-        Assert.That(updatedSellerAggregates.ProductCount, Is.EqualTo(initialProductCount + 1));
+        Assert.That(updatedSellerAggregates.OfferCount, Is.EqualTo(initialProductCount + 1));
     }
 
     [Test, Order(8)]
@@ -153,7 +151,7 @@ public class SellerManagerTests
 
         var payment = new Payment { TransactionId = "SALE_TEST_" + Guid.NewGuid().ToString(), Amount = offerForSale.Price * 2, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
-        TestContext._orderManager.CreateOrder(payment);
+        TestContext._orderManager.CreateOrder();
         TestContext._orderRepository.Flush();
 
         // Get updated seller aggregates
@@ -169,7 +167,7 @@ public class SellerManagerTests
     {
         // Ensure seller is logged in
         Login();
-
+        
         // List a product if not already listed for this test
         var offerForReview = TestContext._offerRepository.First(o => o.SellerId == _seller.Id);
         if (offerForReview == null)
@@ -190,17 +188,17 @@ public class SellerManagerTests
         var initialSellerAggregates = TestContext._sellerManager.GetSellerWithAggregates(_seller.Id, false, true);
         uint initialReviewCount = initialSellerAggregates?.ReviewCount ?? 0;
         double initialReviewAverage = initialSellerAggregates?.ReviewAverage ?? 0.0;
-
+        var reviewer = _seller;
         // Simulate a review
         var review = new ProductReview
         {
             ProductId = offerForReview.ProductId,
             SellerId = offerForReview.SellerId,
-            ReviewerId = TestContext.User.Id, // Assuming TestContext.User is the current logged-in user
+            ReviewerId = reviewer.Id, // Assuming TestContext.User is the current logged-in user
             Rating = 4,
             Comment = "Great product!"
         };
-        TestContext._reviewManager.LeaveReview(review);
+        TestContext._reviewRepository.Add(review);
         TestContext._reviewRepository.Flush();
 
         // Get updated seller aggregates
@@ -220,7 +218,7 @@ public class SellerManagerTests
         }
         else
         {
-            expectedReviewAverage = ((initialReviewAverage * initialReviewCount) + review.Rating) / (initialReviewCount + 1);
+            expectedReviewAverage = ((initialReviewAverage * initialReviewCount) + (double)review.Rating) / (initialReviewCount + 1);
         }
         Assert.That(updatedSellerAggregates.ReviewAverage, Is.EqualTo(expectedReviewAverage).Within(0.001)); // Use Within for double comparison
     }

@@ -2,11 +2,13 @@
 
 public class ReviewComment
 {
-    public int ProductId { get; set; }
-    public int SellerId { get; set; }
-    public int ReviewerId { get; set; }
+    public uint SellerId { get; set; }
+    public uint ReviewerId { get; set; }
+    public uint ProductId { get; set; }
     public ProductReview Review { get; set; }
+    public User Reviewer { get; set; }
     public ulong CommenterId { get; set; }
+    public Session Commenter { get; set; }
     public string? Comment { get; set; }
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     public override bool Equals(object? obj) {

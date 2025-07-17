@@ -17,7 +17,7 @@ public static class SearchExpressionUtils
         ParameterExpression parameter) {
         var ret = new List<(Expression<Func<T, object>>,bool)>();
         foreach (var searchOrder in orders){
-            var property = typeof(Product).GetProperty(searchOrder.PropName);
+            var property = typeof(T).GetProperty(searchOrder.PropName);
             if (property == null) continue;
             var left = Expression.Property(parameter, property);
             Expression<Func<T, object>> orderByExpression = Expression.Lambda<Func<T, object>>(Expression.Convert(left, typeof(object)), parameter);
@@ -37,7 +37,7 @@ public static class SearchExpressionUtils
             if (predicate.PropName.Contains('_')){
                 var splt = predicate.PropName.Split('_');
                 left = Expression.Property(param, splt[0]);
-                property = typeof(Product).GetProperty(splt[0]);
+                property = typeof(T).GetProperty(splt[0]);
                 if (property == null)break;
                 bool cont = false;
                 foreach (var nav in splt.Skip(1)){
@@ -50,7 +50,7 @@ public static class SearchExpressionUtils
                 if (cont) continue;
             }
             else{
-                property = typeof(Product).GetProperty(predicate.PropName);
+                property = typeof(T).GetProperty(predicate.PropName);
                 if (property == null) continue;
                 left = Expression.Property(param, property);
             }
@@ -73,8 +73,17 @@ public static class SearchExpressionUtils
                             continue;
                         right = Expression.Constant(value2);
                         break;
-                    case TypeCode.Decimal:
+                    case TypeCode.Single:
+                        if(!float.TryParse(predicate.Value, out float value5))
+                            continue;
+                        right = Expression.Constant(value5);
+                        break;
                     case TypeCode.Double:
+                        if(!double.TryParse(predicate.Value, out double value4))
+                            continue;
+                        right= Expression.Constant(value4);
+                        break;
+                    case TypeCode.Decimal:
                         if (!decimal.TryParse(predicate.Value, out decimal value3))
                             continue;
                         right = Expression.Constant(value3);

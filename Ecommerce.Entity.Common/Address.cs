@@ -9,4 +9,7 @@ public class Address
     public string State { get; set; }
     public string Neighborhood { get; set; }
     public string ZipCode { get; set; }
- }
+    public override string ToString() {
+        return $"{Street} sk. {Neighborhood} mah. {City}/{State} {ZipCode}";
+    }
+}

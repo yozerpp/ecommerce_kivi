@@ -4,8 +4,8 @@ namespace Ecommerce.Entity;
 
 public class CartItem
 {
-    public uint ProductId { get; set; }
     public uint SellerId { get; set; }
+    public uint ProductId { get; set; }
     public uint CartId { get; set; }
     public uint Quantity { get; set; }
     public ProductOffer ProductOffer { get; set; }

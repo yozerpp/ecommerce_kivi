@@ -17,20 +17,15 @@ public class OrderManager : IOrderManager
         _cartManager = cartManager;
         _orderRepository = orderRepository;
     }
-    public bool isComplete(string transactionId)
-    {
-        return true;
-    }
-    public Order CreateOrder(Payment payment) {
+
+    public Order CreateOrder() {
         var user = ContextHolder.GetUserOrThrow();
-        if (payment.TransactionId == null || !isComplete(payment.TransactionId))
-        {
-            throw new UnauthorizedAccessException("Payment Incomplete.");
-        }
+
         if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
         var cart = ContextHolder.Session!.Cart;
         var o = new Order{
-            Date = DateTime.Now, PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
+            Date = DateTime.Now, 
+            // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
             ShippingAddress = user.ShippingAddress, Status = OrderStatus.PENDING, UserId = user.Id,
             User = user.Id == 0 ? user : null
         };
@@ -39,46 +34,50 @@ public class OrderManager : IOrderManager
         }
         _orderRepository.Add(o);
         _cartManager.newCart();
+        _orderRepository.Flush();
         return o;
     }
     public Order CancelOrder(Order order)
     {
         var user = ContextHolder.Session.User;
         if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
-        if (order.UserId==0){ //not attached
-           var actual = _orderRepository.First(o=>o.Id == order.Id);
-           order = actual ?? throw new ArgumentException("Order with the given id doesn't exists");
-        }
-        if (user.Id != order.UserId)
-        {
-            throw new UnauthorizedAccessException("Order doesn't belong to the user.");
-        }
+        var i  =_orderRepository.UpdateExpr([
+            (o=>o.Status, OrderStatus.CANCELLED)
+        ], o => o.Id == order.Id && o.UserId == user.Id && (o.Status != OrderStatus.CANCELLED && o.Status!=OrderStatus.DELIVERED));
         order.Status = OrderStatus.CANCELLED;
-        _orderRepository.Update(order);
+        if(i == 0) throw new UnauthorizedAccessException("You can't cancel an order that is already complete.");
         return order;
     }
     public Order complete(Order order)
     {
-        verifyOrThrow(order);
-        order.Status = OrderStatus.DELIVERED;
-        UpdateOrder(order);
+        VerifyOrThrow(order);
+        if(_orderRepository.UpdateExpr([
+            (o => o.Status, OrderStatus.DELIVERED)
+        ], o => o.Id == order.Id && o.Status!=OrderStatus.CANCELLED ) == 0) throw new UnauthorizedAccessException("You can't complete an order that is canceled.");
         return order;
     }
-    public Order UpdateOrder(Order order)
+    public void UpdateOrder(Order order)
     {
-        verifyOrThrow(order);
-        _orderRepository.Update(order);
-        return order;
+        VerifyOrThrow(order);
+        var uid = ContextHolder.GetUserOrThrow().Id;
+        var c = _orderRepository.UpdateExpr([
+        (o=>o.ShippingAddress.City, order.ShippingAddress.City),
+        (o=>o.ShippingAddress.Neighborhood, order.ShippingAddress.Neighborhood),
+        (o=>o.ShippingAddress.State, order.ShippingAddress.State),
+        (o=>o.ShippingAddress.Street, order.ShippingAddress.Street),
+        (o=>o.ShippingAddress.ZipCode, order.ShippingAddress.ZipCode),
+        ],o=>o.Id == order.Id && o.UserId == uid);
+        _orderRepository.Flush();
+        if(c==0) throw new UnauthorizedAccessException("Order with the given id doesn't exists or doesn't belong to the user.");
     }
-
-    private void verifyOrThrow(Order order)
+    private void VerifyOrThrow(Order order)
     {
+        var user = ContextHolder.GetUserOrThrow();
         var oldOrder = _orderRepository.First(o1 => o1.Id == order.Id);
         if (oldOrder == null)
         {
             throw new ArgumentException("Order with the given id doesn't exists");
         }
-        var user = ContextHolder.Session?.User;
         if (user == null || user.Id!=oldOrder.UserId)
         {
             throw new UnauthorizedAccessException("Order doesn't belong to this user.");
@@ -88,7 +87,7 @@ public class OrderManager : IOrderManager
     }
 
     public OrderWithAggregates? GetOrderWithItems( uint orderId) {
-        var uid = ContextHolder.Session!.UserId;
+        var uid = ContextHolder.Session!.User.Id;
         var ret = _orderRepository.First(OrderWithItemsAggregateProjection, o => o.UserId == uid && o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]]);
         if (ret == null) return null;
         ret.CouponDiscountedPrice = ret.Items.Sum(o => o.DiscountedPrice);
@@ -99,9 +98,10 @@ public class OrderManager : IOrderManager
         return ret;
     }
 
-    public List<OrderWithAggregates> getAllOrders(int page = 1, int pageSize = 10) {
-        var uid = ContextHolder.Session.UserId;
-        var ret = _orderRepository.Where(OrderWithoutItemsAggregateProjection, o => o.UserId == uid,
+    public List<OrderWithAggregates> getAllOrders(bool includeItems = false,int page = 1, int pageSize = 10) {
+        var user = ContextHolder.GetUserOrThrow();
+        var uid = user.Id;
+        var ret = _orderRepository.Where(OrderWithItemsAggregateProjection, o => o.UserId == uid,
             includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
         foreach (var order in ret){
             order.DiscountAmount = order.BasePrice - order.DiscountedPrice;
@@ -111,10 +111,9 @@ public class OrderManager : IOrderManager
     }
     public static readonly Expression<Func<Order, OrderWithAggregates>> OrderWithoutItemsAggregateProjection = o => new OrderWithAggregates
     {
-        BasePrice = o.Items.Sum(i=>i.Quantity*i.ProductOffer.Price),
-        DiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal) i.ProductOffer.Discount),
-        CouponDiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal) i.ProductOffer.Discount *
-                                    (decimal)(i.Coupon != null ? i.Coupon.DiscountRate : 1f)),
+        BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*i.ProductOffer.Price) ?? 0m,
+        DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
+        CouponDiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
         ItemCount = 0,
         Id = o.Id,
         PaymentId = o.PaymentId,
@@ -137,6 +136,9 @@ public class OrderManager : IOrderManager
             Status = o.Status,
             Payment = o.Payment,
             User = o.User,
+            BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*i.ProductOffer.Price) ?? 0m,
+            DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
+            CouponDiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
             Items = o.Items.Select(o => new OrderItemWithAggregates{
                 ProductId = o.ProductId,
                 SellerId = o.SellerId,
@@ -147,11 +149,11 @@ public class OrderManager : IOrderManager
                 BasePrice = o.ProductOffer.Price * o.Quantity,
                 CouponId = o.CouponId,
                 Coupon = o.Coupon,
-                DiscountedPrice = o.ProductOffer.Price * o.Quantity * (decimal)o.ProductOffer.Discount,
+                DiscountedPrice = o.ProductOffer.Price * o.Quantity *(decimal) o.ProductOffer.Discount,
                 CouponDiscountedPrice = o.ProductOffer.Price * o.Quantity * (decimal)o.ProductOffer.Discount *
-                                        (decimal)(o.Coupon != null ? o.Coupon.DiscountRate : 1f),
-                TotalDiscountPercentage = (decimal)o.ProductOffer.Discount *
-                                          (decimal)(o.Coupon != null ? o.Coupon.DiscountRate : 1f),
+                                        (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : 1m),
+                TotalDiscountPercentage =(decimal) o.ProductOffer.Discount *
+                                          (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : 1m),
             })
         };
 }

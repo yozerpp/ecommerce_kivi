@@ -15,8 +15,8 @@ public class OrderItem
         CouponId = cartItem.CouponId;
         Coupon = cartItem.Coupon;
     }
-    public uint ProductId { get; set; }
     public uint SellerId { get; set; }
+    public uint ProductId { get; set; }
     public uint OrderId { get; set; }
     public uint Quantity { get; set; }
     public ProductOffer ProductOffer { get; set; }

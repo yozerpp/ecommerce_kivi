@@ -1,62 +1,75 @@
 ﻿using System.Diagnostics;
-using Ecommerce.Dao.Concrete;
+using System.Diagnostics.Eventing.Reader;
+using System.Reflection;
 using Ecommerce.Dao.Default;
-using Ecommerce.Dao.Iface;
+using Ecommerce.Dao.Default.Tool;
 using Ecommerce.Entity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Internal;
 using NUnit.Framework.Legacy;
 
 namespace Ecommerce.Dao.Tests;
 
 public class Tests
 {
-    private DefaultDbContext _dbContext;
-    private IRepository<Cart> _repo1, _repo2;
-    [SetUp]
+    private DbContextOptions<DefaultDbContext> _dbContextOptions;
+    private const bool Skip = false;
+    [OneTimeSetUp]
     public void Setup() {
-        _dbContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>()
+        _dbContextOptions = new DbContextOptionsBuilder<DefaultDbContext>()
             .UseSqlServer("Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;")
-            .EnableSensitiveDataLogging().Options);
-        _repo1 = LockingMockRepository<Cart>.Create();
-        _repo2 = LockingMockRepository<Cart>.Create();
+            .EnableSensitiveDataLogging().Options;
     }
-
-    [Test]
-    public void TestTransactions() {
-        var watch = Stopwatch.StartNew();
-        //these need to be serialzied.
-        var t1 =new Thread(() => _repo1.Add(new Cart{ }));
-        var t2= new Thread(()=> _repo2.Add(new Cart()));
-        t1.Start();
-        t2.Start();
-        t1.Join();
-        t2.Join();
-        ClassicAssert.GreaterOrEqual(watch.ElapsedMilliseconds, TimeSpan.FromMilliseconds(2000).Milliseconds);
-    }
-    [Test]
-    public void initDb() {
-        if (false){
+    [Test, Order(1)]
+    public void CreateDb() {
+        if (Skip){
             return;
         }
-        DatabaseInitializer initializer = new DatabaseInitializer(
-           _dbContext,
+        using var context = new DefaultDbContext(_dbContextOptions);
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
+        context.SaveChanges();
+    }
+    private const int UserCount = 1000;
+    private const int SellerCount = 200;
+    private const int ProductCount = SellerCount*5;
+    private const int ProductOfferCount = SellerCount * ProductCount / 100;
+    private const int CouponCount = SellerCount;
+    private const int ProductReviewCount = ProductCount * UserCount / 100;
+    private const int ReviewCommentCount = ProductOfferCount*10;
+    private const int ReviewVoteCount = ProductOfferCount;
+    private const int CartCount = UserCount * 2;
+    private const int CartItemCount = CartCount;
+    private const int SessionCount = UserCount * 2;
+    private const int OrderItemCount = CartItemCount;
+    private const int OrderCount = UserCount * 2;
+    private const int CategoryCount = 10;
+    
+    [Test, Order(2)]
+    public void InitDb() {
+        if (Skip){
+            return;
+        }
+        using var initializer = new DatabaseInitializer<DefaultDbContext>(
+           _dbContextOptions,
             new Dictionary<Type, int?> {
-                { typeof(User), 100 },
-                { typeof(Seller), 20 },
-                { typeof(Product), 100 },
-                { typeof(ProductOffer), 200 },
-                { typeof(Cart), 100 },
-                { typeof(CartItem), 100 },
-                { typeof(Session), 100 },
-                { typeof(Order), 30 },
-                { typeof(Payment), 30 }
+                { typeof(User), UserCount },
+                { typeof(Seller), SellerCount },
+                { typeof(Product), ProductCount },
+                { typeof(ProductOffer), ProductOfferCount},
+                {typeof(Coupon),CouponCount},
+                {typeof(ProductReview), ProductReviewCount},
+                {typeof(ReviewComment), ReviewCommentCount},
+                {typeof(ReviewVote), ReviewVoteCount},
+                { typeof(Cart), CartCount},
+                { typeof(CartItem), CartItemCount },
+                { typeof(Session), SessionCount},
+                {typeof(OrderItem), OrderItemCount},
+                { typeof(Order), OrderCount},
+                {typeof(Category), CategoryCount}
             }
         );
         initializer.initialize();
     }
-    [TearDown]
-    public void TearDown() {
-        _dbContext.Dispose();
-    }
+
 }
+
