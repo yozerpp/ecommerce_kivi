@@ -7,7 +7,7 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IOrderManager
 {
-    public Order CreateOrder();
+    public Order CreateOrder(string? email = null, Address? shippingAddress = null);
     public Order CancelOrder(Order order);
     public Order complete(Order order);
     public void UpdateOrder(Order order);

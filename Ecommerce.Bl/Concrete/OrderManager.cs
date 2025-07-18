@@ -17,18 +17,17 @@ public class OrderManager : IOrderManager
         _cartManager = cartManager;
         _orderRepository = orderRepository;
     }
-
-    public Order CreateOrder() {
-        var user = ContextHolder.GetUserOrThrow();
-
-        if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
-        var cart = ContextHolder.Session!.Cart;
+    
+    public Order CreateOrder(string? email = null, Address? shippingAddress = null) {
+        var user = ContextHolder.Session!.User;
+        if (user == null && (email == null || shippingAddress == null)) throw new ArgumentException("Email and address must be specified for anonymous orders.");
         var o = new Order{
             Date = DateTime.Now, 
             // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
-            ShippingAddress = user.ShippingAddress, Status = OrderStatus.PENDING, UserId = user.Id,
-            User = user.Id == 0 ? user : null
+            ShippingAddress = user?.ShippingAddress??shippingAddress!, Status = OrderStatus.PENDING, UserId = user?.Id,
+            User = user?.Id == 0 ? user : null, Email = user==null?email:user.Email,SessionId = ContextHolder.Session.Id, Session = ContextHolder.Session.Id==0?ContextHolder.Session:null,
         };
+        var cart = ContextHolder.Session!.Cart;
         foreach (var cartItem in cart.Items){
             o.Items.Add(new OrderItem(cartItem, o));
         }

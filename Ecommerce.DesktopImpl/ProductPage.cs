@@ -18,10 +18,9 @@ namespace Ecommerce.DesktopImpl
         private static readonly string[] reviewExcludes = [nameof(ProductReview.CensorName), nameof(ReviewWithAggregates.OwnVote)];
         private static readonly string[] reviewIncludes =[string.Join('_', nameof(ProductReview.Reviewer), nameof(User.FirstName)),
             string.Join('_', nameof(ProductReview.Reviewer), nameof(User.LastName)),
-            string.Join('_', nameof(ProductReview.Seller) , nameof(Seller.ShopName))
+            string.Join('_', nameof(ProductReview.Offer), nameof(ProductOffer.Seller) , nameof(Seller.ShopName))
         ];
-        private static readonly string[] productExcludes =
-            [nameof(Product.Name), nameof(Product.Description), nameof(Product.Image)];
+        private static readonly string[] productExcludes =[nameof(Product.Name), nameof(Product.Description), nameof(Product.Image)];
         private static readonly string[] productIncludes =[];
         public ProductPage(ICartManager cartManager, IProductManager productManager, IReviewManager reviewManager, Navigation navigation) {
             _reviewManager = reviewManager;

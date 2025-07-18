@@ -12,7 +12,6 @@ public class Seller : User
     public Address ShopAddress { get; set; }
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
-    public ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
     public override bool Equals(object? obj)
     {
         if (obj is Seller other)

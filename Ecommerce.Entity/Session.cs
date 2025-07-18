@@ -7,7 +7,7 @@ public class Session
     public Cart Cart { get; set; }
     public uint? UserId {get;set;}
     public User? User {get;set;}
-
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
     public override bool Equals(object? obj)
     {
         if (obj is Session other)

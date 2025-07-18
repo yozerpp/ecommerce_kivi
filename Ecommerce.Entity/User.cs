@@ -19,6 +19,7 @@ public class User
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
     public ICollection<ReviewComment> ReviewComments { get; set; } = new List<ReviewComment>();
+    public ICollection<ReviewVote > ReviewVotes { get; set; } = new List<ReviewVote>();
     public ulong SessionId { get; set; }
     public Session? Session { get; set; }
 

@@ -51,8 +51,8 @@ public partial class ReviewPage : UserControl, IPage
         if (selected.Tag is ReviewComment) selected = selected.Parent;
         var review = (ProductReview)selected.Tag;
         var cmnt = _reviewManager.CommentReview(new ReviewComment(){
-            Comment = rev, CommenterId = ContextHolder.Session.Id, ProductId = review.ProductId,
-            ReviewerId = review.ReviewerId, SellerId = review.SellerId
+            Comment = rev, SessionId = ContextHolder.Session.Id, ProductId = review.ProductId,
+            ReviewSessionId = review.SessionId, SellerId = review.SellerId
         });
         Clear();
         LoadReviews(Loaded);

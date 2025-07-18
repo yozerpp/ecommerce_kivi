@@ -148,7 +148,7 @@ public class ProductManagerTests
         {
             ProductId = _offer1.ProductId,
             SellerId = _offer1.SellerId,
-            ReviewerId = _reviewerUser.Id,
+            SessionId = _reviewerUser.Id,
             Rating = 5,
             Comment = "Excellent product!"
         };
@@ -160,7 +160,7 @@ public class ProductManagerTests
         {
             ProductId = _offer2.ProductId,
             SellerId = _offer2.SellerId,
-            ReviewerId = _reviewerUser.Id,
+            SessionId = _reviewerUser.Id,
             Rating = 3,
             Comment = "It's okay."
         };

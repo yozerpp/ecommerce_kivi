@@ -63,6 +63,7 @@ public class OrderManagerTests
         TestContext._userManager.LoginSeller(newSeller.Email,newSeller.PasswordHash, out _);
         product = TestContext._productRepository.Detach(product);
         product.Offers.Clear();
+        product.Id = 0;
         _offer2 = TestContext._sellerManager.ListProduct(new ProductOffer{
             Product = product,
             Price = 100,
@@ -71,7 +72,6 @@ public class OrderManagerTests
         });
         TestContext._cartManager.Add(_offer1, 1);
         var payment = new Payment { TransactionId = "REVIEW_PURCHASE_" + Guid.NewGuid().ToString(), Amount = _offer1.Price, PaymentMethod = PaymentMethod.CARD };
-        payment = TestContext._paymentRepository.Add(payment);
         TestContext._orderManager.CreateOrder();
         ContextHolder.Session = null;
         _user = TestContext._userManager.Register(new User{

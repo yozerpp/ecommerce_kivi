@@ -195,7 +195,7 @@ public class SellerManagerTests
         {
             ProductId = offerForReview.ProductId,
             SellerId = offerForReview.SellerId,
-            ReviewerId = reviewer.Id, // Assuming TestContext.User is the current logged-in user
+            SessionId = reviewer.Id, // Assuming TestContext.User is the current logged-in user
             Rating = 4,
             Comment = "Great product!"
         };
