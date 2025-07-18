@@ -105,7 +105,7 @@ public class CartManagerTests
         decimal expectedCouponDiscountAmount = expectedDiscountedPrice - expectedCouponDiscountedPrice; // Should be 0 if no coupons
 
         // Assertions
-        Assert.That(cartWithAggregates.ItemCount, Is.EqualTo(2));
+        Assert.That(cartWithAggregates.ItemCount, Is.EqualTo(quantity1 + quantity2));
         Assert.That(cartWithAggregates.TotalPrice, Is.EqualTo(expectedTotalPrice));
         Assert.That(cartWithAggregates.DiscountedPrice, Is.EqualTo(expectedDiscountedPrice));
         Assert.That(cartWithAggregates.CouponDiscountedPrice, Is.EqualTo(expectedCouponDiscountedPrice));

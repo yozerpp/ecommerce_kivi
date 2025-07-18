@@ -36,7 +36,8 @@ public partial class UserPage : UserControl
             nameof(Seller.ShopAddress)),
     };
 
-    private readonly FlowLayoutPanel _infoContainer;
+    private readonly FlowLayoutPanel _infoContainer, _aggregatesContainer;
+    private readonly Dictionary<string, TextBox> _infoBoxes = new(), _aggregatesBoxes = new();
     private readonly LoginPage _loginPage;
     private static readonly string[] userIncludes =["Email"];
     private static readonly string[] userExclude =[];
@@ -56,7 +57,10 @@ public partial class UserPage : UserControl
                      orderItemsExclude)){
             orderItemsView.Columns.Add(orderItem).AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
-        _infoContainer = InitDetailsScheme();
+        _infoContainer = Utils.InitDetailsScheme(_infoBoxes, typeof(User), userExclude, userIncludes);
+        _aggregatesContainer = Utils.InitDetailsScheme(_aggregatesBoxes, typeof(UserWithAggregates), [], [], true);
+        infoBox.Controls.Add(_infoContainer);
+        statisticsBox.Controls.Add(_aggregatesContainer);
         editBtn.Click += (_, _) => {
             if(editing) SaveUser();
         };
@@ -82,39 +86,11 @@ public partial class UserPage : UserControl
         if(ep.NewPassword .Equals( ep.RepeatNewPassword)) throw new ArgumentException("Şifreler eşleşmiyor.");
         _userManager.ChangePassword(ep.OldPassword, ep.NewPassword);
     }
-    private readonly Dictionary<string, TextBox> _textBoxes = new();
-    private FlowLayoutPanel InitDetailsScheme() {
-        var infoContainer = new FlowLayoutPanel(){
-            Dock = DockStyle.Fill, WrapContents = true, FlowDirection = FlowDirection.TopDown,AutoScroll = true,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left, Visible = true, Enabled = true
-        };
-        infoBox.Controls.Add(infoContainer);
-        foreach (var kv in Utils.ColumnNames(typeof(UserWithAggregates), userExclude, userIncludes)){
-            if(kv.Equals(nameof(User.PasswordHash))) continue;
-            var label = new Label{
-                Text = kv, TextAlign = ContentAlignment.MiddleLeft, AutoSize = true,
-                Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular)
-            };
-            var text = new TextBox{
-                Text = kv, ReadOnly = true, AutoSize = true,
-                Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular), Enabled = true, Visible = true
-            };
-            var container = new FlowLayoutPanel{
-                FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.None,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left, Visible = true, Enabled = true
-            };
-            _textBoxes.Add( kv,text);
-            container.Controls.Add(label);
-            container.Controls.Add(text);
-            infoContainer.Controls.Add(container);
-        }
-        return infoContainer;
-    }
 
     private void LoadUser(User user) {
         foreach (var  us in Utils.ToPairs(user,userExclude, userIncludes)){
             if(us.Item1.Equals(nameof(User.PasswordHash))) continue;
-            if(!_textBoxes.TryGetValue(us.Item1, out var box))continue;
+            if(!_infoBoxes.TryGetValue(us.Item1, out var box))continue;
             box.Text = us.Item2.ToString();
         }
         infoBox.Refresh();
@@ -148,7 +124,7 @@ public partial class UserPage : UserControl
     private void Clear() {
         orderItemsView.Groups.Clear();
         orderItemsView.Items.Clear();
-        foreach (var keyValuePair in _textBoxes){
+        foreach (var keyValuePair in _infoBoxes){
             keyValuePair.Value.Clear();
         }
     }
@@ -198,7 +174,7 @@ public partial class UserPage : UserControl
         }
     }
     private void SaveUser() {
-        var user=(User)Utils.DictToObject(typeof(User), _textBoxes.Where(p=>typeof(User).GetProperty(p.Key)!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key)!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
         user.Id = (uint)_loadedId;
         user.SessionId = ContextHolder.Session.Id;
         user.PasswordHash = ContextHolder.GetUserOrThrow().PasswordHash;
@@ -207,7 +183,7 @@ public partial class UserPage : UserControl
         Utils.Info("Kullanıcı Bilgileri Güncellendi.");
     }
     private void editBtn_Click(object sender, EventArgs e) {
-        foreach (var keyValuePair in _textBoxes){
+        foreach (var keyValuePair in _infoBoxes){
             keyValuePair.Value.ReadOnly = false;
         }
     }

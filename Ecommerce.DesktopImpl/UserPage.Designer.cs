@@ -36,14 +36,17 @@
             orderItemsView = new System.Windows.Forms.ListView();
             editBtn = new System.Windows.Forms.Button();
             _changePasswordBtn = new System.Windows.Forms.Button();
+            label3 = new System.Windows.Forms.Label();
+            statisticsBox = new System.Windows.Forms.Panel();
             SuspendLayout();
             // 
             // label1
             // 
             label1.Font = new System.Drawing.Font("Segoe UI", 12F);
-            label1.Location = new System.Drawing.Point(0, 183);
+            label1.Location = new System.Drawing.Point(-5, 258);
+            label1.Margin = new System.Windows.Forms.Padding(0);
             label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(107, 29);
+            label1.Size = new System.Drawing.Size(98, 27);
             label1.TabIndex = 1;
             label1.Text = "Siparişler";
             // 
@@ -100,18 +103,18 @@
             // 
             orderItemsView.FullRowSelect = true;
             orderItemsView.GridLines = true;
-            orderItemsView.Location = new System.Drawing.Point(-3, 215);
+            orderItemsView.Location = new System.Drawing.Point(-3, 288);
             orderItemsView.Name = "orderItemsView";
-            orderItemsView.Size = new System.Drawing.Size(1020, 387);
+            orderItemsView.Size = new System.Drawing.Size(1020, 314);
             orderItemsView.TabIndex = 7;
             orderItemsView.UseCompatibleStateImageBehavior = false;
             orderItemsView.View = System.Windows.Forms.View.Details;
             // 
             // editBtn
             // 
-            editBtn.Location = new System.Drawing.Point(879, 183);
+            editBtn.Location = new System.Drawing.Point(879, 182);
             editBtn.Name = "editBtn";
-            editBtn.Size = new System.Drawing.Size(105, 29);
+            editBtn.Size = new System.Drawing.Size(105, 30);
             editBtn.TabIndex = 8;
             editBtn.Text = "Düzenle";
             editBtn.UseVisualStyleBackColor = true;
@@ -120,17 +123,35 @@
             // _changePasswordBtn
             // 
             _changePasswordBtn.AutoSize = true;
-            _changePasswordBtn.Location = new System.Drawing.Point(768, 183);
+            _changePasswordBtn.Location = new System.Drawing.Point(768, 182);
             _changePasswordBtn.Name = "_changePasswordBtn";
             _changePasswordBtn.Size = new System.Drawing.Size(105, 30);
             _changePasswordBtn.TabIndex = 9;
             _changePasswordBtn.Text = "Şifre Değiştir";
             _changePasswordBtn.UseVisualStyleBackColor = true;
             // 
+            // label3
+            // 
+            label3.Font = new System.Drawing.Font("Segoe UI", 12F);
+            label3.Location = new System.Drawing.Point(-5, 211);
+            label3.Name = "label3";
+            label3.Size = new System.Drawing.Size(98, 27);
+            label3.TabIndex = 10;
+            label3.Text = "İstatistik:";
+            // 
+            // statisticsBox
+            // 
+            statisticsBox.Location = new System.Drawing.Point(88, 211);
+            statisticsBox.Name = "statisticsBox";
+            statisticsBox.Size = new System.Drawing.Size(927, 54);
+            statisticsBox.TabIndex = 11;
+            // 
             // UserPage
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            Controls.Add(statisticsBox);
+            Controls.Add(label3);
             Controls.Add(_changePasswordBtn);
             Controls.Add(editBtn);
             Controls.Add(orderItemsView);
@@ -144,6 +165,9 @@
             ResumeLayout(false);
             PerformLayout();
         }
+
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Panel statisticsBox;
 
         private System.Windows.Forms.Button _changePasswordBtn;
 

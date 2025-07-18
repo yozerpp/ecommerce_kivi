@@ -45,7 +45,7 @@ public class CartManager : ICartManager
      */
     public Session newCart(User? newUser=null, bool flush = false) {
         Session? session;
-        if ((session = ContextHolder.Session) != null){
+        if (newUser==null&&(session = ContextHolder.Session) !=null){
             session.Cart = new Cart{ SessionId = session.Id };
             session = _sessionRepository.Update(session);
         }
@@ -81,15 +81,15 @@ public class CartManager : ICartManager
     }
     public CartItem Add(CartItem item, uint amount = 1)
     {
-        var cart = ContextHolder.Session!.Cart;
-        item.CartId = cart.Id;
-        item.Cart = cart.Id==0?cart:null;
+        var s = ContextHolder.Session!;
+        var cartId = item.CartId = s.CartId==0?s.Cart.Id:s.CartId;
+        
         if (item.Quantity<=0){
             throw new ArgumentException("Quantity must be greater than 0.");
         }
-        CartItem existing;
+        CartItem? existing;
         CartItem ret;
-        if ((existing = _cartItemRepository.First(ci=>ci.CartId == cart.Id && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId))!=null){
+        if ((existing = _cartItemRepository.First(ci=>ci.CartId == cartId && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId))!=null){
             existing.Quantity += amount;
             ret = _cartItemRepository.Update(existing);
         } 

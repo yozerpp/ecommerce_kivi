@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ecommerce.Dao.Default;
+using Ecommerce.Entity;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Ninject;
@@ -68,10 +69,10 @@ namespace Ecommerce.DesktopImpl
             if (typeof(string).IsAssignableFrom(tp)) return val;
             else throw new ArgumentException("Type deserialization not supported: " + tp.FullName);
         }
-        public static ICollection<string> ColumnNames(Type entityType, string[] exclude, string[] include)
+        public static ICollection<string> ColumnNames(Type entityType, string[] exclude, string[] include, bool onlyDeclared = false)
         {
             var t = GetEntityType(entityType);
-            IEnumerable<PropertyInfo> properties = entityType.GetProperties();
+            IEnumerable<PropertyInfo> properties = onlyDeclared?entityType.GetProperties().Where(p=>p.DeclaringType==entityType):entityType.GetProperties();
             if (t != null)
                 properties = properties.Where(p1 => {
                     var p2 = t.FindProperty(p1.Name);
@@ -339,6 +340,33 @@ private static ICollection<(string, object)> ToPairsProperties(object entity, IE
                 }
             }
             return ret;
+        }
+
+        public static FlowLayoutPanel InitDetailsScheme(Dictionary<string, TextBox> textBoxes, Type type, string[] exclude, string[] include, bool onlyDeclared = false) {
+            var infoContainer = new FlowLayoutPanel(){
+                Dock = DockStyle.Fill, WrapContents = true, FlowDirection = FlowDirection.TopDown,AutoScroll = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left, Visible = true, Enabled = true
+            };
+            foreach (var kv in Utils.ColumnNames(type, exclude, include, onlyDeclared:onlyDeclared)){
+                if(kv.Equals(nameof(User.PasswordHash))) continue;
+                var label = new Label{
+                    Text = kv, TextAlign = ContentAlignment.MiddleLeft, AutoSize = true,
+                    Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular)
+                };
+                var text = new TextBox{
+                    Text = kv, ReadOnly = true, AutoSize = true,
+                    Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular), Enabled = true, Visible = true
+                };
+                var container = new FlowLayoutPanel{
+                    FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.None,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left, Visible = true, Enabled = true
+                };
+                textBoxes.Add( kv,text);
+                container.Controls.Add(label);
+                container.Controls.Add(text);
+                infoContainer.Controls.Add(container);
+            }
+            return infoContainer;
         }
     }
 }

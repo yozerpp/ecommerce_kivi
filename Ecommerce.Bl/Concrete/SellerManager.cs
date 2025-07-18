@@ -56,10 +56,8 @@ public class SellerManager : ISellerManager
         if (offer.Product!=null)
         {
             offer.Product.Id = 0;
-            offer.Product = _productRepository.Add(offer.Product);
             offer.ProductId = offer.Product.Id;
         }
-   
         offer.SellerId = ContextHolder.Session.User.Id;
         var ret = _productOfferRepository.Add(offer);
         //this needs better transaction management.

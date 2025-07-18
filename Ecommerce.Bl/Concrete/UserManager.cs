@@ -4,6 +4,7 @@ using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Concrete;
@@ -38,11 +39,14 @@ public class UserManager : IUserManager
             Email = u.Email, 
             FirstName = u.FirstName, 
             LastName = u.LastName,
-            // TotalSpent = u.Orders.SelectMany(o=>o.Items).Sum(i=>
-                // (decimal?)((decimal?)i.Quantity * i.ProductOffer.Discount * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? i.Coupon.DiscountRate : 1m ) ))??0m,
-            // TotalOrders = ((int?)u.Orders.Count()) ?? 0,
-            // TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
-                // (decimal?)((decimal?)i.Quantity * (1m-i.ProductOffer.Discount) * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-i.Coupon.DiscountRate) : 0m)))??0m,
+            TotalSpent = u.Orders.SelectMany(o=>o.Items ).Sum(i=>
+                (decimal?)((decimal?)i.Quantity * (decimal?)i.ProductOffer.Discount * (decimal?)i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m ) ))??0m,
+            TotalOrders = ((int?)u.Orders.Count()) ?? 0,
+            TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
+                (decimal?)((decimal?)i.Quantity * (1m-(decimal?)i.ProductOffer.Discount) * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-(decimal?)i.Coupon.DiscountRate) : 0m)))??0m,
+            TotalReviews = ((int?)u.Reviews.Count())??0,
+            TotalReplies = ((int?)u.ReviewComments.Count())??0,
+            TotalKarma = ((int?) u.Reviews.SelectMany(r=>r.Votes).Sum(v=>(int?)((v.Up) ? 1 : -1)) )??0,
             ShippingAddress = u.ShippingAddress,
             PhoneNumber = u.PhoneNumber,
             Active = u.Active, 
@@ -84,12 +88,19 @@ public class UserManager : IUserManager
         }
         _cartManager.newCart(newUser);
         User ret;
-        if (newUser is Seller s){
-            ret  = _sellerRepository.Add(s);
+        try{
+            if (newUser is Seller s){
+                ret  = _sellerRepository.Add(s);
+            }
+            else ret =  _userRepository.Add(newUser);
+            _userRepository.Flush();
+        } catch (Exception e){
+            if(!typeof(DbUpdateException).IsInstanceOfType(e) && !typeof(InvalidOperationException).IsInstanceOfType(e))
+                throw;
+            if(e.Message.Contains("already",StringComparison.InvariantCultureIgnoreCase) || e.Message.Contains("conflict",StringComparison.InvariantCultureIgnoreCase) || e.Message.Contains("same",StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException("User with this email already exists.");
+            throw;
         }
-        else ret =  _userRepository.Add(newUser);
-        
-        _userRepository.Flush();
         return ret;
     }
     public void ChangePassword(string oldPassword, string newPassword) {

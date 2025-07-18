@@ -16,7 +16,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
     private readonly DbContext _defaultContext;
     private readonly Dictionary<IEntityType, Lock> _dictLocks = new();
     private readonly Dictionary<IEntityType, ISet<object>> _saved = new();
-    private readonly Dictionary<IEntityType, Dictionary<INavigation, ISet<object> >> _uniqueStore = new();
+    private readonly Dictionary<INavigation, IEnumerator<object>> _uniqueStore = new();
     private readonly Dictionary<Type, Int32?> _typeCounts;
     private readonly int _defaultCount;
     private readonly Dictionary<IEntityType,ISet<INavigation>> _nonRequiredNavigations = new();
@@ -62,7 +62,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
 
     private readonly ThreadLocal<TC> _contextThreadLocal = new();
     private void CreateEntities() {
-        _lanes.AsParallel().ForAll(l => {
+     foreach(var l in _lanes){
             _contextThreadLocal.Value = l.Item1;
             foreach (var entityType in l.Item2){
                 while (!IsFull(entityType)){
@@ -78,14 +78,15 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
                     }
                 }
             }
-        });
+        };
     }
     private void PopulateNonRequiredRelations()
     {
-        foreach (var kv in _saved)
+        Console.WriteLine("-----Finished Creating Entitie. Wiring Non-Required Relations...-----");
+        _uniqueStore.Clear(); 
+        foreach (var (entityType, set) in _saved)
         {
-            var entityType = kv.Key;
-            foreach (var entity in kv.Value)
+            foreach (var entity in set)
             {
                 WireNonRequiredRelation(entity, entityType);
             }
@@ -99,7 +100,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
             {
                 navigation.PropertyInfo.SetValue(entity, RetrieveSelfReferencing(targetType, entity, navigation.PropertyInfo));
             } else if (navigation.ForeignKey.IsUnique){
-                navigation.PropertyInfo.SetValue(entity, RetrieveUnique(targetType, navigation));
+                navigation.PropertyInfo.SetValue(entity, RetrieveUnique(navigation));
             }
             else navigation.PropertyInfo.SetValue(entity, RetrieveRandom(targetType));
         }
@@ -110,7 +111,6 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
             Debug.WriteLine(e);
         }
     }
-
     private object RandomizeAndSave(IEntityType enttiyType)
     {
         var entity = CreateAndPopulatePrimitives(enttiyType);
@@ -120,7 +120,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         var navsInHierarchy = RequiredNavsInHierarchy(enttiyType);
         foreach (var navigation in navsInHierarchy)
         {
-            _dictLocks[navigation.TargetEntityType].Enter();
+            // _dictLocks[navigation.TargetEntityType].Enter();
             try{
                 object val;
                 if ((val = GetSavedIfFull(navigation.TargetEntityType, navigation, 
@@ -128,10 +128,9 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
                         )) == null)
                     val = RandomizeAndSave(navigation.TargetEntityType);
                 AssignForeignKeys(navigation.ForeignKey, entity, val);
-                _uniqueStore[navigation.TargetEntityType][navigation].Add(val);
             }
             finally{
-                _dictLocks[navigation.TargetEntityType].Exit();
+                // _dictLocks[navigation.TargetEntityType].Exit();
             }
         }
         var context = _contextThreadLocal.Value!;
@@ -145,7 +144,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         if ( IsFull(enttiyType)){
             object ret;
             if (from != null) ret = RetrieveSelfReferencing(enttiyType, from, nav!.PropertyInfo);
-            if (nav?.ForeignKey.IsUnique ?? false) ret = RetrieveUnique(enttiyType, nav);
+            if (nav?.ForeignKey.IsUnique ?? false) ret = RetrieveUnique(nav);
             else ret= RetrieveRandom(enttiyType);
             return ret;
         }
@@ -181,7 +180,6 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
             _requiredNavigations[entityType] = new HashSet<INavigation>();
             _nonRequiredNavigations[entityType] = new HashSet<INavigation>();
             _saved[entityType] = new HashSet<object>();
-            _uniqueStore[entityType] = new Dictionary<INavigation, ISet<object>>();
             _compositeKeys[entityType] = new HashSet<EqualityComparableSet<INavigation>>();
             _dictLocks[entityType] = new Lock();
         }
@@ -199,7 +197,6 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
             }
             foreach (var navigation in entityType.GetNavigations().Where(n=>n.IsOnDependent&&n.DeclaringEntityType.IsAssignableFrom(entityType) &&
                          !_compositeKeys[entityType].Any(n1=>n1.Contains(n)))){
-                _uniqueStore[navigation.TargetEntityType][navigation] = new HashSet<object>();
                 if (navigation.ForeignKey.IsRequired) 
                     _requiredNavigations[entityType].Add(navigation);
                 else _nonRequiredNavigations[entityType].Add(navigation);
@@ -220,12 +217,14 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         return ret;
     }
 
-    private object RetrieveUnique(IEntityType targetType, INavigation nav) { 
-        var s = _saved[targetType]
-            .First(s=>!(_uniqueStore[targetType].GetValueOrDefault(nav)?.Contains(s) ?? false));
-        return s;
+    
+    private object RetrieveUnique(INavigation nav) {
+        if (!_uniqueStore.TryGetValue(nav, out var value)){
+            value = _uniqueStore[nav] = _saved[nav.TargetEntityType].GetEnumerator();
+        }
+        return !value.MoveNext() ? null : value.Current;
     }
-
+    
     private static object CreateAndPopulatePrimitives(IEntityType entityType) {
         var entity = entityType.ClrType.GetConstructor([])!.Invoke(null);
         foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty()  && !p.IsForeignKey()&&

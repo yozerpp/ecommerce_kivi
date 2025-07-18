@@ -50,8 +50,9 @@ public partial class Form1 : Form
                 logoutBtn.Visible = true;
                 userPage1._loadedId = i.Value.Item2?.User?.Id?? (i.Value.Item1?.Id);
             }
-            ContextHolder.Session = i.Value.Item1.Session;
+            ContextHolder.Session = i.Value.Item1?.Session??i.Value.Item2;
         }
+        
         login1.OnLogin += (_, _) => loginBtn.Text = "Kullanıcı Bilgileri";
         login1.OnLogin += (_, _) => {
             registerBtn.Visible = false;
@@ -112,7 +113,7 @@ public partial class Form1 : Form
     }
 
     private void LoginBtnClick(object sender, EventArgs e) {
-        if(ContextHolder.Session.User==null)
+        if(ContextHolder.Session?.User==null)
             _navigation.Go(null, login1);
         else if(ContextHolder.Session.User is Seller)
             _navigation.Go(null, sellerPage1);

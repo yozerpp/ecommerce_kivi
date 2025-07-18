@@ -36,7 +36,7 @@ public class Tests
     private const int CouponCount = SellerCount;
     private const int ProductReviewCount = ProductCount * UserCount / 100;
     private const int ReviewCommentCount = ProductOfferCount*10;
-    private const int ReviewVoteCount = ProductOfferCount;
+    private const int ReviewVoteCount = ReviewCommentCount * 10;
     private const int CartCount = UserCount * 2;
     private const int CartItemCount = CartCount;
     private const int SessionCount = UserCount * 2;

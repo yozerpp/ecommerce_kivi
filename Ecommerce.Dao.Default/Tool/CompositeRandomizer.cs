@@ -10,7 +10,7 @@ public class CompositeRandomizer
     private readonly Dictionary<IKey, ICollection<EqualityComparableSet<object>>> _savedKeys=new ();
     private readonly Dictionary<IEntityType, Lock> _globalLocks;
     private readonly Dictionary<IKey, (Lock, Lock)> _locks = new();
-    private readonly Dictionary<IKey, ICollection<EqualityComparableSet<object>>> _computedCombinations = new();
+    private readonly Dictionary<IKey, Stack<EqualityComparableSet<object>>> _computedCombinations = new();
     public CompositeRandomizer(Dictionary<IEntityType, ISet<object>> globalStore, Dictionary<IEntityType,Lock> lck) {
         _globalStore = globalStore;
         _globalLocks = lck;
@@ -42,50 +42,85 @@ public class CompositeRandomizer
     public IEnumerable<(IForeignKey, object)> GetCompositeKeys(IEntityType type) {
         return _keys[type].Count == 0 ? [] : _keys[type].SelectMany(pair => FindNonExistentCombination(pair.Key, pair.Value));
     }
-    
+    private readonly Dictionary<IKey, IEnumerator<EqualityComparableSet<object>>> _currentCombinationEnumerators = new();
     private IEnumerable<(IForeignKey, object)> FindNonExistentCombination(IKey key, ICollection<INavigation> navigations) {
-        _locks[key].Item1.Enter();
-        if (!_computedCombinations.TryGetValue(key, out var combinations)){
-            var lcks = _globalLocks.Where(p => navigations.Any(n => n.TargetEntityType.IsAssignableFrom(p.Key))).ToArray();
-            foreach(var lck in lcks)
-                lck.Value.Enter();
-            combinations = Cartesian(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray());
-            foreach (var keyValuePair in lcks){
-                keyValuePair.Value.Exit();
-            }
-            _computedCombinations[key] = combinations;
+        if (!_currentCombinationEnumerators.TryGetValue(key, out var enumerator)){
+            enumerator = _currentCombinationEnumerators[key] =
+                Cartesian(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray()).GetEnumerator();
         }
-        _locks[key].Item1.Exit();
-        foreach (var keyCandidate in combinations){
-            _locks[key].Item2.Enter();
-            if (!_savedKeys[key].Contains(keyCandidate)){
-                _savedKeys[key].Add(keyCandidate);
-                var ret = keyCandidate.Select(k =>
-                    (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)).ForeignKey, k)); //TODO potential issue here if both navigations target different entities in the same hierarchy.
-                _locks[key].Item2.Exit();
-                return ret;
-            }
-            _locks[key].Item2.Exit();
-        }
-        throw new InvalidOperationException("Cannot find a non-existent combination for key: " + key.Properties.Select(p=>p.Name).Aggregate((a, b) => a + ", " + b));
+        if (!enumerator.MoveNext()) return[];
+        return enumerator.Current.Select(k =>
+            (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)).ForeignKey, k));
+        // _locks[key].Item1.Enter();
+        // if (!_computedCombinations.TryGetValue(key, out var combinations)){
+        //     var lcks = _globalLocks.Where(p => navigations.Any(n => n.TargetEntityType.IsAssignableFrom(p.Key))).ToArray();
+        //     // foreach(var lck in lcks)
+        //         // lck.Value.Enter();
+        //     combinations = Cartesian(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray());
+        //     // foreach (var keyValuePair in lcks){
+        //         // keyValuePair.Value.Exit();
+        //     // }
+        //     _computedCombinations[key] = combinations;
+        // }
+        // _locks[key].Item1.Exit();
+        // _locks[key].Item2.Enter();
+        // _locks[key].Item2.Exit();
+        // return ret!;
     }
-    private static List<EqualityComparableSet<object>> Cartesian(ICollection<ICollection<object>> sets)
+    private static IEnumerable<EqualityComparableSet<object>> Cartesian(ICollection<ICollection<object>> sets)
     {
-        List<EqualityComparableSet<object>> temp =[new()];
-        for (int i = 0; i < sets.Count; i++)
+        if (!sets.Any())
         {
-            List<EqualityComparableSet<object>> newTemp =[];
-            foreach (EqualityComparableSet<object> product in temp)
-            {
-                foreach (var element in sets.ElementAt(i))
-                {
-                    var tempCopy = new EqualityComparableSet<object>(product){ element };
-                    newTemp.Add(tempCopy);
-                }
-            }
-            temp = newTemp;
+            yield return new EqualityComparableSet<object>();
+            yield break;
         }
 
-        return temp;
+        var setsArray = sets.ToArray();
+        var indices = new int[setsArray.Length];
+        var setsSizes = setsArray.Select(s => s.Count).ToArray();
+
+        if (setsSizes.Any(size => size == 0))
+            yield break;
+        
+        do
+        {
+            var result = new EqualityComparableSet<object>();
+            for (int i = 0; i < setsArray.Length; i++)
+            {
+                result.Add(setsArray[i].ElementAt(indices[i]));
+            }
+            yield return result;
+        }
+        while (IncrementIndices(indices, setsSizes));
     }
+    private static bool IncrementIndices(int[] indices, int[] maxValues)
+    {
+        for (int i = indices.Length - 1; i >= 0; i--)
+        {
+            indices[i]++;
+            if (indices[i] < maxValues[i])
+                return true;
+            indices[i] = 0;
+        }
+        return false;
+    }
+    // private static Stack<EqualityComparableSet<object>> Cartesian(ICollection<ICollection<object>> sets)
+    // {
+    //     Stack<EqualityComparableSet<object>> temp =new Stack<EqualityComparableSet<object>>([[]]);
+    //     for (int i = 0; i < sets.Count; i++)
+    //     {
+    //         Stack<EqualityComparableSet<object>> newTemp =[];
+    //         foreach (EqualityComparableSet<object> product in temp)
+    //         {
+    //             foreach (var element in sets.ElementAt(i))
+    //             {
+    //                 var tempCopy = new EqualityComparableSet<object>(product){ element };
+    //                 newTemp.Push(tempCopy);
+    //             }
+    //         }
+    //         temp = newTemp;
+    //     }
+    //
+    //     return temp;
+    // }
 }
