@@ -8,7 +8,7 @@ namespace Ecommerce.DesktopImpl
         public User User { get; set; }
         public Session Session { get; set; }
     }
-    public partial class LoginPage : UserControl, IPage
+    public partial class LoginPage : UserControl
     {
         public event EventHandler<LoginEventArgs> OnLogin = delegate{};
         private readonly IUserManager _userManager;
@@ -24,9 +24,6 @@ namespace Ecommerce.DesktopImpl
             _userManager = userManager;
             InitializeComponent();
         }
-
-        public void Go() { }
-
         private void userLgnBtn_Click(object sender, EventArgs e) {
             var email = emailBox.Text;
             var password = passwordBox.Text;

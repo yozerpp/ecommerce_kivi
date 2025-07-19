@@ -2,7 +2,7 @@
 
 namespace Ecommerce.DesktopImpl;
 
-partial class ReviewPage 
+partial class ReviewPage
 {
     /// <summary> 
     /// Required designer variable.

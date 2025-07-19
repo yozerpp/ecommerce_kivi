@@ -108,9 +108,9 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
     }
 
     public TEntity Detach(TEntity entity) {
-        foreach (var e1 in _context.ChangeTracker.Entries<TEntity>().Where(e => e.Entity.Equals(entity))){
-            e1.State = EntityState.Detached;
-        }
+        // foreach (var e1 in _context.ChangeTracker.Entries<TEntity>().Where(e => e.Entity.Equals(entity))){
+        //     e1.State = EntityState.Detached;
+        // }
         return entity;
     }
     public TEntity Merge(TEntity entity) {

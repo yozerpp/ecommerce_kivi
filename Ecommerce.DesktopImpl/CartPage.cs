@@ -4,7 +4,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class CartPage : UserControl, IPage
+    public partial class CartPage : UserControl
     {
         private readonly ICartManager _cartManager;
         private readonly IOrderManager _orderManager;
@@ -36,8 +36,9 @@ namespace Ecommerce.DesktopImpl
             }
         }
 
-        public void Go()
+        public override void Refresh()
         {
+            base.Refresh();
             Clear();
             Load();
         }
@@ -71,7 +72,8 @@ namespace Ecommerce.DesktopImpl
                 var (item, _) = ((CartItemWithAggregates, Seller))cartViewSelectedRow.Tag;
                 _cartManager.Remove(item);
             }
-            Go();
+            Refresh();
+
         }
 
         private void addBtn_Click(object sender, EventArgs e)

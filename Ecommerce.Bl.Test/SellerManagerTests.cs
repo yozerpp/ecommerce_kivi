@@ -71,7 +71,6 @@ public class SellerManagerTests
     public void UpdateOffer() {
         var oldStock = _offer.Stock;
         _offer.Stock += 10;
-        _offer.Product = null;
         TestContext._sellerManager.updateOffer(_offer, _offer.ProductId);
         TestContext._offerRepository.Flush();
         TestContext._offerRepository.Detach(_offer);

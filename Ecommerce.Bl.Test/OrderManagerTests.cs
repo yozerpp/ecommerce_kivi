@@ -103,6 +103,7 @@ public class OrderManagerTests
         Assert.That(o1, Is.Not.Null);
         Assert.That(o.Id, Is.EqualTo(o1.Id));
         Assert.That(o1.Items.Count(), Is.EqualTo(1));
+        Assert.That(o.Payment.Id, Is.EqualTo(o1.Payment.Id));
         Assert.That(o.User.Id, Is.EqualTo(o1.User.Id));
         Assert.That(userWithOrders.Orders, Contains.Item(o1));
         _user = userWithOrders;

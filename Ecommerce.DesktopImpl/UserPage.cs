@@ -17,11 +17,10 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 
 namespace Ecommerce.DesktopImpl
 {
-public partial class UserPage : UserControl, IPage
+public partial class UserPage : UserControl
 {
     private readonly IOrderManager _orderManager;
     private readonly IUserManager _userManager;
-    public static UserPage Instance { get; private set; }
     public uint? _loadedId = null;
     private int _ordersPage = 1;
     private bool editing = false;
@@ -40,8 +39,8 @@ public partial class UserPage : UserControl, IPage
     private readonly FlowLayoutPanel _infoContainer, _aggregatesContainer;
     private readonly Dictionary<string, TextBox> _infoBoxes = new(), _aggregatesBoxes = new();
     private readonly LoginPage _loginPage;
-    private static readonly string[] userIncludes =[nameof(User.Email)];
-    private static readonly string[] userExclude =[nameof(User.Active)];
+    private static readonly string[] userIncludes =["Email"];
+    private static readonly string[] userExclude =[];
     private static readonly string[] orderItemsExclude =[];
 
     public UserPage(IOrderManager orderManager, IUserManager userManager, LoginPage loginPage) {
@@ -70,23 +69,12 @@ public partial class UserPage : UserControl, IPage
             if (editing) editBtn.Text = "Kaydet";
             else editBtn.Text = "Düzenle";
         };
-        Instance = this;
-    }
-
-    public new void Load(uint id) {
-        _loadedId = id;
     }
     public new void Load() {
         if (_loadedId == null) return;
-        var u = _userManager.GetWithAggregates(_loadedId);
-        var ownPage = (ContextHolder.Session.User?.Id ?? ContextHolder.Session.UserId) == _loadedId;
-        if(ownPage) LoadOrders();
-        if (!ownPage){
-            confirmBtn.Enabled = confirmBtn.Visible = editBtn.Enabled = editBtn.Visible = false;
-        }
-        else confirmBtn.Enabled = confirmBtn.Visible = editBtn.Enabled = editBtn.Visible = true;
-        LoadUser(u, ownPage);
-        
+        var u = _userManager.GetWithAggregates();
+        LoadOrders();
+        LoadUser(u);
     }
     private struct EmailAndPassword {
         public string OldPassword { get; set; }
@@ -98,14 +86,11 @@ public partial class UserPage : UserControl, IPage
         if(ep.NewPassword .Equals( ep.RepeatNewPassword)) throw new ArgumentException("Şifreler eşleşmiyor.");
         _userManager.ChangePassword(ep.OldPassword, ep.NewPassword);
     }
-    private static string[] sensitiveExclude = [
-        nameof(User.PasswordHash), nameof(User.ShippingAddress), nameof(User.LastName), nameof(User.PhoneNumber)
-    ];
-    private void LoadUser(User user, bool ownPage = true) {
-        foreach (var  us in Utils.ToPairs(user,!ownPage?userExclude.Concat(sensitiveExclude).ToArray():userExclude, userIncludes)){
+
+    private void LoadUser(User user) {
+        foreach (var  us in Utils.ToPairs(user,userExclude, userIncludes)){
             if(us.Item1.Equals(nameof(User.PasswordHash))) continue;
-            if(!_infoBoxes.TryGetValue(us.Item1, out var box)) 
-                if(!_aggregatesBoxes.TryGetValue(us.Item1, out box)) continue;
+            if(!_infoBoxes.TryGetValue(us.Item1, out var box))continue;
             box.Text = us.Item2.ToString();
         }
         infoBox.Refresh();
@@ -128,10 +113,10 @@ public partial class UserPage : UserControl, IPage
             }
             orderItemsView.Groups.Add(group);
         }
-        orderItemsView.Refresh();
     }
 
-    public void Go() {
+    public override void Refresh() {
+        base.Refresh();
         Clear();
         Load();
     }
@@ -189,11 +174,10 @@ public partial class UserPage : UserControl, IPage
         }
     }
     private void SaveUser() {
-        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key.Split('_').First())!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key)!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
         user.Id = (uint)_loadedId;
         user.SessionId = ContextHolder.Session.Id;
-        var u = ContextHolder.GetUserOrThrow();
-        user.PasswordHash = u.PasswordHash;
+        user.PasswordHash = ContextHolder.GetUserOrThrow().PasswordHash;
         _userManager.Update(user);
         LoadUser(user);
         Utils.Info("Kullanıcı Bilgileri Güncellendi.");

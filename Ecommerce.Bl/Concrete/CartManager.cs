@@ -21,18 +21,11 @@ public class CartManager : ICartManager
         _sessionRepository = sessionRepository;
     }
 
-    public Cart? Get(bool includeAggregates = true, bool getItems = true, bool includeSeller =true) {
-        var includes = GetIncludes(getItems, includeSeller);
+    public Cart? Get(bool includeAggregates = true, bool getItems = true) {
+        string[][] includes = getItems ?[[nameof(Cart.Items),nameof(CartItem.ProductOffer), nameof(ProductOffer.Product) ]]:[];
         if (!includeAggregates)
             return _cartRepository.First(c => c.Id == ContextHolder.Session!.CartId, includes: includes);
         return GetWithAggregates(includes);
-    }
-    private static string[][] GetIncludes(bool items, bool seller) {
-        var includes = new List<string[]>();
-        if (!items) return includes.ToArray();
-        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product)]);
-        if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
-        return includes.ToArray();
     }
     private Cart? GetWithAggregates(string[][] includes) {
         var cartId = ContextHolder.Session!.CartId;
@@ -69,7 +62,7 @@ public class CartManager : ICartManager
 
     public void AddCoupon(ProductOffer offer, Coupon coupon) {
         var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
-        if( !_couponRepository.Exists(c => c.Id == coupon.Id && c.SellerId == offer.SellerId)){
+        if( _couponRepository.Exists(c => c.Id == coupon.Id && c.SellerId == offer.SellerId)){
             throw new ArgumentException("Coupon is not valid for this offer.");
         }
         var c = _cartItemRepository.UpdateExpr([
@@ -103,7 +96,6 @@ public class CartManager : ICartManager
         else ret = _cartItemRepository.Add(item);
         _cartItemRepository.Flush();
         _cartItemRepository.Detach(ret);
-        ContextHolder.Session.Cart.Items.Add(ret);
         return ret;
     }
 
@@ -161,7 +153,7 @@ public class CartManager : ICartManager
                     DiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount,
                     CouponDiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount *
                                             (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
-                    TotalDiscountPercentage = (1m - ci.ProductOffer.Discount) * ( ci.Coupon != null ? 1m- ci.Coupon.DiscountRate : 0m),
+                    TotalDiscountPercentage = ci.ProductOffer.Discount * (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
                 }),
             ItemCount = c.Items.Sum(ci=>(uint?)ci.Quantity) as uint? ?? 0,
     };

@@ -5,7 +5,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class Homepage : UserControl, IPage
+    public partial class Homepage : UserControl
     {
         private readonly IProductManager _productManager;
         private readonly ProductPage _productPage;
@@ -124,9 +124,10 @@ namespace Ecommerce.DesktopImpl
             return predicates;
         }
 
-        public void Go()
+        public override void Refresh()
         {
             search_Click(null,null);
+            base.Refresh();
         }
 
         private void nextBtn_Click(object sender, EventArgs e) {
