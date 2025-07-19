@@ -7,6 +7,7 @@ public class CartWithAggregates : Cart
     public decimal CouponDiscountAmount { get; set; }
     public decimal TotalPrice { get; set; }
     public decimal DiscountedPrice { get; set; }
-    public decimal CouponDiscountedPrice { get; set; }
+    public decimal TotalDiscountedPrice { get; set; }
+    public decimal TotalDiscountPercentage { get; set; }
     public new IEnumerable<CartItemWithAggregates> Items { get; set; }
 }

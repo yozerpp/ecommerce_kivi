@@ -81,6 +81,11 @@ public class RepositoryProxyTests
             return default(TP);
         }
 
+        public TP? FirstP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, string[][]? includes = null,
+            (Expression<Func<T, object>>, bool)[]? orderBy = null) {
+            return default;
+        }
+
         public bool Exists(Expression<Func<T, bool>> predicate, string[][]? includes = null) => false;
         public bool Exists<T1>(Expression<Func<T1, bool>> predicate, Expression<Func<T, T1>> select, string[][]? includes = null) {
             return true;

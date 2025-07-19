@@ -38,7 +38,6 @@ public static class SearchExpressionUtils
                 var splt = predicate.PropName.Split('_');
                 left = Expression.Property(param, splt[0]);
                 property = typeof(T).GetProperty(splt[0]);
-                if (property == null)break;
                 bool cont = false;
                 foreach (var nav in splt.Skip(1)){
                     property = property.PropertyType.GetProperty(nav);
@@ -53,59 +52,16 @@ public static class SearchExpressionUtils
                 property = typeof(T).GetProperty(predicate.PropName);
                 if (property == null) continue;
                 left = Expression.Property(param, property);
+                if(Nullable.GetUnderlyingType(property.PropertyType)!=null)
+                    left = Expression.Property(left, property.PropertyType.GetProperty("Value")!);
             }
-            ConstantExpression right;
+            ConstantExpression? right;
             if (predicate.Value == null || predicate.Value.Equals("null"))
                 right = Expression.Constant(null);
             else{
-                switch (Type.GetTypeCode(property.PropertyType)){
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt64:
-                    case TypeCode.UInt32:
-                        if (!UInt32.TryParse(predicate.Value, out UInt32 value1))
-                            continue;
-                        right = Expression.Constant(value1);
-                        break;
-                    case TypeCode.Int16:
-                    case TypeCode.Int64:
-                    case TypeCode.Int32:
-                        if (!Int32.TryParse(predicate.Value, out int value2))
-                            continue;
-                        right = Expression.Constant(value2);
-                        break;
-                    case TypeCode.Single:
-                        if(!float.TryParse(predicate.Value, out float value5))
-                            continue;
-                        right = Expression.Constant(value5);
-                        break;
-                    case TypeCode.Double:
-                        if(!double.TryParse(predicate.Value, out double value4))
-                            continue;
-                        right= Expression.Constant(value4);
-                        break;
-                    case TypeCode.Decimal:
-                        if (!decimal.TryParse(predicate.Value, out decimal value3))
-                            continue;
-                        right = Expression.Constant(value3);
-                        break;
-                    case TypeCode.Boolean:
-                        if (!bool.TryParse(predicate.Value, out bool boolVal))
-                            continue;
-                        right = Expression.Constant(boolVal);
-                        break;
-                    case TypeCode.Char:
-                        if (!char.TryParse(predicate.Value, out char charVal))
-                            continue;
-                        right = Expression.Constant(charVal);
-                        break;
-                    case TypeCode.String:
-                        right = Expression.Constant(predicate.Value);
-                        break;
-                    case TypeCode.Object: //complex property, should be covered by the initial traversal property traversal.
-                    default:
-                        throw new Exception("Unsupported property type for predicate: " + property.PropertyType);
-                }
+                right = GetConstant<T>(property.PropertyType, predicate);
             }
+            if(right==null) continue;
             Expression check;
             switch (predicate.Operator){
                 case SearchPredicate.OperatorType.Equals:
@@ -115,9 +71,10 @@ public static class SearchExpressionUtils
                     if (property.PropertyType != typeof(string))
                         throw new Exception("Like operator can only be used with string properties.");
                     var method = typeof(string).GetMethod("Contains", [typeof(string)]);
-                    if (method == null)
-                        throw new Exception("String.Contains method not found.");
-                    check = Expression.Call(left, method, right);
+                    check = Expression.Condition(Expression.NotEqual(left, Expression.Constant(null)),
+                        Expression.Call(left, method,right),
+                        Expression.Constant(false));
+                    
                     break;
                 case SearchPredicate.OperatorType.GreaterThan:
                     check =Expression.GreaterThan(left, right);
@@ -138,5 +95,63 @@ public static class SearchExpressionUtils
         }
         var predicateExpression = Expression.Lambda<Func<T, bool>>(checks!, param);
         return predicateExpression;
+    }
+
+    private static ConstantExpression? GetConstant<T>(Type? property, SearchPredicate predicate) {
+        ConstantExpression? right;
+        switch (Type.GetTypeCode(property)){
+            case TypeCode.UInt16:
+            case TypeCode.UInt64:
+            case TypeCode.UInt32:
+                if (!UInt32.TryParse(predicate.Value, out UInt32 value1))
+                    return null;
+                right = Expression.Constant(value1);
+                break;
+            case TypeCode.Int16:
+            case TypeCode.Int64:
+            case TypeCode.Int32:
+                if (!Int32.TryParse(predicate.Value, out int value2))
+                    return null;
+                right = Expression.Constant(value2);
+                break;
+            case TypeCode.Single:
+                if(!float.TryParse(predicate.Value, out float value5))
+                    return null;
+                right = Expression.Constant(value5);
+                break;
+            case TypeCode.Double:
+                if(!double.TryParse(predicate.Value, out double value4))
+                    return null;
+                right= Expression.Constant(value4);
+                break;
+            case TypeCode.Decimal:
+                if (!decimal.TryParse(predicate.Value, out decimal value3))
+                    return null;
+                right = Expression.Constant(value3);
+                break;
+            case TypeCode.Boolean:
+                if (!bool.TryParse(predicate.Value, out bool boolVal))
+                    return null;
+                right = Expression.Constant(boolVal);
+                break;
+            case TypeCode.Char:
+                if (!char.TryParse(predicate.Value, out char charVal))
+                    return null;
+                right = Expression.Constant(charVal);
+                break;
+            case TypeCode.String:
+                right = Expression.Constant(predicate.Value);
+                break;
+            case TypeCode.Object: //complex property, should be covered by the initial traversal property traversal.
+            default:
+                Type underLyingType;
+                if ((underLyingType = Nullable.GetUnderlyingType(property)) == null)
+                    throw new Exception("Unsupported property type for predicate: " + property);
+                right =  GetConstant<T>(underLyingType, predicate);
+                
+                break;
+        }
+
+        return right;
     }
 }

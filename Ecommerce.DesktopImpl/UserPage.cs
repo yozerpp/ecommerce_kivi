@@ -1,26 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Ecommerce.Bl;
+﻿using Ecommerce.Bl;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Projections;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 
 namespace Ecommerce.DesktopImpl
 {
-public partial class UserPage : UserControl
+public partial class UserPage : UserControl, IPage
 {
     private readonly IOrderManager _orderManager;
     private readonly IUserManager _userManager;
+    public static UserPage Instance { get; private set; }
     public uint? _loadedId = null;
     private int _ordersPage = 1;
     private bool editing = false;
@@ -39,8 +29,8 @@ public partial class UserPage : UserControl
     private readonly FlowLayoutPanel _infoContainer, _aggregatesContainer;
     private readonly Dictionary<string, TextBox> _infoBoxes = new(), _aggregatesBoxes = new();
     private readonly LoginPage _loginPage;
-    private static readonly string[] userIncludes =["Email"];
-    private static readonly string[] userExclude =[];
+    private static readonly string[] userIncludes =[nameof(User.Email)];
+    private static readonly string[] userExclude =[nameof(User.Active)];
     private static readonly string[] orderItemsExclude =[];
 
     public UserPage(IOrderManager orderManager, IUserManager userManager, LoginPage loginPage) {
@@ -69,12 +59,28 @@ public partial class UserPage : UserControl
             if (editing) editBtn.Text = "Kaydet";
             else editBtn.Text = "Düzenle";
         };
+        Instance = this;
+    }
+
+    public new void Load(uint id) {
+        _loadedId = id;
+    }
+
+    private UserWithAggregates GetUser() {
+        return _userManager.GetWithAggregates(_loadedId);
     }
     public new void Load() {
         if (_loadedId == null) return;
-        var u = _userManager.GetWithAggregates();
-        LoadOrders();
-        LoadUser(u);
+        var userTask = Task.Run(GetUser);
+        var ordersTask = userTask.ContinueWith(_=>GetAllOrders());
+        var ownPage = (ContextHolder.Session.User?.Id ?? ContextHolder.Session.UserId) == _loadedId;
+        if(ownPage) ordersTask.ContinueWith(o =>Invoke( ()=>LoadOrders(o.Result)));
+        if (!ownPage){
+            confirmBtn.Enabled = confirmBtn.Visible = editBtn.Enabled = editBtn.Visible = false;
+        }
+        else confirmBtn.Enabled = confirmBtn.Visible = editBtn.Enabled = editBtn.Visible = true;
+        userTask.ContinueWith(u=>Invoke(()=>LoadUser(u.Result, ownPage)));
+        Task.WaitAll(userTask, ordersTask);
     }
     private struct EmailAndPassword {
         public string OldPassword { get; set; }
@@ -82,23 +88,29 @@ public partial class UserPage : UserControl
         public string RepeatNewPassword { get; set; }
     }
     private void _changePasswordBtn_click(object? s, EventArgs e) {
-        var ep = (EmailAndPassword) Utils.GetInput(typeof(EmailAndPassword));
+        var ep = (EmailAndPassword) Utils.GetInput(typeof(EmailAndPassword) , "Şifre Gir");
+        // if (ep.OldPassword == ep.NewPassword){
+        //     
+        // }
         if(ep.NewPassword .Equals( ep.RepeatNewPassword)) throw new ArgumentException("Şifreler eşleşmiyor.");
         _userManager.ChangePassword(ep.OldPassword, ep.NewPassword);
     }
-
-    private void LoadUser(User user) {
-        foreach (var  us in Utils.ToPairs(user,userExclude, userIncludes)){
+    private static string[] sensitiveExclude = [
+        nameof(User.PasswordHash), nameof(User.ShippingAddress), nameof(User.LastName), nameof(User.PhoneNumber)
+    ];
+    private void LoadUser(User user, bool ownPage = true) {
+        foreach (var  us in Utils.ToPairs(user,!ownPage?userExclude.Concat(sensitiveExclude).ToArray():userExclude, userIncludes)){
             if(us.Item1.Equals(nameof(User.PasswordHash))) continue;
-            if(!_infoBoxes.TryGetValue(us.Item1, out var box))continue;
+            if(!_infoBoxes.TryGetValue(us.Item1, out var box)) 
+                if(!_aggregatesBoxes.TryGetValue(us.Item1, out box)) continue;
             box.Text = us.Item2.ToString();
         }
         infoBox.Refresh();
     }
-    private void LoadOrders() {
+    private void LoadOrders(List<OrderWithAggregates> orders, bool ownPage = true) {
         orderItemsView.Groups.Clear();
         orderItemsView.Items.Clear();
-        foreach (var order in _orderManager.getAllOrders(page: _ordersPage)){
+        foreach (var order in orders){
             var group = new ListViewGroup(
                 $"Order #{order.Id} - {order.Status} : {order.Date.ToShortDateString()} \nİndirimsiz Fiyat: {order.BasePrice} \nSon Fiyat: {order.CouponDiscountedPrice}",
                 HorizontalAlignment.Left){Subtitle = "Teslimat Adresi: " + order.ShippingAddress.ToString()};
@@ -113,10 +125,14 @@ public partial class UserPage : UserControl
             }
             orderItemsView.Groups.Add(group);
         }
+        orderItemsView.Refresh();
     }
 
-    public override void Refresh() {
-        base.Refresh();
+    private List<OrderWithAggregates> GetAllOrders() {
+        return _orderManager.getAllOrders(true,page: _ordersPage);
+    }
+
+    public void Go() {
         Clear();
         Load();
     }
@@ -150,20 +166,22 @@ public partial class UserPage : UserControl
             var order  =(Order)orderItemsView.Groups[index].Tag;
             _orderManager.CancelOrder(order);
         }
-        LoadOrders();
+        Task.Run(GetAllOrders).ContinueWith(o=>Invoke(()=>LoadOrders(o.Result)) );
         Utils.Info("Siparişler İptal Edildi.");
     }
 
     private void updateAdres_Click(object sender, EventArgs e) {
-        var newaddress =(Address?) Utils.GetInput(typeof(Address));
+        var newaddress =(Address?) Utils.GetInput(typeof(Address), "Addres Güncelle");
         if(newaddress==null) return;
         foreach (int idx in orderItemsView.SelectedIndices){
             var order = (Order)orderItemsView.Groups[idx].Tag ;
             order.ShippingAddress = newaddress;
             _orderManager.UpdateOrder(order);
         }
-        LoadOrders();
+        var o=Task.Run(GetAllOrders);
+        o.ContinueWith(o=>Invoke(()=>LoadOrders(o.Result)));
         Utils.Info("Adres Bilgileri Güncellendi.");
+        Task.WaitAll(o);
     }
     
     private void confirmBtn_Click(object sender, EventArgs e) {
@@ -174,12 +192,13 @@ public partial class UserPage : UserControl
         }
     }
     private void SaveUser() {
-        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key)!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key.Split('_').First())!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
         user.Id = (uint)_loadedId;
         user.SessionId = ContextHolder.Session.Id;
-        user.PasswordHash = ContextHolder.GetUserOrThrow().PasswordHash;
-        _userManager.Update(user);
-        LoadUser(user);
+        var u = ContextHolder.GetUserOrThrow();
+        user.PasswordHash = u.PasswordHash;
+        var updateTask = Task.Run(()=> _userManager.Update(user));
+        updateTask.ContinueWith(t => Invoke(() => LoadUser(t.Result)));
         Utils.Info("Kullanıcı Bilgileri Güncellendi.");
     }
     private void editBtn_Click(object sender, EventArgs e) {

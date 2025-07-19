@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ecommerce.Dao.Default;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Common.Meta;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Ninject;
@@ -52,8 +53,9 @@ namespace Ecommerce.DesktopImpl
         }
 
         public static object ParseProp(Type tp, string val) {
-            if (tp.IsPrimitive )   
-                return tp.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public , [typeof(string)]).Invoke(null, [val]);
+            var pars = tp.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, [typeof(string)]);
+            if (pars!=null )   
+                return pars.Invoke(null, [val]);
             if (tp.IsEnum)
                 return Enum.Parse(tp, val);
             if (tp.IsArray){
@@ -86,7 +88,7 @@ namespace Ecommerce.DesktopImpl
                 var nestedIncludes = NestIncludes(include);
                 var nestedExcludes = NestIncludes(exclude);
                 foreach (var navigation in t.GetNavigations()
-                             .Where(n => !n.IsCollection && n.IsOnDependent && !n.IsShadowProperty()).Where(n=>!exclude.Contains(n.Name))){
+                             .Where(n => (!onlyDeclared || n.DeclaringEntityType.ClrType == entityType)&&!n.IsCollection && n.IsOnDependent && !n.IsShadowProperty()).Where(n=>!exclude.Contains(n.Name))){
                     if(!include.Any(i => i.Split('_').First().Equals(navigation.Name) || 
                                          i.Split('_').First().Equals(navigation.Name))) continue;
                     ret.AddRange(ColumnNames(navigation.TargetEntityType.ClrType,nestedExcludes,nestedIncludes).Where(s=>nestedIncludes.Contains(s)).Select(s=>$"{navigation.Name}_{s}"));
@@ -135,12 +137,12 @@ namespace Ecommerce.DesktopImpl
             }
             return ret;
         }
-        public static object? GetInput(Type type,params string[] ignore){
+        public static object? GetInput(Type type, string cap, string[]? include = null,params string[] ignore){
             Form prompt = new Form()
             {
                 Width = 250,
                 Height = 300,
-                Text = "Adress Güncelle",
+                Text = cap,
                 StartPosition = FormStartPosition.CenterScreen,
             };
             var container1 = new FlowLayoutPanel(){
@@ -149,24 +151,27 @@ namespace Ecommerce.DesktopImpl
             };
             Button ok = new Button() { Text = "OK", Left = 280, Width = 80, Top = 80, Dock = DockStyle.Bottom, DialogResult = DialogResult.OK };
             Dictionary<PropertyInfo, TextBox> inputs = new();
-            foreach (var propertyInfo in type.GetProperties()){
+            var t = Model.FindEntityType(type);
+            ICollection<PropertyInfo> fileProperties = new List<PropertyInfo>();
+            foreach (var propertyInfo in type.GetProperties().Where(p=> {
+                         var p2 = t?.FindProperty(p.Name);
+                         return t == null || p2 != null && ((!p2.IsForeignKey() && !p2.IsKey()) ||
+                                                             (include?.Contains(p2.Name) ?? false));
+                     })){
                 if(ignore.Contains(propertyInfo.Name)) continue;
+                if (propertyInfo.GetCustomAttribute<ImageAttribute>() != null){
+                    fileProperties.Add(propertyInfo);
+                    continue;
+                }
                 var container = new FlowLayoutPanel{
                     FlowDirection = FlowDirection.LeftToRight,AutoSize = true,Dock = DockStyle.Top, Anchor = AnchorStyles.Top | AnchorStyles.Left,
                 };
-                var label = new Label{
-                    Text = propertyInfo.Name,
-                    Left = 20, Top = 20, AutoSize = true,Anchor = AnchorStyles.Top | AnchorStyles.Left,
-                    Dock = DockStyle.Left
-                };
-                var inputBox = new TextBox{
-                  PlaceholderText  = propertyInfo.Name,AutoSize = true,
-                  Dock = DockStyle.Fill, Anchor = AnchorStyles.Top | AnchorStyles.Right
-                };
-                container.Controls.Add(label);
-                container.Controls.Add(inputBox);
-                container1.Controls.Add(container);
-                inputs.Add(propertyInfo, inputBox);
+                 foreach (var valueTuple in CreateTextBox(propertyInfo)){
+                    container.Controls.Add(valueTuple.label);
+                    container.Controls.Add(valueTuple.inputBox);
+                    inputs.Add(propertyInfo, valueTuple.inputBox);
+                 }
+                 container1.Controls.Add(container);
             }
             container1.Controls.Add(ok);
             prompt.Controls.Add(container1);
@@ -174,12 +179,55 @@ namespace Ecommerce.DesktopImpl
             var resp = prompt.ShowDialog();
             if (resp == DialogResult.Abort || resp == DialogResult.Cancel) return default;
             var ret = type.GetConstructor([]).Invoke([]);
+            foreach (var fileProperty in fileProperties){
+                var file = PromptFile(fileProperty.Name);
+                if(file==null) continue;
+                if(fileProperty.PropertyType ==typeof(string) )
+                    fileProperty.SetValue(ret, Convert.ToBase64String(file));
+                else fileProperty.SetValue(ret, file);
+            }
             foreach (var kv in inputs){
                 kv.Key.SetValue(ret, ParseProp(kv.Key.PropertyType, kv.Value.Text));
             }
             return ret;
         }
-public static ICollection<(string, object)> ToPairs(object entity, string[] exclude, string[] include)
+
+        private static byte[]? PromptFile(string cap) {
+            using OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.InitialDirectory = "c:\\";
+            openFileDialog.Filter = "Image files (*.jpg, *.png)|*.jpg; *.png|All files (*.*)|*.*";
+            openFileDialog.FilterIndex = 1;
+            openFileDialog.RestoreDirectory = true;
+            openFileDialog.Title = "Select a file for " + cap;
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                // Get the selected file path
+                string filePath = openFileDialog.FileName;
+
+                // Do something with the file (e.g., read)
+                return File.ReadAllBytes(filePath);
+            }
+
+            return null;
+        }
+        private static IEnumerable<(Label label, TextBox inputBox)> CreateTextBox(PropertyInfo propertyInfo) {
+            var c =Type.GetTypeCode(propertyInfo.PropertyType);
+            if (c == TypeCode.Object  && Model.FindEntityType(propertyInfo.DeclaringType)?.FindComplexProperty(propertyInfo.Name)!=null ){ 
+                return propertyInfo.PropertyType.GetProperties().SelectMany(CreateTextBox );
+            }
+            var label = new Label{
+                Text = propertyInfo.Name,
+                Left = 20, Top = 20, AutoSize = true,Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                Dock = DockStyle.Left
+            };
+            var inputBox = new TextBox{
+                PlaceholderText  = propertyInfo.Name,AutoSize = true,
+                Dock = DockStyle.Fill, Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            return [(label, inputBox)];
+        }
+
+        public static ICollection<(string, object)> ToPairs(object entity, string[] exclude, string[] include)
 {
     var vals = new List<(string, object)>();
     var t = GetEntityType(entity.GetType());

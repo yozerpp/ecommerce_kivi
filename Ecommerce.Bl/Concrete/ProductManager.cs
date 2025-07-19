@@ -20,11 +20,10 @@ public class ProductManager : IProductManager
 
     public List<ProductWithAggregates> SearchWithAggregates(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false, int page=1, int pageSize=20) {
         var offset = (page - 1) * pageSize;
-        var limit = page*pageSize;
         DbContext a;
         SearchExpressionUtils.Build<ProductWithAggregates>(predicates, ordering, out var predicateExpr, out var orderByExpr);
         string[][] includes = fetchReviews ?[[nameof(Product.Offers), nameof(ProductOffer.Reviews)], [nameof(Product.Category)]] :[[nameof(Product.Category)]];
-        return _productRepository.Where(GetAggregateProjection(includeImage), predicateExpr, offset, limit,
+        return _productRepository.Where(GetAggregateProjection(includeImage), predicateExpr, offset, pageSize,
             orderBy: orderByExpr.ToArray(), includes: includes);
     }
     public List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering,

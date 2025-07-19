@@ -29,8 +29,8 @@ public class UserManager : IUserManager
         return ContextHolder.GetUserOrThrow();
     }
 
-    public UserWithAggregates GetWithAggregates() {
-        var id = ContextHolder.GetUserOrThrow().Id;
+    public UserWithAggregates GetWithAggregates(uint? id=null) {
+        id ??= ContextHolder.GetUserOrThrow().Id;
         return _userRepository.First(UserAggregateProjection, u => u.Id == id, includes:[[nameof(User.Session)]]);
     }
     private static readonly Expression<Func<User, UserWithAggregates>> UserAggregateProjection = 
@@ -39,11 +39,11 @@ public class UserManager : IUserManager
             Email = u.Email, 
             FirstName = u.FirstName, 
             LastName = u.LastName,
-            TotalSpent = u.Orders.SelectMany(o=>o.Items ).Sum(i=>
-                (decimal?)((decimal?)i.Quantity * (decimal?)i.ProductOffer.Discount * (decimal?)i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m ) ))??0m,
+            // TotalSpent = u.Orders.SelectMany(o=>o.Items ).Sum(i=>
+                // (i.Quantity * (decimal?)i.ProductOffer.Discount * (decimal?)i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate :(decimal?) 1m ) ))??0m,
             TotalOrders = ((int?)u.Orders.Count()) ?? 0,
-            TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
-                (decimal?)((decimal?)i.Quantity * (1m-(decimal?)i.ProductOffer.Discount) * i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-(decimal?)i.Coupon.DiscountRate) : 0m)))??0m,
+            // TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
+                // (decimal?)((decimal?)i.Quantity * (1m-(decimal?)i.ProductOffer.Discount) *(decimal?) i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-(decimal?)i.Coupon.DiscountRate) : (decimal?)0m)))??0m,
             TotalReviews = ((int?)u.Reviews.Count())??0,
             TotalReplies = ((int?)u.ReviewComments.Count())??0,
             TotalKarma = ((int?) u.Reviews.SelectMany(r=>r.Votes).Sum(v=>(int?)((v.Up) ? 1 : -1)) )??0,

@@ -44,6 +44,7 @@
             textBox1 = new System.Windows.Forms.TextBox();
             pictureBox1 = new System.Windows.Forms.PictureBox();
             title1 = new System.Windows.Forms.TextBox();
+            addOfferBtn = new System.Windows.Forms.Button();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)reviewView).BeginInit();
             ((System.ComponentModel.ISupportInitialize)offersView).BeginInit();
@@ -52,6 +53,7 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(addOfferBtn);
             panel1.Controls.Add(censorNameBtn);
             panel1.Controls.Add(pageNext);
             panel1.Controls.Add(pageBack);
@@ -181,6 +183,8 @@
             reviewView.RowHeadersWidth = 51;
             reviewView.Size = new System.Drawing.Size(982, 167);
             reviewView.TabIndex = 5;
+            reviewView.CellContentClick += reviewsView_CellContentClick;
+            reviewView.RowHeaderMouseDoubleClick += reviewView_RowHeaderMouseDoubleClick;
             // 
             // offersView
             // 
@@ -221,6 +225,16 @@
             title1.Size = new System.Drawing.Size(689, 34);
             title1.TabIndex = 0;
             // 
+            // addOfferBtn
+            // 
+            addOfferBtn.Location = new System.Drawing.Point(931, 411);
+            addOfferBtn.Name = "addOfferBtn";
+            addOfferBtn.Size = new System.Drawing.Size(86, 29);
+            addOfferBtn.TabIndex = 17;
+            addOfferBtn.Text = "İlan Ver";
+            addOfferBtn.UseVisualStyleBackColor = true;
+            addOfferBtn.Click += addOfferBtn_Click;
+            // 
             // ProductPage
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
@@ -234,6 +248,8 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
         }
+
+        private System.Windows.Forms.Button addOfferBtn;
 
         private System.Windows.Forms.CheckBox censorNameBtn;
 

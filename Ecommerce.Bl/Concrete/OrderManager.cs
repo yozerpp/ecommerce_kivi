@@ -29,11 +29,13 @@ public class OrderManager : IOrderManager
             ShippingAddress = user.ShippingAddress, Status = OrderStatus.PENDING, UserId = user.Id,
             User = user.Id == 0 ? user : null
         };
-        foreach (var cartItem in cart.Items){
+        var cartItems = _cartManager.Get(false, true, false).Items;
+        if(cartItems.Count==0) throw new ArgumentException("Cart is empty.");
+        foreach (var cartItem in cartItems){
             o.Items.Add(new OrderItem(cartItem, o));
         }
         _orderRepository.Add(o);
-        _cartManager.newCart();
+        _cartManager.newCart(flush:true);
         _orderRepository.Flush();
         return o;
     }
@@ -102,7 +104,7 @@ public class OrderManager : IOrderManager
         var user = ContextHolder.GetUserOrThrow();
         var uid = user.Id;
         var ret = _orderRepository.Where(OrderWithItemsAggregateProjection, o => o.UserId == uid,
-            includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
+            includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
         foreach (var order in ret){
             order.DiscountAmount = order.BasePrice - order.DiscountedPrice;
             order.CouponDiscountAmount = order.DiscountedPrice - order.CouponDiscountedPrice;
@@ -136,9 +138,9 @@ public class OrderManager : IOrderManager
             Status = o.Status,
             Payment = o.Payment,
             User = o.User,
-            BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*i.ProductOffer.Price) ?? 0m,
-            DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
-            CouponDiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
+            BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*(decimal?)i.ProductOffer.Price) ?? 0m,
+            DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * (decimal?)i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
+            CouponDiscountedPrice = o.Items.Sum(i=>(decimal?)i.Quantity *(decimal?) i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
             Items = o.Items.Select(o => new OrderItemWithAggregates{
                 ProductId = o.ProductId,
                 SellerId = o.SellerId,
@@ -149,11 +151,11 @@ public class OrderManager : IOrderManager
                 BasePrice = o.ProductOffer.Price * o.Quantity,
                 CouponId = o.CouponId,
                 Coupon = o.Coupon,
-                DiscountedPrice = o.ProductOffer.Price * o.Quantity *(decimal) o.ProductOffer.Discount,
-                CouponDiscountedPrice = o.ProductOffer.Price * o.Quantity * (decimal)o.ProductOffer.Discount *
-                                        (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : 1m),
+                DiscountedPrice =(decimal?) o.ProductOffer.Price *(decimal?) o.Quantity *(decimal) o.ProductOffer.Discount??0m,
+                CouponDiscountedPrice = (decimal?)o.ProductOffer.Price * (decimal?)o.Quantity * (decimal)o.ProductOffer.Discount *
+                                        (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : (decimal?)1m)??0m,
                 TotalDiscountPercentage =(decimal) o.ProductOffer.Discount *
-                                          (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : 1m),
+                                          (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : (decimal?)1m)??0m,
             })
         };
 }

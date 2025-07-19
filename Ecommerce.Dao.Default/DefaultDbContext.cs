@@ -94,13 +94,14 @@ public class DefaultDbContext : DbContext
         productBuilder.Property(p=>p.Id).ValueGeneratedOnAdd();
         productBuilder.HasMany(p => p.Offers).WithOne(o => o.Product).HasForeignKey(o => o.ProductId)
             .HasPrincipalKey(p => p.Id).OnDelete(DeleteBehavior.Cascade);
-        productBuilder.HasOne<Category>(p => p.Category).WithMany().HasForeignKey(p => p.CategoryId)
-            .HasPrincipalKey(c => c.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict);
+        productBuilder.HasOne<Category>(p => p.Category).WithMany(c=>c.Products).HasForeignKey(p => p.CategoryId)
+            .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
         var categoryBuilder = modelBuilder.Entity<Category>();
         categoryBuilder.HasKey(c => c.Id);
         categoryBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
         categoryBuilder.HasOne<Category>(c => c.Parent).WithMany(c => c.Children).HasForeignKey(c => c.ParentId)
             .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+        categoryBuilder.HasMany<Product>(c => c.Products).WithOne(p=>p.Category).HasForeignKey(p=>p.CategoryId).HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
         var couponBuilder = modelBuilder.Entity<Coupon>();
         couponBuilder.HasKey(c => c.Id);
         couponBuilder.HasOne<Seller>(c => c.Seller).WithMany(s => s.Coupons).HasForeignKey(c => c.SellerId)

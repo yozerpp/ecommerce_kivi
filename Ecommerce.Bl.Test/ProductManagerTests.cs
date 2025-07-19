@@ -108,7 +108,7 @@ public class ProductManagerTests
         TestContext._jwtmanager.UnwrapToken(buyerToken, out var buyerUser, out var buyerSession);
 
         // Purchase from offer1
-        TestContext._cartManager.newCart(_buyerUser);
+        // TestContext._cartManager.newCart(_buyerUser);
         TestContext._cartManager.Add(_offer1, 2); // Buy 2 units
         TestContext._cartRepository.Flush();
         var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.CARD };
@@ -117,9 +117,8 @@ public class ProductManagerTests
         TestContext._orderRepository.Flush();
 
         // Purchase from offer2
-        TestContext._cartManager.newCart(_buyerUser);
+        // TestContext._cartManager.newCart(_buyerUser);
         TestContext._cartManager.Add(_offer2, 1); // Buy 1 unit
-        TestContext._cartRepository.Flush();
         var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.CARD };
         payment2 = TestContext._paymentRepository.Add(payment2);
         TestContext._orderManager.CreateOrder();
@@ -197,16 +196,16 @@ public class ProductManagerTests
             It.IsAny<int>(), 
             It.IsAny<(Expression<Func<ProductWithAggregates, object>>,bool)[]>(), 
             It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
-                _testProducts.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<ProductWithAggregates, bool>> predicate, int offset, int limit, (Expression<Func<ProductWithAggregates, object>>, bool)[] orderBy, string[][] includes) =>
+                _testProducts.Select(select.Compile()).Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
 
         _mockProductRepository.Setup(r => r.First(
                 It.IsAny<Expression<Func<Product, ProductWithAggregates>>>(), // Changed to ProductWithAggregates
                 It.IsAny<Expression<Func<ProductWithAggregates, bool>>>(),
                 It.IsAny<string[][]>(),
                 It.IsAny<(Expression<Func<ProductWithAggregates, object>>,bool)[]>()))
-            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, string[][] includes, (Expression<Func<Product, object>>,bool)[] order) =>
-                _testProducts.Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<ProductWithAggregates, bool>> predicate, string[][] includes, (Expression<Func<ProductWithAggregates, object>>,bool)[] order) =>
+                _testProducts.Select(select.Compile()).Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
 
         _mockProductRepository.Setup(r => r.First(
                 It.IsAny<Expression<Func<Product, Product>>>(), // For GetById
@@ -214,7 +213,7 @@ public class ProductManagerTests
                 It.IsAny<string[][]>(),
                 It.IsAny<(Expression<Func<Product, object>>,bool)[]>()))
             .Returns((Expression<Func<Product, Product>> select, Expression<Func<Product, bool>> predicate, string[][] includes,(Expression<Func<Product, object>>,bool)[] orders) =>
-                _testProducts.Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
+                _testProducts.Select(select.Compile()).Where(predicate.Compile()).Select(select.Compile()).FirstOrDefault());
     }
 
     [Test]
@@ -363,8 +362,8 @@ public class ProductManagerTests
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<ProductWithAggregates, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
-                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<ProductWithAggregates, bool>> predicate, int offset, int limit, (Expression<Func<ProductWithAggregates, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
@@ -468,8 +467,8 @@ public class ProductManagerTests
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<ProductWithAggregates, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
-                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<ProductWithAggregates, bool>> predicate, int offset, int limit, (Expression<Func<ProductWithAggregates, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
@@ -500,8 +499,8 @@ public class ProductManagerTests
                 It.IsAny<int>(), 
                 It.IsAny<(Expression<Func<ProductWithAggregates, object>>,bool)[]>(), 
                 It.IsAny<string[][]>()))
-            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<Product, bool>> predicate, int offset, int limit, (Expression<Func<Product, object>>, bool)[] orderBy, string[][] includes) =>
-                productsWithNull.Where(predicate.Compile()).Select(select.Compile()).Skip(offset).Take(limit).ToList());
+            .Returns((Expression<Func<Product, ProductWithAggregates>> select, Expression<Func<ProductWithAggregates, bool>> predicate, int offset, int limit, (Expression<Func<ProductWithAggregates, object>>, bool)[] orderBy, string[][] includes) =>
+                productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);

@@ -108,7 +108,7 @@ public class CartManagerTests
         Assert.That(cartWithAggregates.ItemCount, Is.EqualTo(quantity1 + quantity2));
         Assert.That(cartWithAggregates.TotalPrice, Is.EqualTo(expectedTotalPrice));
         Assert.That(cartWithAggregates.DiscountedPrice, Is.EqualTo(expectedDiscountedPrice));
-        Assert.That(cartWithAggregates.CouponDiscountedPrice, Is.EqualTo(expectedCouponDiscountedPrice));
+        Assert.That(cartWithAggregates.TotalDiscountedPrice, Is.EqualTo(expectedCouponDiscountedPrice));
         Assert.That(cartWithAggregates.DiscountAmount, Is.EqualTo(expectedDiscountAmount));
         Assert.That(cartWithAggregates.CouponDiscountAmount, Is.EqualTo(expectedCouponDiscountAmount));
         Assert.That(cartWithAggregates.Items.Sum(i=>i.Quantity), Is.EqualTo(5)); // Should have 2 distinct items

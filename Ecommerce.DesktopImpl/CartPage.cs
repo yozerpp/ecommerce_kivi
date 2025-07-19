@@ -4,7 +4,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class CartPage : UserControl
+    public partial class CartPage : UserControl, IPage
     {
         private readonly ICartManager _cartManager;
         private readonly IOrderManager _orderManager;
@@ -19,7 +19,10 @@ namespace Ecommerce.DesktopImpl
         private static readonly string[] itemsIncluded = [ string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Price)),
             string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Discount)),
             string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Product), nameof(Product.Name)),
-            string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.ShopName))
+            string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.ShopName)),
+            string.Join('_', nameof(CartItem.Coupon), nameof(Coupon.Id)),
+            string.Join('_', nameof(CartItem.Coupon), nameof(Coupon.DiscountRate)),
+            string.Join('_', nameof(CartItem.ProductOffer), nameof(ProductOffer.Price))
         ];
         public CartPage(ICartManager cartManager, ProductPage productPage, Navigation navigation, IOrderManager orderManager, SellerPage sellerPage)
         {
@@ -29,18 +32,16 @@ namespace Ecommerce.DesktopImpl
             _navigation = navigation;
             _orderManager = orderManager;
             InitializeComponent();
-            cartView.Columns.Add(CouponCodeColName, CouponCodeColName);
             foreach (var columnName in Utils.ColumnNames(typeof(CartItemWithAggregates),itemsExcluded, itemsIncluded ))
             {
                 cartView.Columns.Add(columnName, columnName);
             }
         }
 
-        public override void Refresh()
+        public void Go()
         {
-            base.Refresh();
             Clear();
-            Load();
+            InvokeAsync(Load);
         }
 
         public void Clear()
@@ -50,21 +51,31 @@ namespace Ecommerce.DesktopImpl
         }
         public new void Load()
         {
-            _cart = (CartWithAggregates)_cartManager.Get(true, true);
-            foreach (var valueTuple in Utils.ToPairs(_cart, [nameof(Cart.SessionId), nameof(Cart.Id)], [])){
-                var lineS = new List<string>(aggregateBpx.Lines){ valueTuple.Item1 + ": " + valueTuple.Item2 };
-                aggregateBpx.Lines = lineS.ToArray();
-            }
-            foreach (var cartItem in _cart.Items)
-            {
-                var i = cartView.Rows.Add();
-                foreach (var valueTuple in Utils.ToPairs(cartItem, itemsExcluded,itemsIncluded)){
-                    cartView.Rows[i].Cells[valueTuple.Item1].Value = valueTuple.Item2;
-                }
-                cartView.Rows[i].Cells[CouponCodeColName].Value = cartItem.CouponId;
-                cartView.Rows[i].Tag = (cartItem, cartItem.ProductOffer.Seller);
-            }
+            var cartask = Task.Run(GetCart);
+            cartask.ContinueWith(c => {
+                _cart = c.Result;
+                Invoke(() => {
+                    foreach (var valueTuple in Utils.ToPairs(_cart, [nameof(Cart.SessionId), nameof(Cart.Id)], [])){
+                        var lineS = new List<string>(aggregateBpx.Lines){ valueTuple.Item1 + ": " + valueTuple.Item2 };
+                        aggregateBpx.Lines = lineS.ToArray();
+                    }
+
+                    foreach (var cartItem in _cart.Items){
+                        var i = cartView.Rows.Add();
+                        foreach (var valueTuple in Utils.ToPairs(cartItem, itemsExcluded, itemsIncluded)){
+                            cartView.Rows[i].Cells[valueTuple.Item1].Value = valueTuple.Item2;
+                        }
+                        cartView.Rows[i].Tag = (cartItem, cartItem.ProductOffer.Seller);
+                    }
+                });
+            });
+            cartask.Wait();
         }
+
+        private CartWithAggregates? GetCart() {
+            return (CartWithAggregates)_cartManager.Get(true, true);
+        }
+
         private void deleteBtn_Click(object sender, EventArgs e)
         {
             foreach (DataGridViewRow cartViewSelectedRow in cartView.SelectedRows)
@@ -72,8 +83,7 @@ namespace Ecommerce.DesktopImpl
                 var (item, _) = ((CartItemWithAggregates, Seller))cartViewSelectedRow.Tag;
                 _cartManager.Remove(item);
             }
-            Refresh();
-
+            Go();
         }
 
         private void addBtn_Click(object sender, EventArgs e)
@@ -83,7 +93,7 @@ namespace Ecommerce.DesktopImpl
                 var (item, _) = ((CartItemWithAggregates, Seller))cartViewSelectedRow.Tag;
                 _cartManager.Add(item, 1);
             }
-            Refresh();
+            Go();
         }
 
         private void decrementButton_Click(object sender, EventArgs e)
@@ -94,7 +104,7 @@ namespace Ecommerce.DesktopImpl
 
                 _cartManager.Decrement(item);
             }           
-            Refresh();
+            Go();
 
         }
 
@@ -107,21 +117,21 @@ namespace Ecommerce.DesktopImpl
                 var (item, _) = ((CartItemWithAggregates, Seller))cartViewSelectedRow.Tag;
                 _cartManager.AddCoupon( item.ProductOffer,new Coupon { Id = code });
             }
-            Refresh();
+            Go();
 
         }
 
         private void clearBtn_Click(object sender, EventArgs e)
         {
             _cartManager.newCart(flush:true);
-            Refresh();
+            Go();
         }
 
         private void orderBtn_Click(object sender, EventArgs e)
         {
             var order = _orderManager.CreateOrder();
             Utils.Info("Sipariş Oluşturuldu.");
-            Refresh();
+            Go();
         }
 
         private void cartView_CellContentClick(object sender, DataGridViewCellEventArgs e) {

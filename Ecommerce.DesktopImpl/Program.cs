@@ -1,3 +1,4 @@
+using System.Reflection;
 using Ecommerce.Bl.Concrete;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Default;
@@ -24,7 +25,11 @@ static class Program
         initDeps();
         ApplicationConfiguration.Initialize();
         Application.ThreadException += (_, args) => {
-            Utils.Error(args.Exception.Message + (args.Exception.InnerException != null ?args.Exception.InnerException.Message:""));
+            Exception e;
+            if (args.Exception is TargetInvocationException ie){
+                e = ie.InnerException;
+            } else e = args.Exception;
+            Utils.Error(e.Message + (e.InnerException != null ?e.InnerException.Message:""));
         };
         Application.Run(Kernel.Get<Form1>());
     }
@@ -42,15 +47,15 @@ static class Program
         Kernel.Bind<SellerPage>().To<SellerPage>().InSingletonScope();
         Kernel.Bind<RegisteryPage>().To<RegisteryPage>().InSingletonScope();
         Kernel.Bind<CartPage>().To<CartPage>().InSingletonScope();
-        Kernel.Bind<ReviewPage>().To<ReviewPage>().InSingletonScope();
         Kernel.Bind<LoginPage>().To<LoginPage>().InSingletonScope();
         Kernel.Bind<UserPage>().To<UserPage>().InSingletonScope();
+        Kernel.Bind<ReviewPage>().To<ReviewPage>().InSingletonScope();
         Kernel.Bind<IRepository<Cart>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Cart>(model)));
-        Kernel.Bind<IRepository<CartItem>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<CartItem>(model)));
         Kernel.Bind<IRepository<Category>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Category>(model)));
-        Kernel.Bind<IRepository<Coupon>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Coupon>(model)));
+        Kernel.Bind<IRepository<Coupon>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Coupon>(model), new CouponValidator()));
         Kernel.Bind<IRepository<Order>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Order>(model)));
-        Kernel.Bind<IRepository<OrderItem>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<OrderItem>(model)));
+        Kernel.Bind<IRepository<CartItem>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<CartItem>(model), new CartItemValidator(Kernel.Get<IRepository<Coupon>>())));
+        Kernel.Bind<IRepository<OrderItem>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<OrderItem>(model), new OrderItemValidator(Kernel.Get<IRepository<Coupon>>())));
         Kernel.Bind<IRepository<Payment>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Payment>(model)));
         Kernel.Bind<IRepository<Product>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Product>(model)));
         Kernel.Bind<IRepository<ProductOffer>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<ProductOffer>(model)));

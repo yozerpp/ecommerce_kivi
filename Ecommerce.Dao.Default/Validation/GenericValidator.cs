@@ -16,7 +16,6 @@ public class GenericValidator<TE>: IValidator<TE> where TE : class, new()
         return new ValidationResult(message, memberNames);
     }
     private static (string, IEnumerable<string>) Validate(object entity, ITypeBase entityType) {
-        ValidationResult res;
         var messages = String.Empty;
         var memberNames = new List<string>();
         foreach (var property in entityType.GetProperties().Where(p=>!p.IsPrimaryKey()&&!p.IsForeignKey()&&!p.IsShadowProperty())){

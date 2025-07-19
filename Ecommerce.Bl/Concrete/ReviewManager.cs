@@ -51,7 +51,6 @@ public class ReviewManager : IReviewManager
     private static string[][] GetReviewIncludes(bool includeComments, bool includeSeller) {
         ICollection<string[]> includes = new List<string[]>();
         includes.Add([nameof(ProductReview.Reviewer)]);
-        includes.Add([nameof(ProductReview.Votes)]);
         if (includeSeller){
             includes.Add([nameof(ProductReview.Seller)]);
         }

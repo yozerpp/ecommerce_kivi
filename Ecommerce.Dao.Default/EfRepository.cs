@@ -23,7 +23,7 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
 
     public  List<TEntity> Where(Expression<Func<TEntity, bool>> predicate,int offset=0, int limit = 20, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null, string[][]? includes=null)
     {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).Skip(offset).Take(limit).ToList();
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).Where(predicate).Skip(offset).Take(limit).ToList();
     }
 
     public List<TP> Where<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate, int offset = 0, int limit = 20, (Expression<Func<TP, object>>, bool)[]? orderBy = null,
@@ -36,6 +36,11 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
         return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).FirstOrDefault(predicate);
     }
 
+    public TP? FirstP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate,
+        string[][]? includes = null, (Expression<Func<TEntity, object>>, bool)[]? orderBy = null) {
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes), orderBy).Where(predicate).Select(select)
+            .FirstOrDefault();
+    }
     public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null) {
             return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select),orderBy).FirstOrDefault(predicate);
 
@@ -108,9 +113,9 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
     }
 
     public TEntity Detach(TEntity entity) {
-        // foreach (var e1 in _context.ChangeTracker.Entries<TEntity>().Where(e => e.Entity.Equals(entity))){
-        //     e1.State = EntityState.Detached;
-        // }
+        foreach (var e1 in _context.ChangeTracker.Entries<TEntity>().Where(e => e.Entity.Equals(entity))){
+            e1.State = EntityState.Detached;
+        }
         return entity;
     }
     public TEntity Merge(TEntity entity) {

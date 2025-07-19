@@ -21,22 +21,33 @@ public class CartManager : ICartManager
         _sessionRepository = sessionRepository;
     }
 
-    public Cart? Get(bool includeAggregates = true, bool getItems = true) {
-        string[][] includes = getItems ?[[nameof(Cart.Items),nameof(CartItem.ProductOffer), nameof(ProductOffer.Product) ]]:[];
+    public Cart? Get(bool includeAggregates = true, bool getItems = true, bool includeSeller =true) {
+        var includes = GetIncludes(getItems, includeSeller);
         if (!includeAggregates)
             return _cartRepository.First(c => c.Id == ContextHolder.Session!.CartId, includes: includes);
         return GetWithAggregates(includes);
     }
+    private static string[][] GetIncludes(bool items, bool seller) {
+        var includes = new List<string[]>();
+        if (!items) return includes.ToArray();
+        includes.Add([nameof(Cart.Items), nameof(CartItem.Coupon)]);
+        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product)]);
+        if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
+        return includes.ToArray();
+    }
     private Cart? GetWithAggregates(string[][] includes) {
         var cartId = ContextHolder.Session!.CartId;
-        var ret = _cartRepository.First(CartAggregateProjection, c => c.Id == cartId,
+        var ret = _cartRepository.First(CartAggregateProjection, c => c.Id == cartId, 
             includes: includes);
         if (ret == null) return null;
         ret.TotalPrice = ret.Items.Sum(i => i.BasePrice);
         ret.DiscountedPrice = ret.Items.Sum(i => i.DiscountedPrice);
-        ret.CouponDiscountedPrice = ret.Items.Sum(i => i.CouponDiscountedPrice);
+        ret.TotalDiscountedPrice = ret.Items.Sum(i => i.CouponDiscountedPrice);
         ret.DiscountAmount = ret.Items.Sum(i => i.BasePrice - i.DiscountedPrice);
         ret.CouponDiscountAmount = ret.Items.Sum(i => i.DiscountedPrice - i.CouponDiscountedPrice);
+        var bottom = ret.Items.Sum(i => i.BasePrice);
+        ret.TotalDiscountPercentage = bottom!=0?1-(ret.Items.Sum(i => i.CouponDiscountedPrice)/bottom):0;
+        
         return ret;
     }
 
@@ -46,13 +57,14 @@ public class CartManager : ICartManager
     public Session newCart(User? newUser=null, bool flush = false) {
         Session? session;
         if (newUser==null&&(session = ContextHolder.Session) !=null){
-            session.Cart = new Cart{ SessionId = session.Id };
+            session.Cart = _cartRepository.Add(new Cart{ SessionId = session.Id });
             session = _sessionRepository.Update(session);
         }
         else{
-            session = new Session(){Cart = new Cart{} };
+            session = new Session(){Cart = _cartRepository.Add(new Cart{}) };
             session.Cart.Session = session;
             session = _sessionRepository.Add(session);
+            session.User = ContextHolder.Session?.User;
         }
         if (newUser != null) newUser.Session = session;
         else ContextHolder.Session = session;
@@ -61,16 +73,17 @@ public class CartManager : ICartManager
     }
 
     public void AddCoupon(ProductOffer offer, Coupon coupon) {
-        var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
-        if( _couponRepository.Exists(c => c.Id == coupon.Id && c.SellerId == offer.SellerId)){
-            throw new ArgumentException("Coupon is not valid for this offer.");
-        }
-        var c = _cartItemRepository.UpdateExpr([
-            ( ci=>ci.CouponId, coupon.Id)
-        ], item => item.CartId == cartId && item.ProductId == offer.ProductId && item.SellerId ==offer.SellerId);
-        if (c == 0){
-            throw new ArgumentException("You do not have this item in your cart.");
-        }
+        _cartItemRepository.Update(new CartItem(){
+            CartId = ContextHolder.Session.Cart.Id, CouponId = coupon.Id, ProductId = offer.ProductId,
+            SellerId = offer.SellerId
+        });
+        // var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
+        // var c = _cartItemRepository.UpdateExpr([
+            // ( ci=>ci.CouponId, coupon.Id)
+        // ], item => item.CartId == cartId && item.ProductId == offer.ProductId && item.SellerId ==offer.SellerId);
+        // if (c == 0){
+            // throw new ArgumentException("You do not have this item in your cart.");
+        // }
     }
     public CartItem Add(ProductOffer offer, uint amount = 1)
     {
@@ -134,6 +147,7 @@ public class CartManager : ICartManager
     {
         _cartItemRepository.Delete(c => c.ProductId == item.ProductId && c.SellerId == item.SellerId);
         _cartItemRepository.Detach(item);
+        _cartItemRepository.Flush();
     }
     private static readonly Expression<Func<Cart, CartWithAggregates>> CartAggregateProjection= c => new CartWithAggregates{
             Id = c.Id,
@@ -153,7 +167,7 @@ public class CartManager : ICartManager
                     DiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount,
                     CouponDiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount *
                                             (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
-                    TotalDiscountPercentage = ci.ProductOffer.Discount * (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
+                    TotalDiscountPercentage = (1m - ci.ProductOffer.Discount) * ( ci.Coupon != null ? 1m- ci.Coupon.DiscountRate : 0m),
                 }),
             ItemCount = c.Items.Sum(ci=>(uint?)ci.Quantity) as uint? ?? 0,
     };

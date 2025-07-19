@@ -8,12 +8,12 @@ namespace Ecommerce.Bl;
 /// </summary>
 public static class ContextHolder
 {
-    private static readonly ThreadLocal<Session> _session = new ThreadLocal<Session>();
-     
+    // private static readonly ThreadLocal<Session> _session = new ThreadLocal<Session>();
+    private static Session _session;
     public static Session? Session
     {
-        get => _session.Value;
-        set => _session.Value = value;
+        get => _session;
+        set => _session = value;
     }
 
     public static  User GetUserOrThrow() {

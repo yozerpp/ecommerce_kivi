@@ -8,9 +8,10 @@ namespace Ecommerce.DesktopImpl
         public User User { get; set; }
         public Session Session { get; set; }
     }
-    public partial class LoginPage : UserControl
+    public partial class LoginPage : UserControl, IPage
     {
         public event EventHandler<LoginEventArgs> OnLogin = delegate{};
+        public static LoginPage Instance { get; set; }
         private readonly IUserManager _userManager;
         private readonly LocalStorage _localStorage;
         private readonly SellerPage _sellerPage;
@@ -23,7 +24,11 @@ namespace Ecommerce.DesktopImpl
             _navigation = navigation;
             _userManager = userManager;
             InitializeComponent();
+            Instance = this;
         }
+
+        public void Go() { }
+
         private void userLgnBtn_Click(object sender, EventArgs e) {
             var email = emailBox.Text;
             var password = passwordBox.Text;
@@ -47,8 +52,9 @@ namespace Ecommerce.DesktopImpl
             }
             if(rememberMeBtn.Checked)
                 _localStorage.PersistLoginInfo(token);
-            _navigation.Go(this, _sellerPage);
+            _sellerPage.Load(seller.Id);
             OnLogin(this, new LoginEventArgs(){User = seller, Session = seller.Session});
+            _navigation.Go(this, _sellerPage);
         }
         private void registerBtn_Click(object sender, EventArgs e) {
             _navigation.Go(this, _registeryPage);

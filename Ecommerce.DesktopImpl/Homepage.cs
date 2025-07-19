@@ -5,7 +5,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class Homepage : UserControl
+    public partial class Homepage : UserControl, IPage
     {
         private readonly IProductManager _productManager;
         private readonly ProductPage _productPage;
@@ -36,7 +36,7 @@ namespace Ecommerce.DesktopImpl
                 var filter = _query.Split('&');
                 var order = filter[filter.Length - 1].Split("&&");
                 filter[filter.Length - 1] = order.Length > 1 ? order[0] : filter[filter.Length - 1];
-                order = order.Skip(1).ToArray();
+                order = order.Skip(order.Length>1?1:0).ToArray();
                 preds = GetPredicates(filter);
                 orders = GetOrdering(order);
             }
@@ -45,15 +45,21 @@ namespace Ecommerce.DesktopImpl
 
         private void doSearch(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders)
         {
-            var results = _productManager.SearchWithAggregates(preds, orders,false, false, page:_page);
-            searchResults.Rows.Clear();
-            foreach (var product in results){
-                var i = searchResults.Rows.Add();
-                foreach (var pair in Utils.ToPairs(product, excluded, included)){
-                    searchResults.Rows[i].Cells[pair.Item1].Value = pair.Item2;
-                }
-                searchResults.Rows[i].Tag = product;
-            }
+            var results = Task.Run(()=> _productManager.SearchWithAggregates(preds, orders,false, false, page:_page));
+            results.ContinueWith((r) => {
+                Invoke(() => {
+                    searchResults.Rows.Clear();
+                    foreach (var product in r.Result){
+                        var i = searchResults.Rows.Add();
+                        foreach (var pair in Utils.ToPairs(product, excluded, included)){
+                            searchResults.Rows[i].Cells[pair.Item1].Value = pair.Item2;
+                        }
+
+                        searchResults.Rows[i].Tag = product;
+                    }
+                });
+            });
+            results.Wait();
         }
 
         private ICollection<SearchOrder> GetOrdering(string[] orderings)
@@ -124,20 +130,19 @@ namespace Ecommerce.DesktopImpl
             return predicates;
         }
 
-        public override void Refresh()
-        {
+        public void Go() {
+            _page = 1;
             search_Click(null,null);
-            base.Refresh();
         }
 
         private void nextBtn_Click(object sender, EventArgs e) {
             _page++;
-            doSearch([],[]);
+            search_Click(null,null);
         }
         private void prevBtn_Click(object sender, EventArgs e) {
             if (_page > 1) {
                 _page--;
-                doSearch([],[]);
+                search_Click(null,null);
             }
         }
 

@@ -19,11 +19,12 @@ public partial class Form1 : Form
     private readonly LocalStorage localStorage;
     private readonly ICartManager _cartManager;
     private readonly IUserManager _userManager;
-
+    private readonly ReviewPage _reviewPage;
     public Form1(Homepage homepage, CartPage cartPage, UserPage useraPage,ICartManager cartManager, 
-        LoginPage loginPage, SellerPage sellerPage, Navigation navigation, RegisteryPage registeryPage,IUserManager userManager, ProductPage productPage, LocalStorage localStorage) {
+        LoginPage loginPage, SellerPage sellerPage,ReviewPage reviewPage, Navigation navigation, RegisteryPage registeryPage,IUserManager userManager, ProductPage productPage, LocalStorage localStorage) {
         this.localStorage = localStorage;
         _cartManager = cartManager;
+        _reviewPage = reviewPage;
         _userManager = userManager;
         cart1 = cartPage;
         _navigation = navigation;
@@ -42,13 +43,15 @@ public partial class Form1 : Form
             localStorage.PersistAnonymousSession(s);
         }
         else{
-            if (i.Value.Item1 != null || i.Value.Item2.User != null){
+            var user = i.Value.Item1 ?? i.Value.Item2.User;
+            if ( user!= null){
                 loginBtn.Text = "Kullanıcı Bilgileri";
                 registerBtn.Visible = false;
                 registerBtn.Enabled = false;
                 logoutBtn.Enabled = true;
                 logoutBtn.Visible = true;
                 userPage1._loadedId = i.Value.Item2?.User?.Id?? (i.Value.Item1?.Id);
+                if(user is Seller) sellerPage1.Load(user.Id);
             }
             ContextHolder.Session = i.Value.Item1?.Session??i.Value.Item2;
         }
@@ -70,7 +73,7 @@ public partial class Form1 : Form
             logoutBtn.Enabled = false;
         };
         logoutBtn.Click += CleanSession;
-        _navigation.Go(homepage1, homepage1);
+        Load+=(_,_)=> _navigation.Go(homepage1, homepage1);
     }
     
     private void InitPages()
@@ -95,6 +98,9 @@ public partial class Form1 : Form
         pageContainer.Controls.Add(login1);
         registerUser1.Visible = false;
         registerUser1.Dock = DockStyle.Fill;
+        _reviewPage.Visible = false;
+        _reviewPage.Dock = DockStyle.Fill;
+        pageContainer.Controls.Add(_reviewPage);
         pageContainer.Controls.Add(registerUser1);
     }
     private void backBtn_Click_1(object sender, EventArgs e)
@@ -141,4 +147,6 @@ public partial class Form1 : Form
     private void registerBtn_Click(object sender, EventArgs e) {
         _navigation.Go(null, registerUser1);
     }
+
+
 }

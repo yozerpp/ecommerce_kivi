@@ -22,7 +22,7 @@ namespace Ecommerce.DesktopImpl
         }
         public (User?,Session)? GetSavedSessionInfo() {
             var l = GetLoggedSessionInfo();
-            if (l != null) return l;
+            if (l != null && (l.Value.Item1 != null || l.Value.Item2 != null)) return l;
             var a = GetAnonymousSessionInfo();
             if (a != null) return (null,a);
             return null;
