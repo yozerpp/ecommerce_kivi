@@ -14,16 +14,12 @@ namespace Ecommerce.Dao.Default.Tool;
 public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
 {
     private readonly DbContext _defaultContext;
-    private readonly Dictionary<IEntityType, Lock> _dictLocks = new();
-    private readonly Dictionary<IEntityType, ISet<object>> _saved = new();
-    private readonly Dictionary<INavigation, IEnumerator<object>> _uniqueStore = new();
+    private readonly Dictionary<IEntityType, Lock> _dictLocks;
+    private readonly Dictionary<IEntityType, ISet<object>> _saved;
     private readonly Dictionary<Type, Int32?> _typeCounts;
     private readonly int _defaultCount;
-    private readonly Dictionary<IEntityType,ISet<INavigation>> _nonRequiredNavigations = new();
-    private readonly Dictionary<IEntityType,ISet<INavigation>> _requiredNavigations = new();
-    private readonly Dictionary<IEntityType, ISet<EqualityComparableSet<INavigation>>> _compositeKeys = new();
     private readonly ICollection<IEntityType> _entityTypes;
-    private readonly CompositeRandomizer _compositeRandomizer;
+    private readonly RelationRandomizer _relationRandomizer;
     private readonly ICollection<(TC,ICollection<IEntityType>)> _lanes;
     //
     public DatabaseInitializer(DbContextOptions<TC> options, Dictionary<Type, int?> typeCounts, int defaultCount = 100) {
@@ -31,16 +27,18 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         _typeCounts = typeCounts;
         _defaultContext = (TC) typeof(TC).GetConstructor([typeof(DbContextOptions<TC>)]).Invoke([options]);
         _entityTypes=_defaultContext.Model.GetEntityTypes().ToArray();
-        InitContainers();
-        _compositeRandomizer = new CompositeRandomizer(_saved, _dictLocks);
+        _saved = _entityTypes.ToDictionary(e=>e, e=>(ISet<object>)new HashSet<object>());
+        _dictLocks = _entityTypes.ToDictionary(e=>e, e=>new Lock());
+        _relationRandomizer = new RelationRandomizer(_saved, _dictLocks);
         _lanes = Sort(options);
     }
     public void initialize() {
         CreateEntities();
+        Console.WriteLine("-----Finished Creating Entities. Wiring Non-Required Relations...-----");
         PopulateNonRequiredRelations();
     }
     private ICollection<(TC, ICollection<IEntityType>)> Sort(DbContextOptions<TC> options) {
-        var visited = new HashSet<string>(_entityTypes.Count());
+        var visited = new HashSet<string>(_entityTypes.Count);
         var lanes = new List<Stack<IEntityType>>();
         foreach (var entityType in _entityTypes){
             if (visited.Contains(entityType.Name)) continue;
@@ -50,10 +48,8 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         }
         return lanes.Select(l=>((TC)typeof(TC).GetConstructor([typeof(DbContextOptions<TC>)]).Invoke([options]),(ICollection<IEntityType>)l.Reverse().ToArray() )).ToArray();
         void SortRecursive(IEntityType entityType, Stack<IEntityType> lane) {
-            var keys = _compositeRandomizer.GetNavigations(entityType);
-            keys.AddRange(RequiredNavsInHierarchy(entityType));
             visited.Add(entityType.Name);
-            foreach (var navigation in keys){
+            foreach (var navigation in entityType.GetNavigations().Where(n =>n.IsOnDependent&& n.ForeignKey.IsRequired).ToHashSet()){
                 SortRecursive(navigation.TargetEntityType, lane);
             }
             lane.Push(entityType);
@@ -62,7 +58,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
 
     private readonly ThreadLocal<TC> _contextThreadLocal = new();
     private void CreateEntities() {
-     foreach(var l in _lanes){
+        foreach(var l in _lanes){
             _contextThreadLocal.Value = l.Item1;
             foreach (var entityType in l.Item2){
                 while (!IsFull(entityType)){
@@ -70,145 +66,50 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
                     try{
                         RandomizeAndSave(entityType);
                     }
-                    catch (Exception e){
-                        Debug.WriteLine(e);
-                    }
                     finally{
                         _dictLocks[entityType].Exit();
                     }
                 }
             }
-        };
+        }
+        _defaultContext.SaveChanges();
     }
     private void PopulateNonRequiredRelations()
     {
-        Console.WriteLine("-----Finished Creating Entitie. Wiring Non-Required Relations...-----");
-        _uniqueStore.Clear(); 
         foreach (var (entityType, set) in _saved)
         {
             foreach (var entity in set)
             {
-                WireNonRequiredRelation(entity, entityType);
+                foreach (var fk in entityType.GetForeignKeys().Where(fk=>!fk.IsRequired)){
+                    AssignForeignKeys(entity, _relationRandomizer.GetForeignKeyValue(fk, entity));
+                }
+                _defaultContext.Update(entity);
             }
         }
+        _defaultContext.SaveChanges();
     }
-    private void WireNonRequiredRelation(object entity, IEntityType entityType)
-    {
-        foreach (var navigation in _nonRequiredNavigations[entityType]){
-            var targetType = navigation.TargetEntityType;
-            if (navigation.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle??false)
-            {
-                navigation.PropertyInfo.SetValue(entity, RetrieveSelfReferencing(targetType, entity, navigation.PropertyInfo));
-            } else if (navigation.ForeignKey.IsUnique){
-                navigation.PropertyInfo.SetValue(entity, RetrieveUnique(navigation));
-            }
-            else navigation.PropertyInfo.SetValue(entity, RetrieveRandom(targetType));
-        }
-        try{
-            _defaultContext.Update(entity);
-        }
-        catch (Exception e){
-            Debug.WriteLine(e);
-        }
-    }
-    private object RandomizeAndSave(IEntityType enttiyType)
+
+    private void RandomizeAndSave(IEntityType enttiyType)
     {
         var entity = CreateAndPopulatePrimitives(enttiyType);
-        foreach (var compositeKey in _compositeRandomizer.GetCompositeKeys(enttiyType)){
-            AssignForeignKeys(compositeKey.Item1, entity, compositeKey.Item2);
+        foreach (var key in enttiyType.GetKeys().Where(k=>k.Properties.Count > 1)){
+            AssignForeignKeys(entity , _relationRandomizer.GetKeyValues(key));
         }
-        var navsInHierarchy = RequiredNavsInHierarchy(enttiyType);
-        foreach (var navigation in navsInHierarchy)
-        {
-            // _dictLocks[navigation.TargetEntityType].Enter();
-            try{
-                object val;
-                if ((val = GetSavedIfFull(navigation.TargetEntityType, navigation, 
-                        navigation.PropertyInfo.GetCustomAttribute<SelfReferencingProperty>()?.BreakCycle??false?entity:null
-                        )) == null)
-                    val = RandomizeAndSave(navigation.TargetEntityType);
-                AssignForeignKeys(navigation.ForeignKey, entity, val);
-            }
-            finally{
-                // _dictLocks[navigation.TargetEntityType].Exit();
-            }
+        foreach (var foreignKey in enttiyType.GetForeignKeys().Where(fk=>fk.IsRequired&&!fk.Properties.All(p=>p.IsKey()))){ //TODO no action if foreign key is both self-referencing and required.
+            AssignForeignKeys(entity,_relationRandomizer.GetForeignKeyValue(foreignKey));
         }
-        var context = _contextThreadLocal.Value!;
-        entity = context.Add(entity).Entity;
-        context.SaveChanges();
+        entity = _defaultContext.Add(entity).Entity;
         _saved[enttiyType].Add(entity);
-        return entity;
     }
 
-    private object GetSavedIfFull(IEntityType enttiyType, INavigation? nav, object? from) {
-        if ( IsFull(enttiyType)){
-            object ret;
-            if (from != null) ret = RetrieveSelfReferencing(enttiyType, from, nav!.PropertyInfo);
-            if (nav?.ForeignKey.IsUnique ?? false) ret = RetrieveUnique(nav);
-            else ret= RetrieveRandom(enttiyType);
-            return ret;
-        }
 
-        return null;
-    }
-
-    private void AssignForeignKeys(IForeignKey fk, object dependent, object principal) {
-        var propsInPrincipal = fk.PrincipalKey.Properties;
-        var propsIndependent = fk.Properties;
-        for (int i = 0; i < propsIndependent.Count; i++){
-            propsIndependent[i].PropertyInfo.SetValue(dependent, propsInPrincipal[i].PropertyInfo.GetValue(principal));
-        }
-    }
-    private ISet<INavigation> RequiredNavsInHierarchy(IEntityType enttiyType) {
-        ISet<INavigation> navsInHierarchy = new HashSet<INavigation>();
-        IEntityType? tp=enttiyType;
-        while (tp!=null){
-            foreach (var nav1 in _requiredNavigations[tp]){
-                navsInHierarchy.Add(nav1);
-                
-            }
-
-            tp = tp.BaseType;
-        }
-
-        return navsInHierarchy;
-    }
-
-    private void InitContainers() {
-        
-        foreach (var entityType in _entityTypes){
-            _requiredNavigations[entityType] = new HashSet<INavigation>();
-            _nonRequiredNavigations[entityType] = new HashSet<INavigation>();
-            _saved[entityType] = new HashSet<object>();
-            _compositeKeys[entityType] = new HashSet<EqualityComparableSet<INavigation>>();
-            _dictLocks[entityType] = new Lock();
-        }
-        foreach (var entityType in _entityTypes){
-            //this also gets the properties that reference to a single object. such as CartItem->ProductOffer.
-            foreach (var key in entityType.GetKeys().Where(k=>k.Properties.Count > 1)){
-                //don't allow composite keys that are subsets of other composite keys.
-                //navigations associated with this composite key
-                var navs = key.Properties.Select(p => p.GetContainingForeignKeys().ElementAt(0).GetNavigation(true))
-                    .Where(n=>n!=null) .ToHashSet();
-                if (_compositeKeys[entityType].Any(n=>navs.All(n.Contains)))
-                    continue;                    
-                var keyNavs = new EqualityComparableSet<INavigation>(navs);
-                _compositeKeys[entityType].Add(keyNavs);
-            }
-            foreach (var navigation in entityType.GetNavigations().Where(n=>n.IsOnDependent&&n.DeclaringEntityType.IsAssignableFrom(entityType) &&
-                         !_compositeKeys[entityType].Any(n1=>n1.Contains(n)))){
-                if (navigation.ForeignKey.IsRequired) 
-                    _requiredNavigations[entityType].Add(navigation);
-                else _nonRequiredNavigations[entityType].Add(navigation);
-            }
+    private void AssignForeignKeys( object dependent, params IEnumerable<(INavigation, object)> keyValues) {
+        foreach (var (nav, principal) in keyValues){
+            nav.PropertyInfo.SetValue(dependent, principal);
         }
     }
 
-    private object RetrieveRandom(IEntityType type) {
-        var s = _saved[type];
-        var ret = s.ElementAt(new Randomizer().Number(s.Count - 1));
-        return ret;
-    }
+
     //don't allow circular reference.
     private object? RetrieveSelfReferencing(IEntityType type, object current, PropertyInfo property) {
         var s = _saved[type].Where(o =>
@@ -217,13 +118,6 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         return ret;
     }
 
-    
-    private object RetrieveUnique(INavigation nav) {
-        if (!_uniqueStore.TryGetValue(nav, out var value)){
-            value = _uniqueStore[nav] = _saved[nav.TargetEntityType].GetEnumerator();
-        }
-        return !value.MoveNext() ? null : value.Current;
-    }
     
     private static object CreateAndPopulatePrimitives(IEntityType entityType) {
         var entity = entityType.ClrType.GetConstructor([])!.Invoke(null);

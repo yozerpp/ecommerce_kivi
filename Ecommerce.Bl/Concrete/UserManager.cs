@@ -29,8 +29,8 @@ public class UserManager : IUserManager
         return ContextHolder.GetUserOrThrow();
     }
 
-    public UserWithAggregates GetWithAggregates() {
-        var id = ContextHolder.GetUserOrThrow().Id;
+    public UserWithAggregates GetWithAggregates(uint? id=null) {
+        id ??= ContextHolder.GetUserOrThrow().Id;
         return _userRepository.First(UserAggregateProjection, u => u.Id == id, includes:[[nameof(User.Session)]]);
     }
     private static readonly Expression<Func<User, UserWithAggregates>> UserAggregateProjection = 

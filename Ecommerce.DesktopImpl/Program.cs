@@ -42,9 +42,9 @@ static class Program
         Kernel.Bind<SellerPage>().To<SellerPage>().InSingletonScope();
         Kernel.Bind<RegisteryPage>().To<RegisteryPage>().InSingletonScope();
         Kernel.Bind<CartPage>().To<CartPage>().InSingletonScope();
-        Kernel.Bind<ReviewPage>().To<ReviewPage>().InSingletonScope();
         Kernel.Bind<LoginPage>().To<LoginPage>().InSingletonScope();
         Kernel.Bind<UserPage>().To<UserPage>().InSingletonScope();
+        Kernel.Bind<ReviewPage>().To<ReviewPage>().InSingletonScope();
         Kernel.Bind<IRepository<Cart>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Cart>(model)));
         Kernel.Bind<IRepository<CartItem>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<CartItem>(model)));
         Kernel.Bind<IRepository<Category>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Category>(model)));

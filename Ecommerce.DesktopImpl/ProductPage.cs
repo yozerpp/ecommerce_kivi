@@ -1,11 +1,12 @@
-﻿using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
 
-    public partial class ProductPage : UserControl
+    public partial class ProductPage : UserControl, IPage
     {
         private readonly IProductManager _manager;
         private readonly ICartManager _cartManager;
@@ -53,10 +54,11 @@ namespace Ecommerce.DesktopImpl
 
         }
 
+        private ProductWithAggregates? _product;
         private void doLoad() {
             if(_loaded==null) return;
             var product = _manager.GetByIdWithAggregates((uint)_loaded!);
-            LoadProductInfo(product);
+            LoadProductInfo(_product = product!);
             LoadOffers(product);
             LoadReviews();
         }
@@ -84,7 +86,11 @@ namespace Ecommerce.DesktopImpl
                 offersView.Rows[i].Tag = (productOffer, productOffer.Seller);
             }
         }
-
+        private void reviewView_RowHeaderMouseDoubleClick(object s, DataGridViewCellMouseEventArgs e)
+        {
+            ReviewPage.Instance.LoadReviews(_loaded.Value);
+            _navigation.Go(this,ReviewPage.Instance);
+        }
         private void addToCartBtn_Click(object sender, EventArgs e)
         {
             foreach (DataGridViewRow row in offersView.SelectedRows)
@@ -99,7 +105,7 @@ namespace Ecommerce.DesktopImpl
             
         }
 
-        private void Rate(decimal rating, string comment, ProductOffer offer)
+        private void Rate(decimal rating, string comment, ProductOffer offer,bool censorName)
         {
             try
             {
@@ -109,6 +115,7 @@ namespace Ecommerce.DesktopImpl
                     Rating = rating,
                     ProductId = offer.ProductId,
                     SellerId = offer.SellerId,
+                    CensorName = censorName
                 });
             }
             catch (Exception e)
@@ -123,38 +130,41 @@ namespace Ecommerce.DesktopImpl
             { //update
                 if (reviewView.SelectedRows.Count == 0)
                 {
-                    Utils.Error("You must either select your review to update or select an offer to leave a review.");
+                    Utils.Error("Yorum bırakmak istediğiniz teklifi, güncellemek istediğniz yorum veya cevaplamak istediğniz yorumu seçmelisiniz.");
                     return;
                 }
+
+                var u = ContextHolder.GetUserOrThrow();
                 var rev = (ProductReview)reviewView.SelectedRows[0].Tag;
+                if(rev!.Reviewer.Equals(u)|| rev.ReviewerId.Equals(u.Id)){
                 rev.Comment = commentBox.Text;
                 rev.Rating = Convert.ToDecimal(ratingBox.Text);
-                try
-                {
                     _reviewManager.UpdateReview(rev);
+                }else{
+                    _reviewManager.CommentReview(new ReviewComment(){
+                        ReviewerId = rev.ReviewerId, CommenterId = ContextHolder.Session.Id, ProductId = rev.ProductId,
+                        SellerId = rev.SellerId,
+                        Comment = commentBox.Text,
+                    });
                 }
-                catch (Exception exception)
-                {
-                    Console.WriteLine(exception);
-                    Utils.Error(exception.Message);
-                }
-                return;
             }
-            var comment = commentBox.Text;
-            var rating = Convert.ToDecimal(ratingBox.Text);
-            var (offer,_) = ((ProductOffer, Seller))offersView.SelectedRows[0].Tag;
-            //var review = (ProductReview)reviewView.SelectedRows[0].Tag;
-            Rate(rating, comment, offer);
+            else{
+                var comment = commentBox.Text;
+                var rating = Convert.ToDecimal(ratingBox.Text);
+                var (offer,_) = ((ProductOffer, Seller))offersView.SelectedRows[0].Tag;
+                //var review = (ProductReview)reviewView.SelectedRows[0].Tag;
+                Rate(rating, comment, offer, censorNameBtn.Checked);
+            }
             LoadReviews();
         }
-        public override void Refresh()
+        public void Go()
         {
-            base.Refresh();
             clear();
             doLoad();
         }
         private void LoadReviews()
         {
+            reviewView.Rows.Clear();
             foreach (var productReview in _reviewManager.GetReviewsWithAggregates( false,true,_loaded)){
                 var i = reviewView.Rows.Add();
                 foreach (var review in Utils.ToPairs(productReview, reviewExcludes , reviewIncludes)){
@@ -181,6 +191,17 @@ namespace Ecommerce.DesktopImpl
             LoadReviews();
         }
 
+        private void reviewsView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
+            if (reviewView.Columns[e.ColumnIndex].Name.Contains("Seller")){
+                var sellerId = ((ProductReview)reviewView.Rows[e.RowIndex].Tag).Seller.Id;
+                SellerPage.Instance.Load(sellerId);
+                _navigation.Go(this, SellerPage.Instance);
+            } else if (reviewView.Columns[e.ColumnIndex].Name.Contains("Reviewer")){
+                var uid = ((ProductReview)reviewView.Rows[e.RowIndex].Tag).ReviewerId;
+                UserPage.Instance.Load(uid);
+                _navigation.Go(this, UserPage.Instance);
+            }
+        }
         private void offersView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
             if (offersView.Columns[e.ColumnIndex].Name.Equals(string.Join('_', nameof(ProductOffer.Seller), nameof(Seller.ShopName)))){
                 var (_, seller) = ((ProductOffer, Seller))offersView.Rows[e.RowIndex].Tag;

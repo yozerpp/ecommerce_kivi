@@ -13,7 +13,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class SellerPage : UserControl
+    public partial class SellerPage : UserControl, IPage
     {
         public static SellerPage Instance { get; private set; }
         private readonly Navigation _navigation;
@@ -26,7 +26,8 @@ namespace Ecommerce.DesktopImpl
         ];
         private static readonly string[] reviewsExclude = [
             string.Join('_', nameof(ProductReview.CensorName)),
-            string.Join('_', nameof(ProductReview.HasBought))
+            string.Join('_', nameof(ProductReview.HasBought)),
+            string.Join('_', nameof(ReviewWithAggregates.OwnVote))
         ];
 
         private static readonly string[] coupınsExclude = [
@@ -82,7 +83,7 @@ namespace Ecommerce.DesktopImpl
             foreach (var sellerCoupon in seller.Coupons)
             {
                 var i = couponsView.Rows.Add();
-                foreach (var  valueTuple in Utils.ToPairs(seller, coupınsExclude,[nameof(Coupon.Id)]))
+                foreach (var  valueTuple in Utils.ToPairs(sellerCoupon, coupınsExclude,[nameof(Coupon.Id)]))
                 {
                     couponsView.Rows[i].Cells[valueTuple.Item1].Value = valueTuple.Item2;
                 }
@@ -119,7 +120,7 @@ namespace Ecommerce.DesktopImpl
             shopNameBox.Clear();
             addressBox1.Clear();
         }
-        public override void Refresh()
+        public void Go()
         {
             Clear();
             var seller = _sellerManager.GetSellerWithAggregates(_loaded, false, false, true, offersPage: _offersPage, offersPageSize: 20)!;
@@ -133,7 +134,7 @@ namespace Ecommerce.DesktopImpl
         {
             shopNameBox.Text = seller.ShopName;
             addressBox1.Lines = [seller.ShopAddress.ToString(), " Telefon: " + seller.ShopPhoneNumber];
-            foreach (var aggregates in Utils.ToPairs(seller, aggreagateBoxInclude, []))   
+            foreach (var aggregates in Utils.ToPairs(seller, [], aggreagateBoxInclude))   
             {
                 if (aggreagateBoxInclude.Contains(aggregates.Item1)) {
                     aggregateBox.Items.Add(aggregates.Item1 + ": " + aggregates.Item2);
@@ -189,6 +190,12 @@ namespace Ecommerce.DesktopImpl
             _offersPage++;
             ClearOffers();
             LoadOffers();
+        }
+
+        private void couponsView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
+            if (couponsView.Columns[e.ColumnIndex].Name.Equals(nameof(Coupon.Id))){
+                Clipboard.SetText(couponsView.Rows[e.RowIndex].Cells[nameof(Coupon.Id)].Value.ToString());
+            }
         }
     }
 }

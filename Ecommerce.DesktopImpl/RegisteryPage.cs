@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Ecommerce.DesktopImpl
 {
-    public partial class RegisteryPage : UserControl
+    public partial class RegisteryPage : UserControl, IPage
     {
         private Dictionary<string, TextBox>[] inputs = [new(),new()];
         private readonly IUserManager _userManager;
@@ -38,6 +38,10 @@ namespace Ecommerce.DesktopImpl
             CreateForm(typeof(User), 0);
             CreateForm(typeof(Seller), 1);
         }
+
+        public void Go() {
+        }
+
         //register
         private void button1_Click(object sender, EventArgs e) {
             var user = (User)Utils.DictToObject(formTabs.SelectedIndex==0?typeof(User):typeof(Seller),inputs[formTabs.SelectedIndex].ToDictionary(kv => kv.Key, kv => kv.Value.Text));

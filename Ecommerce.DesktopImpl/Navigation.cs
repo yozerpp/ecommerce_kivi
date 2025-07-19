@@ -24,13 +24,12 @@ namespace Ecommerce.DesktopImpl
             to.Visible = true;
             to.BringToFront();
             to.Select();
-            to.Refresh();
-            
+            ((IPage)to).Go();
         }
 
         public void Refresh()
         {
-            current.Refresh();
+            ((IPage)current).Go();
         }
         public void Back()
         {

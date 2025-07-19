@@ -181,6 +181,8 @@
             reviewView.RowHeadersWidth = 51;
             reviewView.Size = new System.Drawing.Size(982, 167);
             reviewView.TabIndex = 5;
+            reviewView.CellContentClick += reviewsView_CellContentClick;
+            reviewView.RowHeaderMouseDoubleClick+= reviewView_RowHeaderMouseDoubleClick;
             // 
             // offersView
             // 

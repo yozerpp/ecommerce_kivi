@@ -19,11 +19,12 @@ public partial class Form1 : Form
     private readonly LocalStorage localStorage;
     private readonly ICartManager _cartManager;
     private readonly IUserManager _userManager;
-
+    private readonly ReviewPage _reviewPage;
     public Form1(Homepage homepage, CartPage cartPage, UserPage useraPage,ICartManager cartManager, 
-        LoginPage loginPage, SellerPage sellerPage, Navigation navigation, RegisteryPage registeryPage,IUserManager userManager, ProductPage productPage, LocalStorage localStorage) {
+        LoginPage loginPage, SellerPage sellerPage,ReviewPage reviewPage, Navigation navigation, RegisteryPage registeryPage,IUserManager userManager, ProductPage productPage, LocalStorage localStorage) {
         this.localStorage = localStorage;
         _cartManager = cartManager;
+        _reviewPage = reviewPage;
         _userManager = userManager;
         cart1 = cartPage;
         _navigation = navigation;
@@ -95,6 +96,9 @@ public partial class Form1 : Form
         pageContainer.Controls.Add(login1);
         registerUser1.Visible = false;
         registerUser1.Dock = DockStyle.Fill;
+        _reviewPage.Visible = false;
+        _reviewPage.Dock = DockStyle.Fill;
+        pageContainer.Controls.Add(_reviewPage);
         pageContainer.Controls.Add(registerUser1);
     }
     private void backBtn_Click_1(object sender, EventArgs e)
