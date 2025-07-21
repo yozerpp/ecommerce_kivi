@@ -238,5 +238,11 @@ namespace Ecommerce.DesktopImpl
                 _navigation.Go(this, _productPage);
             }
         }
+
+        private void couponsView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
+            if (couponsView.Columns[e.ColumnIndex].Name.Equals(nameof(Coupon.Id))){
+                Clipboard.SetText(couponsView.Rows[e.RowIndex].Cells[nameof(Coupon.Id)].Value.ToString());
+            }
+        }
     }
 }
