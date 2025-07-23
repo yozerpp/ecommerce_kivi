@@ -6,20 +6,20 @@ namespace Ecommerce.Bl.Test;
 
 public class CartManagerTests
 {
-    private static User _user;
+    private static Customer _customer;
     [OneTimeSetUp]
     public void Register() {
-        _user = UserManagerTests.Register();
+        _customer = UserManagerTests.Register();
     }
 
     [SetUp]
     public void Login() {
-        UserManagerTests.Login(_user,out _);
+        UserManagerTests.Login(_customer,out _);
     }
     [Test]
     public void newCartUserful() {
         var oldSession = ContextHolder.Session;
-        TestContext._cartManager.newCart();
+        TestContext._cartManager.newSession();
         TestContext._cartRepository.Flush();
         Assert.That(ContextHolder.Session, Is.EqualTo(oldSession));
     }
@@ -67,7 +67,7 @@ public class CartManagerTests
     public void TestGetWithAggregates()
     {
         // Clear cart first to ensure a clean state for testing aggregates
-        TestContext._cartManager.newCart();
+        TestContext._cartManager.newSession();
         var currentCartItems = TestContext._cartItemRepository.Where(ci => ci.CartId == ContextHolder.Session.Cart.Id);
         foreach (var item in currentCartItems)
         {

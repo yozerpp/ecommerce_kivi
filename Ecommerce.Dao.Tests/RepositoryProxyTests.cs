@@ -17,6 +17,12 @@ public class RepositoryProxyTests
         _repo1 = MockRepository.Create<Cart>();
         _repo2 = MockRepository.Create<Cart>();
     }
+
+    [OneTimeTearDown]
+    public void TearDown() {
+        _repo1.Dispose();
+        _repo2.Dispose();
+    }
     [Test]
     public void TestTransactions() {
         var watch = Stopwatch.StartNew();
@@ -92,14 +98,38 @@ public class RepositoryProxyTests
         }
 
         public T Add(T entity) => entity;
+        public Task<T> AddAsync(T entity, bool flush = true, CancellationToken cancellationToken = default) {
+            throw new NotImplementedException();
+        }
+
         public T Save(T entity, bool flush = true) => entity;
+        public Task<T> SaveAsync(T entity, bool flush = true, CancellationToken cancellationToken = default) {
+            throw new NotImplementedException();
+        }
+
         public T Update(T entity) => entity;
+        public Task<T> UpdateAsync(T entity, bool flush = true, CancellationToken token = default) {
+            throw new NotImplementedException();
+        }
+
         public int UpdateExpr((Expression<Func<T, object>>, object)[] memberAccessorsAndValues, Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
         public T Delete(T entity) => entity;
+        public Task<T> DeleteAsync(T entity, bool flush = true, CancellationToken cancellationToken = default) {
+            throw new NotImplementedException();
+        }
+
         public int Delete(Expression<Func<T, bool>> predicate, string[][]? includes = null) => 0;
         public void Flush() { }
         public T Detach(T entity) => entity;
+        public Task<T> DetachAsync(T entity, CancellationToken cancellationToken = default) {
+            throw new NotImplementedException();
+        }
+
         public T Merge(T entity) => entity;
+
+        public void Dispose() {
+            // TODO release managed resources here
+        }
     }
 
     private class MockValidator<T> : IValidator<T>

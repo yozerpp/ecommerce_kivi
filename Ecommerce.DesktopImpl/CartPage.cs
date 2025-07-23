@@ -123,7 +123,7 @@ namespace Ecommerce.DesktopImpl
 
         private void clearBtn_Click(object sender, EventArgs e)
         {
-            _cartManager.newCart(flush:true);
+            _cartManager.newSession(flush:true);
             Go();
         }
 

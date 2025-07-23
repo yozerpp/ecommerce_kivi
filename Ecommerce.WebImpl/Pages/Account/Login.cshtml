@@ -1,0 +1,41 @@
+﻿@page
+@using Ecommerce.WebImpl.Pages.Shared
+@model Login
+@inject EntityMapper EntityMapper
+@{
+    ViewData["Title"] = "Giriş Yap";
+}
+
+<!DOCTYPE html>
+
+<html lang="tr">
+<head>
+    <title>Giriş Yap</title>
+</head>
+<body>
+<div class="text-center">
+    <ul class="nav nav-tabs" id="forms" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#customer" type="button" role="tab">Müşteri Girişi</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#seller" type="button" role="tab">Satıcı Girişi</button>
+        </li>
+    </ul>
+    <div class="tab-content mt-2" id="formsContent">
+        <div class="tab-pane fade show active" id="customer" role="tabpanel">
+            <form asp-page="/Account/Login" asp-page-handler="User">
+                @EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential));
+                <button type="submit">Giriş Yap</button>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="seller" role="tabpanel">
+            <form asp-page="/Account/Login" asp-page-handler="Seller">
+                @EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential));
+                <button type="submit">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

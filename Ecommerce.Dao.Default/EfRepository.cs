@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace Ecommerce.Dao.Default;
-
-internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class, new()
+//TODO async methods need to be rewritten. to use async/await properly
+public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable where TEntity : class, new()
 {
     private DbContext _context;
     public EfRepository(DbContext context)
@@ -58,6 +58,19 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
         Detach(entity);
         return _context.Set<TEntity>().Add(entity).Entity;
     }
+
+    public Task<TEntity> AddAsync(TEntity entity, bool flush=true, CancellationToken cancellationToken = default) {
+        return DetachAsync(entity, cancellationToken).ContinueWith(r => {
+            if (cancellationToken.IsCancellationRequested) return null!;
+            var t = _context.AddAsync(r.Result, cancellationToken).AsTask();
+            if (flush&& !cancellationToken.IsCancellationRequested) {
+                t.ContinueWith(_ => _context.SaveChangesAsync(cancellationToken), cancellationToken).Wait(cancellationToken);
+            }
+            else t.Wait(cancellationToken);
+            return cancellationToken.IsCancellationRequested? null!:t.Result.Entity;
+        }, cancellationToken);
+    }
+
     /// <summary>
     /// <warning>Flushed the context</warning>
     /// </summary>
@@ -82,11 +95,41 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
         }
         return ret;
     }
+
+    public Task<TEntity> SaveAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default) {
+        return DetachAsync(entity).ContinueWith(r => {
+            try{
+                var t =AddAsync(r.Result, flush, cancellationToken);
+                t.Wait(cancellationToken);
+                return t.Result;
+            }
+            catch (AggregateException e){
+                if (e.InnerExceptions.Any(e=>e is InvalidOperationException io && io.Message.Contains("same") ||
+                                             e is DbUpdateException du &&
+                                             du.Message.Contains("Conflict"))){
+                    var ret = _context.Set<TEntity>().Update(r.Result).Entity;
+                    if (flush) _context.SaveChangesAsync(cancellationToken).Wait(cancellationToken);
+                    return ret;
+                }
+                throw;
+            }
+        }, cancellationToken);
+        
+    }
+
     public TEntity Update(TEntity entity) {
         Detach(entity);
         return _context.Set<TEntity>().Update(entity).Entity;
     }
 
+    public  Task<TEntity> UpdateAsync(TEntity entity, bool flush = true, CancellationToken token = default) {
+        return DetachAsync(entity,token).ContinueWith(r => _context.Set<TEntity>().Update(r.Result).Entity, token)
+            .ContinueWith(reT => {
+            if(flush)
+                _context.SaveChangesAsync(token).Wait(token);
+            return reT.IsCanceled? null! : reT.Result;
+        }, token);
+    }
     public int UpdateExpr((Expression<Func<TEntity, object>>,object)[] memberAccessorAndValues, Expression<Func<TEntity, bool>> predicate, string[][]? includes = null) {
         var q = doIncludes(_context.Set<TEntity>(), includes).Where(predicate);
         var param = Expression.Parameter(typeof(SetPropertyCalls<TEntity>), "setters");
@@ -108,6 +151,12 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
         return doIncludes(_context.Set<TEntity>(), includes).Where(predicate).ExecuteDelete();
     }
 
+    public Task<TEntity> DeleteAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default) {
+        return DetachAsync(entity, cancellationToken).ContinueWith(r => _context.Set<TEntity>().Remove(r.Result).Entity, cancellationToken).ContinueWith(r => {
+                _context.SaveChangesAsync(cancellationToken);
+                return cancellationToken.IsCancellationRequested ?null!:r.Result;
+        },cancellationToken);
+    }
     public void Flush() {
         _context.SaveChanges();
     }
@@ -117,6 +166,13 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
             e1.State = EntityState.Detached;
         }
         return entity;
+    }
+    public async Task<TEntity> DetachAsync(TEntity entity, CancellationToken cancellationToken = default) {
+            foreach (var e1 in _context.ChangeTracker.Entries<TEntity>().Where(e => e.Entity.Equals(entity))){
+                if(cancellationToken.IsCancellationRequested) return null!;
+                e1.State = EntityState.Detached;
+            }
+            return entity;
     }
     public TEntity Merge(TEntity entity) {
         throw new NotImplementedException();
@@ -133,5 +189,13 @@ internal class EfRepository<TEntity> : IRepository<TEntity> where TEntity : clas
             ret = ret.Include(string.Join('.',include));
         }
         return ret;
+    }
+
+    public void Dispose() {
+        _context.Dispose();
+    }
+
+    public async ValueTask DisposeAsync() {
+        await _context.DisposeAsync();
     }
 }

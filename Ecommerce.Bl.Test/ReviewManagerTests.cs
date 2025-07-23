@@ -11,69 +11,66 @@ public class ReviewManagerTests
 {
     private ProductOffer _testOffer;
     private ProductReview _testReview;
-    private User _reviewerUser;
-    private User _commenterUser;
-    private User _voterUser;
+    private Customer _reviewerCustomer;
+    private Customer _commenterCustomer;
+    private Customer _voterCustomer;
     private Seller _testSeller; // Declare a test seller
 
     [OneTimeSetUp]
     public void SetupUsersAndProducts()
     {
         // Register a main user (reviewer)
-        _reviewerUser = new User
+        _reviewerCustomer = new Customer
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
             FirstName = "Reviewer",
             LastName = "User",
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
         ContextHolder.Session = null;
-        _reviewerUser = TestContext._userManager.Register(_reviewerUser);
+        _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
         // Register a commenter user
-        _commenterUser = new User
+        _commenterCustomer = new Customer
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
             FirstName = "Commenter",
             LastName = "User",
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
         ContextHolder.Session = null;
-        _commenterUser = TestContext._userManager.Register(_commenterUser);
+        _commenterCustomer = (Customer)TestContext._userManager.Register(_commenterCustomer);
         // Register a voter user
-        _voterUser = new User
+        _voterCustomer = new Customer
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
             FirstName = "Voter",
             LastName = "User",
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
         ContextHolder.Session = null;
-        _voterUser = TestContext._userManager.Register(_voterUser);
+        _voterCustomer = (Customer)TestContext._userManager.Register(_voterCustomer);
         // Register and Login as a Seller for product listing
         _testSeller = new Seller
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop",
-            ShopEmail = new Faker().Internet.Email(),
-            ShopPhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"},
-            ShopAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
 
         };
         ContextHolder.Session = null;
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
         // Login as the seller to list the product offer
-        TestContext._userManager.LoginSeller(_testSeller.Email, _testSeller.PasswordHash, out SecurityToken sellerToken);
+        TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
         TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
 
 
@@ -92,7 +89,7 @@ public class ReviewManagerTests
         // Simulate a purchase by _reviewerUser for _testOffer
         // First, login as the reviewer user
         ContextHolder.Session = null;
-        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken reviewerToken);
+        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
         TestContext._jwtmanager.UnwrapToken(reviewerToken, out var reviewerUser, out var reviewerSession);
 
         TestContext._cartManager.Add(_testOffer, 1);
@@ -104,7 +101,7 @@ public class ReviewManagerTests
     [SetUp]
     public void LoginAsReviewer()
     {
-        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
     }
 
@@ -115,7 +112,7 @@ public class ReviewManagerTests
         {
             ProductId = _testOffer.ProductId,
             SellerId = _testOffer.SellerId,
-            ReviewerId = _reviewerUser.Id, // ReviewerId is User.Id
+            ReviewerId = _reviewerCustomer.Id, // ReviewerId is User.Id
             Rating = 5,
             Comment = "This is a great product!",
             CensorName = true
@@ -134,8 +131,8 @@ public class ReviewManagerTests
         
         var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(leftReview.ProductId, leftReview.SellerId, leftReview.ReviewerId,false);
         // assert that name is blurred
-        Assert.That(reviewWithAggregates.Reviewer.FirstName, Is.EqualTo(_reviewerUser.FirstName[0] + "***"));
-        Assert.That(reviewWithAggregates.Reviewer.LastName, Is.EqualTo(_reviewerUser.LastName[0] + "***"));
+        Assert.That(reviewWithAggregates.Reviewer.FirstName, Is.EqualTo(_reviewerCustomer.FirstName[0] + "***"));
+        Assert.That(reviewWithAggregates.Reviewer.LastName, Is.EqualTo(_reviewerCustomer.LastName[0] + "***"));
         _testReview = reviewWithAggregates;
     }
 
@@ -159,14 +156,14 @@ public class ReviewManagerTests
     [Test, Order(3)]
     public void CommentReview_Success()
     {
-        TestContext._userManager.LoginUser(_commenterUser.Email, _commenterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var comment = new ReviewComment
         {
             ProductId = (uint)_testReview.ProductId,
             SellerId = (uint)_testReview.SellerId,
-            ReviewerId = (uint)_testReview.ReviewerId,
+            SessionId = (uint)_testReview.ReviewerId,
             Comment = "I agree with this review!"
         };
 
@@ -182,13 +179,13 @@ public class ReviewManagerTests
     [Test, Order(4)]
     public void UpdateComment_Success()
     {
-        TestContext._userManager.LoginUser(_commenterUser.Email, _commenterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var commentToUpdate = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&
             c.SellerId == _testReview.SellerId &&
-            c.ReviewerId == _testReview.ReviewerId &&
+            c.SessionId == _testReview.ReviewerId &&
             c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
 
         Assert.That(commentToUpdate, Is.Not.Null);
@@ -199,7 +196,7 @@ public class ReviewManagerTests
         var updatedComment = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == commentToUpdate.ProductId &&
             c.SellerId == commentToUpdate.SellerId &&
-            c.ReviewerId == commentToUpdate.ReviewerId &&
+            c.SessionId == commentToUpdate.SessionId &&
             c.CommenterId == commentToUpdate.CommenterId);
 
         Assert.That(updatedComment, Is.Not.Null);
@@ -209,14 +206,14 @@ public class ReviewManagerTests
     [Test, Order(5)]
     public void VoteReview_Upvote_Success()
     {
-        TestContext._userManager.LoginUser(_voterUser.Email, _voterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var vote = new ReviewVote
         {
             ProductId = (uint)_testReview.ProductId,
             SellerId = (uint)_testReview.SellerId,
-            ReviewerId = (uint)_testReview.ReviewerId,
+            SessionId = (uint)_testReview.ReviewerId,
             Up = true
         };
 
@@ -232,26 +229,26 @@ public class ReviewManagerTests
     public void VoteReview_Downvote_Success() {
         ContextHolder.Session = null;
         // Login as a different voter to downvote
-        var anotherVoterUser = new User
+        var anotherVoterUser = new Customer
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
             FirstName = "Another",
             LastName = "Voter",
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
-        anotherVoterUser = TestContext._userManager.Register(anotherVoterUser);
+        anotherVoterUser = (Customer)TestContext._userManager.Register(anotherVoterUser);
         TestContext._userRepository.Flush();
 
-        TestContext._userManager.LoginUser(anotherVoterUser.Email, anotherVoterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var vote = new ReviewVote
         {
             ProductId = (uint)_testReview.ProductId,
             SellerId = (uint)_testReview.SellerId,
-            ReviewerId = (uint)_testReview.ReviewerId,
+            SessionId = (uint)_testReview.ReviewerId,
             Up = false
         };
 
@@ -267,7 +264,7 @@ public class ReviewManagerTests
     public void GetReviewsWithAggregates_OwnVoteAndComments_Success()
     {
         // Login as the voter user to check OwnVote
-        TestContext._userManager.LoginUser(_voterUser.Email, _voterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
@@ -290,7 +287,7 @@ public class ReviewManagerTests
         Assert.That(review.Comments.Count(), Is.EqualTo(1));
         var commentWithAggregates = review.Comments.First();
 
-        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterUser.SessionId)); // CommenterId is Session.Id
+        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterCustomer.SessionId)); // CommenterId is Session.Id
         Assert.That(commentWithAggregates.Comment, Is.EqualTo("Actually, I strongly agree!"));
         Assert.That(commentWithAggregates.OwnVote, Is.EqualTo(0)); // _voterUser's session did not vote on this comment
         Assert.That(commentWithAggregates.Votes, Is.EqualTo(0)); // No votes on comment yet
@@ -299,14 +296,14 @@ public class ReviewManagerTests
     [Test, Order(8)]
     public void UnVoteReview_Success()
     {
-        TestContext._userManager.LoginUser(_voterUser.Email, _voterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var vote = new ReviewVote
         {
             ProductId = (uint)_testReview.ProductId,
             SellerId = (uint)_testReview.SellerId,
-            ReviewerId = (uint)_testReview.ReviewerId,
+            SessionId = (uint)_testReview.ReviewerId,
             Up = true // This is the vote we want to remove
         };
 
@@ -323,13 +320,13 @@ public class ReviewManagerTests
     [Test, Order(9)]
     public void DeleteComment_Success()
     {
-        TestContext._userManager.LoginUser(_commenterUser.Email, _commenterUser.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
         TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
 
         var commentToDelete = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&
             c.SellerId == _testReview.SellerId &&
-            c.ReviewerId == _testReview.ReviewerId &&
+            c.SessionId == _testReview.ReviewerId &&
             c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
 
         Assert.That(commentToDelete, Is.Not.Null);

@@ -396,7 +396,7 @@ private static ICollection<(string, object)> ToPairsProperties(object entity, IE
                 Anchor = AnchorStyles.Top | AnchorStyles.Left, Visible = true, Enabled = true
             };
             foreach (var kv in Utils.ColumnNames(type, exclude, include, onlyDeclared:onlyDeclared)){
-                if(kv.Equals(nameof(User.PasswordHash))) continue;
+                if(kv.Equals(nameof(Customer.PasswordHash))) continue;
                 var label = new Label{
                     Text = kv, TextAlign = ContentAlignment.MiddleLeft, AutoSize = true,
                     Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular)

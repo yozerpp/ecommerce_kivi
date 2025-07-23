@@ -7,13 +7,11 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IUserManager
 {
-    User? LoginUser(string Email, string password, out SecurityToken? token);
-    User GetUser();
-    UserWithAggregates GetWithAggregates(uint? id=null);
+    Customer? LoginCustomer(string Email, string password, out SecurityToken? token);
+
     Seller? LoginSeller(string Email, string password, out SecurityToken? token);
+    Staff? LoginStaff(string email, string password, out SecurityToken? token);
     User Register(User newUser);
-    void ChangePassword(string oldPassword, string newPassword);
-    void Logout();
-    User Update(User user);
-    void deactivate();
+    void ChangePassword(User user,string oldPassword, string newPassword);
+    void deactivate(Customer customer);
 }

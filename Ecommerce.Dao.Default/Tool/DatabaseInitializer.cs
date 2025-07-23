@@ -4,6 +4,7 @@ using System.Reflection;
 using Bogus;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Common.Meta;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Address = Ecommerce.Entity.Common.Address;
@@ -26,7 +27,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         _defaultCount = defaultCount;
         _typeCounts = typeCounts;
         _defaultContext = (TC) typeof(TC).GetConstructor([typeof(DbContextOptions<TC>)]).Invoke([options]);
-        _entityTypes=_defaultContext.Model.GetEntityTypes().ToArray();
+        _entityTypes=_defaultContext.Model.GetEntityTypes().Where(t=>!t.IsOwned() && !typeof(Dictionary<string,object>).IsAssignableFrom(t.ClrType)).ToArray();
         _saved = _entityTypes.ToDictionary(e=>e, e=>(ISet<object>)new HashSet<object>());
         _dictLocks = _entityTypes.ToDictionary(e=>e, e=>new Lock());
         _relationRandomizer = new RelationRandomizer(_saved, _dictLocks);
@@ -66,6 +67,11 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
                     try{
                         RandomizeAndSave(entityType);
                     }
+                    catch(Exception e){
+                        if(e.InnerException is SqlException sqlException && sqlException.Number==2627)
+                            _defaultContext.ChangeTracker.Clear();
+                        Debug.WriteLine(e.Message);
+                    }
                     finally{
                         _dictLocks[entityType].Exit();
                     }
@@ -99,13 +105,19 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
             AssignForeignKeys(entity,_relationRandomizer.GetForeignKeyValue(foreignKey));
         }
         entity = _defaultContext.Add(entity).Entity;
+        _defaultContext.SaveChanges();
         _saved[enttiyType].Add(entity);
     }
 
 
     private void AssignForeignKeys( object dependent, params IEnumerable<(INavigation, object)> keyValues) {
         foreach (var (nav, principal) in keyValues){
-            nav.PropertyInfo.SetValue(dependent, principal);
+            var propsInPrincipal = nav.ForeignKey.PrincipalKey.Properties;
+            var dependentProps = nav.ForeignKey.Properties;
+            for (var i = 0; i < dependentProps.Count; i++){
+                dependentProps[i].PropertyInfo.SetValue(dependent, propsInPrincipal[i].PropertyInfo.GetValue(principal));
+            }
+            // nav.PropertyInfo.SetValue(dependent, principal);
         }
     }
 

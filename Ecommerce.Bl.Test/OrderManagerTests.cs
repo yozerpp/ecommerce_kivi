@@ -9,7 +9,7 @@ namespace Ecommerce.Bl.Test;
 
 public class OrderManagerTests
 {
-    private static User _user;
+    private static Customer _customer;
     private static ProductOffer _offer1, _offer2;
     [OneTimeSetUp]
     public void SetupUsersAndProducts()
@@ -17,21 +17,18 @@ public class OrderManagerTests
 
         var _testSeller = new Seller
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop",
-            ShopEmail = new Faker().Internet.Email(),
-            ShopPhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"},
-            ShopAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
         ContextHolder.Session = null;
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
         // Login as the seller to list the product offer
-        TestContext._userManager.LoginSeller(_testSeller.Email, _testSeller.PasswordHash, out SecurityToken sellerToken);
+        TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
         // Create a product and offer for testing reviews
         var category = TestContext._categoryRepository.First(_ => true);
         var product = new Product { Name = "Review Test Product", Description = "Description", CategoryId = category.Id };
@@ -48,19 +45,16 @@ public class OrderManagerTests
         ContextHolder.Session = null;
         var newSeller = new Seller
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop",
-            ShopEmail = new Faker().Internet.Email(),
-            ShopPhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"},
-            ShopAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
-            ShippingAddress = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };;
         TestContext._userManager.Register(newSeller);
-        TestContext._userManager.LoginSeller(newSeller.Email,newSeller.PasswordHash, out _);
+        TestContext._userManager.LoginSeller(newSeller.NormalizedEmail,newSeller.PasswordHash, out _);
         product = TestContext._productRepository.Detach(product);
         product.Offers.Clear();
         _offer2 = TestContext._sellerManager.ListProduct(new ProductOffer{
@@ -74,19 +68,19 @@ public class OrderManagerTests
         payment = TestContext._paymentRepository.Add(payment);
         TestContext._orderManager.CreateOrder();
         ContextHolder.Session = null;
-        _user = TestContext._userManager.Register(new User{
-            Email = new Faker().Internet.Email(),
+        _customer = (Customer)TestContext._userManager.Register(new Customer{
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
-            ShippingAddress = new Address()
+            Address = new Address()
                 { City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd" },
             PhoneNumber = new PhoneNumber(){ CountryCode = 90, Number = "5551234567" }
         });
     }
     [SetUp]
     public void Login() {
-        UserManagerTests.Login(_user,out _);
+        UserManagerTests.Login(_customer,out _);
     }
     [Test]
     public void CreateOrder() {
@@ -96,8 +90,8 @@ public class OrderManagerTests
         TestContext._cartManager.Add(offer);
         var o = TestContext._orderManager.CreateOrder();
         TestContext._orderRepository.Flush();
-        TestContext._userRepository.Detach(_user);
-        var userWithOrders = TestContext._userRepository.First(u=>u.Id == _user.Id, includes:[[nameof(User.Orders)]]);
+        TestContext._userRepository.Detach(_customer);
+        var userWithOrders = TestContext._userRepository.First(u=>u.Id == _customer.Id, includes:[[nameof(Customer.Orders)]]);
         TestContext._orderRepository.Detach(o);
         var o1=TestContext._orderRepository.First(or => or.Id == o.Id, includes:[[nameof(Order.Items)]]);
         Assert.That(o1, Is.Not.Null);
@@ -105,7 +99,7 @@ public class OrderManagerTests
         Assert.That(o1.Items.Count(), Is.EqualTo(1));
         Assert.That(o.User.Id, Is.EqualTo(o1.User.Id));
         Assert.That(userWithOrders.Orders, Contains.Item(o1));
-        _user = userWithOrders;
+        _customer = userWithOrders;
     }
 
     [Test]
@@ -137,7 +131,7 @@ public class OrderManagerTests
         var orderToComplete = TestContext._orderManager.CreateOrder();
         TestContext._orderRepository.Flush();
         // Now, complete the order
-        TestContext._orderManager.complete(orderToComplete);
+        TestContext._orderManager.Complete(orderToComplete);
         TestContext._orderRepository.Detach(orderToComplete);
         var completedOrder = TestContext._orderRepository.First(o=>o.Id ==orderToComplete.Id);
         // Assertions

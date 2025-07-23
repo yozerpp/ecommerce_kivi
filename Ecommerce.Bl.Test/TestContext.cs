@@ -1,10 +1,11 @@
-﻿using Bogus;
+﻿using System.Security.Claims;
+using System.Security.Cryptography;
 using Ecommerce.Bl.Concrete;
-using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Dao.Default;
 using Ecommerce.Entity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Test;
 
@@ -16,11 +17,12 @@ public static class TestContext
     public static readonly UserManager _userManager;
     public static readonly ProductManager _productManager;
     public static readonly ReviewManager _reviewManager;
-    public static User _user;
+    public static Customer Customer;
+    public static readonly IRepository<User> _userBaseRepository;
     public static readonly IRepository<Session> _sessionRepository;
     public static readonly IRepository<Cart> _cartRepository;
     public static readonly JwtManager _jwtmanager;
-    public static readonly IRepository<User> _userRepository;
+    public static readonly IRepository<Customer> _userRepository;
     public static readonly IRepository<ProductOffer> _offerRepository;
     public static readonly IRepository<Product> _productRepository;
     public static readonly IRepository<Category> _categoryRepository;
@@ -37,10 +39,11 @@ public static class TestContext
         DefaultDbContext context = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>()
             .UseSqlServer("Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;")
             .EnableSensitiveDataLogging().Options);
+        _userBaseRepository = RepositoryFactory.Create<User>(context);
         _cartRepository = RepositoryFactory.Create<Cart>(context);
         _orderRepository = RepositoryFactory.Create<Order>(context);
         _sellerRepository = RepositoryFactory.Create<Seller>(context);
-        _userRepository= RepositoryFactory.Create<User>(context);
+        _userRepository= RepositoryFactory.Create<Customer>(context);
         _productRepository= RepositoryFactory.Create<Product>(context);
         _cartItemRepository = RepositoryFactory.Create<CartItem>(context);
         _paymentRepository = RepositoryFactory.Create<Payment>(context);
@@ -53,11 +56,24 @@ public static class TestContext
         _reviewRepository = RepositoryFactory.Create<ProductReview>(context);
         _orderItemRepository = RepositoryFactory.Create<OrderItem>(context);
         _couponRepository= RepositoryFactory.Create<Coupon>(context);
-        _jwtmanager = new JwtManager(_userRepository,_sellerRepository,_sessionRepository);
+        var k = new SymmetricSecurityKey(SHA256.HashData(
+            "somekey"u8.ToArray()));
+        _jwtmanager = new JwtManager(new TokenValidationParameters(){
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "App",
+            ValidAudience = "App",
+            IssuerSigningKey = k,
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            NameClaimType = ClaimTypes.NameIdentifier,
+            RoleClaimType = ClaimTypes.Role,
+        },new SigningCredentials(k,SecurityAlgorithms.HmacSha256),_userRepository,_sellerRepository,_sessionRepository);
         _productManager = new ProductManager(_productRepository);
         _cartManager = new CartManager(_sessionRepository, _couponRepository, _cartRepository, _cartItemRepository);
         _orderManager = new OrderManager(_cartManager,_orderRepository);
-        _userManager = new UserManager(_jwtmanager,_userRepository, _sellerRepository, s => s, _cartManager);
+        _userManager = new UserManager(_jwtmanager,_userRepository, _userBaseRepository, _sellerRepository, s => s, _cartManager);
         _sellerManager = new SellerManager(_couponRepository,_productRepository,_sellerRepository, _offerRepository);
         _reviewManager = new ReviewManager(_reviewRepository, _reviewCommentRepository, _reviewVoteRepository,
             _orderItemRepository);

@@ -1,5 +1,4 @@
 using System.Drawing.Drawing2D;
-using Ecommerce.Bl;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Microsoft.Identity.Client;
@@ -39,7 +38,7 @@ public partial class Form1 : Form
         InitPages();
         var i = localStorage.GetSavedSessionInfo();
         if (i == null || i.Value.Item1==null && i.Value.Item2==null){
-            var s = _cartManager.newCart(flush:true);
+            var s = _cartManager.newSession(flush:true);
             localStorage.PersistAnonymousSession(s);
         }
         else{
@@ -136,7 +135,7 @@ public partial class Form1 : Form
             localStorage.DeleteLoginInfo();
             var s = localStorage.GetAnonymousSessionInfo();
             if (s==null){
-                s= _cartManager.newCart(flush:true);
+                s= _cartManager.newSession(flush:true);
                 localStorage.PersistAnonymousSession(s);
             }
             ContextHolder.Session = s;

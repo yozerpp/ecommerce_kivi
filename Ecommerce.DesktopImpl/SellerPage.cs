@@ -1,5 +1,4 @@
-﻿using Ecommerce.Bl;
-using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
 
@@ -35,7 +34,7 @@ namespace Ecommerce.DesktopImpl
             string.Join('_', nameof(SellerWithAggregates.SaleCount))
         ];
         private static readonly string[] offerExclude = [];
-        private static readonly string[] reviewsInclude = [string.Join('_', nameof(ProductReview.Reviewer), nameof(User.FirstName), string.Join('_', nameof(ProductReview.Reviewer), nameof(User.LastName)))];
+        private static readonly string[] reviewsInclude = [string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.FirstName), string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.LastName)))];
         private readonly IReviewManager _reviewManager;
         private uint _loaded;
         public SellerPage(Navigation navigation, ReviewPage reviewPage, ProductPage productPage, IReviewManager reviewManager, ISellerManager sellerManager)
@@ -144,7 +143,7 @@ namespace Ecommerce.DesktopImpl
         private void LoadSeller(Seller seller)
         {
             shopNameBox.Text = seller.ShopName;
-            addressBox1.Lines = [seller.ShopAddress.ToString(), " Telefon: " + seller.ShopPhoneNumber];
+            addressBox1.Lines = [seller.Address.ToString(), " Telefon: " + seller.PhoneNumber];
             foreach (var aggregates in Utils.ToPairs(seller, [], aggreagateBoxInclude))   
             {
                 if (aggreagateBoxInclude.Contains(aggregates.Item1)) {
@@ -206,11 +205,6 @@ namespace Ecommerce.DesktopImpl
             Task.Run(GetOffers).ContinueWith(r => Invoke(() => LoadOffers(r.Result)));
         }
 
-        private void couponsView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
-            if (couponsView.Columns[e.ColumnIndex].Name.Equals(nameof(Coupon.Id))){
-                Clipboard.SetText(couponsView.Rows[e.RowIndex].Cells[nameof(Coupon.Id)].Value.ToString());
-            }
-        }
 
         private void listProductBtn_Click(object sender, EventArgs e) {
             var p =(Product)Utils.GetInput(typeof(Product), "Ürün tanımla");

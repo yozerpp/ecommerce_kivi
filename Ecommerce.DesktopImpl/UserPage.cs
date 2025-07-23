@@ -1,5 +1,4 @@
-﻿using Ecommerce.Bl;
-using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Projections;
@@ -23,14 +22,14 @@ public partial class UserPage : UserControl, IPage
         string.Join('_', nameof(OrderItemWithAggregates.ProductOffer), nameof(ProductOffer.Product),
             nameof(Product.Category), nameof(Category.Name)),
         string.Join('_', nameof(OrderItemWithAggregates.ProductOffer), nameof(ProductOffer.Seller),
-            nameof(Seller.ShopAddress)),
+            nameof(Seller.Address)),
     };
 
     private readonly FlowLayoutPanel _infoContainer, _aggregatesContainer;
     private readonly Dictionary<string, TextBox> _infoBoxes = new(), _aggregatesBoxes = new();
     private readonly LoginPage _loginPage;
-    private static readonly string[] userIncludes =[nameof(User.Email)];
-    private static readonly string[] userExclude =[nameof(User.Active)];
+    private static readonly string[] userIncludes =[nameof(Customer.NormalizedEmail)];
+    private static readonly string[] userExclude =[nameof(Customer.Active)];
     private static readonly string[] orderItemsExclude =[];
 
     public UserPage(IOrderManager orderManager, IUserManager userManager, LoginPage loginPage) {
@@ -41,14 +40,14 @@ public partial class UserPage : UserControl, IPage
         _orderManager = orderManager;
         _userManager = userManager;
         _loginPage.OnLogin += (_, args) => {
-            _loadedId = args.User.Id;
+            _loadedId = args.Customer.Id;
         };
         foreach (var orderItem in Utils.ColumnNames(typeof(OrderItemWithAggregates), orderItemsIncludes,
                      orderItemsExclude)){
             orderItemsView.Columns.Add(orderItem).AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
-        _infoContainer = Utils.InitDetailsScheme(_infoBoxes, typeof(User), userExclude, userIncludes);
-        _aggregatesContainer = Utils.InitDetailsScheme(_aggregatesBoxes, typeof(UserWithAggregates), [], [], true);
+        _infoContainer = Utils.InitDetailsScheme(_infoBoxes, typeof(Customer), userExclude, userIncludes);
+        _aggregatesContainer = Utils.InitDetailsScheme(_aggregatesBoxes, typeof(CustomerWithAggregates), [], [], true);
         infoBox.Controls.Add(_infoContainer);
         statisticsBox.Controls.Add(_aggregatesContainer);
         editBtn.Click += (_, _) => {
@@ -66,7 +65,7 @@ public partial class UserPage : UserControl, IPage
         _loadedId = id;
     }
 
-    private UserWithAggregates GetUser() {
+    private CustomerWithAggregates GetUser() {
         return _userManager.GetWithAggregates(_loadedId);
     }
     public new void Load() {
@@ -96,11 +95,11 @@ public partial class UserPage : UserControl, IPage
         _userManager.ChangePassword(ep.OldPassword, ep.NewPassword);
     }
     private static string[] sensitiveExclude = [
-        nameof(User.PasswordHash), nameof(User.ShippingAddress), nameof(User.LastName), nameof(User.PhoneNumber)
+        nameof(Customer.PasswordHash), nameof(Customer.Address), nameof(Customer.LastName), nameof(Customer.PhoneNumber)
     ];
-    private void LoadUser(User user, bool ownPage = true) {
-        foreach (var  us in Utils.ToPairs(user,!ownPage?userExclude.Concat(sensitiveExclude).ToArray():userExclude, userIncludes)){
-            if(us.Item1.Equals(nameof(User.PasswordHash))) continue;
+    private void LoadUser(Customer customer, bool ownPage = true) {
+        foreach (var  us in Utils.ToPairs(customer,!ownPage?userExclude.Concat(sensitiveExclude).ToArray():userExclude, userIncludes)){
+            if(us.Item1.Equals(nameof(Customer.PasswordHash))) continue;
             if(!_infoBoxes.TryGetValue(us.Item1, out var box)) 
                 if(!_aggregatesBoxes.TryGetValue(us.Item1, out box)) continue;
             box.Text = us.Item2.ToString();
@@ -129,7 +128,7 @@ public partial class UserPage : UserControl, IPage
     }
 
     private List<OrderWithAggregates> GetAllOrders() {
-        return _orderManager.getAllOrders(true,page: _ordersPage);
+        return _orderManager.GetAllOrders(true,page: _ordersPage);
     }
 
     public void Go() {
@@ -188,11 +187,11 @@ public partial class UserPage : UserControl, IPage
         foreach (int i in orderItemsView.SelectedIndices){
             var order = (Order)orderItemsView.Groups[i].Tag;
             order.Status = OrderStatus.DELIVERED;
-            _orderManager.complete(order);
+            _orderManager.Complete(order);
         }
     }
     private void SaveUser() {
-        var user=(User)Utils.DictToObject(typeof(User), _infoBoxes.Where(p=>typeof(User).GetProperty(p.Key.Split('_').First())!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+        var user=(Customer)Utils.DictToObject(typeof(Customer), _infoBoxes.Where(p=>typeof(Customer).GetProperty(p.Key.Split('_').First())!=null).ToDictionary(kv => kv.Key, kv => kv.Value.Text));
         user.Id = (uint)_loadedId;
         user.SessionId = ContextHolder.Session.Id;
         var u = ContextHolder.GetUserOrThrow();

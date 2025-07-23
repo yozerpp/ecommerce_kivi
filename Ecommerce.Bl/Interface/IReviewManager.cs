@@ -5,7 +5,7 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IReviewManager
 {
-    public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, bool includeSeller = false,uint? productId=null,
+    public List<ReviewWithAggregates> GetReviewsWithAggregates(Customer customer,bool includeComments, bool includeSeller = false,uint? productId=null,
         uint? sellerId = null, int page = 1, int pageSize = 20);
     ProductReview LeaveReview(ProductReview review);
     void UpdateReview(ProductReview review);

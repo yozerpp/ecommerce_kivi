@@ -2,7 +2,7 @@
 
 namespace Ecommerce.Dao.Spi;
 
-public interface IRepository<TEntity> where TEntity : class, new()
+public interface IRepository<TEntity> : IDisposable where TEntity : class, new() 
 {
     public List<TEntity> All(string[][]? includes = null);
     public List<TP> All<TP>(Expression<Func<TEntity, TP>> select,string[][]? includes = null);
@@ -17,12 +17,17 @@ public interface IRepository<TEntity> where TEntity : class, new()
     public bool Exists(Expression<Func<TEntity, bool>> predicate, string[][]? includes= null);
     public bool Exists<T>(Expression<Func<T, bool>> predicate, Expression<Func<TEntity, T>> select, string[][]? includes = null);
     public TEntity Add(TEntity entity);
+    public Task<TEntity> AddAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
     public TEntity Save(TEntity entity, bool flush = true);
+    public Task<TEntity> SaveAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
     public TEntity Update(TEntity entity);
+    public Task<TEntity> UpdateAsync(TEntity entity, bool flush = true, CancellationToken token = default);
     public int UpdateExpr((Expression<Func<TEntity,object>>,object)[] memberAccessorsAndValues, Expression<Func<TEntity, bool>> predicate, string[][]? includes = null);
     public TEntity Delete(TEntity entity);
+    public Task<TEntity> DeleteAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
     public int Delete(Expression<Func<TEntity, bool>> predicate,string[][]? includes =null);
     public void Flush();
     public TEntity Detach(TEntity entity);
+    public Task<TEntity> DetachAsync(TEntity entity, CancellationToken cancellationToken = default);
     public TEntity Merge(TEntity entity);
 }

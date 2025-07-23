@@ -15,13 +15,10 @@ public class SellerManagerTests
     [OneTimeSetUp]
     public static void CreateSeller() {
         _seller = new Seller(){
-            ShopEmail = new Faker().Internet.Email(), ShopName = "ShopName",
-            ShopPhoneNumber = new PhoneNumber(){ CountryCode = 90, Number = "1234567890" },
+            ShopName = "ShopName",
             FirstName = new Faker().Name.FirstName(),
             LastName = new Faker().Name.LastName(),
-            ShopAddress = new Address()
-                { City = "city", Neighborhood = "neighborhood", Street = "street", ZipCode = "12345",State = "state"},
-            Email = new Faker().Internet.Email(), PasswordHash = "pass",ShippingAddress = new Address{
+            NormalizedEmail = new Faker().Internet.Email(), PasswordHash = "pass",Address = new Address{
                 City = "Trabzon", ZipCode = "35450", Street = "SFSD", Neighborhood = "Other", State = "Gaziemir"
             },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "5551234567" }
@@ -31,11 +28,11 @@ public class SellerManagerTests
     }
     [SetUp]
     public void Login(){
-        TestContext._userManager.LoginUser(_seller.Email, _seller.PasswordHash, out SecurityToken token);
+        TestContext._userManager.LoginCustomer(_seller.NormalizedEmail, _seller.PasswordHash, out SecurityToken token);
     }
     [Test,Order(2)]
     public void LoginSeller() {
-        TestContext._userManager.LoginSeller(_seller.Email, _seller.PasswordHash, out _);
+        TestContext._userManager.LoginSeller(_seller.NormalizedEmail, _seller.PasswordHash, out _);
         Assert.That(ContextHolder.Session?.User, Is.Not.Null);
         Assert.That(ContextHolder.Session.User, Is.InstanceOf<Seller>());
     }
@@ -146,7 +143,7 @@ public class SellerManagerTests
         uint initialSaleCount = initialSellerAggregates?.SaleCount ?? 0;
 
         // Simulate a sale: Add item to cart and create an order
-        TestContext._cartManager.newCart(); // Ensure a fresh cart for the user
+        TestContext._cartManager.newSession(); // Ensure a fresh cart for the user
         TestContext._cartManager.Add(offerForSale, 2); // Add 2 units of the product
         TestContext._cartRepository.Flush();
 

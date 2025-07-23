@@ -12,69 +12,64 @@ namespace Ecommerce.Bl.Concrete;
 public class OrderManager : IOrderManager
 {
     private readonly IRepository<Order> _orderRepository;
-    private readonly CartManager _cartManager;
-    public OrderManager(CartManager cartManager,IRepository<Order> orderRepository) {
+    private readonly ICartManager _cartManager;
+    public OrderManager(ICartManager cartManager,IRepository<Order> orderRepository) {
         _cartManager = cartManager;
         _orderRepository = orderRepository;
     }
 
-    public Order CreateOrder() {
-        var user = ContextHolder.GetUserOrThrow();
-
-        if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
-        var cart = ContextHolder.Session!.Cart;
+    public Order CreateOrder(Customer user, string? email = null,Address? shippingAddress = null) {
+        var cart = user.Session.Cart;
         var o = new Order{
             Date = DateTime.Now, 
             // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
-            ShippingAddress = user.ShippingAddress, Status = OrderStatus.PENDING, UserId = user.Id,
-            User = user.Id == 0 ? user : null
+            Email = user?.Email ?? email,
+            ShippingAddress = user?.Address ?? shippingAddress ?? throw new ArgumentException("You need to specify shipping address for anonymous orders"),
+            Status = OrderStatus.PENDING, UserId = user?.Id,
+            User = user?.Id == 0 ? (Customer?)user : null,
+            SessionId = user.Session?.Id??user.SessionId, Session = user.SessionId!=0?null!:user.Session
         };
-        var cartItems = _cartManager.Get(false, true, false).Items;
+        var cartItems = _cartManager.Get(user.Session.CartId, false, true, false).Items;
         if(cartItems.Count==0) throw new ArgumentException("Cart is empty.");
         foreach (var cartItem in cartItems){
             o.Items.Add(new OrderItem(cartItem, o));
         }
         _orderRepository.Add(o);
-        _cartManager.newCart(flush:true);
+        _cartManager.newSession(user, flush:true);
         _orderRepository.Flush();
         return o;
     }
     public Order CancelOrder(Order order)
     {
-        var user = ContextHolder.Session.User;
-        if (user == null) throw new UnauthorizedAccessException("You must be logged in to create an order.");
         var i  =_orderRepository.UpdateExpr([
             (o=>o.Status, OrderStatus.CANCELLED)
-        ], o => o.Id == order.Id && o.UserId == user.Id && (o.Status != OrderStatus.CANCELLED && o.Status!=OrderStatus.DELIVERED));
+        ], o => o.Id == order.Id && o.UserId == order.UserId && (o.Status != OrderStatus.CANCELLED && o.Status!=OrderStatus.DELIVERED));
         order.Status = OrderStatus.CANCELLED;
         if(i == 0) throw new UnauthorizedAccessException("You can't cancel an order that is already complete.");
         return order;
     }
-    public Order complete(Order order)
+    public Order Complete(Order order)
     {
-        VerifyOrThrow(order);
         if(_orderRepository.UpdateExpr([
             (o => o.Status, OrderStatus.DELIVERED)
         ], o => o.Id == order.Id && o.Status!=OrderStatus.CANCELLED ) == 0) throw new UnauthorizedAccessException("You can't complete an order that is canceled.");
         return order;
     }
-    public void UpdateOrder(Order order)
-    {
-        VerifyOrThrow(order);
-        var uid = ContextHolder.GetUserOrThrow().Id;
+    public void UpdateOrder(Order order) {
+        var uid = order.User?.Id ?? order.UserId;
+        var oid = order.Id;
         var c = _orderRepository.UpdateExpr([
         (o=>o.ShippingAddress.City, order.ShippingAddress.City),
         (o=>o.ShippingAddress.Neighborhood, order.ShippingAddress.Neighborhood),
         (o=>o.ShippingAddress.State, order.ShippingAddress.State),
         (o=>o.ShippingAddress.Street, order.ShippingAddress.Street),
         (o=>o.ShippingAddress.ZipCode, order.ShippingAddress.ZipCode),
-        ],o=>o.Id == order.Id && o.UserId == uid);
+        ],o=>o.Id == oid && o.UserId ==uid);
         _orderRepository.Flush();
         if(c==0) throw new UnauthorizedAccessException("Order with the given id doesn't exists or doesn't belong to the user.");
     }
-    private void VerifyOrThrow(Order order)
+    private void VerifyOrThrow(Customer user, Order order)
     {
-        var user = ContextHolder.GetUserOrThrow();
         var oldOrder = _orderRepository.First(o1 => o1.Id == order.Id);
         if (oldOrder == null)
         {
@@ -86,11 +81,11 @@ public class OrderManager : IOrderManager
         }
         order.UserId = oldOrder.UserId;
         order.PaymentId = oldOrder.PaymentId;
+        _orderRepository.Detach(oldOrder);
     }
 
     public OrderWithAggregates? GetOrderWithItems( uint orderId) {
-        var uid = ContextHolder.Session!.User.Id;
-        var ret = _orderRepository.First(OrderWithItemsAggregateProjection, o => o.UserId == uid && o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]]);
+        var ret = _orderRepository.First(OrderWithItemsAggregateProjection, o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]]);
         if (ret == null) return null;
         ret.CouponDiscountedPrice = ret.Items.Sum(o => o.DiscountedPrice);
         ret.BasePrice = ret.Items.Sum(o => o.BasePrice);
@@ -100,8 +95,7 @@ public class OrderManager : IOrderManager
         return ret;
     }
 
-    public List<OrderWithAggregates> getAllOrders(bool includeItems = false,int page = 1, int pageSize = 10) {
-        var user = ContextHolder.GetUserOrThrow();
+    public List<OrderWithAggregates> GetAllOrders(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
         var uid = user.Id;
         var ret = _orderRepository.Where(OrderWithItemsAggregateProjection, o => o.UserId == uid,
             includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Ecommerce.Entity.Events;
 
 namespace Ecommerce.Entity;
 
@@ -13,6 +14,7 @@ public class ProductOffer
     public uint Stock { get; set; }
     public ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
     public ICollection<OrderItem> BoughtItems { get; set; } = new List<OrderItem>();
+    public ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
     public override bool Equals(object? obj)
     {
         if (obj is ProductOffer other){

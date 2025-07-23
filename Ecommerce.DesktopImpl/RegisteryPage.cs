@@ -35,7 +35,7 @@ namespace Ecommerce.DesktopImpl
         public RegisteryPage(IUserManager userManager) {
             _userManager = userManager;
             InitializeComponent();
-            CreateForm(typeof(User), 0);
+            CreateForm(typeof(Customer), 0);
             CreateForm(typeof(Seller), 1);
         }
 
@@ -53,7 +53,7 @@ namespace Ecommerce.DesktopImpl
         }
         //register
         private void button1_Click(object sender, EventArgs e) {
-            var user = (User)Utils.DictToObject(formTabs.SelectedIndex==0?typeof(User):typeof(Seller),inputs[formTabs.SelectedIndex].ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+            var user = (Customer)Utils.DictToObject(formTabs.SelectedIndex==0?typeof(Customer):typeof(Seller),inputs[formTabs.SelectedIndex].ToDictionary(kv => kv.Key, kv => kv.Value.Text));
             _userManager.Register(user);
             Clear();
             Utils.Info("Başarıyla Kayıt Yapıldı.");

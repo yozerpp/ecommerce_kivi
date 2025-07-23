@@ -2,28 +2,25 @@
 
 public class ReviewVote
 {
-    public uint ProductId { get; set; }
-    public uint SellerId { get; set; }
-    public uint ReviewerId { get; set; }
-    public ulong? CommenterId { get; set; }
-    public ulong VoterId { get; set; }
+    public ulong Id { get; set; }
+    public ulong? ReviewId {get;set;}
+    public ulong? CommentId {get;set;}
+    public ulong VoterId {get;set;}
     public Session Voter { get; set; }    
     public bool Up { get; set; }
     public ProductReview? ProductReview { get; set; }
     public ReviewComment? ReviewComment { get; set; }
-    public override bool Equals(object? obj)
-    {
-        if (obj is not ReviewVote commentVote) return false;
-        if (ProductId == default && SellerId == default && ReviewerId == default && CommenterId == default && VoterId == default) 
-            return ReferenceEquals(this, commentVote);
-        return ProductId == commentVote.ProductId && SellerId == commentVote.SellerId
-               && ReviewerId == commentVote.ReviewerId && CommenterId == commentVote.CommenterId
-               && VoterId == commentVote.VoterId;
+
+    protected bool Equals(ReviewVote other) {
+        return Id == other.Id && ReviewId == other.ReviewId && CommentId == other.CommentId;
+    }
+
+    public override bool Equals(object? obj) {
+        return ReferenceEquals(this, obj) ||Id!=default&& VoterId!=default && obj is ReviewVote other && Equals(other);
     }
 
     public override int GetHashCode() {
-        if (ProductId == default && SellerId == default && ReviewerId == default && CommenterId == default && VoterId == default) 
-            return base.GetHashCode();
-        return HashCode.Combine(ProductId, SellerId, ReviewerId, CommenterId, VoterId);
+        if (Id == default && VoterId == default) return base.GetHashCode();
+        return HashCode.Combine(Id, ReviewId, CommentId);
     }
 }

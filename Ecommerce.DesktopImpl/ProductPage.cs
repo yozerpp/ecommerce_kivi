@@ -1,5 +1,4 @@
-﻿using Ecommerce.Bl;
-using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
 
@@ -17,9 +16,9 @@ namespace Ecommerce.DesktopImpl
         private static readonly string[] offerExcldues =[];
         private static readonly string[] offerIncludes = [string.Join('_', nameof(ProductOffer.Seller), nameof(Seller.ShopName))];
         private static readonly string[] reviewExcludes = [nameof(ProductReview.CensorName), nameof(ReviewWithAggregates.OwnVote)];
-        private static readonly string[] reviewIncludes =[string.Join('_', nameof(ProductReview.Reviewer), nameof(User.FirstName)),
-            string.Join('_', nameof(ProductReview.Reviewer), nameof(User.LastName)),
-            string.Join('_', nameof(ProductReview.Seller) , nameof(Seller.ShopName))
+        private static readonly string[] reviewIncludes =[string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.FirstName)),
+            string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.LastName)),
+            string.Join('_', nameof(ProductReview.Offer) , nameof(ProductOffer.Seller), nameof(Seller.ShopName))
         ];
         private static readonly string[] productExcludes =
             [nameof(Product.Name), nameof(Product.Description), nameof(Product.Image)];
@@ -150,7 +149,7 @@ namespace Ecommerce.DesktopImpl
                     _reviewManager.UpdateReview(rev);
                 }else{
                     _reviewManager.CommentReview(new ReviewComment(){
-                        ReviewerId = rev.ReviewerId, CommenterId = ContextHolder.Session.Id, ProductId = rev.ProductId,
+                        SessionId = rev.ReviewerId, CommenterId = ContextHolder.Session.Id, ProductId = rev.ProductId,
                         SellerId = rev.SellerId,
                         Comment = commentBox.Text,
                     });
@@ -178,8 +177,8 @@ namespace Ecommerce.DesktopImpl
                 var i = reviewView.Rows.Add();
                 foreach (var review in Utils.ToPairs(productReview, reviewExcludes , reviewIncludes)){
                     object v;
-                    if ((review.Item1.Equals(string.Join('_', nameof(ProductReview.Reviewer), nameof(User.FirstName))) ||
-                         review.Item1.Equals(string.Join('_', nameof(ProductReview.Reviewer), nameof(User.LastName)))) &&
+                    if ((review.Item1.Equals(string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.FirstName))) ||
+                         review.Item1.Equals(string.Join('_', nameof(ProductReview.Reviewer), nameof(Customer.LastName)))) &&
                         productReview.CensorName)
                         v = review.Item2.ToString()![0] + "***";
                     else v = review.Item2;
@@ -207,7 +206,7 @@ namespace Ecommerce.DesktopImpl
 
         private void reviewsView_CellContentClick(object sender, DataGridViewCellEventArgs e) {
             if (reviewView.Columns[e.ColumnIndex].Name.Contains("Seller")){
-                var sellerId = ((ProductReview)reviewView.Rows[e.RowIndex].Tag).Seller.Id;
+                var sellerId = ((ProductReview)reviewView.Rows[e.RowIndex].Tag).Offer.Seller.Id;
                 SellerPage.Instance.Load(sellerId);
                 _navigation.Go(this, SellerPage.Instance);
             } 

@@ -1,6 +1,5 @@
 ﻿using System.Linq.Expressions;
 using Ecommerce.Bl.Interface;
-using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
@@ -8,92 +7,81 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Concrete;
-public class UserManager : IUserManager
+public class UserManager :IUserManager
 { 
     public delegate string HashFunction(string input);
     
-    private readonly JwtManager _jwtManager;
+    private readonly IJwtManager _jwtManager;
     private readonly HashFunction _hashFunction;
-    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Customer> _customerRepository;
     private readonly IRepository<Seller> _sellerRepository;
-    private readonly CartManager _cartManager;
-    public UserManager(JwtManager manager,IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, CartManager cartManager) {
+    private readonly IRepository<User> _userRepository;
+    private readonly ICartManager _cartManager;
+    private readonly IRepository<Staff> _staffRepository;
+    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager) {
         this._jwtManager = manager;
-        this._userRepository = userRepository;
+        _userRepository = userRepository;
+        _staffRepository = staffRepository;
+        this._customerRepository = customerRepository;
         this._hashFunction = hashFunction;
         this._cartManager = cartManager;
         _sellerRepository = sellerRepository;
     }
 
-    public User GetUser() {
-        return ContextHolder.GetUserOrThrow();
-    }
-
-    public UserWithAggregates GetWithAggregates(uint? id=null) {
-        id ??= ContextHolder.GetUserOrThrow().Id;
-        return _userRepository.First(UserAggregateProjection, u => u.Id == id, includes:[[nameof(User.Session)]]);
-    }
-    private static readonly Expression<Func<User, UserWithAggregates>> UserAggregateProjection = 
-        u => new UserWithAggregates {
-            Id = u.Id, 
-            Email = u.Email, 
-            FirstName = u.FirstName, 
-            LastName = u.LastName,
-            // TotalSpent = u.Orders.SelectMany(o=>o.Items ).Sum(i=>
-                // (i.Quantity * (decimal?)i.ProductOffer.Discount * (decimal?)i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate :(decimal?) 1m ) ))??0m,
-            TotalOrders = ((int?)u.Orders.Count()) ?? 0,
-            // TotalDiscountUsed = u.Orders.SelectMany(o=>o.Items).Sum(i=>
-                // (decimal?)((decimal?)i.Quantity * (1m-(decimal?)i.ProductOffer.Discount) *(decimal?) i.ProductOffer.Price *(decimal?) (i.Coupon != null ? (1m-(decimal?)i.Coupon.DiscountRate) : (decimal?)0m)))??0m,
-            TotalReviews = ((int?)u.Reviews.Count())??0,
-            TotalReplies = ((int?)u.ReviewComments.Count())??0,
-            TotalKarma = ((int?) u.Reviews.SelectMany(r=>r.Votes).Sum(v=>(int?)((v.Up) ? 1 : -1)) )??0,
-            ShippingAddress = u.ShippingAddress,
-            PhoneNumber = u.PhoneNumber,
-            Active = u.Active, 
-            Session= u.Session,
-            SessionId = u.SessionId,
-            Orders = u.Orders,
-            Reviews = u.Reviews,
-            ReviewComments = u.ReviewComments,
-            
-        };
-    public User? LoginUser(string email, string password, out SecurityToken? token)
+    public Customer? LoginCustomer(string email, string password, out SecurityToken? token)
     {
-        return doLogin(email, password, false, out token);
+        return (Customer?)doLogin(email, password, 0, out token);
     }
     public Seller? LoginSeller(string email, string password, out SecurityToken? token)
     {
-        return (Seller?) doLogin(email, password, true, out token); 
+        return (Seller?) doLogin(email, password, 1, out token); 
     }
-    private User? doLogin(string email, string password, bool isSeller, out SecurityToken? token) {
+
+    public Staff? LoginStaff(string email, string password, out SecurityToken? token) {
+        return (Staff?) doLogin(email, password, 2, out token);
+    }
+    private User? doLogin(string email, string password, ushort type, out SecurityToken? token) {
         User? user;
-        if (isSeller)
-            user = _sellerRepository.First(u => u.Email == email && u.PasswordHash == _hashFunction(password),
-                includes:[[nameof(User.Session)]]);
-        else
-            user = _userRepository.First(u => u.Email == email && u.PasswordHash == _hashFunction(password),
-                includes:[[nameof(User.Session)]]);
+        switch (type){
+            case 0:
+                user = _sellerRepository.First(u => u.NormalizedEmail == email && u.PasswordHash == _hashFunction(password),
+                    includes:[[nameof(Customer.Session)]]);
+                break;
+            case 1: 
+                user = _customerRepository.First(u => u.NormalizedEmail == email && u.PasswordHash == _hashFunction(password),
+                    includes:[[nameof(Customer.Session)]]);
+                break;
+            case 2:
+                user = _staffRepository.First(s=>s.NormalizedEmail == email && s.PasswordHash == _hashFunction(password),
+                    includes:[[nameof(Staff.Session)]]);
+                break;
+            default: user = null;
+                break;
+        }
         if (user == null){
             token = null;
             return null;
         }
-        ContextHolder.Session = user.Session;
         token = _jwtManager.CreateToken(user.Session!);
         return user;
     }
     public User Register(User newUser) {
-        var existingUser = ContextHolder.Session?.User;
-        if (existingUser!=null&& newUser is not Seller){
-            throw new ArgumentException("You are already logged in as a user. You can only register as a seller when you're logged in as a user.");
-        }
-        _cartManager.newCart(newUser);
-        User ret;
+        _cartManager.newSession(newUser);
+        User ret=null!;
         try{
-            if (newUser is Seller s){
-                ret  = _sellerRepository.Add(s);
+            switch (newUser){
+                case Customer customer:
+                    _customerRepository.Add(customer);
+                    break;
+                case Seller seller:
+                    _sellerRepository.Add(seller);
+                    break;
+                case Staff staff: 
+                    _staffRepository.Add(staff);
+                    break;
+                default: throw new ArgumentException("User cannot base class " + newUser.GetType().Name);
             }
-            else ret =  _userRepository.Add(newUser);
-            _userRepository.Flush();
+            _customerRepository.Flush();
         } catch (Exception e){
             if(!typeof(DbUpdateException).IsInstanceOfType(e) && !typeof(InvalidOperationException).IsInstanceOfType(e))
                 throw;
@@ -103,36 +91,12 @@ public class UserManager : IUserManager
         }
         return ret;
     }
-    public void ChangePassword(string oldPassword, string newPassword) {
-        User user;
-        if ((user=ContextHolder.Session?.User) ==null){
-            throw new UnauthorizedAccessException("You aren't logged in.");
-        }
-        if (!user.PasswordHash.Equals(this._hashFunction(oldPassword))){
-            throw new UnauthorizedAccessException("Old password is incorrect.");
-        }
+    public void ChangePassword(User user, string oldPassword, string newPassword) {
         user.PasswordHash = this._hashFunction(newPassword);
         _userRepository.Update(user);
         _userRepository.Flush();
     }
-    /// <summary>
-    /// Ui layer should also clear the persisted login information. (Such as cookies)
-    /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
-    public void Logout() {
-        throw new NotImplementedException("Logout should be handled by the controller/ui layer.");
-    }
-    public User Update(User user)
-    {
-       var ret =  _userRepository.Update(user);
-       _userRepository.Flush();
-       return ret;
-    }
-    public void deactivate() {
-        User? user;
-        if ((user =ContextHolder.Session?.User)==null){
-            throw new UnauthorizedAccessException("You aren't logged in.");
-        }
+    public void deactivate(Customer user) {
         user.Active = false;
         _userRepository.Update(user);
         _userRepository.Flush();

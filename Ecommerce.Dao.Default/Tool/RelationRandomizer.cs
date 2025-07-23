@@ -22,7 +22,7 @@ public class RelationRandomizer
             foreach (var compositeKey in compositeKeys.Where(k1 => !compositeKeys.Any(k2 =>
                              !k1.Equals(k2) && k1.Properties.All(p1 => k2.Properties.Contains(p1)) //Only get the most inclusive key.
                      ))){
-                var navs = compositeKey.Properties.SelectMany(p=>p.GetContainingForeignKeys()).Select(fk=>fk.GetNavigation(true)).ToHashSet();
+                var navs = compositeKey.Properties.SelectMany(p=>p.GetContainingForeignKeys()).Select(fk=>fk.GetNavigation(true)).Where(n=>n!=null).ToHashSet();
                 _compositeKeys[compositeKey] = navs!;
                 _locks[compositeKey] = (new Lock(), new Lock());
             }

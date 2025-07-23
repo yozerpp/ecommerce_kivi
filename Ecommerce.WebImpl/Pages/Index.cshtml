@@ -1,0 +1,26 @@
+﻿@page
+@model HomepageModel
+@{
+    ViewData["Title"] = "Home page";
+}
+<div class="text-center">
+        <table class="table">
+            <thead>
+            <tr>
+                @foreach (var colName in Model.ProductMapper.ColumnNames()){
+                    <th scope="col">@colName</th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Products){
+                <tr>
+                    @foreach (var kv in Model.ProductMapper.ToPairs(item)){
+                        <td @Html.DisplayName(kv.Item1)>@kv.Item2.ToString()</td>
+                    }
+                </tr>
+            }
+            </tbody>
+            
+        </table>
+</div>

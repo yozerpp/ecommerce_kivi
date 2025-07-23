@@ -1,5 +1,4 @@
-﻿using Ecommerce.Bl;
-using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
 
@@ -59,7 +58,7 @@ public partial class ReviewPage : UserControl, IPage
         var review = (ProductReview)selected.Tag;
         var cmnt = _reviewManager.CommentReview(new ReviewComment(){
             Comment = rev, CommenterId = ContextHolder.Session.Id, ProductId = review.ProductId,
-            ReviewerId = review.ReviewerId, SellerId = review.SellerId
+            SessionId = review.ReviewerId, SellerId = review.SellerId
         });
         Clear();
         var fetchTask = Task.Run(GetReviewsWithAggregates);

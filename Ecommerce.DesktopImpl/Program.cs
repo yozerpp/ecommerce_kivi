@@ -37,7 +37,7 @@ static class Program
     static void initDeps() {
         var context = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>()
             .UseSqlServer(
-                "Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;")
+                DefaultDbContext.DefaultConnectionString)
             .EnableSensitiveDataLogging().Options);
         Kernel.Bind<DefaultDbContext>().ToConstant(context).InSingletonScope();
         Kernel.Bind<DbContext>().ToConstant(context).InSingletonScope();
@@ -64,7 +64,7 @@ static class Program
         Kernel.Bind<IRepository<ReviewVote>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<ReviewVote>(model)));
         Kernel.Bind<IRepository<Seller>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Seller>(model)));
         Kernel.Bind<IRepository<Session>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Session>(model)));
-        Kernel.Bind<IRepository<User>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<User>(model)));
+        Kernel.Bind<IRepository<Customer>>().ToConstant(RepositoryFactory.Create(context, new GenericValidator<Customer>(model)));
         Kernel.Bind<UserManager.HashFunction>().ToConstant(new UserManager.HashFunction(s => s));
         Kernel.Bind(x => {
             x.FromAssembliesInPath(AppDomain.CurrentDomain.BaseDirectory).SelectAllTypes().BindAllInterfaces().Configure(

@@ -32,23 +32,11 @@ public class SellerManager : ISellerManager
     }
     //@param Seller should contain user information as well.
     public void UpdateSeller(Seller seller) {
-        User user;
-        if ((user = ContextHolder.Session!.User)==null || user is not Seller){
-            throw new UnauthorizedAccessException("You have to be logged in as a Seller.");
-        }
-        var oldSeller = user as Seller;
-        foreach (var property in typeof(Seller).GetProperties().Where(p=>p.DeclaringType == typeof(Seller))){
-            property.SetValue(oldSeller, property.GetValue(seller));
-        }
-        _sellerRepository.Update(oldSeller);
+        _sellerRepository.Update(seller);
         _sellerRepository.Flush();
     }
-    public ProductOffer ListProduct(ProductOffer offer)
+    public ProductOffer ListProduct(Seller seller, ProductOffer offer)
     {
-        if (ContextHolder.Session!.User==null || !typeof(Seller).IsAssignableFrom(ContextHolder.Session.User.GetType()))
-        {
-            throw new UnauthorizedAccessException("You do not have permission to list product offerings.");
-        }
         if (offer.ProductId==0 && offer.Product==null)
         {
             throw new ArgumentException("An offer should be associated with a new or existing product.");
@@ -58,23 +46,16 @@ public class SellerManager : ISellerManager
             offer.Product.Id = 0;
             offer.ProductId = offer.Product.Id;
         }
-        offer.SellerId = ContextHolder.Session.User.Id;
+
+        offer.SellerId = seller.Id;
+        offer.Seller = seller.Id != 0 ? null! : seller;
         var ret = _productOfferRepository.Add(offer);
-        //this needs better transaction management.
         _productOfferRepository.Flush();
         return ret;
     }
     
-    public ProductOffer updateOffer(ProductOffer offer, uint productId)
+    public ProductOffer updateOffer(Seller seller, ProductOffer offer, uint productId)
     {
-        if (ContextHolder.Session?.User==null || ContextHolder.Session.User is not Seller)
-        {
-            throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
-        }
-        var existingOffer = _productOfferRepository.First(o=>o.ProductId==productId && o.SellerId == ContextHolder.Session.User.Id);
-        if (existingOffer==null){
-            throw new ArgumentException("You don't have an offer for this product.");
-        }
         if (offer.Product!=null && _productRepository.Exists(p=>p.Id==offer.ProductId))
         {
             offer.Product.Id = 0;
@@ -87,7 +68,7 @@ public class SellerManager : ISellerManager
         return ret;
     }
 
-    public void UnlistOffer(ProductOffer offer)
+    public void UnlistOffer(Seller seller, ProductOffer offer)
     {
         var o = _productOfferRepository.Delete(offer);
         var p = _productRepository.First(p=>p.Id == o.ProductId);
@@ -98,12 +79,7 @@ public class SellerManager : ISellerManager
         _productOfferRepository.Flush();
     }
 
-    public void CreateCoupon(Coupon coupon) {
-        
-        if (ContextHolder.Session!.User == null || ContextHolder.Session.User is not Seller seller)
-        {
-            throw new UnauthorizedAccessException("You need to be a logged in as a seller.");
-        }
+    public void CreateCoupon(Seller seller, Coupon coupon) {
         coupon.SellerId = seller.Id;
         var couponCount = _sellerRepository.First( s=>s.Id==seller.Id,includes:[[nameof(Seller.Coupons)]]).Coupons.Count;
         coupon.Id = seller.ShopName + (ushort)couponCount ;
@@ -119,10 +95,7 @@ public class SellerManager : ISellerManager
                 SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (int?)oi.Quantity) ?? 0),
                 OfferCount = (uint)s.Offers.Count,
                 Id = s.Id,
-                ShopAddress = s.ShopAddress,
                 ShopName = s.ShopName,
-                ShopEmail = s.ShopEmail,
-                ShopPhoneNumber = s.ShopPhoneNumber,
                 Offers = s.Offers,
                 Coupons = s.Coupons,
             };
@@ -135,20 +108,16 @@ public class SellerManager : ISellerManager
             SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (decimal?)oi.Quantity)??0),
             OfferCount = (uint)s.Offers.Count,
             Id = s.Id,
-            ShopAddress = s.ShopAddress,
             ShopName = s.ShopName,
-            ShopEmail = s.ShopEmail,
-            ShopPhoneNumber = s.ShopPhoneNumber,
             Offers = s.Offers,
             Coupons = s.Coupons,
             
             FirstName = s.FirstName,
             LastName = s.LastName,
-            Email = s.Email,
-            ShippingAddress = s.ShippingAddress,
+            NormalizedEmail = s.NormalizedEmail,
+            Address = s.Address,
             PhoneNumber = s.PhoneNumber,
             Active = s.Active,
-            Orders = s.Orders,
             SessionId = s.SessionId,
             Session = s.Session,
         };

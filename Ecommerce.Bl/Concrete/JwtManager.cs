@@ -3,28 +3,30 @@ using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Concrete;
 
-public class JwtManager
+public class JwtManager : IJwtManager
 {
-    private readonly SecurityKey _secretKey;
     private readonly JwtSecurityTokenHandler _tokenHandler = new();
     private readonly SigningCredentials _credentials ;
-    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Customer> _userRepository;
     private readonly IRepository<Session> _sessionRepository;
     private readonly IRepository<Seller> _sellerRepository;
-    public JwtManager(IRepository<User> userRepository, IRepository<Seller> sellerRepository, IRepository<Session> sessionRepository) {
-        const string secretKey = "uDF$Gldpgl3*-4-ags";
+    private readonly TokenValidationParameters _tokenValidationParameters;
+    public JwtManager(TokenValidationParameters parameters, SigningCredentials signingCredentials, IRepository<Customer> userRepository, IRepository<Seller> sellerRepository, IRepository<Session> sessionRepository) {
         this._sellerRepository = sellerRepository;
         this._userRepository = userRepository;
+        _tokenValidationParameters = parameters;
         this._sessionRepository = sessionRepository;
-        _secretKey = new SymmetricSecurityKey(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(secretKey)));
-        _credentials = new SigningCredentials(_secretKey, SecurityAlgorithms.HmacSha256);
+        _credentials = signingCredentials;
     }
 
     public string Serialize(SecurityToken securityToken) {
@@ -33,7 +35,7 @@ public class JwtManager
 
     public void Deserialize(string token, out User? user, out Session? session) {
         try{
-            var p = _tokenHandler.ValidateToken(token, GetTokenValidationParameters(), out _);
+            var p = _tokenHandler.ValidateToken(token, _tokenValidationParameters, out _);
             ParsePrincipal(out user, out session, p);
         }
         catch (SecurityTokenValidationException e){
@@ -42,62 +44,65 @@ public class JwtManager
             return;
         }
     }
-    public SecurityToken CreateToken(Session session) {
+
+    public List<Claim> GetClaims(Session session) {
         var claims = new List<Claim>();
         switch (session.User){
             case Seller s:
-                claims.Add(new Claim("sellerId",s.Id.ToString()));
+                claims.Add(new Claim(ClaimTypes.Role,nameof(Seller)));
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, s.Id.ToString()));
                 break;
-            case User u:
-                claims.Add(new Claim("userId",u.Id.ToString()));
+            case Customer u:
+                claims.Add(new Claim(ClaimTypes.Role,nameof(Customer)));
+                claims.Add(new Claim(ClaimTypes.NameIdentifier , u.Id.ToString()));
                 break;
             case null:
-                claims.Add(new Claim("sessionId", session.Id.ToString()));
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, session.Id.ToString()));
                 break;
         }
+        return claims;
+    }
+    public SecurityToken CreateToken(Session session) {
+        var claims = GetClaims(session);
         return _tokenHandler.CreateToken(new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(claims),
+            Subject = new ClaimsIdentity(claims,JwtBearerDefaults.AuthenticationScheme),
             Expires = DateTime.UtcNow.AddHours(1),
             SigningCredentials = _credentials
         });
     }
+    
 
-    private TokenValidationParameters GetTokenValidationParameters() {
-        return new TokenValidationParameters(){
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            IssuerSigningKey = _secretKey,
-            ValidateLifetime = true
-        };
-    }
     public void UnwrapToken(SecurityToken token, out User? user, out Session? session) {
-        var principal = _tokenHandler.ValidateToken( _tokenHandler.WriteToken(token),GetTokenValidationParameters(), out var _);
+        var principal = _tokenHandler.ValidateToken( _tokenHandler.WriteToken(token),_tokenValidationParameters, out var _);
         ParsePrincipal(out user, out session, principal);
     }
 
-    private void ParsePrincipal(out User? user, out Session? session, ClaimsPrincipal principal) {
+    public void ParsePrincipal(out User? user, out Session? session, ClaimsPrincipal principal) {
         if (principal == null){ 
             user=null;
             session = null;
             return;
         }
         user= null;
-        uint id;
+        uint id = Convert.ToUInt32(
+            principal.Claims.FirstOrDefault(c => c.Type.Equals(ClaimTypes.NameIdentifier))?.Value);
+        var role = principal.Claims.FirstOrDefault(c => c.Type.Equals(ClaimTypes.Role));
         ulong sessionId;
-        if ((id= Convert.ToUInt32(principal.Claims.FirstOrDefault(c => c.Type.Equals("sellerId"))?.Value))!=0){
-            user = _sellerRepository.First(s => s.Id == id, includes:[[nameof(User.Session)]]);
-            session = null;
-        }
-        else if ((id= Convert.ToUInt32(principal.Claims.FirstOrDefault(c => c.Type.Equals("userId"))?.Value))!=0){
-            user = _userRepository.First(u => u.Id == id, includes:[[nameof(User.Session)]]);
-            session = null;
-        } else if ((sessionId = Convert.ToUInt64(principal.Claims.FirstOrDefault(c => c.Type.Equals("sessionId"))!.Value))!=0){
-            session = _sessionRepository.First(s => s.Id == sessionId);
-        }
-        else{
+        if (id == 0){
             session = null;
             user = null;
+            return;
+        }
+        if (role.Value.Equals(nameof(Seller))){
+            user = _sellerRepository.First(s => s.Id == id, includes:[[nameof(Customer.Session)]]);
+            session = null;
+        }
+        else if (role.Value.Equals(nameof(Customer))){
+            user = _userRepository.First(u => u.Id == id, includes:[[nameof(Customer.Session)]]);
+            session = null;
+        } else{
+            session = _sessionRepository.First(s => s.Id == id);
         }
     }
 }

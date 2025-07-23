@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "k8rNbVDdmTY=",
+  "dgSpecHash": "TaxUaD0Pqrc=",
   "success": true,
   "projectFilePath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Bl\\Ecommerce.Bl.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tipil\\.nuget\\packages\\bogus\\35.6.3\\bogus.35.6.3.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\fluentvalidation\\12.0.0\\fluentvalidation.12.0.0.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.18\\microsoft.aspnetcore.authentication.jwtbearer.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.entityframeworkcore\\8.0.18\\microsoft.entityframeworkcore.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\8.0.18\\microsoft.entityframeworkcore.abstractions.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\8.0.18\\microsoft.entityframeworkcore.analyzers.8.0.18.nupkg.sha512",
@@ -20,6 +21,8 @@
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.12.1\\microsoft.identitymodel.abstractions.8.12.1.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.12.1\\microsoft.identitymodel.jsonwebtokens.8.12.1.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.logging\\8.12.1\\microsoft.identitymodel.logging.8.12.1.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.protocols\\7.1.2\\microsoft.identitymodel.protocols.7.1.2.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\7.1.2\\microsoft.identitymodel.protocols.openidconnect.7.1.2.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.12.1\\microsoft.identitymodel.tokens.8.12.1.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.12.1\\system.identitymodel.tokens.jwt.8.12.1.nupkg.sha512"
   ],

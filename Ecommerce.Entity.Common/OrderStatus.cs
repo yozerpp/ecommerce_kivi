@@ -7,5 +7,6 @@ public enum OrderStatus
     DELIVERED=2,
     CANCELLED=3,
     COMPLETE=4,
-    RETURNED=5,
+    RETURNING =5,
+    RETURNED=6,
 }

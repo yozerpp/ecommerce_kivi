@@ -36,14 +36,16 @@ public class Tests
     private const int CouponCount = SellerCount*10;
     private const int ProductReviewCount = ProductCount * UserCount / 100;
     private const int ReviewCommentCount = ProductOfferCount*10;
-    private const int ReviewVoteCount = 0;
+    private const int ReviewVoteCount = ReviewCommentCount*2;
     private const int CartCount = UserCount * 2;
     private const int CartItemCount = CartCount;
     private const int SessionCount = UserCount * 2;
     private const int OrderItemCount = CartItemCount;
     private const int OrderCount = UserCount * 2;
     private const int CategoryCount = 10;
-    
+    private const int StaffCount = 10;
+    private const int PermissionCount = 5;
+    private const int PermissionClaimCount = PermissionCount * StaffCount / 2;
     [Test, Order(2)]
     public void InitDb() {
         if (Skip){
@@ -52,8 +54,11 @@ public class Tests
         using var initializer = new DatabaseInitializer<DefaultDbContext>(
            _dbContextOptions,
             new Dictionary<Type, int?> {
-                { typeof(User), UserCount },
+                { typeof(Customer), UserCount },
                 { typeof(Seller), SellerCount },
+                {typeof(Staff), StaffCount},
+                {typeof(Permission), PermissionCount},
+                {typeof(PermissionClaim), PermissionClaimCount},
                 { typeof(Product), ProductCount },
                 { typeof(ProductOffer), ProductOfferCount},
                 {typeof(Coupon),CouponCount},
@@ -66,7 +71,7 @@ public class Tests
                 {typeof(OrderItem), OrderItemCount},
                 { typeof(Order), OrderCount},
                 {typeof(Category), CategoryCount}
-            }
+            }, defaultCount:0
         );
         initializer.initialize();
     }

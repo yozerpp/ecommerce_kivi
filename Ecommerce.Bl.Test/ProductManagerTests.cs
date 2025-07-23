@@ -25,8 +25,8 @@ public class ProductManagerTests
     private Product _productWithAggregates;
     private ProductOffer _offer1;
     private ProductOffer _offer2;
-    private User _buyerUser;
-    private User _reviewerUser;
+    private Customer _buyerCustomer;
+    private Customer _reviewerCustomer;
 
     [OneTimeSetUp]
     public void OneTimeSetupAggregates()
@@ -34,22 +34,19 @@ public class ProductManagerTests
         // 1. Register and Login a Seller
         _testSeller = new Seller
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Agg",
             LastName = "Seller",
             ShopName = "AggTestShop",
-            ShopEmail = new Faker().Internet.Email(),
-            ShopPhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"},
-            ShopAddress = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
-            ShippingAddress = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
         TestContext._sellerRepository.Flush();
 
         // Login as the seller to list products
-        TestContext._userManager.LoginSeller(_testSeller.Email, _testSeller.PasswordHash, out SecurityToken sellerToken);
+        TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
         TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
 
         // 2. Create a Product and multiple Offers for it
@@ -66,16 +63,13 @@ public class ProductManagerTests
         };
         _offer1 = TestContext._sellerManager.ListProduct(_offer1); // This will add the product too
         ContextHolder.Session = null;
-        var secondSeller = TestContext._userManager.Register(new Seller{
-            Email = new Faker().Internet.Email(),
+        var secondSeller =(Seller) TestContext._userManager.Register(new Seller{
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
             FirstName = "Agg",
             LastName = "Seller",
             ShopName = "AggTestShop",
-            ShopEmail = new Faker().Internet.Email(),
-            ShopPhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "345345345" },
-            ShopAddress = new Address{ City = "c", Neighborhood = "n", State = "s", Street = "st", ZipCode = "z" },
-            ShippingAddress = new Address{ City = "c", Neighborhood = "n", State = "s", Street = "st", ZipCode = "z" },
+            Address = new Address{ City = "c", Neighborhood = "n", State = "s", Street = "st", ZipCode = "z" },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "345345345" }
         });
         UserManagerTests.Login(secondSeller,out _);
@@ -90,21 +84,21 @@ public class ProductManagerTests
         _offer2 = TestContext._sellerManager.ListProduct(_offer2);
 
         // 3. Register Buyer User
-        _buyerUser = new User
+        _buyerCustomer = new Customer
         {
-            Email = new Faker().Internet.Email(),
+            NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "buyerpass",
             FirstName = "Agg",
             LastName = "Buyer",
-            ShippingAddress = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         ContextHolder.Session = null;
-        _buyerUser = TestContext._userManager.Register(_buyerUser);
+        _buyerCustomer = (Customer) TestContext._userManager.Register(_buyerCustomer);
 
         // 4. Simulate Sales (Orders)
         // Login as buyer
-        TestContext._userManager.LoginUser(_buyerUser.Email, _buyerUser.PasswordHash, out SecurityToken buyerToken);
+        TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out SecurityToken buyerToken);
         TestContext._jwtmanager.UnwrapToken(buyerToken, out var buyerUser, out var buyerSession);
 
         // Purchase from offer1
@@ -125,22 +119,22 @@ public class ProductManagerTests
         TestContext._orderRepository.Flush();
 
         // 5. Register Reviewer User
-        _reviewerUser = new User
+        _reviewerCustomer = new Customer
         {
-            Email =new Faker().Internet.Email(),
+            NormalizedEmail =new Faker().Internet.Email(),
             PasswordHash = "reviewerpass",
             FirstName = "Agg",
             LastName = "Reviewer",
-            ShippingAddress = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         ContextHolder.Session = null;
-        _reviewerUser = TestContext._userManager.Register(_reviewerUser);
+        _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
         TestContext._userRepository.Flush();
 
         // 6. Simulate Reviews
         // Login as reviewer
-        TestContext._userManager.LoginUser(_reviewerUser.Email, _reviewerUser.PasswordHash, out SecurityToken reviewerToken);
+        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
         TestContext._jwtmanager.UnwrapToken(reviewerToken, out var rUser, out var rSession);
 
         // Review for offer1
@@ -148,7 +142,7 @@ public class ProductManagerTests
         {
             ProductId = _offer1.ProductId,
             SellerId = _offer1.SellerId,
-            ReviewerId = _reviewerUser.Id,
+            ReviewerId = _reviewerCustomer.Id,
             Rating = 5,
             Comment = "Excellent product!"
         };
@@ -160,7 +154,7 @@ public class ProductManagerTests
         {
             ProductId = _offer2.ProductId,
             SellerId = _offer2.SellerId,
-            ReviewerId = _reviewerUser.Id,
+            ReviewerId = _reviewerCustomer.Id,
             Rating = 3,
             Comment = "It's okay."
         };
@@ -184,7 +178,7 @@ public class ProductManagerTests
             new Product { Id = 4, Name = "Dell Laptop", CategoryId = 3, Description = "Gaming laptop" },
             new Product { Id = 5, Name = "HP Printer", CategoryId = 4, Description = "Inkjet printer" }
         };
-        UserManagerTests.Login(_buyerUser, out _);
+        UserManagerTests.Login(_buyerCustomer, out _);
     }
 
     private void SetupMockRepository()

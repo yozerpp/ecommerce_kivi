@@ -5,7 +5,7 @@ namespace Ecommerce.DesktopImpl
 {
     public class LoginEventArgs: EventArgs
     {
-        public User User { get; set; }
+        public User Customer { get; set; }
         public Session Session { get; set; }
     }
     public partial class LoginPage : UserControl, IPage
@@ -32,14 +32,14 @@ namespace Ecommerce.DesktopImpl
         private void userLgnBtn_Click(object sender, EventArgs e) {
             var email = emailBox.Text;
             var password = passwordBox.Text;
-            var user = _userManager.LoginUser(email,password, out var token);
+            var user = _userManager.LoginCustomer(email,password, out var token);
             if (token == null){
                 Utils.Error("Eşleşen Kullanıcı Bulunamadı.");
                 return;
             }
             if(rememberMeBtn.Checked)
                 _localStorage.PersistLoginInfo(token);
-            OnLogin(this, new LoginEventArgs{User =user, Session = user.Session});
+            OnLogin(this, new LoginEventArgs{Customer =user, Session = user.Session});
             _navigation.Go(this, null);
         }
         private void sellerLoginBtn_Click(object sender, EventArgs e) {
@@ -53,7 +53,7 @@ namespace Ecommerce.DesktopImpl
             if(rememberMeBtn.Checked)
                 _localStorage.PersistLoginInfo(token);
             _sellerPage.Load(seller.Id);
-            OnLogin(this, new LoginEventArgs(){User = seller, Session = seller.Session});
+            OnLogin(this, new LoginEventArgs(){Customer = seller, Session = seller.Session});
             _navigation.Go(this, _sellerPage);
         }
         private void registerBtn_Click(object sender, EventArgs e) {
