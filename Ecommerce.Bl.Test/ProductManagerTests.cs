@@ -27,6 +27,8 @@ public class ProductManagerTests
     private ProductOffer _offer2;
     private Customer _buyerCustomer;
     private Customer _reviewerCustomer;
+    private Session _buyerSession;
+    private Session _reviewerSession;
 
     [OneTimeSetUp]
     public void OneTimeSetupAggregates()
@@ -46,8 +48,7 @@ public class ProductManagerTests
         TestContext._sellerRepository.Flush();
 
         // Login as the seller to list products
-        TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
-        TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
+        var sellerSession1 = TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
 
         // 2. Create a Product and multiple Offers for it
         var category = TestContext._categoryRepository.First(_ => true);
@@ -61,8 +62,8 @@ public class ProductManagerTests
             SellerId = _testSeller.Id,
             Discount = 0.1m // 10% discount
         };
-        _offer1 = TestContext._sellerManager.ListProduct(_offer1); // This will add the product too
-        ContextHolder.Session = null;
+        _offer1 = TestContext._sellerManager.ListProduct(_testSeller, _offer1); // This will add the product too
+        
         var secondSeller =(Seller) TestContext._userManager.Register(new Seller{
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
@@ -72,7 +73,7 @@ public class ProductManagerTests
             Address = new Address{ City = "c", Neighborhood = "n", State = "s", Street = "st", ZipCode = "z" },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "345345345" }
         });
-        UserManagerTests.Login(secondSeller,out _);
+        var sellerSession2 = TestContext._userManager.LoginSeller(secondSeller.NormalizedEmail, secondSeller.PasswordHash,out _);
         _offer2 = new ProductOffer
         {
             ProductId = _productWithAggregates.Id, // Link to the same product
@@ -81,7 +82,7 @@ public class ProductManagerTests
             SellerId = secondSeller.Id,
             Discount = 0.0m // No discount
         };
-        _offer2 = TestContext._sellerManager.ListProduct(_offer2);
+        _offer2 = TestContext._sellerManager.ListProduct(secondSeller, _offer2);
 
         // 3. Register Buyer User
         _buyerCustomer = new Customer
@@ -93,29 +94,25 @@ public class ProductManagerTests
             Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
-        ContextHolder.Session = null;
         _buyerCustomer = (Customer) TestContext._userManager.Register(_buyerCustomer);
 
         // 4. Simulate Sales (Orders)
         // Login as buyer
-        TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out SecurityToken buyerToken);
-        TestContext._jwtmanager.UnwrapToken(buyerToken, out var buyerUser, out var buyerSession);
+        _buyerSession = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out SecurityToken buyerToken);
 
         // Purchase from offer1
-        // TestContext._cartManager.newCart(_buyerUser);
-        TestContext._cartManager.Add(_offer1, 2); // Buy 2 units
+        TestContext._cartManager.Add(_buyerSession.Cart, _offer1, 2); // Buy 2 units
         TestContext._cartRepository.Flush();
         var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.CARD };
         payment1 = TestContext._paymentRepository.Add(payment1);
-        TestContext._orderManager.CreateOrder();
+        TestContext._orderManager.CreateOrder(_buyerSession);
         TestContext._orderRepository.Flush();
 
         // Purchase from offer2
-        // TestContext._cartManager.newCart(_buyerUser);
-        TestContext._cartManager.Add(_offer2, 1); // Buy 1 unit
+        TestContext._cartManager.Add(_buyerSession.Cart, _offer2, 1); // Buy 1 unit
         var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.CARD };
         payment2 = TestContext._paymentRepository.Add(payment2);
-        TestContext._orderManager.CreateOrder();
+        TestContext._orderManager.CreateOrder(_buyerSession);
         TestContext._orderRepository.Flush();
 
         // 5. Register Reviewer User
@@ -128,14 +125,12 @@ public class ProductManagerTests
             Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
-        ContextHolder.Session = null;
         _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
         TestContext._userRepository.Flush();
 
         // 6. Simulate Reviews
         // Login as reviewer
-        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
-        TestContext._jwtmanager.UnwrapToken(reviewerToken, out var rUser, out var rSession);
+        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
 
         // Review for offer1
         var review1 = new ProductReview
@@ -178,7 +173,8 @@ public class ProductManagerTests
             new Product { Id = 4, Name = "Dell Laptop", CategoryId = 3, Description = "Gaming laptop" },
             new Product { Id = 5, Name = "HP Printer", CategoryId = 4, Description = "Inkjet printer" }
         };
-        UserManagerTests.Login(_buyerCustomer, out _);
+        // Ensure a session is set up for the buyer customer before each test
+        _buyerSession = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out _);
     }
 
     private void SetupMockRepository()
@@ -392,19 +388,19 @@ public class ProductManagerTests
         // Arrange
         SetupMockRepository();
         var predicates = new List<SearchPredicate>();
-        var ordering = new List<SearchOrder>
-        {
-            new SearchOrder { PropName = "Name", Ascending = true },
-            new SearchOrder { PropName = "InvalidProperty", Ascending = false }, // This should be filtered out
-            new SearchOrder { PropName = "CategoryId", Ascending = false }
-        };
+        var ordering = new List<SearchOrder>();
+        // The invalid ordering property should be filtered out (tested by not throwing exception)
+        // This test doesn't directly assert on the filtering, but rather that the call doesn't fail.
+        // The actual filtering logic is within SearchExpressionUtils.Build, which is not directly tested here.
+        ordering.Add(new SearchOrder { PropName = "Name", Ascending = true });
+        ordering.Add(new SearchOrder { PropName = "InvalidProperty", Ascending = false }); 
+        ordering.Add(new SearchOrder { PropName = "CategoryId", Ascending = false });
 
         // Act
         var result = _productManager.SearchWithAggregates(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(5)); // All products should be returned
-        // The invalid ordering property should be filtered out (tested by not throwing exception)
     }
 
     [Test]
