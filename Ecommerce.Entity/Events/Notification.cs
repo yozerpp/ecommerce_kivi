@@ -7,7 +7,6 @@ public class Notification
     public User User { get; set; }
     public bool IsRead { get; set; }
     public DateTime Time { get; set; }
-    public string NotificationType { get; set; }
     protected bool Equals(Notification other) {
         return Id == other.Id && UserId == other.UserId;
     }

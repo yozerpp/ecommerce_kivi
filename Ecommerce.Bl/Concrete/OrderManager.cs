@@ -18,16 +18,15 @@ public class OrderManager : IOrderManager
         _orderRepository = orderRepository;
     }
 
-    public Order CreateOrder(Customer user, string? email = null,Address? shippingAddress = null) {
-        var cart = user.Session.Cart;
+    public Order CreateOrder(Session session, Customer? user=null, string? email = null, Address? shippingAddress = null) {
         var o = new Order{
             Date = DateTime.Now, 
             // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
-            Email = user?.Email ?? email,
-            ShippingAddress = user?.Address ?? shippingAddress ?? throw new ArgumentException("You need to specify shipping address for anonymous orders"),
+            Email = user?.Email ?? email ?? throw new ArgumentNullException("You must provide an email for anonymous orders."),
+            ShippingAddress = user?.Address ?? shippingAddress ?? throw new ArgumentNullException("You need to specify shipping address for anonymous orders"),
             Status = OrderStatus.PENDING, UserId = user?.Id,
             User = user?.Id == 0 ? (Customer?)user : null,
-            SessionId = user.Session?.Id??user.SessionId, Session = user.SessionId!=0?null!:user.Session
+            SessionId = session.Id, Session = session.Id!=0?null!:session
         };
         var cartItems = _cartManager.Get(user.Session.CartId, false, true, false).Items;
         if(cartItems.Count==0) throw new ArgumentException("Cart is empty.");

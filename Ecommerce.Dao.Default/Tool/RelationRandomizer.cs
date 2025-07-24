@@ -11,11 +11,13 @@ public class RelationRandomizer
     private readonly  Dictionary<IEntityType, ISet<object>> _globalStore;
     private readonly Dictionary<IKey, ICollection<INavigation>> _compositeKeys =new () ;
     private readonly Dictionary<IForeignKey, INavigation> _foreignKeys = new();
-    private readonly Dictionary<IAnnotatable, (Lock, Lock)> _locks = new();
+    private readonly Dictionary<IEntityType, Lock> _dictLocks = new();
     private readonly Dictionary<IKey, IEnumerator<ISet<object>>> _keyEnumerators = new();
     private readonly Dictionary<IForeignKey, IEnumerator<object>> _foreignKeyEnumerators = new();
+    private readonly Dictionary<IAnnotatable, Lock> _locks = new();
     public RelationRandomizer(Dictionary<IEntityType, ISet<object>> globalStore, Dictionary<IEntityType,Lock> lck) {
         _globalStore = globalStore;
+        _dictLocks = lck;
         foreach (var entityType in _globalStore.Keys){
             var compositeKeys = entityType.GetProperties() //properties that participate in a composite key
                 .SelectMany(p => p.GetContainingKeys().Where(k => k.Properties.Count > 1)).ToHashSet();
@@ -24,7 +26,7 @@ public class RelationRandomizer
                      ))){
                 var navs = compositeKey.Properties.SelectMany(p=>p.GetContainingForeignKeys()).Select(fk=>fk.GetNavigation(true)).Where(n=>n!=null).ToHashSet();
                 _compositeKeys[compositeKey] = navs!;
-                _locks[compositeKey] = (new Lock(), new Lock());
+                _locks[compositeKey] = new Lock();
             }
             foreach (var keyValuePair in entityType.GetForeignKeys()
                          .Where(f => _compositeKeys.Where(kv => kv.Key.DeclaringEntityType == f.DeclaringEntityType)
@@ -32,6 +34,7 @@ public class RelationRandomizer
                              .All(key => !f.Properties.All(fp => key.Properties.Contains(fp))))
                          .Select(f => (f,f.GetNavigation(true)))){
                 _foreignKeys[keyValuePair.f] =  keyValuePair.Item2;
+                _locks[keyValuePair.f] = new Lock();
             }
             
         }
@@ -39,13 +42,20 @@ public class RelationRandomizer
 
     public IEnumerable<(INavigation, object)> GetKeyValues(IKey key) {
         var navigations = _compositeKeys[key];
-        if (!_keyEnumerators.TryGetValue(key, out var enumerator)){
-            enumerator = _keyEnumerators[key] =
-                CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray()).GetEnumerator();
+        _locks[key].Enter();
+        try{
+            if (!_keyEnumerators.TryGetValue(key, out var enumerator)){
+                enumerator = _keyEnumerators[key] =
+                    CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray()).GetEnumerator();
+            }
+            if (!enumerator.MoveNext()) return[];
+            var ret = enumerator.Current.Select(k =>
+                (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)), k));
+            return ret;
         }
-        if (!enumerator.MoveNext()) return[];
-        return enumerator.Current.Select(k =>
-            (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)), k));
+        finally{
+            _locks[key].Exit();
+        }
     }
     /// <summary>
     /// 
@@ -56,21 +66,30 @@ public class RelationRandomizer
     public (INavigation, object) GetForeignKeyValue(IForeignKey foreignKey, object? from=null) {
         var nav = _foreignKeys[foreignKey];
         if (!foreignKey.IsUnique) return (nav, RetrieveRandom(nav.TargetEntityType));
-        if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)){
-            enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
+        _locks[nav.ForeignKey].Enter();
+        try{
+            if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)){
+                enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
+            }
+            bool selfRef = foreignKey.IsSelfReferencing();
+            do{
+                if (!enumerator.MoveNext())
+                    throw new IndexOutOfRangeException();
+            } while (selfRef && enumerator.Current.Equals(from)); 
+            return (nav, enumerator.Current);
+        }
+        finally{
+            _locks[nav.ForeignKey].Exit();
         }
 
-        bool selfRef = foreignKey.IsSelfReferencing();
-        do{
-            if (!enumerator.MoveNext()) 
-                return(nav, null);    
-        } while (selfRef && enumerator.Current.Equals(from)); 
-        return (nav, enumerator.Current);
+
     }
 
     private object RetrieveRandom(IEntityType type) {
+        _dictLocks[type].Enter();
         var s = _globalStore[type];
         var ret = s.ElementAt(new Randomizer().Number(s.Count - 1));
+        _dictLocks[type].Exit();
         return ret;
     }
     private static IEnumerable<object> UniqueEnumerable(ICollection<object> objects) {

@@ -141,7 +141,9 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
         orderItemBuilder.Property<uint>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired().ValueGeneratedNever();
         var reviewBuilder = modelBuilder.Entity<ProductReview>();
-        reviewBuilder.HasKey(nameof(ProductReview.ReviewerId),nameof(ProductReview.SellerId),nameof(ProductReview.ProductId));
+        reviewBuilder.HasKey(r => r.Id);
+        reviewBuilder.Property(r => r.Id).ValueGeneratedOnAdd();
+        reviewBuilder.HasAlternateKey(nameof(ProductReview.ReviewerId),nameof(ProductReview.SellerId),nameof(ProductReview.ProductId));
         reviewBuilder.HasMany<ReviewComment>(r => r.Comments).WithOne(c => c.Review).HasForeignKey( r=>r.ReviewId)
             .HasPrincipalKey(r=>r.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         reviewBuilder.HasOne<ProductOffer>(r=>r.Offer).WithMany(o=>o.Reviews).HasForeignKey(nameof(ProductReview.SellerId),nameof(ProductReview.ProductId))
@@ -156,6 +158,8 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         var commentBuilder = modelBuilder.Entity<ReviewComment>();
         commentBuilder.HasKey(c=>c.Id);
+        commentBuilder.HasAlternateKey(c => new{ c.CommenterId, c.ReviewId });
+        commentBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
         commentBuilder.HasOne<ProductReview>(r=>r.Review).WithMany(r=>r.Comments).HasForeignKey(c=>c.ReviewId)
             .HasPrincipalKey(r=>r.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         commentBuilder.HasOne<ReviewComment>(r => r.Parent).WithMany(r => r.Replies).HasForeignKey(r => r.ParentId).HasPrincipalKey(r => r.Id)
@@ -165,31 +169,31 @@ public class DefaultDbContext : DbContext
         commentBuilder.HasOne<Session>(r=>r.Commenter).WithMany().HasForeignKey(c => c.CommenterId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         var voteBuilder = modelBuilder.Entity<ReviewVote>();
         voteBuilder.HasKey(v=>v.Id);
+        voteBuilder.Property(v => v.Id).ValueGeneratedOnAdd();
         voteBuilder.HasOne<ProductReview>(r=>r.ProductReview).WithMany(r=>r.Votes).HasForeignKey(v=>v.ReviewId)
             .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         voteBuilder.HasOne<ReviewComment>(r=>r.ReviewComment).WithMany(r=>r.Votes).HasForeignKey(v=>v.CommentId)
             .HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         voteBuilder.HasOne<Session>(v=>v.Voter).WithMany().HasForeignKey(v => v.VoterId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
-        var notificationBuilder = modelBuilder.Entity<Notification>().UseTptMappingStrategy();
-        // notificationBuilder.HasDiscriminator(n => n.NotificationType);
+        var notificationBuilder = modelBuilder.Entity<Notification>().UseTpcMappingStrategy();
+        notificationBuilder.HasKey(n => n.Id);
+        notificationBuilder.HasNoDiscriminator();
+        notificationBuilder.Property(n => n.Id).ValueGeneratedOnAdd();
         notificationBuilder.HasOne<User>(n => n.User).WithMany(u => u.Notifications).HasForeignKey(n => n.UserId)
             .HasPrincipalKey(u => u.Id)
-            .IsRequired().OnDelete(DeleteBehavior.Cascade);
+            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         notificationBuilder.Property<DateTime>(n=>n.Time).HasDefaultValue(DateTime.UtcNow + TimeSpan.FromHours(3));
-        var requestBuilder = modelBuilder.Entity<Request>().UseTphMappingStrategy();
-        // requestBuilder.HasDiscriminator(r => r.NotificationType).HasValue("Request");
-        requestBuilder.HasBaseType<Notification>().UseTphMappingStrategy();
-        requestBuilder.HasDiscriminator(r=>r.RequestType);
-        requestBuilder.HasKey(r => r.Id);
+        var requestBuilder = modelBuilder.Entity<Request>().UseTpcMappingStrategy();
+        requestBuilder.HasBaseType<Notification>();
         requestBuilder.Property(r => r.Id).ValueGeneratedOnAdd();
         requestBuilder.HasOne<User>(r => r.Requester).WithMany(u => u.Requests).HasForeignKey(u => u.RequesterId).HasPrincipalKey(r => r.Id)
             .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var refundRequestBuilder = modelBuilder.Entity<RefundRequest>();
-        refundRequestBuilder.HasBaseType<Request>().HasDiscriminator(r=>r.RequestType).HasValue("Refund");
-        refundRequestBuilder.HasOne<OrderItem>(r => r.Item).WithOne().HasForeignKey<RefundRequest>(r=>new {r.OrderId, r.SellerId, r.ProductId})
-            .HasPrincipalKey<OrderItem>(o=>new {o.OrderId, o.SellerId, o.ProductId}).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        refundRequestBuilder.HasBaseType<Request>();
+        refundRequestBuilder.HasOne<OrderItem>(r => r.Item).WithOne().HasForeignKey<RefundRequest>(r=>new {r.OrderId, r.UserId, r.ProductId})
+            .HasPrincipalKey<OrderItem>(o=>new {o.OrderId, o.SellerId, o.ProductId}).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var permissionRequestBuilder = modelBuilder.Entity<PermissionRequest>();
-        permissionRequestBuilder.HasBaseType<Request>().HasDiscriminator(r=>r.RequestType).HasValue("Permission");
+        permissionRequestBuilder.HasBaseType<Request>();
         permissionRequestBuilder.HasOne<Permission>(p => p.Permission).WithMany().HasForeignKey(r => r.PermissionId)
             .HasPrincipalKey(p => p.Id)
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
@@ -210,7 +214,7 @@ public class DefaultDbContext : DbContext
         reviewNotificationBuilder.HasOne<ProductReview>(n => n.Review).WithOne().HasForeignKey<ReviewNotification>(n => n.ReviewId)
             .HasPrincipalKey<ProductReview>(r => r.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
         var rcnBuilder = modelBuilder.Entity<ReviewCommentNotification>();
-        rcnBuilder.HasBaseType<ReviewCommentNotification>();
+        rcnBuilder.HasBaseType<Notification>();
         rcnBuilder.HasOne<ReviewComment>(r => r.ReviewComment).WithOne()
             .HasForeignKey<ReviewCommentNotification>(n => n.CommentId)
             .HasPrincipalKey<ReviewComment>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
@@ -225,7 +229,7 @@ public class DefaultDbContext : DbContext
             .HasForeignKey(n => new{ n.SellerId, n.ProductId })
             .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.Cascade);
         var cancellationRequestBuilder = modelBuilder.Entity<CancellationRequest>(); 
-        cancellationRequestBuilder.HasBaseType<Request>().HasDiscriminator(c=>c.RequestType).HasValue("Cancellation");
+        cancellationRequestBuilder.HasBaseType<RefundRequest>();
     }
 
     private const int ShopNameMaxLength = 25;

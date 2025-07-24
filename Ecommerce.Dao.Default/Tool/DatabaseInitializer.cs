@@ -17,7 +17,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
     private readonly DbContext _defaultContext;
     private readonly Dictionary<IEntityType, Lock> _dictLocks;
     private readonly Dictionary<IEntityType, ISet<object>> _saved;
-    private readonly Dictionary<Type, Int32?> _typeCounts;
+    private readonly Dictionary<Type, int?> _typeCounts;
     private readonly int _defaultCount;
     private readonly ICollection<IEntityType> _entityTypes;
     private readonly RelationRandomizer _relationRandomizer;
@@ -59,17 +59,21 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
 
     private readonly ThreadLocal<TC> _contextThreadLocal = new();
     private void CreateEntities() {
-        foreach(var l in _lanes){
+        _lanes.AsParallel().ForAll(l => {
             _contextThreadLocal.Value = l.Item1;
             foreach (var entityType in l.Item2){
                 while (!IsFull(entityType)){
-                    _dictLocks[entityType].Enter();
                     try{
-                        RandomizeAndSave(entityType);
+                        var entity = Randomize(entityType);
+                        var ctx = _contextThreadLocal.Value;
+                        entity = ctx!.Add(entity).Entity;
+                        ctx.SaveChanges();
+                        _dictLocks[entityType].Enter();
+                        _saved[entityType].Add(entity);
                     }
-                    catch(Exception e){
-                        if(e.InnerException is SqlException sqlException && sqlException.Number==2627)
-                            _defaultContext.ChangeTracker.Clear();
+                    catch (Exception e){
+                        if (e.InnerException is SqlException sqlException && sqlException.Number == 2627)
+                            _contextThreadLocal.Value.ChangeTracker.Clear();
                         Debug.WriteLine(e.Message);
                     }
                     finally{
@@ -77,8 +81,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
                     }
                 }
             }
-        }
-        _defaultContext.SaveChanges();
+        });
     }
     private void PopulateNonRequiredRelations()
     {
@@ -95,7 +98,7 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         _defaultContext.SaveChanges();
     }
 
-    private void RandomizeAndSave(IEntityType enttiyType)
+    private object Randomize(IEntityType enttiyType)
     {
         var entity = CreateAndPopulatePrimitives(enttiyType);
         foreach (var key in enttiyType.GetKeys().Where(k=>k.Properties.Count > 1)){
@@ -104,9 +107,8 @@ public class DatabaseInitializer<TC> : IDisposable where TC: DbContext, new()
         foreach (var foreignKey in enttiyType.GetForeignKeys().Where(fk=>fk.IsRequired&&!fk.Properties.All(p=>p.IsKey()))){ //TODO no action if foreign key is both self-referencing and required.
             AssignForeignKeys(entity,_relationRandomizer.GetForeignKeyValue(foreignKey));
         }
-        entity = _defaultContext.Add(entity).Entity;
-        _defaultContext.SaveChanges();
-        _saved[enttiyType].Add(entity);
+
+        return entity;
     }
 
 

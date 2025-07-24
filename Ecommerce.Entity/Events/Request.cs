@@ -6,7 +6,7 @@ public class Request : Notification
     public bool IsApproved { get; set; }
     public uint RequesterId { get; set; }
     public User Requester { get; set; }
-    public string RequestType { get; set; }
+
     protected bool Equals(Request other) {
         return base.Equals(other) && RequesterId == other.RequesterId;
     }

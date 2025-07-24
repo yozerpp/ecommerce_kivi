@@ -99,9 +99,6 @@ public class ReviewManager : IReviewManager
             throw new ArgumentException("Review or offer cannot be found.");
     }
 
-    public static ulong GetCommenterId(ReviewComment reviewComment) {
-        return reviewComment.CommenterId!=0?reviewComment.CommenterId : reviewComment.Commenter?.Id ?? throw new ArgumentException("Comment is not associated with a review.");
-    }
     public ReviewComment CommentReview(ReviewComment comment) {
         var ret =_reviewCommentRepository.Add(comment);
         _reviewCommentRepository.Flush();
@@ -111,13 +108,13 @@ public class ReviewManager : IReviewManager
     public void UpdateComment(ReviewComment comment) {
         var c =_reviewCommentRepository.UpdateExpr([
             (r=>r.Comment, comment.Comment )
-        ], r => r.ProductId == comment.ProductId&& r.SellerId==comment.SellerId &&r.SessionId==comment.SessionId && r.CommenterId == comment.CommenterId);
+        ], r => r.Id==comment.Id && r.CommenterId == comment.CommenterId);
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
 
     public void DeleteComment(ReviewComment comment) {
-        var c = _reviewCommentRepository.Delete(r => r.ProductId == comment.ProductId && r.SellerId == comment.SellerId && r.SessionId == comment.SessionId && r.CommenterId == comment.CommenterId);
+        var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == comment.CommenterId);
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
@@ -127,7 +124,7 @@ public class ReviewManager : IReviewManager
     }
 
     public void UnVote(ReviewVote vote) {
-        var c = _reviewVoteRepository.Delete(v=>v.ProductId == vote.ProductId && v.SellerId == vote.SellerId &&v.SessionId == vote.SessionId && v.VoterId == vote.VoterId);
+        var c = _reviewVoteRepository.Delete(v=>v.Id==vote.Id && v.VoterId == vote.VoterId);
         if (c==0){
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
@@ -140,9 +137,7 @@ public class ReviewManager : IReviewManager
             Comment = r.Comment,
             CensorName = r.CensorName,
             Comments = r.Comments.Select(c=>new ReviewCommentWithAggregates(){
-                SellerId = c.SellerId,
-                ProductId = c.ProductId,
-                SessionId = c.SessionId,
+                Id = c.Id,
                 CommenterId = c.CommenterId,
                 Comment = c.Comment,
                 OwnVote = c.Votes.Where(v=>v.VoterId==sessionId).Select(v=>v.Up?1:-1).FirstOrDefault() as int? ??0,
