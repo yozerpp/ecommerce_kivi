@@ -15,6 +15,11 @@ public class ReviewManagerTests
     private Customer _commenterCustomer;
     private Customer _voterCustomer;
     private Seller _testSeller; // Declare a test seller
+    private Session _reviewerSession;
+    private Session _commenterSession;
+    private Session _voterSession;
+    private Session _sellerSession;
+
 
     [OneTimeSetUp]
     public void SetupUsersAndProducts()
@@ -29,8 +34,9 @@ public class ReviewManagerTests
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
-        ContextHolder.Session = null;
         _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
+        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
+        
         // Register a commenter user
         _commenterCustomer = new Customer
         {
@@ -41,8 +47,9 @@ public class ReviewManagerTests
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
-        ContextHolder.Session = null;
         _commenterCustomer = (Customer)TestContext._userManager.Register(_commenterCustomer);
+        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        
         // Register a voter user
         _voterCustomer = new Customer
         {
@@ -53,8 +60,9 @@ public class ReviewManagerTests
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
-        ContextHolder.Session = null;
         _voterCustomer = (Customer)TestContext._userManager.Register(_voterCustomer);
+        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        
         // Register and Login as a Seller for product listing
         _testSeller = new Seller
         {
@@ -67,11 +75,8 @@ public class ReviewManagerTests
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
 
         };
-        ContextHolder.Session = null;
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
-        // Login as the seller to list the product offer
-        TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out SecurityToken sellerToken);
-        TestContext._jwtmanager.UnwrapToken(sellerToken, out var sellerUser, out var sellerSession);
+        _sellerSession = TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out _);
 
 
         // Create a product and offer for testing reviews
@@ -84,25 +89,21 @@ public class ReviewManagerTests
             Stock = 10,
             SellerId = _testSeller.Id // Use the registered seller's ID
         };
-        _testOffer = TestContext._sellerManager.ListProduct(_testOffer);
+        _testOffer = TestContext._sellerManager.ListProduct(_testSeller, _testOffer);
 
         // Simulate a purchase by _reviewerUser for _testOffer
-        // First, login as the reviewer user
-        ContextHolder.Session = null;
-        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
-        TestContext._jwtmanager.UnwrapToken(reviewerToken, out var reviewerUser, out var reviewerSession);
-
-        TestContext._cartManager.Add(_testOffer, 1);
+        // First, ensure reviewer is logged in to create a cart item
+        TestContext._cartManager.Add(_reviewerSession.Cart, _testOffer, 1);
         var payment = new Payment { TransactionId = "REVIEW_PURCHASE_" + Guid.NewGuid().ToString(), Amount = _testOffer.Price, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
-        TestContext._orderManager.CreateOrder();
+        TestContext._orderManager.CreateOrder(_reviewerSession);
     }
 
     [SetUp]
     public void LoginAsReviewer()
     {
-        TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure _reviewerSession is the active session for tests that require it
+        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
     }
 
     [Test, Order(1)]
@@ -118,7 +119,7 @@ public class ReviewManagerTests
             CensorName = true
         };
 
-        var leftReview = TestContext._reviewManager.LeaveReview(_testReview);
+        var leftReview = TestContext._reviewManager.LeaveReview(_reviewerSession, _testReview);
 
         Assert.That(leftReview, Is.Not.Null);
         Assert.That(leftReview.ProductId, Is.EqualTo(_testReview.ProductId));
@@ -129,7 +130,7 @@ public class ReviewManagerTests
         Assert.That(leftReview.HasBought, Is.True); // Should be true because we simulated a purchase
         TestContext._reviewRepository.Detach(leftReview);
         
-        var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(leftReview.ProductId, leftReview.SellerId, leftReview.ReviewerId,false);
+        var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(_reviewerCustomer, leftReview.ProductId, leftReview.SellerId, leftReview.ReviewerId,false);
         // assert that name is blurred
         Assert.That(reviewWithAggregates.Reviewer.FirstName, Is.EqualTo(_reviewerCustomer.FirstName[0] + "***"));
         Assert.That(reviewWithAggregates.Reviewer.LastName, Is.EqualTo(_reviewerCustomer.LastName[0] + "***"));
@@ -141,7 +142,7 @@ public class ReviewManagerTests
     {
         _testReview.Rating = 4;
         _testReview.Comment = "It's good, but not perfect.";
-        TestContext._reviewManager.UpdateReview(_testReview);
+        TestContext._reviewManager.UpdateReview(_reviewerSession, _testReview);
 
         var updatedReview = TestContext._reviewRepository.First(r =>
             r.ProductId == _testReview.ProductId &&
@@ -156,47 +157,47 @@ public class ReviewManagerTests
     [Test, Order(3)]
     public void CommentReview_Success()
     {
-        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure commenter is logged in
+        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
 
         var comment = new ReviewComment
         {
             ProductId = (uint)_testReview.ProductId,
             SellerId = (uint)_testReview.SellerId,
-            SessionId = (uint)_testReview.ReviewerId,
+            ReviewId = _testReview.Id, // Use the actual review ID
             Comment = "I agree with this review!"
         };
 
-        var addedComment = TestContext._reviewManager.CommentReview(comment);
+        var addedComment = TestContext._reviewManager.CommentReview(_commenterSession, comment);
         TestContext._reviewCommentRepository.Flush();
 
         Assert.That(addedComment, Is.Not.Null);
         Assert.That(addedComment.ProductId, Is.EqualTo(comment.ProductId));
-        Assert.That(addedComment.CommenterId, Is.EqualTo(ContextHolder.Session.Id)); // CommenterId is Session.Id
+        Assert.That(addedComment.CommenterId, Is.EqualTo(_commenterSession.Id)); // CommenterId is Session.Id
         Assert.That(addedComment.Comment, Is.EqualTo(comment.Comment));
     }
 
     [Test, Order(4)]
     public void UpdateComment_Success()
     {
-        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure commenter is logged in
+        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
 
         var commentToUpdate = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&
             c.SellerId == _testReview.SellerId &&
-            c.SessionId == _testReview.ReviewerId &&
-            c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
+            c.ReviewId == _testReview.Id && // Use the actual review ID
+            c.CommenterId == _commenterSession.Id); // Use Session.Id for lookup
 
         Assert.That(commentToUpdate, Is.Not.Null);
         commentToUpdate.Comment = "Actually, I strongly agree!";
-        TestContext._reviewManager.UpdateComment(commentToUpdate);
+        TestContext._reviewManager.UpdateComment(_commenterSession, commentToUpdate);
         TestContext._reviewCommentRepository.Flush();
 
         var updatedComment = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == commentToUpdate.ProductId &&
             c.SellerId == commentToUpdate.SellerId &&
-            c.SessionId == commentToUpdate.SessionId &&
+            c.ReviewId == commentToUpdate.ReviewId &&
             c.CommenterId == commentToUpdate.CommenterId);
 
         Assert.That(updatedComment, Is.Not.Null);
@@ -206,28 +207,25 @@ public class ReviewManagerTests
     [Test, Order(5)]
     public void VoteReview_Upvote_Success()
     {
-        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure voter is logged in
+        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
 
         var vote = new ReviewVote
         {
-            ProductId = (uint)_testReview.ProductId,
-            SellerId = (uint)_testReview.SellerId,
-            SessionId = (uint)_testReview.ReviewerId,
+            ReviewId = _testReview.Id, // Use the actual review ID
             Up = true
         };
 
-        var addedVote = TestContext._reviewManager.Vote(vote);
+        var addedVote = TestContext._reviewManager.Vote(_voterSession, vote);
         TestContext._reviewVoteRepository.Flush();
 
         Assert.That(addedVote, Is.Not.Null);
-        Assert.That(addedVote.VoterId, Is.EqualTo(ContextHolder.Session.Id)); // VoterId is Session.Id
+        Assert.That(addedVote.VoterId, Is.EqualTo(_voterSession.Id)); // VoterId is Session.Id
         Assert.That(addedVote.Up, Is.True);
     }
 
     [Test, Order(6)]
     public void VoteReview_Downvote_Success() {
-        ContextHolder.Session = null;
         // Login as a different voter to downvote
         var anotherVoterUser = new Customer
         {
@@ -239,24 +237,19 @@ public class ReviewManagerTests
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         };
         anotherVoterUser = (Customer)TestContext._userManager.Register(anotherVoterUser);
-        TestContext._userRepository.Flush();
-
-        TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        var anotherVoterSession = TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out _);
 
         var vote = new ReviewVote
         {
-            ProductId = (uint)_testReview.ProductId,
-            SellerId = (uint)_testReview.SellerId,
-            SessionId = (uint)_testReview.ReviewerId,
+            ReviewId = _testReview.Id, // Use the actual review ID
             Up = false
         };
 
-        var addedVote = TestContext._reviewManager.Vote(vote);
+        var addedVote = TestContext._reviewManager.Vote(anotherVoterSession, vote);
         TestContext._reviewVoteRepository.Flush();
 
         Assert.That(addedVote, Is.Not.Null);
-        Assert.That(addedVote.VoterId, Is.EqualTo(ContextHolder.Session.Id)); // VoterId is Session.Id
+        Assert.That(addedVote.VoterId, Is.EqualTo(anotherVoterSession.Id)); // VoterId is Session.Id
         Assert.That(addedVote.Up, Is.False);
     }
 
@@ -264,11 +257,10 @@ public class ReviewManagerTests
     public void GetReviewsWithAggregates_OwnVoteAndComments_Success()
     {
         // Login as the voter user to check OwnVote
-        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
-            _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
+            _voterCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
 
         Assert.That(review, Is.Not.Null);
 
@@ -287,7 +279,7 @@ public class ReviewManagerTests
         Assert.That(review.Comments.Count(), Is.EqualTo(1));
         var commentWithAggregates = review.Comments.First();
 
-        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterCustomer.SessionId)); // CommenterId is Session.Id
+        Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterSession.Id)); // CommenterId is Session.Id
         Assert.That(commentWithAggregates.Comment, Is.EqualTo("Actually, I strongly agree!"));
         Assert.That(commentWithAggregates.OwnVote, Is.EqualTo(0)); // _voterUser's session did not vote on this comment
         Assert.That(commentWithAggregates.Votes, Is.EqualTo(0)); // No votes on comment yet
@@ -296,22 +288,20 @@ public class ReviewManagerTests
     [Test, Order(8)]
     public void UnVoteReview_Success()
     {
-        TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure voter is logged in
+        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
 
         var vote = new ReviewVote
         {
-            ProductId = (uint)_testReview.ProductId,
-            SellerId = (uint)_testReview.SellerId,
-            SessionId = (uint)_testReview.ReviewerId,
+            ReviewId = _testReview.Id, // Use the actual review ID
             Up = true // This is the vote we want to remove
         };
 
-        TestContext._reviewManager.UnVote(vote);
+        TestContext._reviewManager.UnVote(_voterSession, vote);
         TestContext._reviewVoteRepository.Flush();
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
-            _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
+            _voterCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
 
         Assert.That(review.OwnVote, Is.EqualTo(0)); // _voterUser's vote removed
         Assert.That(review.Votes, Is.EqualTo(-1)); // Only the downvote remains
@@ -320,21 +310,21 @@ public class ReviewManagerTests
     [Test, Order(9)]
     public void DeleteComment_Success()
     {
-        TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out SecurityToken token);
-        TestContext._jwtmanager.UnwrapToken(token, out var user, out var session);
+        // Ensure commenter is logged in
+        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
 
         var commentToDelete = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&
             c.SellerId == _testReview.SellerId &&
-            c.SessionId == _testReview.ReviewerId &&
-            c.CommenterId == ContextHolder.Session.Id); // Use Session.Id for lookup
+            c.ReviewId == _testReview.Id && // Use the actual review ID
+            c.CommenterId == _commenterSession.Id); // Use Session.Id for lookup
 
         Assert.That(commentToDelete, Is.Not.Null);
-        TestContext._reviewManager.DeleteComment(commentToDelete);
+        TestContext._reviewManager.DeleteComment(_commenterSession, commentToDelete);
         TestContext._reviewCommentRepository.Flush();
 
         var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(
-            _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
+            _reviewerCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
         Assert.That(reviewWithAggregates.CommentCount, Is.EqualTo(0));
     }
 
@@ -343,14 +333,12 @@ public class ReviewManagerTests
     {
         LoginAsReviewer(); // Login as the reviewer to delete their review
 
-        TestContext._reviewManager.DeleteReview(_testReview);
+        TestContext._reviewManager.DeleteReview(_reviewerSession, _testReview);
         TestContext._reviewRepository.Flush();
 
         var reviews = TestContext._reviewManager.GetReviewWithAggregates(
-            _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
+            _reviewerCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
 
         Assert.That(reviews, Is.Null);
     }
-
-
 }

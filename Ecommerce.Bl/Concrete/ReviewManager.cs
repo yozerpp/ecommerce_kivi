@@ -61,9 +61,9 @@ public class ReviewManager : IReviewManager
         return includes.ToArray();
     }
 
-    public ProductReview LeaveReview(ProductReview review) {
-        var rid =GetSessionId(review);
-        review.HasBought = _orderItemRepository.Exists(oi => oi.Order.SessionId == rid && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
+    public ProductReview LeaveReview(Session session, ProductReview review) {
+        review.SessionId = session.Id;
+        review.HasBought = _orderItemRepository.Exists(oi => oi.Order.SessionId == session.Id && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
         try{
             var ret = _reviewRepository.Add(review);
             _reviewRepository.Flush();
@@ -77,54 +77,52 @@ public class ReviewManager : IReviewManager
             throw;
         }
     }
-    private static ulong GetSessionId(ProductReview review) {
-        return review.SessionId != 0 ? review.SessionId : review.Session?.Id ?? throw new ArgumentException("Review is not associated with a reviewer.");
-    }
-    public void UpdateReview(ProductReview review) {
-        var rid = GetSessionId(review);
+    
+    public void UpdateReview(Session session, ProductReview review) {
         var c = _reviewRepository.UpdateExpr([
                 (r => r.Rating, review.Rating),
                 (r=>r.Comment, review.Comment),
             ],
-            r => r.ProductId == review.ProductId && r.SellerId == review.SellerId && r.SessionId == rid);
+            r => r.ProductId == review.ProductId && r.SellerId == review.SellerId && r.SessionId == session.Id);
         if(c==0) {
             throw new ArgumentException("Review or offer cannot be found.");
         }
     }
 
-    public void DeleteReview(ProductReview review) {
-        var rid = GetSessionId(review);
-        var c = _reviewRepository.Delete(r => r.ProductId == review.ProductId && r.SellerId == review.SellerId && r.SessionId == rid);
+    public void DeleteReview(Session session, ProductReview review) {
+        var c = _reviewRepository.Delete(r => r.ProductId == review.ProductId && r.SellerId == review.SellerId && r.SessionId == session.Id);
         if (c == 0)
             throw new ArgumentException("Review or offer cannot be found.");
     }
 
-    public ReviewComment CommentReview(ReviewComment comment) {
+    public ReviewComment CommentReview(Session session, ReviewComment comment) {
+        comment.CommenterId = session.Id;
         var ret =_reviewCommentRepository.Add(comment);
         _reviewCommentRepository.Flush();
         return ret;
     }
 
-    public void UpdateComment(ReviewComment comment) {
+    public void UpdateComment(Session session, ReviewComment comment) {
         var c =_reviewCommentRepository.UpdateExpr([
             (r=>r.Comment, comment.Comment )
-        ], r => r.Id==comment.Id && r.CommenterId == comment.CommenterId);
+        ], r => r.Id==comment.Id && r.CommenterId == session.Id);
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
 
-    public void DeleteComment(ReviewComment comment) {
-        var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == comment.CommenterId);
+    public void DeleteComment(Session session, ReviewComment comment) {
+        var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == session.Id);
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
 
-    public ReviewVote Vote(ReviewVote vote) {
+    public ReviewVote Vote(Session session, ReviewVote vote) {
+        vote.VoterId = session.Id;
         return _reviewVoteRepository.Save(vote);
     }
 
-    public void UnVote(ReviewVote vote) {
-        var c = _reviewVoteRepository.Delete(v=>v.Id==vote.Id && v.VoterId == vote.VoterId);
+    public void UnVote(Session session, ReviewVote vote) {
+        var c = _reviewVoteRepository.Delete(v=>v.Id==vote.Id && v.VoterId == session.Id);
         if (c==0){
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
