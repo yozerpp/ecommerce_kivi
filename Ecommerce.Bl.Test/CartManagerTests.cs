@@ -7,6 +7,7 @@ namespace Ecommerce.Bl.Test;
 public class CartManagerTests
 {
     private static Customer _customer;
+    private static Session _session;
     [OneTimeSetUp]
     public void Register() {
         _customer = UserManagerTests.Register();
@@ -14,31 +15,31 @@ public class CartManagerTests
 
     [SetUp]
     public void Login() {
-        UserManagerTests.Login(_customer,out _);
+        _session = UserManagerTests.Login(_customer,out _);
     }
     [Test]
     public void newCartUserful() {
-        var oldSession = ContextHolder.Session;
-        TestContext._cartManager.newSession();
+        var oldSession = _session;
+        _session = TestContext._cartManager.newSession(_customer);
         TestContext._cartRepository.Flush();
-        Assert.That(ContextHolder.Session, Is.EqualTo(oldSession));
+        Assert.That(_session, Is.EqualTo(oldSession));
     }
     [Test]
     public void TestAdd() {
         var offer = TestContext._offerRepository.First(_=>true)!;
         var amount = (uint) Random.Shared.Next(1,3);
-        var item = TestContext._cartManager.Add(offer, amount);
+        var item = TestContext._cartManager.Add(_session.Cart, offer, amount);
         TestContext._cartRepository.Flush();
-        var items = TestContext._cartRepository.First(c=>c.Id==ContextHolder.Session.Cart.Id,includes:[[nameof(Cart.Items)]]).Items;        
+        var items = TestContext._cartRepository.First(c=>c.Id==_session.Cart.Id,includes:[[nameof(Cart.Items)]]).Items;        
         Assert.That(items, Contains.Item(item));
-        Assert.That(item.CartId, Is.EqualTo(ContextHolder.Session.Cart.Id));
+        Assert.That(item.CartId, Is.EqualTo(_session.Cart.Id));
         Assert.That(item.ProductId, Is.EqualTo(offer.ProductId));
         Assert.That(item.SellerId, Is.EqualTo(offer.SellerId));
     }
     [Test]
     public void TestIncrement() {
         var offer = TestContext._offerRepository.First(_=>true)!;
-        var old = TestContext._cartItemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id&&
+        var old = TestContext._cartItemRepository.First(i=>i.CartId == _session.Cart.Id&&
                                                        i.ProductId==offer.ProductId && i.SellerId == offer.SellerId);
         uint oldAmount;
         if (old != null){
@@ -46,20 +47,20 @@ public class CartManagerTests
             oldAmount = old.Quantity;
         }
         else oldAmount = 0;
-        var i = TestContext._cartManager.Add(offer);
+        var i = TestContext._cartManager.Add(_session.Cart, offer);
         TestContext._cartRepository.Flush();
         Assert.That(i.Quantity, Is.EqualTo(oldAmount +1));
     }
     [Test]
     public void Decrement() {
         var offer = TestContext._offerRepository.First(_=>true)!;
-        var i = TestContext._cartManager.Add(offer);
+        var i = TestContext._cartManager.Add(_session.Cart, offer);
         TestContext._cartItemRepository.Flush();
         var oldAmount = i.Quantity;
         var decremented = Random.Shared.Next((int)i.Quantity - 1);
-        TestContext._cartManager.Decrement(offer, (uint)decremented);
+        TestContext._cartManager.Decrement(_session.Cart, offer, (uint)decremented);
         TestContext._cartRepository.Flush();
-        var refetched = TestContext._cartItemRepository.First(i=>i.CartId == ContextHolder.Session.Cart.Id && i.ProductId == offer.ProductId && i.SellerId==offer.SellerId);
+        var refetched = TestContext._cartItemRepository.First(i=>i.CartId == _session.Cart.Id && i.ProductId == offer.ProductId && i.SellerId==offer.SellerId);
         Assert.That(refetched.Quantity, Is.EqualTo(oldAmount - decremented));
     }
 
@@ -67,8 +68,8 @@ public class CartManagerTests
     public void TestGetWithAggregates()
     {
         // Clear cart first to ensure a clean state for testing aggregates
-        TestContext._cartManager.newSession();
-        var currentCartItems = TestContext._cartItemRepository.Where(ci => ci.CartId == ContextHolder.Session.Cart.Id);
+        _session = TestContext._cartManager.newSession(_customer);
+        var currentCartItems = TestContext._cartItemRepository.Where(ci => ci.CartId == _session.Cart.Id);
         foreach (var item in currentCartItems)
         {
             TestContext._cartItemRepository.Delete(item);
@@ -87,12 +88,12 @@ public class CartManagerTests
         uint quantity1 = 2;
         uint quantity2 = 3;
 
-        TestContext._cartManager.Add(offer1!, quantity1);
-        TestContext._cartManager.Add(offer2!, quantity2);
+        TestContext._cartManager.Add(_session.Cart, offer1!, quantity1);
+        TestContext._cartManager.Add(_session.Cart, offer2!, quantity2);
         TestContext._cartRepository.Flush();
 
         // Get cart with aggregates
-        var cartWithAggregates = TestContext._cartManager.Get(true, true) as CartWithAggregates;
+        var cartWithAggregates = TestContext._cartManager.Get(_session, true, true) as CartWithAggregates;
 
         Assert.That(cartWithAggregates, Is.Not.Null);
 

@@ -21,11 +21,11 @@ public class CartManager : ICartManager
         _sessionRepository = sessionRepository;
     }
 
-    public Cart? Get(uint id,bool includeAggregates = true, bool getItems = true, bool includeSeller =true) {
+    public Cart? Get(Session session, bool includeAggregates = true, bool getItems = true, bool includeSeller =true) {
         var includes = GetIncludes(getItems, includeSeller);
         if (!includeAggregates)
-            return _cartRepository.First(c => c.Id == id, includes: includes);
-        return GetWithAggregates(id, includes);
+            return _cartRepository.First(c => c.Id == session.CartId, includes: includes);
+        return GetWithAggregates(session.CartId, includes);
     }
     private static string[][] GetIncludes(bool items, bool seller) {
         var includes = new List<string[]>();
@@ -82,7 +82,7 @@ public class CartManager : ICartManager
     {
         return Add(new CartItem()
         {
-            ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null:offer,SellerId = offer.SellerId, Quantity = amount
+            Cart = cart, CartId = cart.Id, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null:offer,SellerId = offer.SellerId, Quantity = amount
         });
     }
     public CartItem Add(CartItem item, uint amount = 1) {
