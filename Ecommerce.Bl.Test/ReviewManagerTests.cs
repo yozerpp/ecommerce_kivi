@@ -19,6 +19,7 @@ public class ReviewManagerTests
     private Session _commenterSession;
     private Session _voterSession;
     private Session _sellerSession;
+    private ReviewComment _testComment; // To store the comment for subsequent tests
 
 
     [OneTimeSetUp]
@@ -164,19 +165,20 @@ public class ReviewManagerTests
 
         var comment = new ReviewComment
         {
-            ProductId = (uint)_testReview.ProductId,
-            SellerId = (uint)_testReview.SellerId,
+            // ProductId = (uint)_testReview.ProductId, // Not part of PK anymore
+            // SellerId = (uint)_testReview.SellerId, // Not part of PK anymore
             ReviewId = _testReview.Id, // Use the actual review ID
             Comment = "I agree with this review!"
         };
 
-        var addedComment = TestContext._reviewManager.CommentReview(_commenterSession, comment);
+        _testComment = TestContext._reviewManager.CommentReview(_commenterSession, comment); // Capture the returned comment with its new ID
         TestContext._reviewCommentRepository.Flush();
 
-        Assert.That(addedComment, Is.Not.Null);
-        Assert.That(addedComment.ProductId, Is.EqualTo(comment.ProductId));
-        Assert.That(addedComment.CommenterId, Is.EqualTo(_commenterSession.Id)); // CommenterId is Session.Id
-        Assert.That(addedComment.Comment, Is.EqualTo(comment.Comment));
+        Assert.That(_testComment, Is.Not.Null);
+        // Assert.That(_testComment.ProductId, Is.EqualTo(comment.ProductId)); // Not part of PK anymore
+        Assert.That(_testComment.CommenterId, Is.EqualTo(_commenterSession.Id)); // CommenterId is Session.Id
+        Assert.That(_testComment.Comment, Is.EqualTo(comment.Comment));
+        Assert.That(_testComment.Id, Is.GreaterThan(0)); // Assert that an ID has been generated
     }
 
     [Test, Order(4)]
@@ -186,22 +188,13 @@ public class ReviewManagerTests
         _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
         _commenterSession = _commenterCustomer.Session;
 
-        var commentToUpdate = TestContext._reviewCommentRepository.First(c =>
-            c.ProductId == _testReview.ProductId &&
-            c.SellerId == _testReview.SellerId &&
-            c.ReviewId == _testReview.Id && // Use the actual review ID
-            c.CommenterId == _commenterSession.Id); // Use Session.Id for lookup
-
-        Assert.That(commentToUpdate, Is.Not.Null);
-        commentToUpdate.Comment = "Actually, I strongly agree!";
-        TestContext._reviewManager.UpdateComment(_commenterSession, commentToUpdate);
+        // Use the captured _testComment which has the generated ID
+        Assert.That(_testComment, Is.Not.Null);
+        _testComment.Comment = "Actually, I strongly agree!";
+        TestContext._reviewManager.UpdateComment(_commenterSession, _testComment); // Pass the comment with its ID
         TestContext._reviewCommentRepository.Flush();
 
-        var updatedComment = TestContext._reviewCommentRepository.First(c =>
-            c.ProductId == commentToUpdate.ProductId &&
-            c.SellerId == commentToUpdate.SellerId &&
-            c.ReviewId == commentToUpdate.ReviewId &&
-            c.CommenterId == commentToUpdate.CommenterId);
+        var updatedComment = TestContext._reviewCommentRepository.First(c => c.Id == _testComment.Id); // Fetch by ID
 
         Assert.That(updatedComment, Is.Not.Null);
         Assert.That(updatedComment.Comment, Is.EqualTo("Actually, I strongly agree!"));
@@ -284,6 +277,7 @@ public class ReviewManagerTests
         Assert.That(review.Comments.Count(), Is.EqualTo(1));
         var commentWithAggregates = review.Comments.First();
 
+        Assert.That(commentWithAggregates.Id, Is.EqualTo(_testComment.Id)); // Assert comment ID
         Assert.That(commentWithAggregates.CommenterId, Is.EqualTo(_commenterSession.Id)); // CommenterId is Session.Id
         Assert.That(commentWithAggregates.Comment, Is.EqualTo("Actually, I strongly agree!"));
         Assert.That(commentWithAggregates.OwnVote, Is.EqualTo(0)); // _voterUser's session did not vote on this comment
@@ -320,14 +314,9 @@ public class ReviewManagerTests
         _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
         _commenterSession = _commenterCustomer.Session;
 
-        var commentToDelete = TestContext._reviewCommentRepository.First(c =>
-            c.ProductId == _testReview.ProductId &&
-            c.SellerId == _testReview.SellerId &&
-            c.ReviewId == _testReview.Id && // Use the actual review ID
-            c.CommenterId == _commenterSession.Id); // Use Session.Id for lookup
-
-        Assert.That(commentToDelete, Is.Not.Null);
-        TestContext._reviewManager.DeleteComment(_commenterSession, commentToDelete);
+        // Use the captured _testComment which has the generated ID
+        Assert.That(_testComment, Is.Not.Null);
+        TestContext._reviewManager.DeleteComment(_commenterSession, _testComment); // Pass the comment with its ID
         TestContext._reviewCommentRepository.Flush();
 
         var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(

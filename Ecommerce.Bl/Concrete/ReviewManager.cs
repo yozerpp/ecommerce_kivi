@@ -108,13 +108,13 @@ public class ReviewManager : IReviewManager
     public void UpdateComment(Session session, ReviewComment comment) {
         var c =_reviewCommentRepository.UpdateExpr([
             (r=>r.Comment, comment.Comment )
-        ], r => r.Id==comment.Id && r.CommenterId == session.Id);
+        ], r => r.Id==comment.Id && r.CommenterId == session.Id); // Use comment.Id
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
 
     public void DeleteComment(Session session, ReviewComment comment) {
-        var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == session.Id);
+        var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == session.Id); // Use comment.Id
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
@@ -138,7 +138,7 @@ public class ReviewManager : IReviewManager
             Comment = r.Comment,
             CensorName = r.CensorName,
             Comments = r.Comments.Select(c=>new ReviewCommentWithAggregates(){
-                Id = c.Id,
+                Id = c.Id, // Use c.Id
                 CommenterId = c.CommenterId,
                 Comment = c.Comment,
                 OwnVote = c.Votes.Where(v=>v.VoterId==sessionId).Select(v=>v.Up?1:-1).FirstOrDefault() as int? ??0,

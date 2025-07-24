@@ -16,14 +16,14 @@ public class ReviewComment
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     public ICollection<ReviewComment> Replies { get; set; } = new List<ReviewComment>();
     protected bool Equals(ReviewComment other) {
-        return Id == other.Id && ReviewId == other.ReviewId &&  CommenterId == other.CommenterId;
+        return Id == other.Id; // Rely solely on Id for equality
     }
 
     public override bool Equals(object? obj) {
-        return ReferenceEquals(this, obj) || Id!=default && ReviewId!=default &&CommenterId!=default&& obj is ReviewComment other && Equals(other);
+        return ReferenceEquals(this, obj) || (obj is ReviewComment other && Equals(other));
     }
     public override int GetHashCode() {
-        if (Id == default && ReviewId == default && CommenterId==default) return base.GetHashCode();
-        return HashCode.Combine(Id, ReviewId, CommenterId);
+        if (Id == default) return base.GetHashCode();
+        return Id.GetHashCode(); // Rely solely on Id for hash code
     }
 }
