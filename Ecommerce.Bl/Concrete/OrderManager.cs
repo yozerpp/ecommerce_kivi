@@ -28,7 +28,7 @@ public class OrderManager : IOrderManager
             User = user?.Id == 0 ? (Customer?)user : null,
             SessionId = session.Id, Session = session.Id!=0?null!:session
         };
-        var cartItems = _cartManager.Get(user.Session.CartId, false, true, false).Items;
+        var cartItems = _cartManager.Get(user?.Session??session, false, true, false).Items;
         if(cartItems.Count==0) throw new ArgumentException("Cart is empty.");
         foreach (var cartItem in cartItems){
             o.Items.Add(new OrderItem(cartItem, o));

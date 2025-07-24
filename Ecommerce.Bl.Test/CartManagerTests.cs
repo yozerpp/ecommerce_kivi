@@ -15,14 +15,14 @@ public class CartManagerTests
 
     [SetUp]
     public void Login() {
-        _session = UserManagerTests.Login(_customer,out _);
+        _customer = UserManagerTests.Login(_customer,out _);
+        _session = _customer.Session;
     }
     [Test]
     public void newCartUserful() {
         var oldSession = _session;
-        _session = TestContext._cartManager.newSession(_customer);
-        TestContext._cartRepository.Flush();
-        Assert.That(_session, Is.EqualTo(oldSession));
+        _session = TestContext._cartManager.newSession(_customer, true);
+        Assert.That(_session, Is.Not.EqualTo(oldSession));
     }
     [Test]
     public void TestAdd() {

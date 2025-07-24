@@ -24,9 +24,10 @@ public class ReviewManager : IReviewManager
         _reviewVoteRepository = reviewVoteRepository;
     }
 
-    public List<ReviewWithAggregates> GetReviewsWithAggregates(Customer customer, bool includeComments,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
+    public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, Customer? customer=null, Session? session = null,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
         var includes = GetReviewIncludes(includeComments, includeSeller);
-        var ret =  _reviewRepository.Where(ReviewProjection(customer.Session?.Id),r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
+        var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id;
+        var ret =  _reviewRepository.Where(ReviewProjection(sessionId),r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
             offset:(page - 1) * pageSize, limit:pageSize * page);
         foreach (var r in ret){
             if (!r.CensorName) continue;
@@ -38,11 +39,13 @@ public class ReviewManager : IReviewManager
         return ret;
     }
 
-    public ReviewWithAggregates? GetReviewWithAggregates(Customer customer, uint productId, uint sellerId, uint ReviewerId,
-        bool includeComments, bool includeSeller =true) {
+    public ReviewWithAggregates? GetReviewWithAggregates(uint productId, uint sellerId,Customer? customer=null, Session? session = null,
+        bool includeComments=false, bool includeSeller =true) {
+        var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id ?? throw new ArgumentException("Either commenterId or reviewerId must be provided.");
+        var reviewerId = customer?.Id;
         var includes = GetReviewIncludes(includeComments,includeSeller );
-        var r= _reviewRepository.First(ReviewProjection(customer.Session?.Id),
-            r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == ReviewerId, includes: includes);
+        var r= _reviewRepository.First(ReviewProjection(sessionId),
+            r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == reviewerId&& r.SessionId==sessionId, includes: includes);
         if (!(r?.CensorName ?? false)) return r;
         r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
         r.Reviewer.LastName = r.Reviewer.LastName[0] + "***";

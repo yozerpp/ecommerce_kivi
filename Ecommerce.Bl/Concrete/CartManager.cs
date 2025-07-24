@@ -82,7 +82,7 @@ public class CartManager : ICartManager
     {
         return Add(new CartItem()
         {
-            Cart = cart, CartId = cart.Id, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null:offer,SellerId = offer.SellerId, Quantity = amount
+            CartId = cart.Id, Cart = cart.Id==0?cart:null!, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null!:offer,SellerId = offer.SellerId, Quantity = amount
         });
     }
     public CartItem Add(CartItem item, uint amount = 1) {

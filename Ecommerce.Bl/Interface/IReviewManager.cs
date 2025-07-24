@@ -5,14 +5,19 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IReviewManager
 {
-    public List<ReviewWithAggregates> GetReviewsWithAggregates(Customer customer,bool includeComments, bool includeSeller = false,uint? productId=null,
-        uint? sellerId = null, int page = 1, int pageSize = 20);
-    ProductReview LeaveReview(ProductReview review);
-    void UpdateReview(ProductReview review);
-    void DeleteReview(ProductReview review);
-    ReviewComment CommentReview(ReviewComment comment);
-    void UpdateComment(ReviewComment comment);
-    void DeleteComment(ReviewComment comment);
-    ReviewVote Vote(ReviewVote vote);
-    void UnVote(ReviewVote vote);
+    public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, Customer? customer = null,
+        Session? session = null, bool includeSeller = false, uint? productId = null, uint? sellerId = null,
+        int page = 1, int pageSize = 20);
+    public ReviewWithAggregates? GetReviewWithAggregates(uint productId, uint sellerId, Customer? customer = null,
+        Session? session = null,
+        bool includeComments = false, bool includeSeller = true);
+    
+    ProductReview LeaveReview( Session session, ProductReview review);
+    void UpdateReview(Session session, ProductReview review);
+    void DeleteReview(Session session, ProductReview review);
+    ReviewComment CommentReview(Session session, ReviewComment comment);
+    void UpdateComment(Session session, ReviewComment comment);
+    void DeleteComment(Session session, ReviewComment comment);
+    ReviewVote Vote(Session session, ReviewVote vote);
+    void UnVote(Session session, ReviewVote vote);
 }

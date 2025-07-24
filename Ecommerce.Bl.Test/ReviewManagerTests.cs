@@ -25,7 +25,7 @@ public class ReviewManagerTests
     public void SetupUsersAndProducts()
     {
         // Register a main user (reviewer)
-        _reviewerCustomer = new Customer
+        _reviewerCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
@@ -33,12 +33,12 @@ public class ReviewManagerTests
             LastName = "User",
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
-        };
-        _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
-        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
+        });
+        _reviewerCustomer = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
+        _reviewerSession = _reviewerCustomer.Session;
         
         // Register a commenter user
-        _commenterCustomer = new Customer
+        _commenterCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
@@ -46,12 +46,12 @@ public class ReviewManagerTests
             LastName = "User",
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
-        };
-        _commenterCustomer = (Customer)TestContext._userManager.Register(_commenterCustomer);
-        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        });
+        _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterSession = _commenterCustomer.Session;
         
         // Register a voter user
-        _voterCustomer = new Customer
+        _voterCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
@@ -59,12 +59,12 @@ public class ReviewManagerTests
             LastName = "User",
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
-        };
-        _voterCustomer = (Customer)TestContext._userManager.Register(_voterCustomer);
-        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        });
+        _voterCustomer = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterSession = _voterCustomer.Session;
         
         // Register and Login as a Seller for product listing
-        _testSeller = new Seller
+        _testSeller = (Seller)TestContext._userManager.Register(new Seller
         {
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "sellerpass",
@@ -74,9 +74,9 @@ public class ReviewManagerTests
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
 
-        };
-        _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
-        _sellerSession = TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out _);
+        });
+        _testSeller = TestContext._userManager.LoginSeller(_testSeller.NormalizedEmail, _testSeller.PasswordHash, out _);
+        _sellerSession = _testSeller.Session;
 
 
         // Create a product and offer for testing reviews
@@ -103,7 +103,8 @@ public class ReviewManagerTests
     public void LoginAsReviewer()
     {
         // Ensure _reviewerSession is the active session for tests that require it
-        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
+        _reviewerCustomer = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
+        _reviewerSession = _reviewerCustomer.Session;
     }
 
     [Test, Order(1)]
@@ -158,7 +159,8 @@ public class ReviewManagerTests
     public void CommentReview_Success()
     {
         // Ensure commenter is logged in
-        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterSession = _commenterCustomer.Session;
 
         var comment = new ReviewComment
         {
@@ -181,7 +183,8 @@ public class ReviewManagerTests
     public void UpdateComment_Success()
     {
         // Ensure commenter is logged in
-        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterSession = _commenterCustomer.Session;
 
         var commentToUpdate = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&
@@ -208,7 +211,8 @@ public class ReviewManagerTests
     public void VoteReview_Upvote_Success()
     {
         // Ensure voter is logged in
-        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterCustomer = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterSession = _voterCustomer.Session;
 
         var vote = new ReviewVote
         {
@@ -227,7 +231,7 @@ public class ReviewManagerTests
     [Test, Order(6)]
     public void VoteReview_Downvote_Success() {
         // Login as a different voter to downvote
-        var anotherVoterUser = new Customer
+        var anotherVoterUser = (Customer)TestContext._userManager.Register(new Customer
         {
             NormalizedEmail = new Faker().Internet.Email(),
             PasswordHash = "password",
@@ -235,9 +239,9 @@ public class ReviewManagerTests
             LastName = "Voter",
             Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
-        };
-        anotherVoterUser = (Customer)TestContext._userManager.Register(anotherVoterUser);
-        var anotherVoterSession = TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out _);
+        });
+        anotherVoterUser = TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out _);
+        var anotherVoterSession = anotherVoterUser.Session;
 
         var vote = new ReviewVote
         {
@@ -257,7 +261,8 @@ public class ReviewManagerTests
     public void GetReviewsWithAggregates_OwnVoteAndComments_Success()
     {
         // Login as the voter user to check OwnVote
-        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterCustomer = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterSession = _voterCustomer.Session;
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
             _voterCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
@@ -289,7 +294,8 @@ public class ReviewManagerTests
     public void UnVoteReview_Success()
     {
         // Ensure voter is logged in
-        _voterSession = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterCustomer = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
+        _voterSession = _voterCustomer.Session;
 
         var vote = new ReviewVote
         {
@@ -311,7 +317,8 @@ public class ReviewManagerTests
     public void DeleteComment_Success()
     {
         // Ensure commenter is logged in
-        _commenterSession = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
+        _commenterSession = _commenterCustomer.Session;
 
         var commentToDelete = TestContext._reviewCommentRepository.First(c =>
             c.ProductId == _testReview.ProductId &&

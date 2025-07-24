@@ -27,8 +27,8 @@ public class OrderManagerTests
                 { City = "Trabzon", State = "Trabzon", Neighborhood = "Ortahisar", Street = "Main St", ZipCode = "61000" },
             PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551112233" }
         });
-        _session = UserManagerTests.Login(_customer, out _);
-
+        _customer = UserManagerTests.Login(_customer, out _);
+        _session = _customer.Session;
         // Register and login a seller to list product offers
         var _testSeller = new Seller
         {
@@ -93,7 +93,8 @@ public class OrderManagerTests
     [SetUp]
     public void Login()
     {
-        _session = UserManagerTests.Login(_customer, out _);
+        _customer= UserManagerTests.Login(_customer, out _);
+        _session = _customer.Session;
     }
 
     [Test]

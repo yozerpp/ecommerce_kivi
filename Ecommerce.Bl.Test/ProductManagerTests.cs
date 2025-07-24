@@ -98,8 +98,8 @@ public class ProductManagerTests
 
         // 4. Simulate Sales (Orders)
         // Login as buyer
-        _buyerSession = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out SecurityToken buyerToken);
-
+        _buyerCustomer = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out SecurityToken buyerToken);
+        _buyerSession = _buyerCustomer.Session;
         // Purchase from offer1
         TestContext._cartManager.Add(_buyerSession.Cart, _offer1, 2); // Buy 2 units
         TestContext._cartRepository.Flush();
@@ -130,8 +130,8 @@ public class ProductManagerTests
 
         // 6. Simulate Reviews
         // Login as reviewer
-        _reviewerSession = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
-
+        _reviewerCustomer = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out SecurityToken reviewerToken);
+        _reviewerSession = _reviewerCustomer.Session;
         // Review for offer1
         var review1 = new ProductReview
         {
@@ -141,7 +141,7 @@ public class ProductManagerTests
             Rating = 5,
             Comment = "Excellent product!"
         };
-        TestContext._reviewManager.LeaveReview(review1);
+        TestContext._reviewManager.LeaveReview(_reviewerSession,review1);
         TestContext._reviewRepository.Flush();
 
         // Review for offer2
@@ -153,7 +153,7 @@ public class ProductManagerTests
             Rating = 3,
             Comment = "It's okay."
         };
-        TestContext._reviewManager.LeaveReview(review2);
+        TestContext._reviewManager.LeaveReview(_reviewerSession,review2);
         TestContext._reviewRepository.Flush();
         
     }
@@ -174,7 +174,8 @@ public class ProductManagerTests
             new Product { Id = 5, Name = "HP Printer", CategoryId = 4, Description = "Inkjet printer" }
         };
         // Ensure a session is set up for the buyer customer before each test
-        _buyerSession = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out _);
+        _buyerCustomer = TestContext._userManager.LoginCustomer(_buyerCustomer.NormalizedEmail, _buyerCustomer.PasswordHash, out _);
+        _buyerSession = _buyerCustomer.Session;
     }
 
     private void SetupMockRepository()
