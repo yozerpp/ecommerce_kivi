@@ -1,0 +1,60 @@
+﻿@page
+@using Ecommerce.Entity
+@using Ecommerce.Entity.Projections
+@using Ecommerce.WebImpl.Pages.Shared
+@using Ecommerce.WebImpl.Pages.Shared.Product
+@inject EntityMapper EntityMapper;
+@model AddProduct
+@{
+    ViewBag.User = Model.CurrentUser;
+    ViewBag.Title = "Yeni Ürün Ekle";
+}
+@section Scripts{
+    <script>
+        function HandleProducts(event){
+            const req = event.detail.xhr;
+            try {
+                const json = JSON.parse(req.responseText);
+                const select=document.getElementById('productSelect');
+                select.innerHTML = '';
+                if(json.length > 5){
+                    select.setAttribute('size', '5');
+                } else select.removeAttribute('size')
+                json.forEach(p=>{
+                    let o = document.createElement('option');
+                    o.id = 'option-' +(o.value= p.id);
+                    o.value = p.id;
+                    o.innerHTML = (p.category!=null? p.category.name +' - ' : '') + p.name;
+                    document.getElementById('productSelect').appendChild(o);
+                });
+            } catch (e) {
+                console.error("Error parsing response:", e);
+            }
+        }
+    </script>
+}
+<div class="container">
+    <div class="row">
+        <label class="col-auto">Varolan Bir Ürünü Ekle</label><input class="col-auto" id="addExistingBtn" onclick="document.getElementById('addNewProductBtn').checked=false;document.getElementById('addNewProduct').classList.remove('show');document.getElementById('addExistingProduct').classList.add('show');" type="radio"/>
+    </div>
+    <div id="addExistingProduct" class="collapse">
+        @{ var handler = "HandleProducts";}
+        <partial name="Shared/SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){ EntityMapper = EntityMapper, IsJson = true, Target = handler }"/>
+        <form method="post" hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
+            <select id="productSelect" name="@(nameof(Model.NewOffer)).ProductId"></select>
+            <label>Fiyat</label><input type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
+            <label>İndirim</label><input type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))"/>
+            <button type="submit" class="btn btn-light">Teklif Oluştur</button>
+        </form>
+        <div id="addExistingResult"></div>
+    </div>
+    <div class="row">
+        <label class="col-auto">Yeni Bir ürün Oluştur</label><input class="col-auto" id="addNewProductBtn" type="radio" onclick="document.getElementById('addExistingBtn').checked=false; document.getElementById('addExistingProduct').classList.remove('show');document.getElementById('addNewProduct').classList.add('show');"/>
+    </div>
+    <div class="collapse" id="addNewProduct">
+        <form id="addNewForm">
+        </form>
+        <div>
+        </div>
+    </div>
+</div>
