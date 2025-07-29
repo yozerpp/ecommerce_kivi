@@ -7,8 +7,8 @@
         <p id="@("street" + (Model.Id??""))" class="flex-column">@Model.Address.Street</p>
         @if (Model.Editable)
         {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
+                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
             </a>
         }
         <div class="mx-5 col"></div>
@@ -16,8 +16,8 @@
         <p id="@("neighbourhood" + (Model.Id??""))" class="flex-column">@Model.Address.Neighborhood</p>
         @if (Model.Editable)
         {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
+                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
             </a>
         }
     </div>
@@ -26,16 +26,16 @@
         <p id="@("State" + (Model.Id??""))" class="flex-column">@Model.Address.State</p>
         @if (Model.Editable)
         {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
+                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
             </a>
         }
         <label class="flex-column">Şehir</label>
         <p id="@("City" + (Model.Id??""))" class="flex-column">@Model.Address.City</p>
         @if (Model.Editable)
         {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
+                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
             </a>
         }
     </div>
@@ -44,8 +44,8 @@
         <p id="@("Zipcode" + (Model.Id??""))" class="flex-column">@Model.Address.ZipCode</p>
         @if (Model.Editable)
         {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
+                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
             </a>
         }
     </div>
