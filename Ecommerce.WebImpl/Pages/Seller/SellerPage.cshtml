@@ -64,14 +64,38 @@
             <div class="px-5">
                 <div class="row">
                     <label class="col">Kod</label>
-                    <p class="col">@coupon.Id</p>
+                    <p id="couponIdField_@coupon.Id" class="col">@coupon.Id</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
                 </div>
                 <div class="row">
                     <label class="col">İndirim Miktarı</label>
-                    <p class="col">@(((1 - coupon.DiscountRate) * 100m).ToString("F"))</p>
+                    <p id="couponDiscountRateField_@coupon.Id" class="col">@(((1 - coupon.DiscountRate) * 100m).ToString("F"))</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
                     <div class="col m-5"></div>
                     <label class="col">Son Kullanma Tarihi</label>
-                    <p class="col">@coupon.ExpirationDate</p>
+                    <p id="couponExpirationDateField_@coupon.Id" class="col">@coupon.ExpirationDate</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
+                    <form id="couponEditForm_@coupon.Id" method="post" hx-post="/Seller/SellerPage?handler=editCoupon">
+                        <input type="hidden" name="Coupon.Id" value="@coupon.Id" id="couponIdInput_@coupon.Id"/>
+                        <input type="hidden" name="Coupon.DiscountRate" value="@coupon.DiscountRate" id="couponDiscountRateInput_@coupon.Id"/>
+                        <input type="hidden" name="Coupon.ExpirationDate" value="@coupon.ExpirationDate" id="couponExpirationDateInput_@coupon.Id"/>
+                        <button type="submit" class="btn btn-primary btn-sm">Update Coupon</button>
+                    </form>
                 </div>
             </div>
         }
@@ -140,5 +164,24 @@
                 htmx.trigger(editForm, 'submit');
             });
         }
+
+        // Handle coupon forms
+        document.querySelectorAll('[id^="couponEditForm_"]').forEach(form => {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const couponId = this.id.replace('couponEditForm_', '');
+
+                // Update hidden input values from displayed elements
+                document.getElementById(`couponIdInput_${couponId}`).value = document.getElementById(`couponIdField_${couponId}`).innerText;
+                // For DiscountRate, you might need to convert the displayed percentage back to a decimal
+                const discountRateText = document.getElementById(`couponDiscountRateField_${couponId}`).innerText;
+                document.getElementById(`couponDiscountRateInput_${couponId}`).value = (1 - parseFloat(discountRateText) / 100).toFixed(2);
+                document.getElementById(`couponExpirationDateInput_${couponId}`).value = document.getElementById(`couponExpirationDateField_${couponId}`).innerText;
+
+                // Trigger HTMX submit
+                htmx.trigger(form, 'submit');
+            });
+        });
     });
 </script>
