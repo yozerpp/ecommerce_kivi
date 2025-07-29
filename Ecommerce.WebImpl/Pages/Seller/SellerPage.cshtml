@@ -1,0 +1,109 @@
+﻿@page
+@using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.Shared
+@model Ecommerce.WebImpl.Pages.SellerPage
+@{
+    ViewBag.User = Model.CurrentUser;
+    var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
+}
+<div class="container">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-center">
+            <div class="row"></div>
+            <p id="shopNameField" class="col">@Model.ViewedSeller.ShopName</p>
+            @if (editable){
+                <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                    <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                </a>
+            }
+        </div>
+        <div class="container-fluid row">
+            <div class="col d-flex justify-content-start">
+                <p>@Model.ViewedSeller.ReviewAverage <i class="bi bi-star-fill text-warning"></i></p>
+            </div>
+            <div class="col d-flex mx-5 px-5 justify-content-center">
+                <p>@Model.ViewedSeller.ReviewCount Toplam Değerlendirme</p>
+            </div>
+
+        </div>
+        <div class="d-flex justify-content-start">
+            <label class="col">Email: </label><p id="emailField" class="col">@Model.ViewedSeller.Email</p>
+            <a class="col text-decoration-none" onclick="this.previousSibling.setAttribute('contenteditable','true');" href="javascript:void(0);"><i class="bi bi-pencil text-white bg-dark"></i></a>
+        </div>
+        <div class="d-flex row">
+            <div class="col justify-content-start">
+                <partial name="Shared/_AddressPartial" model="new _AdressPartial(){Address=@Model.ViewedSeller.Address,Editable=editable}"/>
+            </div>
+            <div class="col justify-content-end">
+                <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){PhoneNumber=Model.ViewedSeller.PhoneNumber, Editable=editable}"/>
+            </div>
+        </div>
+        <form id="editForm" method="post" hx-post="/Seller/SellerPage?handler=edit">
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).Id" value="@(Model.ViewedSeller.Id)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" value="@(Model.ViewedSeller.ShopName)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" value="@(Model.ViewedSeller.Email)"/>
+            
+        </form>
+    </div> 
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#coupons" role="button" aria-expanded="false" aria-controls="coupons">
+            Satıcıya ait kuponları Gör.
+        </a>
+    </div>
+    <div class="collapse mx-2" id="coupons">
+        @if (Model.ViewedSeller.Coupons.Count == 0){
+            <p>Satıcının listelenmiş kuponu yok.</p>
+        }
+        @foreach (var coupon in Model.ViewedSeller.Coupons){
+            <div class="px-5">
+                <div class="row">
+                    <label class="col">Kod</label>
+                    <p class="col">@coupon.Id</p>
+                </div>
+                <div class="row">
+                    <label class="col">İndirim Miktarı</label>
+                    <p class="col">@(((1 - coupon.DiscountRate) * 100m).ToString("F"))</p>
+                    <div class="col m-5"></div>
+                    <label class="col">Son Kullanma Tarihi</label>
+                    <p class="col">@coupon.ExpirationDate</p>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#offersSection" role="button" aria-expanded="false" aria-controls="offersSection">
+            İlanları Gör
+        </a>
+    </div>
+    <div class="collapse" id="offersSection">
+        <div class="d-flex justify-content-between px-5 mx-5">
+            <p>@Model.ViewedSeller.OfferCount Listelenen Ürün Saysı</p>
+            <div class="m-3"></div>
+            <p>@Model.ViewedSeller.SaleCount Toplam Satış Sayısı</p>
+        </div>
+        <div id="offers" hx-get="/Seller/SellerPage?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+    </div>
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#reviewsSection" role="button" aria-expanded="false" aria-controls="reviewsSection">
+            Değerlendirmeleri Gör
+        </a>
+    </div>
+    <div class="collapse" id="reviewsSection">
+    <div class="d-flex justify-content-start align-items-center">
+        <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="form-check-inline">
+            <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
+            <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
+            <div class="row">
+                <label class="col">Sayfa boyutu</label>
+                <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="col" name="@(nameof(Reviews.PageSize))">
+                    @{ var ar = new int[]{ 20, 10, 50, 100 }; }
+                    @for (int i = 0; i < ar.Length; i++){
+                        <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+    <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
+    </div>
+</div>
