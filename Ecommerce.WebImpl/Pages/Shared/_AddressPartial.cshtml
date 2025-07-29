@@ -1,0 +1,16 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared._AdressPartial
+
+
+<div class="container">
+    <div class="d-flex flex-row">
+        <label class="flex-column">Sokak: </label><input id="@("street" + (Model.Id??""))" readonly class="flex-column" value="@Model.Address.Street"/><div class="mx-5 col"></div>
+        <label class="flex-column">Mahalle: </label><input id="@("neighbourhood" + (Model.Id??""))" readonly class="flex-column" value="@Model.Address.Neighborhood"/>
+    </div>
+    <div class="d-flex flex-row">
+        <label class="flex-column">İlçe</label><input id="@("State" + (Model.Id??""))" readonly class="flex-column" value="@Model.Address.State"/>
+        <label class="flex-column">Şehir</label><input id="@("City" + (Model.Id??""))" readonly class="flex-column" value="@Model.Address.City"/>
+    </div>
+     <div class="d-flex flex-row">
+        <label class="flex-column">Posta Kodu</label><input id="@("Zipcode" + (Model.Id??""))" readonly class="flex-column" value="@Model.Address.ZipCode"/>
+    </div>
+</div>
