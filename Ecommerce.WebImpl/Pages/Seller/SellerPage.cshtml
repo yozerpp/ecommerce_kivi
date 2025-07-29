@@ -1,4 +1,4 @@
-﻿@page
+@page
 @using Ecommerce.Entity.Common
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.SellerPage
@@ -40,9 +40,15 @@
         </div>
         <form id="editForm" method="post" hx-post="/Seller/SellerPage?handler=edit">
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).Id" value="@(Model.ViewedSeller.Id)"/>
-            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" value="@(Model.ViewedSeller.ShopName)"/>
-            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" value="@(Model.ViewedSeller.Email)"/>
-            
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" id="ShopNameInput" value="@(Model.ViewedSeller.ShopName)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" id="EmailInput" value="@(Model.ViewedSeller.Email)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Street)}")" id="AddressStreetInput" value="@(Model.ViewedSeller.Address.Street)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Neighborhood)}")" id="AddressNeighborhoodInput" value="@(Model.ViewedSeller.Address.Neighborhood)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.State)}")" id="AddressStateInput" value="@(Model.ViewedSeller.Address.State)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.City)}")" id="AddressCityInput" value="@(Model.ViewedSeller.Address.City)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.ZipCode)}")" id="AddressZipCodeInput" value="@(Model.ViewedSeller.Address.ZipCode)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.CountryCode)}")" id="PhoneNumberCountryCodeInput" value="@(Model.ViewedSeller.PhoneNumber.CountryCode)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.Number)}")" id="PhoneNumberNumberInput" value="@(Model.ViewedSeller.PhoneNumber.Number)"/>
         </form>
     </div> 
     <div class="container-fluid justify-content-center my-2">
@@ -107,3 +113,32 @@
     <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const editForm = document.getElementById('editForm');
+        if (editForm) {
+            editForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                // Update hidden input values from displayed elements
+                document.getElementById('ShopNameInput').value = document.getElementById('shopNameField').innerText;
+                document.getElementById('EmailInput').value = document.getElementById('emailField').innerText;
+
+                // Update Address fields
+                document.getElementById('AddressStreetInput').value = document.getElementById('street').value;
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('neighbourhood').value;
+                document.getElementById('AddressStateInput').value = document.getElementById('State').value;
+                document.getElementById('AddressCityInput').value = document.getElementById('City').value;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('Zipcode').value;
+
+                // Update Phone Number fields
+                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('countrycode').value;
+                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('number').value;
+
+                // Trigger HTMX submit
+                htmx.trigger(editForm, 'submit');
+            });
+        }
+    });
+</script>
