@@ -2,20 +2,45 @@
 @using Microsoft.AspNetCore.Html
 @model _CategoryPicker
 
-<div class="d-flex container" >
-    @foreach (var category in Model.Categories){
-        @Html.Raw(ShowCategory(category, true))
+<div class="d-flex container">
+    @foreach (var category in Model.Categories)
+    {
+        @RenderCategory(category, true)
     }
 </div>
+
 @functions{
-    string ShowCategory(Category category, bool root = false) {
-        return string.Format(""""
-                             <div class="row collapse {0}" id="category{1}">
-                                 <div onclick="{2}" class="position-relative p-5 border-1 border-secondary">
-                                     <p>{3}</p>
-                                 </div>{4}
-                                 <div id="{5}Children" onmouseleave="this.classList.remove('show')"  class="col-auto collapse">{6}</div>
-                             </div>
-                             """", root ? "show" : "", category.Id, Model.InputId != null ? $"document.getElementById('{Model.InputId}').value='{category.Id}'" : "", category.Name, category.Children.Count > 0 ? $""""<i onmouseenter="document.getElementById('{category.Id}Children').classList.add('show')" class="position-absolute bi bi-arrow-right" style="height: 1em;"></i>"""" : "", category.Id, string.Join("<br>", category.Children.Select(c => ShowCategory(c))));
+    public IHtmlContent RenderCategory(Category category, bool root = false)
+    {
+        var categoryId = $"category{category.Id}";
+        var childrenId = $"{category.Id}Children";
+        var inputAssignment = Model.InputId != null ? $"document.getElementById('{Model.InputId}').value='{category.Id}'" : "";
+
+        var categoryHtml = $@"
+            <div class=""row collapse {(root ? "show" : "")}"" id=""{categoryId}"">
+                <div onclick=""{inputAssignment}"" class=""position-relative p-5 border-1 border-secondary"">
+                    <p>{category.Name}</p>
+                </div>";
+
+        if (category.Children.Any())
+        {
+            categoryHtml += $@"
+                <i onmouseenter=""document.getElementById('{childrenId}').classList.add('show')"" class=""position-absolute bi bi-arrow-right"" style=""height: 1em;""></i>";
+        }
+
+        categoryHtml += $@"
+                <div id=""{childrenId}"" onmouseleave=""this.classList.remove('show')"" class=""col-auto collapse"">";
+
+        // Recursively render children within the Razor syntax
+        foreach (var child in category.Children)
+        {
+            categoryHtml += RenderCategory(child).ToString();
+        }
+
+        categoryHtml += $@"
+                </div>
+            </div>";
+
+        return new HtmlString(categoryHtml);
     }
 }
