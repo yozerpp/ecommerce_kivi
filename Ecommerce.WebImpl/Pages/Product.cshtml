@@ -1,0 +1,99 @@
+﻿@page
+@model Ecommerce.WebImpl.Pages.Product
+@using System.Globalization
+@using Ecommerce.Entity
+@using Ecommerce.WebImpl.Pages.Shared
+@using Ecommerce.WebImpl.Pages.Shared.Product
+
+@{
+    Layout = "Shared/_Layout";
+    var editable = Model.CurrentStaff!=null && Model.CurrentStaff.HasPermission(Permission.EditProduct) || Model.CurrentSeller!=null && 
+                   Model.ViewedProduct.Offers.Any(o=>o.SellerId == Model.CurrentSeller?.Id);
+    ViewBag.User = Model.CurrentUser;
+}
+
+<partial name="Shared/Product/_ProductPartial" model="new _ProductPartial(){EditorId=Model.CurrentUser?.Id, IsOwnerSeller=Model.ViewedProduct.Offers.Any(o=>o.SellerId==Model.CurrentSeller?.Id), IsPermittedStaff=Model.CurrentStaff?.HasPermission(Permission.EditProduct)??false, ViewedProduct=Model.ViewedProduct}"/>
+
+@section Scripts{
+<script>
+        let editedImages = [];
+        let addedImages = [];
+        let edited = false;
+        function promptFile(accept = '*/*') {
+            return new Promise((resolve, reject) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = accept;
+                input.onchange = () => {
+                    const file = input.files[0];
+                    const reader = new FileReader();
+                    if (file) {
+                     reader.onload = e=>resolve(e.target.result);   
+                     reader.onerror = e => reject(e);
+                     reader.readAsDataURL(file);
+                    }
+                    else reject("No file selected");
+                };
+                input.click();
+            });
+        }
+        function createProperties(){
+            let l = document.createElement('li');
+            l.className='row'
+            let key = document.createElement('input');
+            key.className = 'col';
+            let val = document.createElement('input');
+            val.className = 'col';
+            key.type = 'text';
+            val.type='text';
+            key.setAttribute('placeholder', 'Özellik Adı');
+            val.setAttribute('placeholder', 'Özellik Değeri');
+            l.append(key);
+            l.append(': ')
+            l.append(val);
+            return l;
+        }
+        function assignInputs() {
+            document.getElementById('titleForm').value = document.getElementById('title').innerHTML;
+            document.getElementById('descForm').value = document.getElementById('description').innerHTML;
+            let editedImg;
+            @foreach (var k in Model.ViewedProduct.CategoryProperties.Keys){
+                @:document.getElementById('@(k)PropertyForm').value = document.getElementById('@(k)Value').innerHTML;
+            }
+            let form = document.getElementById('editForm');
+            document.getElementById('propList').querySelectorAll('li:not([id])').forEach(li => {
+                let i = document.createElement('input');
+                i.setAttribute('type', 'hidden');
+                let kv = li.querySelectorAll('input');
+                i.value = kv[1].value;
+                i.setAttribute('name', 'EditedOffer.Product.CategoryProperties[' + kv[0].value + ']');
+                form.insertBefore(i, form.firstChild);
+            })
+            @for (int i1 = 0; i1 < Model.ViewedProduct.Images.Count; i1++){
+                <text>
+                    if ((editedImg = editedImages.find(img => img.idx === @(i1))) !== undefined) {
+                        document.getElementById("image@(i1)Form").value = editedImg.image;
+                    }
+                </text>
+            }
+            document.getElementById('sentImagesForm').value = addedImages.length > 0 ? addedImages.join(';;') : null;
+            @{
+                var oldOffer = Model.ViewedProduct.Offers.FirstOrDefault(o => o.SellerId == Model.CurrentUser?.Id);
+            }
+            document.getElementById('editedForm').value = edited.toString();
+            let priceEl = document.getElementById('newPrice').value
+            document.getElementById('priceForm').value = priceEl.length > 0
+                ? priceEl : @(oldOffer?.Price.ToString("F", CultureInfo.InvariantCulture.NumberFormat));
+                let discountEl = document.getElementById('newDiscount').value;
+            document.getElementById('discountForm').value = discountEl.length > 0
+                ?  discountEl : @((100m- oldOffer?.Discount*100m)?.ToString("F", CultureInfo.InvariantCulture.NumberFormat));
+        }
+        function createSlide(data){
+            let silde = document.getElementById('images').children[0].cloneNode(true);
+            silde.querySelector('img').src = data;
+            silde.classList.remove('active');
+            silde.id = 'image' + document.getElementById('images').children.length;
+            document.getElementById('images').appendChild(silde);   
+        }
+</script>
+}
