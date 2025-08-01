@@ -106,38 +106,11 @@ public class RelationRandomizer
             yield return o;
         }
     }
-    
-    // private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(BlockingCollection<object>[] sets)
-    // {
-    //     if (!sets.Any())
-    //     {
-    //         yield return new EqualityComparableSet<object>();
-    //         yield break;
-    //     }
-    //
-    //     var setsArray = sets.ToArray();
-    //     var indices = new int[setsArray.Length];
-    //     var setsSizes = setsArray.Select(s => s.Count).ToArray();
-    //
-    //     if (setsSizes.Any(size => size == 0))
-    //         yield break;
-    //     
-    //     do
-    //     {
-    //         var result = new EqualityComparableSet<object>();
-    //         for (int i = 0; i < setsArray.Length; i++)
-    //         {
-    //             result.Add(setsArray[i].ElementAt(indices[i]));
-    //         }
-    //         yield return result;
-    //     }
-    //     while (IncrementIndices(indices, setsSizes));
-    // }
-    private static IEnumerable<ISet<object>> CartesianEnumerable(BlockingCollection<object>[] sets)
+    private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(BlockingCollection<object>[] sets)
     {
         if (!sets.Any())
         {
-            yield return new HashSet<object>();
+            yield return new EqualityComparableSet<object>();
             yield break;
         }
 
@@ -150,7 +123,7 @@ public class RelationRandomizer
         
         do
         {
-            var result = new HashSet<object>();
+            var result = new EqualityComparableSet<object>();
             for (int i = 0; i < setsArray.Length; i++)
             {
                 result.Add(setsArray[i].ElementAt(indices[i]));
@@ -159,7 +132,6 @@ public class RelationRandomizer
         }
         while (IncrementIndices(indices, setsSizes));
     }
-
     private static bool IncrementIndices(int[] indices, int[] maxValues)
     {
         for (int i = indices.Length - 1; i >= 0; i--)
