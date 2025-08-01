@@ -167,6 +167,11 @@ public class DatabaseInitializer: IDisposable
 internal class SetterCache
 {
     private readonly ConcurrentDictionary<PropertyInfo, Action<object, object?>> _setterCache;
+    
+    public SetterCache()
+    {
+        _setterCache = new ConcurrentDictionary<PropertyInfo, Action<object, object?>>();
+    }
     public void SetProperty(object obj, PropertyInfo prop, object? value) {
         var setter = _setterCache.GetOrAdd(prop, p => {
             var target = Expression.Parameter(typeof(object));
