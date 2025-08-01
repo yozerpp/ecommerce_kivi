@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Bogus;
 using Microsoft.EntityFrameworkCore;
@@ -10,14 +11,14 @@ namespace Ecommerce.Dao.Default.Tool;
 
 public class RelationRandomizer
 {
-    private readonly  Dictionary<IEntityType, ISet<object>> _globalStore;
+    private readonly  Dictionary<IEntityType, BlockingCollection<object>> _globalStore;
     private readonly Dictionary<IKey, ICollection<INavigation>> _compositeKeys =new () ;
     private readonly Dictionary<IForeignKey, INavigation> _foreignKeys = new();
-    private readonly Dictionary<IEntityType, Lock> _dictLocks = new();
+    private readonly Dictionary<IEntityType, Lock> _dictLocks;
     private readonly Dictionary<IKey, IEnumerator<ISet<object>>> _keyEnumerators = new();
     private readonly Dictionary<IForeignKey, IEnumerator<object>> _foreignKeyEnumerators = new();
     private readonly Dictionary<IAnnotatable, Lock> _locks = new();
-    public RelationRandomizer(Dictionary<IEntityType, ISet<object>> globalStore, Dictionary<IEntityType,Lock> lck) {
+    public RelationRandomizer(Dictionary<IEntityType, BlockingCollection<object>> globalStore, Dictionary<IEntityType,Lock> lck) {
         _globalStore = globalStore;
         _dictLocks = lck;
         foreach (var entityType in _globalStore.Keys){
@@ -41,35 +42,22 @@ public class RelationRandomizer
             
         }
     }
-    private bool TryEnterWithTimeout(SpinLock spinLock, int timeoutMs = 5000) {
-        bool lockTaken = false;
-        var sw = Stopwatch.StartNew();
-        while (!lockTaken && sw.ElapsedMilliseconds < timeoutMs) {
-            spinLock.TryEnter(ref lockTaken);
-            if (!lockTaken) Thread.Yield();
-        }
-        return lockTaken;
-    }
     public IEnumerable<(INavigation, object)> GetKeyValues(IKey key) {
         var navigations = _compositeKeys[key];
-        IEnumerator<EqualityComparableSet<object>> enumerator;
-        EqualityComparableSet<object>? currentSet = null;
-        bool hasValue = false;
-        
         _locks[key].Enter();
         try{
-            enumerator = GetOrCreateKeyEnumerator(key, navigations);
-            hasValue = enumerator.MoveNext();
-            if (hasValue) {
-                currentSet = enumerator.Current;
+            if (!_keyEnumerators.TryGetValue(key, out var enumerator)){
+                enumerator = _keyEnumerators[key] =
+                    CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray()).GetEnumerator();
             }
+            if (!enumerator.MoveNext()) return[];
+            var ret = enumerator.Current.Select(k =>
+                (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)), k));
+            return ret;
         }
-        finally {
+        finally{
             _locks[key].Exit();
         }
-        
-        // Process without holding lock
-        return ProcessKeyEnumeratorResult(navigations, hasValue, currentSet);
     }
     /// <summary>
     /// 
@@ -80,22 +68,21 @@ public class RelationRandomizer
     public (INavigation, object) GetForeignKeyValue(IForeignKey foreignKey, object? from=null) {
         var nav = _foreignKeys[foreignKey];
         if (!foreignKey.IsUnique) return (nav, RetrieveRandom(nav.TargetEntityType));
-        
-        IEnumerator<object> enumerator;
-        object? nextValue = null;
-        bool hasValue = false;
-        
         _locks[nav.ForeignKey].Enter();
-        try {
-            enumerator = GetOrCreateEnumerator(foreignKey);
-            hasValue = TryGetNextValue(enumerator, from, out nextValue);
+        try{
+            if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)){
+                enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
+            }
+            bool selfRef = foreignKey.IsSelfReferencing();
+            do{
+                if (!enumerator.MoveNext())
+                    throw new IndexOutOfRangeException();
+            } while (selfRef && ContainsInHierarchy(nav.PropertyInfo!,enumerator.Current, from)); 
+            return (nav, enumerator.Current);
         }
-        finally {
+        finally{
             _locks[nav.ForeignKey].Exit();
         }
-        
-        // Process without holding lock
-        return ProcessEnumeratorResult(nav, hasValue, nextValue, foreignKey);
     }
 
     private bool ContainsInHierarchy(PropertyInfo propertyInfo, object searched, object? looked) {
@@ -114,89 +101,38 @@ public class RelationRandomizer
         _dictLocks[type].Exit();
         return ret;
     }
-    private static IEnumerable<object> UniqueEnumerable(ICollection<object> objects) {
-        foreach (var o in objects){
+    private static IEnumerable<object> UniqueEnumerable(BlockingCollection<object> objects) {
+        foreach (var o in objects.GetConsumingEnumerable()){
             yield return o;
         }
     }
-    private IEnumerator<EqualityComparableSet<object>> GetOrCreateKeyEnumerator(IKey key, ICollection<INavigation> navigations) {
-        if (!_keyEnumerators.TryGetValue(key, out var enumerator)) {
-            enumerator = _keyEnumerators[key] =
-                CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray())
-                    .GetEnumerator();
-        }
-        return enumerator;
-    }
-
-    private IEnumerable<(INavigation, object)> ProcessKeyEnumeratorResult(
-        ICollection<INavigation> navigations, 
-        bool hasValue, 
-        EqualityComparableSet<object>? currentSet) {
-        
-        if (!hasValue || currentSet == null) {
-            return Enumerable.Empty<(INavigation, object)>();
-        }
-        
-        return currentSet.Select((obj, index) => 
-            (navigations.ElementAt(index), obj));
-    }
-
-    private IEnumerator<object> GetOrCreateEnumerator(IForeignKey foreignKey) {
-        if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)) {
-            enumerator = _foreignKeyEnumerators[foreignKey] = 
-                UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
-        }
-        return enumerator;
-    }
-
-    private bool TryGetNextValue(IEnumerator<object> enumerator, object? from, out object? value) {
-        value = null;
-        bool selfRef = from != null;
-        
-        do {
-            if (!enumerator.MoveNext()) {
-                return false;
-            }
-            value = enumerator.Current;
-        } while (selfRef && ContainsInHierarchy(null, value, from));
-        
-        return true;
-    }
-
-    private (INavigation, object) ProcessEnumeratorResult(INavigation nav, bool hasValue, object? value, IForeignKey foreignKey) {
-        if (!hasValue) {
-            // Fallback to random if enumerator exhausted
-            return (nav, RetrieveRandom(nav.TargetEntityType));
-        }
-        return (nav, value!);
-    }
-
-    private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(ICollection<ICollection<object>> sets)
-    {
-        if (!sets.Any())
-        {
-            yield return new EqualityComparableSet<object>();
-            yield break;
-        }
-
-        var setsArray = sets.ToArray();
-        var indices = new int[setsArray.Length];
-        var setsSizes = setsArray.Select(s => s.Count).ToArray();
-
-        if (setsSizes.Any(size => size == 0))
-            yield break;
-        
-        do
-        {
-            var result = new EqualityComparableSet<object>();
-            for (int i = 0; i < setsArray.Length; i++)
-            {
-                result.Add(setsArray[i].ElementAt(indices[i]));
-            }
-            yield return result;
-        }
-        while (IncrementIndices(indices, setsSizes));
-    }
+    
+    // private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(BlockingCollection<object>[] sets)
+    // {
+    //     if (!sets.Any())
+    //     {
+    //         yield return new EqualityComparableSet<object>();
+    //         yield break;
+    //     }
+    //
+    //     var setsArray = sets.ToArray();
+    //     var indices = new int[setsArray.Length];
+    //     var setsSizes = setsArray.Select(s => s.Count).ToArray();
+    //
+    //     if (setsSizes.Any(size => size == 0))
+    //         yield break;
+    //     
+    //     do
+    //     {
+    //         var result = new EqualityComparableSet<object>();
+    //         for (int i = 0; i < setsArray.Length; i++)
+    //         {
+    //             result.Add(setsArray[i].ElementAt(indices[i]));
+    //         }
+    //         yield return result;
+    //     }
+    //     while (IncrementIndices(indices, setsSizes));
+    // }
     private static bool IncrementIndices(int[] indices, int[] maxValues)
     {
         for (int i = indices.Length - 1; i >= 0; i--)
