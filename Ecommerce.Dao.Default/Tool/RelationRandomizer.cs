@@ -115,18 +115,21 @@ public class RelationRandomizer
         }
 
         var setsArray = sets.ToArray();
-        var indices = new int[setsArray.Length];
         var setsSizes = setsArray.Select(s => s.Count).ToArray();
 
         if (setsSizes.Any(size => size == 0))
             yield break;
+
+        // Convert BlockingCollections to arrays for efficient indexing
+        var setsAsArrays = setsArray.Select(bc => bc.ToArray()).ToArray();
+        var indices = new int[setsAsArrays.Length];
         
         do
         {
             var result = new EqualityComparableSet<object>();
-            for (int i = 0; i < setsArray.Length; i++)
+            for (int i = 0; i < setsAsArrays.Length; i++)
             {
-                result.Add(setsArray[i].ElementAt(indices[i]));
+                result.Add(setsAsArrays[i][indices[i]]);
             }
             yield return result;
         }
