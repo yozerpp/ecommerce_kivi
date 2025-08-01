@@ -52,20 +52,24 @@ public class RelationRandomizer
     }
     public IEnumerable<(INavigation, object)> GetKeyValues(IKey key) {
         var navigations = _compositeKeys[key];
+        IEnumerator<EqualityComparableSet<object>> enumerator;
+        EqualityComparableSet<object>? currentSet = null;
+        bool hasValue = false;
+        
         _locks[key].Enter();
         try{
-            if (!_keyEnumerators.TryGetValue(key, out var enumerator)){
-                enumerator = _keyEnumerators[key] =
-                    CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray()).GetEnumerator();
+            enumerator = GetOrCreateKeyEnumerator(key, navigations);
+            hasValue = enumerator.MoveNext();
+            if (hasValue) {
+                currentSet = enumerator.Current;
             }
-            if (!enumerator.MoveNext()) return[];
-            var ret = enumerator.Current.Select(k =>
-                (navigations.First(n => n.TargetEntityType.ClrType.IsInstanceOfType(k)), k));
-            return ret;
         }
-        finally{
+        finally {
             _locks[key].Exit();
         }
+        
+        // Process without holding lock
+        return ProcessKeyEnumeratorResult(navigations, hasValue, currentSet);
     }
     /// <summary>
     /// 
@@ -76,21 +80,22 @@ public class RelationRandomizer
     public (INavigation, object) GetForeignKeyValue(IForeignKey foreignKey, object? from=null) {
         var nav = _foreignKeys[foreignKey];
         if (!foreignKey.IsUnique) return (nav, RetrieveRandom(nav.TargetEntityType));
+        
+        IEnumerator<object> enumerator;
+        object? nextValue = null;
+        bool hasValue = false;
+        
         _locks[nav.ForeignKey].Enter();
-        try{
-            if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)){
-                enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
-            }
-            bool selfRef = foreignKey.IsSelfReferencing();
-            do{
-                if (!enumerator.MoveNext())
-                    throw new IndexOutOfRangeException();
-            } while (selfRef && ContainsInHierarchy(nav.PropertyInfo!,enumerator.Current, from)); 
-            return (nav, enumerator.Current);
+        try {
+            enumerator = GetOrCreateEnumerator(foreignKey);
+            hasValue = TryGetNextValue(enumerator, from, out nextValue);
         }
-        finally{
+        finally {
             _locks[nav.ForeignKey].Exit();
         }
+        
+        // Process without holding lock
+        return ProcessEnumeratorResult(nav, hasValue, nextValue, foreignKey);
     }
 
     private bool ContainsInHierarchy(PropertyInfo propertyInfo, object searched, object? looked) {
@@ -114,6 +119,58 @@ public class RelationRandomizer
             yield return o;
         }
     }
+    private IEnumerator<EqualityComparableSet<object>> GetOrCreateKeyEnumerator(IKey key, ICollection<INavigation> navigations) {
+        if (!_keyEnumerators.TryGetValue(key, out var enumerator)) {
+            enumerator = _keyEnumerators[key] =
+                CartesianEnumerable(navigations.Select(n => _globalStore[n.TargetEntityType]).ToArray())
+                    .GetEnumerator();
+        }
+        return enumerator;
+    }
+
+    private IEnumerable<(INavigation, object)> ProcessKeyEnumeratorResult(
+        ICollection<INavigation> navigations, 
+        bool hasValue, 
+        EqualityComparableSet<object>? currentSet) {
+        
+        if (!hasValue || currentSet == null) {
+            return Enumerable.Empty<(INavigation, object)>();
+        }
+        
+        return currentSet.Select((obj, index) => 
+            (navigations.ElementAt(index), obj));
+    }
+
+    private IEnumerator<object> GetOrCreateEnumerator(IForeignKey foreignKey) {
+        if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)) {
+            enumerator = _foreignKeyEnumerators[foreignKey] = 
+                UniqueEnumerable(_globalStore[foreignKey.PrincipalEntityType]).GetEnumerator();
+        }
+        return enumerator;
+    }
+
+    private bool TryGetNextValue(IEnumerator<object> enumerator, object? from, out object? value) {
+        value = null;
+        bool selfRef = from != null;
+        
+        do {
+            if (!enumerator.MoveNext()) {
+                return false;
+            }
+            value = enumerator.Current;
+        } while (selfRef && ContainsInHierarchy(null, value, from));
+        
+        return true;
+    }
+
+    private (INavigation, object) ProcessEnumeratorResult(INavigation nav, bool hasValue, object? value, IForeignKey foreignKey) {
+        if (!hasValue) {
+            // Fallback to random if enumerator exhausted
+            return (nav, RetrieveRandom(nav.TargetEntityType));
+        }
+        return (nav, value!);
+    }
+
     private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(ICollection<ICollection<object>> sets)
     {
         if (!sets.Any())
