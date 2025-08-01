@@ -1,4 +1,6 @@
-﻿using Bogus;
+﻿using System.Diagnostics;
+using System.Reflection;
+using Bogus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -39,7 +41,15 @@ public class RelationRandomizer
             
         }
     }
-
+    private bool TryEnterWithTimeout(SpinLock spinLock, int timeoutMs = 5000) {
+        bool lockTaken = false;
+        var sw = Stopwatch.StartNew();
+        while (!lockTaken && sw.ElapsedMilliseconds < timeoutMs) {
+            spinLock.TryEnter(ref lockTaken);
+            if (!lockTaken) Thread.Yield();
+        }
+        return lockTaken;
+    }
     public IEnumerable<(INavigation, object)> GetKeyValues(IKey key) {
         var navigations = _compositeKeys[key];
         _locks[key].Enter();
@@ -75,16 +85,23 @@ public class RelationRandomizer
             do{
                 if (!enumerator.MoveNext())
                     throw new IndexOutOfRangeException();
-            } while (selfRef && enumerator.Current.Equals(from)); 
+            } while (selfRef && ContainsInHierarchy(nav.PropertyInfo!,enumerator.Current, from)); 
             return (nav, enumerator.Current);
         }
         finally{
             _locks[nav.ForeignKey].Exit();
         }
-
-
     }
 
+    private bool ContainsInHierarchy(PropertyInfo propertyInfo, object searched, object? looked) {
+        if (looked == null!) return false;
+        object? gotten;
+        do{
+            gotten = propertyInfo.GetValue(searched);
+            if (gotten == looked) return true;
+        } while (gotten!=null);
+        return false;
+    }
     private object RetrieveRandom(IEntityType type) {
         _dictLocks[type].Enter();
         var s = _globalStore[type];
