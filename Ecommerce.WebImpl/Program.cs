@@ -9,33 +9,42 @@ using Ecommerce.Dao.Default.Validation;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Projections;
+using Ecommerce.Notifications;
+using Ecommerce.Shipping;
+using Ecommerce.Shipping.Dummy;
 using Microsoft.EntityFrameworkCore;
 using Ecommerce.WebImpl.Data;
 using Ecommerce.WebImpl.Data.Identity;
+using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
+using Stripe;
+using Coupon = Ecommerce.Entity.Coupon;
+using Customer = Ecommerce.Entity.Customer;
+using WebSocketOptions = Microsoft.AspNetCore.Http.Connections.WebSocketOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = DefaultDbContext.DefaultConnectionString;
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString)
-        .EnableSensitiveDataLogging(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
+        .EnableServiceProviderCaching(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddMvcOptions(o=>o.Filters.Add<AuthorizationFilter>());
 builder.Services.AddScoped<DbContext, ApplicationDbContext>();
+builder.Services.AddScoped<AuthorizationFilter>();
 builder.Services.AddKeyedSingleton<DbContext, ApplicationDbContext>(nameof(IModel));
 builder.Services.AddSingleton<UserManager.HashFunction>(s => s);
 builder.Services.AddSingleton<IModel>(sp => {
     var ctX = sp.GetRequiredKeyedService<DbContext>(nameof(IModel));
     return ctX.Model;
 });
-builder.Services.AddSingleton<Localizer>(BuildLocalizer);
+builder.Services.AddScoped<IShippingService, ShippingService>();
+builder.Services.AddSingleton(BuildLocalizer);
 builder.Services.AddSingleton<EntityMapper.Factory>();
 builder.Services.AddSingleton<EntityMapper>(sp => sp.GetRequiredService<EntityMapper.Factory>().Create());
 var implementations = Assembly.GetAssembly(typeof(CartManager)).GetTypes().Where(t =>
@@ -49,9 +58,12 @@ foreach (var serviceType in Assembly.GetAssembly(typeof(ICartManager)).GetTypes(
     builder.Services.AddScoped(serviceType,
         provider => CreateManager(provider, serviceType, implementationType));
 }
-builder.Services.AddScoped<IRepository<Customer>>(sp =>
-    sp.GetRequiredKeyedService<IRepository<Customer>>(nameof(IUserManager)));
-builder.Services.AddIdentityCore<Customer>(options => {
+builder.Services.AddScoped<UserManager>(sp => sp.GetRequiredKeyedService<UserManager>(nameof(IUserManager)));
+builder.Services.AddScoped<SignInManager<User>>();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddScoped<IRepository<User>>(sp =>
+sp.GetRequiredKeyedService<IRepository<User>>(nameof(IUserManager)));
+builder.Services.AddIdentityCore<User>(options => {
         options.SignIn.RequireConfirmedAccount = false;
     }).AddUserStore<PasswordStore>()
     .AddUserManager<IdentityUserManagerAdapter>()
@@ -73,6 +85,7 @@ var tokenValidationParameters = new TokenValidationParameters()
 };
 var creds = new SigningCredentials(key, signingAlgorithm);
 builder.Services.AddSingleton(creds);
+builder.Services.AddSignalR();
 builder.Services.AddSingleton(tokenValidationParameters);
 builder.Services.AddKeyedSingleton( nameof(IJwtManager), tokenValidationParameters);
 builder.Services.AddKeyedSingleton(nameof(IJwtManager), creds);
@@ -93,15 +106,22 @@ builder.Services.AddAuthentication(options =>
         options.TokenValidationParameters = tokenValidationParameters;
     });
 builder.Services.AddAuthorization(options => {
-    options.AddPolicy(nameof(Seller), policy => policy.RequireRole(nameof(Seller)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
-    options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer),nameof(Seller)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(Seller), policy => policy.RequireRole(nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer),nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(Staff), policy=> policy.RequireRole(nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.DefaultPolicy = //anonymous
-        new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).AddRequirements( new AssertionRequirement(context => 
-        context.User.Identity?.IsAuthenticated != true || !context.User.IsInRole(nameof(Customer)) && !context.User.IsInRole(nameof(Seller)))).Build();
+        new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+            .RequireAuthenticatedUser().Build();
 });
+StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"] ?? throw new KeyNotFoundException("Stripe Secret Key not found in configuration.");
 // builder.Services.AddScoped<SessionMiddleware>();
+Environment.SetEnvironmentVariable("STRIPE_PK",builder.Configuration.GetSection("Stripe")["PublishableKey"]?? throw new KeyNotFoundException("Stripe Publishable Key not found in configuration."));
 var app = builder.Build();
 // Configure the HTTP request pipeline.
+app.MapHub<NotificationHub>("/notifications", options => {
+    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling ;
+});
 if (app.Environment.IsDevelopment()){
     app.UseMigrationsEndPoint();
 }
@@ -124,11 +144,10 @@ Expression CreateComparerLambdaRecursive<T>(ParameterExpression param1, Expressi
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
-
 app.MapStaticAssets();
 app.MapRazorPages()
     .WithStaticAssets();
-
+app.UseMiddleware<GlobalExceptionHandler>();
 // app.UseMiddleware<SessionMiddleware>();
 app.Run();
 
@@ -149,7 +168,7 @@ object CreateManager(IServiceProvider provider, Type ifaceType, Type implementat
         try{
             return provider.GetRequiredKeyedService(t, ifaceType.Name);
         }
-        catch (Exception){
+        catch (Exception e){
             return provider.GetRequiredService(t);
         }
     }).ToArray();
