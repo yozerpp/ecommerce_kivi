@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
@@ -63,7 +63,7 @@ public class DefaultDbContext : DbContext
                     l.HasOne<Product>(f => f.Product).WithMany().HasForeignKey(f => f.ProductId)
                         .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 r => 
-                    r.HasOne<Customer>(f => f.Customer).WithMany().HasForeignKey(c => c.CustomerId)
+                    r.HasOne<Customer>(f => f.Customer).WithMany().HasForeignKey(c => c.Id)
                         .HasPrincipalKey(c => c.Id)
                         .IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 e=>e.HasKey(e=>new {e.CustomerId, e.ProductId})
@@ -204,6 +204,22 @@ public class DefaultDbContext : DbContext
         orderBuilder.Property(o => o.Status).HasDefaultValue(OrderStatus.WaitingConfirmation);
         orderBuilder.HasMany<OrderItem>(o => o.Items).WithOne(oi=>oi.Order).HasForeignKey(oi=>oi.OrderId)
             .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<OrderItemAggregates>(e => {
+            e.HasNoKey();
+            e.ToView(nameof(OrderItemAggregates), DefaultSchema);
+            e.Property(o => o.OrderId).HasColumnName(nameof(OrderItem.OrderId));
+            e.Property(o => o.ProductId).HasColumnName(nameof(OrderItem.ProductId));
+            e.Property(o => o.SellerId).HasColumnName(nameof(OrderItem.SellerId));
+            e.Property(o => o.Quantity).HasColumnName(nameof(OrderItem.Quantity));
+            e.Property(o => o.BasePrice).HasColumnName(nameof(OrderItemAggregates.BasePrice));
+            e.Property(o => o.DiscountedPrice).HasColumnName(nameof(OrderItemAggregates.DiscountedPrice));
+            e.Property(o => o.CouponDiscountedPrice).HasColumnName(nameof(OrderItemAggregates.CouponDiscountedPrice));
+            e.Property(o => o.TotalDiscountPercentage).HasColumnName(nameof(OrderItemAggregates.TotalDiscountPercentage));
+            e.Property(o => o.CouponId).HasColumnName(nameof(OrderItem.CouponId));
+            e.Property(o => o.ShipmentId).HasColumnName(nameof(OrderItem.ShipmentId));
+            e.Property(o => o.RefundShipmentId).HasColumnName(nameof(OrderItem.RefundShipmentId));
+            e.Property(o => o.ProductOfferId).HasColumnName(nameof(OrderItemAggregates.ProductOfferId));
+        });
         orderBuilder.OwnsOne<OrderStats>(o => o.Stats, c => {
             c.HasKey(v => v.OrderId);
             c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
