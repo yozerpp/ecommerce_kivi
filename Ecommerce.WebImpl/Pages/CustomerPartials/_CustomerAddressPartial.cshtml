@@ -1,0 +1,58 @@
+﻿@using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.Shared
+@model Ecommerce.WebImpl.Pages.CustomerPartials._CustomerAddressPartial
+
+<script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document._selectedAddress = document.getElementById('address0');
+        });
+    </script>
+<div class="py-2 card-header">
+    <div class="dropdown mx-3 gap-2 mt-3 rounded-1">
+        <div class="d-inline-flex container-fluid justify-content-between g-3">
+            <a href="javascript:void(0);" class="bg-secondary-subtle dropdown-toggle mx-2 text-wrap text-decoration-none text-black " data-bs-toggle="dropdown" data-bs-target="+ul" aria-expanded="false">@(Model.Addresses.ElementAtOrDefault(0)?.ToString()??"Kayıtlı Adres Yok")</a>
+            <a class="text-decoration-none" href="javascript:document.getElementById('addressTemplate')">
+                <i class="bi bi-plus-circle-fill fs-4 text-success"></i> <!--TODO-->
+            </a>
+        </div>
+        <ul class="dropdown-menu">
+            @for (int i = 0; i < Model.Addresses.Count; i++){
+                <li class="dropdown-item p-0">
+                    <a href="javascript:@(Model.Editable ? $"this.parentElement.PreviousElementSibling.innerHTML={Model.Addresses[i]};document._selectedAddress.classList.add('d-none');_selectedAddress = document.getElementById('address@(i)');_selectedAddress.classList.remove('d-none');" : "void(0);")"
+                       class="text-black p-0 bg-white text-decoration-none">@(Model.Addresses[i].ToString())</a>
+                </li>
+            }
+        </ul>
+    </div>
+    @if (Model.Editable){
+        <ul id="addresses" class="list-unstyled mx-3 card-body">
+            <li id="addressTemplate" class="d-none">
+                @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = new Address(), Editable = true, Id ="address" + Model.Addresses.Count + 1 })
+            </li>
+        @for (int i = 0; i < Model.Addresses.Count; i++){
+            <li id="address@(i)" class="@(i == 0 ? "" : "d-none")">
+                @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = Model.Addresses[i], Editable = true, Id = "address" + i })
+            </li>
+        }
+    </ul>
+    }
+</div>
+@if (Model.Updateable){
+    <div class="container-fluid justify-content-end align-content-center d-flex">
+        <script>
+            let editing=false;
+        </script>
+        <input type="hidden" name="@nameof(Customer.CustomerId)" value="@Model.CustomerId"/>
+        @for (int i = 0; i < Model.Addresses.Count; i++){
+            <input id="addr@(i)@nameof(Address.City)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.City))" value="@(Model.Addresses[i].City)"/>
+            <input id="addr@(i)@nameof(Address.District)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.District))" value="@(Model.Addresses[i].District)"/>
+            <input id="addr@(i)@nameof(Address.Country)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Country))" value="@(Model.Addresses[i].Country)"/>
+            <input id="addr@(i)@nameof(Address.Line1)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Line1))" value="@(Model.Addresses[i].Line1)"/>
+            <input id="addr@(i)@nameof(Address.Line2)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Line2))" value="@(Model.Addresses[i].Line2)"/>
+            <input id="addr@(i)@nameof(Address.ZipCode)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.ZipCode))" value="@(Model.Addresses[i].ZipCode)"/>
+        }
+        <button class="btn btn-secondary" onclick="if(editing){event.currentTarget.innerText='Adresi Düzenle';}else{event.currentTarget.innerText='Değişiklikleri Kaydet';document.getElementById('address').querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control'));}">
+            Adresi Düzenle
+        </button>
+    </div>
+}

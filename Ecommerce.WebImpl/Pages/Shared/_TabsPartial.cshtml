@@ -1,0 +1,17 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared._TabsPartial
+
+<nav>
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">    
+        @for (var i = 0; i<Model.Tabs.Count ;i++){
+            <button class="nav-link @(i==0?"active":"")" id="tab-@(Model.Tabs[i].Item1)-nav" data-bs-toggle="tab" data-bs-target="#tab-@(Model.Tabs[i].Item1)" type="button" role="tab" aria-controls="tab-@(Model.Tabs[i].Item1)" aria-selected="true">@(Model.Tabs[i].Item1)</button>
+        }
+    </div>
+</nav>
+<div class="tab-content" id="nav-tabContent">
+    @for(var i =0; i <Model.Tabs.Count; i++)
+    {
+        <div class="tab-pane fade show @(i == 0 ? "active" : "")" id="tab-@(Model.Tabs[i].Item1)" role="tabpanel" aria-labelledby="tab-@(Model.Tabs[i].Item1)-nav">
+            @Model.Tabs[i].Item2
+        </div>
+    }
+</div>

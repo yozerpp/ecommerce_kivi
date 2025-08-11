@@ -1,0 +1,21 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Order._OrderListPartial
+
+@if (Model.Orders.Count > 0){
+    <ul class="container-fluid list-group d-flex flex-column flex-grow-1 rounded-2">
+        @foreach (var order in Model.Orders){
+            <li class="list-group-item">
+                @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
+                    IsCollapsable = true, Order = order
+                })
+            </li>
+        }
+        <div data-page="@Model.Page" hx-get="/@(nameof(Customer))?handler=orders" hx-trigger="revealed" hx-select="ul>li" hx-target="this" hx-swap="beforebegin"
+             hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({@(nameof(Customer.PageNumber)): p}));"
+             hx-on::after-request="if(event.detail.xhr.status==204)event.detail.elt.removeAttribute('hx-get');"></div>
+    </ul>
+}
+else{
+    <div class="d-flex px-3 justify-content-center align-content-center">
+        <p class="fs-3 text-dark">Henüz Sipariş Yok.</p>
+    </div>
+}

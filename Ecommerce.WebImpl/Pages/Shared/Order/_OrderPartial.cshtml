@@ -1,0 +1,67 @@
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using Ecommerce.Entity.Common
+@model _OrderPartial
+@{
+    RenderFragment OrderHeadingItem((string, string, int) v) => @<li class="list-group-item rounded-bottom-0 col-@v.Item3 d-inline-flex flex-column justify-content-between">
+                                                                    <p class="fs-6 h-25 fw-bold border-1 border-black border-bottom">@v.Item1</p>
+                                                                    <p class="fs-5 h-75">@v.Item2</p>
+                                                                </li>;
+}
+<div id="order@(Model.Order.Id)" class="container-fluid">
+    <a class="hover-darken text-decoration-none" data-bs-toggle="@(Model.IsCollapsable?"collapse":"")" data-bs-target="#order@(Model.Order.Id)-body" aria-controls="order@(Model.Order.Id)-body" aria-expanded="false">
+        <ul class="list-group-horizontal">
+            @OrderHeadingItem(("Sipariş No", Model.Order.Id.ToString(),1))
+            @OrderHeadingItem(("Sipariş Tarihi", Model.Order.Date.ToString("D", CultureInfo.CurrentCulture),4))
+            @OrderHeadingItem(("Sipariş Durumu", Model.Order.Status.ToLocalizedString(),2 ))
+            @OrderHeadingItem(("Teslimat Adresi",Model.Order.ShippingAddress.ToString(),4))
+            @OrderHeadingItem(("Ürün Sayısı",Model.Order.ItemCount.ToString(), 1))
+        </ul>
+    </a>
+    <ul id="order@(Model.Order.Id)-body" class="list-group container-fluid border-top-0 @(Model.IsCollapsable?"collapse":"")">
+        <li class="list-group-item row g-3 rounded-bottom-0 rounded-top-2" style="max-height: 30px; overflow-y: auto">
+            <div class="col-3">
+                <p class="fs-5">Resim</p>
+            </div>
+            <div class="col-1">
+                <p class="fs-5">Ürün Adı</p>
+            </div>
+            <div class="col-2">
+                <p class="fs-5">Satıcı</p>
+            </div>
+            <div class="col-3">
+                <p class="fs-5">Gönderi Adresi</p>
+            </div>
+            <div class="col-2">
+                <p class="fs-5">Fiyat</p>
+            </div>
+            <div class="col-1">
+                <p class="fs-5">Kupon</p>
+            </div>
+        </li>
+        @foreach (var item in Model.Order.Items){
+            var p = item.ProductOffer!.Product!;
+            <li class="list-group-item row g-3">
+                <div class="col-3">
+                    <img src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))"/>
+                </div>
+                <div class="col-1">
+                    <p class="fs-5">@(p.Name)</p>
+                </div>
+                <div class="col-2">@item.ProductOffer.Seller.ShopName</div>
+                <div class="col-3">
+                    <p class="overflow-y-scroll">@(item.SentShipment.SenderAddress.ToString())</p>
+                </div>
+                <div class="col-2">
+                    <partial name="Shared/_ItemPricePartial" model="item"/>
+                </div>
+                <div class="col-1">
+                    @if (item.CouponId != null){
+                        <p class="overflow-y-scroll">@(item.CouponId)</p>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+
+</div>

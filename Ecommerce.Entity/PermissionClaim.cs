@@ -5,7 +5,7 @@ public class PermissionClaim
     public ulong Id { get; set; }
     public uint GranterId { get; set; }
     public uint GranteeId { get; set; }
-    public uint PermissionId { get; set; }
+    public string PermissionId { get; set; }
     public Staff Granter { get; set; }
     public Staff Grantee { get; set; }
     public Permission Permission { get; set; }
@@ -16,11 +16,11 @@ public class PermissionClaim
     }
 
     public override bool Equals(object? obj) {
-        return ReferenceEquals(this, obj) || Id!=default&& GranteeId!=default&& GranterId!=default && PermissionId!=default&& obj is PermissionClaim other && Equals(other);
+        return ReferenceEquals(this, obj) || Id!=default&& obj is PermissionClaim other && Equals(other);
     }
 
     public override int GetHashCode() {
-        if (Id == default && GranteeId == default && GranterId == default && PermissionId == default)
+        if (Id == default)
             return base.GetHashCode();
         return HashCode.Combine(Id, GranterId, GranteeId, PermissionId);
     }

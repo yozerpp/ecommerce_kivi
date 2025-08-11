@@ -8,7 +8,7 @@ public class OrderNotification : Notification
     public uint OrderId { get; set; }
     public uint ProductId { get; set; }
     public OrderItem Item { get; set; }
-
+    public Seller Seller { get; set; }
     protected bool Equals(OrderNotification other) {
         return base.Equals(other) && OrderId == other.OrderId && ProductId == other.ProductId;
     }
@@ -30,6 +30,7 @@ public class OrderNotification : Notification
     public static Expression<Func<OrderNotification, WithRelated>> AddressProjection=notification => new WithRelated
         {
             Id = notification.Id,
+            UserId = notification.UserId,
             OrderId = notification.OrderId,
             ProductId = notification.ProductId,
             Item = notification.Item,

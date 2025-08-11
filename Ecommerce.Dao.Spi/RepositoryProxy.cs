@@ -3,7 +3,7 @@ using FluentValidation;
 using ValidationException = System.ComponentModel.DataAnnotations.ValidationException;
 
 namespace Ecommerce.Dao.Spi;
-public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
+public class RepositoryProxy<TE> : DispatchProxy where TE : class
 {
     //This assumes each repository that use the same type of Entity actually use the same context.
     // private static Dictionary<Type, Lock?> TransactionLocks = new Dictionary<Type, Lock>();
@@ -20,7 +20,6 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
 
     public RepositoryProxy() {
     }
-
     /// <summary>
     /// This serializes write and read operations on the table.
     /// I'm not sure if it is actually needed since Db does serialization in the background any way.
@@ -30,10 +29,11 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
     /// <returns></returns>
     /// <exception cref="ValidationException">If entity validation failed by _validator</exception>
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
+        if (!typeof(IRepository<TE>).IsAssignableFrom(targetMethod.DeclaringType)) 
+            return targetMethod.Invoke(_repository,args);
         bool isAddOrUpdate = targetMethod.Name.Equals("Add") || targetMethod.Name.Equals("Update");
         if (isAddOrUpdate){
             if (_validators != null && args[0] is TE entity){
-                AbstractValidator<TE> a;
                 var errors = _validators.Select(v => v.Validate(entity))
                     .Where(r => !string.IsNullOrEmpty(r.ErrorMessage)).ToList();
                 if (errors.Count > 0){
@@ -46,7 +46,6 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class, new()
             TransactionLock.EnterWriteLock();
         }
         else TransactionLock.EnterReadLock();
-
         try{
             return targetMethod.Invoke(_repository, args);
         }

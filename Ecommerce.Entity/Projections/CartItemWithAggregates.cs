@@ -1,6 +1,6 @@
 ﻿namespace Ecommerce.Entity.Projections;
 
-public class CartItemWithAggregates : CartItem
+public class CartItemWithAggregates : CartItem, IItemWithAggregates
 {
     public decimal BasePrice { get; set; }
     public decimal DiscountedPrice { get; set; }

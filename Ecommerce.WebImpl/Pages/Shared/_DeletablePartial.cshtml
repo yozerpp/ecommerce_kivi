@@ -1,0 +1,12 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.DeletablePartial
+
+<div class="d-flex justify-content-end align-items-center">
+    <form hx-post="/@(Model.HandlerUrl)" hx-target="#popupResult" hx-swap="innerHTML">
+        @foreach(var input in Model.Inputs)
+        {
+            <input type="hidden" name="@input.Item1" value="@input.Item2"/>
+        }
+        <button type="submit" class="btn-danger">Sil</button>
+    </form>
+</div>
+@Html.Raw(Model.Inner)

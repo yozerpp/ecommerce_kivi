@@ -1,0 +1,153 @@
+﻿@using Ecommerce.Bl.Interface
+@using Ecommerce.Entity
+@using Ecommerce.Entity.Projections
+@using Ecommerce.Entity.Views
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@using Index = System.Index
+@using Product = Ecommerce.WebImpl.Pages.Product
+@model Ecommerce.WebImpl.Pages.Shared._SearchBarPartial
+
+@{
+    var formId = (Model.Target?.ToLowerInvariant() ?? "searchBar") +"Form";
+}
+<form id="@(formId)" asp-page="/Index" method="get">
+    <script>
+        let filterDropdown;
+        document.addEventListener("DOMContentLoaded", ()=> {
+            let el = document.getElementById('filtersButton');
+            filterDropdown= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
+                autoClose: false,reference: document.getElementById('filters')
+            });
+            // el = document.getElementById('ordersButton');
+            // el._dd = new bootstrap.Dropdown(el, {autoClose:false, reference: 'parent'});
+        });
+    </script>
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="categoryIdInput" name="@(nameof(HomepageModel.SearchCategory))"/>
+    <input type="hidden" name="@nameof(HomepageModel.JsonResult)" value="@((Model.Target != null).ToString().ToLowerInvariant())"/>
+    <div class="d-flex gap-1">
+        <div class="input-group rounded-start-2">
+            <button class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="submit">
+                <i class="bi bi-search m-0" style="font-size: large"></i> 
+            </button>
+            <div class="dropdown my-0">
+                <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tümü</button>
+                
+                <div id="categoryPicker" class="dropdown-menu rounded-bottom-2 border-1">
+                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories,displayElementId:"pickerBtn", inputElementId:"categoryIdInput", targetElementId:"categoryProperties"))
+                </div>
+            </div>
+            <input class="rounded-1 rounded-start-0 form-control" type="text" @Html.Raw(Model.Target!=null?$"onchange=\"document.getElementById('{formId}').dispatchEvent(new Event('submit', {{cancelable: true, bubbles: true}}))\"":"") value="@null" name="@(nameof(HomepageModel.SearchName))" />
+        </div>
+        <div class="btn-group justify-content-center mx-1 align-items-center gap-2">
+            <button type="button" class="dropdown-toggle btn btn-outline-info" onclick="filterDropdown.toggle();event.stopImmediatePropagation();">
+                Filtreler
+            </button>
+            <div class="dropdown">
+                <button  type="button" id="ordersButton" class="btn btn-outline-light text-dark dropdown-toggle"  
+                        data-bs-toggle="dropdown" data-bs-target="#order" aria-expanded="false">Sıralama</button>
+                <ul id="order" class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
+                    @foreach (var prop in typeof(ProductStats).GetProperties().Where(p=>!p.Name.Equals(nameof(ProductStats.ProductId)))){
+                        <li class="dropdown-item row g-0 rounded-0">
+                            <div class="input-group col-auto row m-0 p-0 g-2 container-fluid">
+                                <label class="col-11 btn-outline-secondary bg-secondary-subtle input-group-text" for="@(prop.Name)Order">@(prop.Name)</label>
+                                <input id="@(prop.Name)Order" oninput="event.currentTarget.parentElement.nextElementSibling.classList.toggle('d-none')" class="col-1" type="checkbox" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Selected)" value="true"/>
+                            </div>
+                            <div class="col-auto d-none">
+                                <div class="input-group container-fluid row m-0 p-0 g-2">
+                                    <label class="col-11 input-group-text" for="@(prop.Name)Asc">Artan</label>
+                                    <input id="@(prop.Name)Asc" class="col-1" type="radio" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Ascending)" value="true"/>
+                                </div>
+                                <div class="container-fluid input-group m-0 p-0 g-2 row">
+                                    <label class="col-11  input-group-text" for="@(prop.Name)Desc">Azalan</label>
+                                    <input id="@(prop.Name)Desc" class="col-1" type="radio" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Ascending)" value="false"/>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button type="button" id="filtersButton" role="button" class="dropdown-toggle" data-bs-toggle="dropdown" hidden aria-expanded="false"></button>
+        <div id="filters" class="dropdown-menu border-top-0 rounded-2" >
+            <ul class="list-unstyled">
+                <li id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
+                </li>
+                <li class="row row-cols-6 g-2 d-flex ps-2">
+                    <div class="col-6 gap-1">
+                        <div>
+                            Satılma Sayısı
+                        </div>
+                        <div id="saleCountRange">
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MaxValue = 1000000,
+                                MinValue = 0,
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.SaleCount)}]",
+                            })
+                        </div>
+                    </div>
+                    <div class="col-6 gap-1">
+                        <div>İade Sayısı</div>
+                        <div id="refundCountRange">
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MaxValue = 1000000,
+                                MinValue = 0,
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.RefundCount)}]",
+                            })
+                        </div>
+                    </div>
+                    <div class="col-6 gap-1">
+                        <div>
+                            Favorilere Eklenme Sayııs
+                        </div>
+                        <div id="favoriteRange">
+                            <input type="hidden" name=""/>
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MaxValue = 1000000,
+                                MinValue = 0,
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.FavorCount)}]",
+                            })
+                        </div>
+                    </div>
+                    <div class="col-6 gap-1">
+                        <div>
+                            Değerlendirme Sayısı
+                        </div>
+                        <div id="ratingCountRange">
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MaxValue = 1000000,
+                                MinValue = 0,
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.ReviewCount)}]",
+                            })
+                        </div>
+                    </div>
+                    <div class="col-6 gap-1">
+                        <div>
+                            Değerlendirme Ortalaması
+                        </div>
+                        <div id="ratingRange">
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MinValue = 0,
+                                MaxValue = 5,
+                                Step = "0.1",
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.RatingAverage)}]",
+                            })
+                        </div>
+                    </div>
+                    <div class="col-6 gap-1">
+                        <div>Fiyat</div>
+                        <div id="priceRange">
+                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                MaxValue = 1000000, MinValue = 0,
+                                Step = "0.1",
+                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductOffer.Price)}]", //handle specially
+                            })
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</form>

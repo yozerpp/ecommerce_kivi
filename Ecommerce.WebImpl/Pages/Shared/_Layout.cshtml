@@ -2,6 +2,8 @@
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Projections
 @inject EntityMapper EntityMapper
+@inject Dictionary<uint, Category> Categories
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +14,12 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Ecommerce.WebImpl.styles.css" asp-append-version="true"/>
+    @await RenderSectionAsync("Scripts", required: false)
+    
 </head>
 <body>
 <header>
+    <div id="popupResult" class="position-fixed z-3" style="z-index: 9999;"></div>
     <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
         <div class="container">
             <a class="navbar-brand" asp-area="" asp-page="/Index">Ecommerce.WebImpl</a>
@@ -27,54 +32,10 @@
                     <li class="nav-item">
                         <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                    </li>
                     <!-- search -->
-                    <li class="nav-item">
-                        <form method="post" asp-page="/Index" asp-page-handler="Search">
-                            <div class="input-group">
-                                <button class="input-group-text" type="submit">Ara</button>
-                                <input type="text" value="@null" name="Filters[@nameof(Product.Name)]" class="form-control" aria-label="Sizing example input"/>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Filtreler
-                                </button>
-                                <ul class="dropdown-menu" style="min-width: 300px; overflow-y: scroll; overflow-x: visible">
-                                    @foreach (var colName in EntityMapper.ColumnNames(typeof(ProductWithAggregates), null, null, true) ){
-                                        <li class="input-group">
-                                            <span class="input-group-text">@colName</span>
-                                            <select name="Operators[@colName]" class="form-control">
-                                                <option value="@null" selected="@true">Seçiniz</option>
-                                                @foreach (var op in Enum.GetNames(typeof(SearchPredicate.OperatorType))){
-                                                    <option value="@op">@op</option>
-                                                }
-                                            </select>
-                                            <input type="text" name="Filters[@colName]" class="form-control"/>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Sıralama
-                                </button>
-                                <ul class="dropdown-menu" style="min-width: 300px; overflow-y: scroll; overflow-x: visible">
-                                    @foreach (var colName in EntityMapper.ColumnNames(typeof(ProductWithAggregates), null, null, true)){
-                                        <li class="input-group">
-                                            <span class="input-group-text">@colName</span>
-                                            <select name="Orders[@colName]">
-                                                <option value="@null" selected="@true">Seçiniz</option>
-                                                <option value="@false">Artan</option>
-                                                <option value="@true">Azalan</option>
-                                            </select>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        </form>
-                    </li> 
+                    <li class="nav-item flex-grow-1">
+                        <partial name="SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){Categories=Categories.Values,EntityMapper= EntityMapper, IsJson=false}"/>
+                    </li>
                 </ul>
                 <partial name="_LoginPartial"/>
             </div>
@@ -82,7 +43,7 @@
     </nav>
 </header>
 <div class="container">
-    <main role="main" class="pb-3">
+    <main role="main" class="pb-3" style="background-color: @(ViewData.ContainsKey("BgColor")?ViewData["BgColor"]:"bg-white")">
         @RenderBody()
     </main>
 </div>
@@ -96,7 +57,12 @@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
-
-@await RenderSectionAsync("Scripts", required: false)
+<script src="https://unpkg.com/htmx.org"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script>
+    document.addEventListener("DOMContentLoaded", ()=>{
+        document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(e=>new bootstrap.Tooltip(e));
+    })
+</script>
 </body>
 </html>

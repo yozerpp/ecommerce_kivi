@@ -11,7 +11,7 @@ public class CartItemValidator : IValidator<CartItem>
         _couponRepository = couponRepository;
     }
     public ValidationResult Validate(CartItem entity) {
-        if(entity.Quantity <=0) return new ValidationResult("Quantity must be greater than 0.");
+        // if(entity.Quantity <=0) return new ValidationResult("Quantity must be greater than 0.");
         var cid = entity.CouponId;
         if (cid == null) return new ValidationResult(null);
         var sid = entity.SellerId;
@@ -19,6 +19,8 @@ public class CartItemValidator : IValidator<CartItem>
             C1 = c.ExpirationDate > DateTime.Now,
             C2 = c.SellerId == sid
         }, coupon => coupon.Id == cid);
+        if(res==null) 
+            throw new ValidationException("Coupon not found.");
         // if(!res.C1)
         // return new ValidationResult("Coupon used for this item is expired.", [nameof(Coupon.ExpirationDate)]);
         if (!res.C2)

@@ -2,9 +2,10 @@
 
 public class PermissionRequest : Request
 {
-    public uint PermissionId { get; set; }
+    public string PermissionId { get; set; }
     public Permission Permission { get; set; }
-
+    public Staff Requester { get; set; }
+    public Staff Requestee { get; set; }
     protected bool Equals(PermissionRequest other) {
         return base.Equals(other) && PermissionId == other.PermissionId;
     }

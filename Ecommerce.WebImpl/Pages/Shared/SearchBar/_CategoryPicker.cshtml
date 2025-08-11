@@ -1,46 +1,17 @@
-﻿@using Ecommerce.Entity
-@using Microsoft.AspNetCore.Html
+﻿@using Castle.Components.DictionaryAdapter.Xml
+@using Ecommerce.Entity
 @model _CategoryPicker
 
-<div class="d-flex container">
-    @foreach (var category in Model.Categories)
-    {
-        @RenderCategory(category, true)
+<ul class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
+    @{
+        var onClickHandler = $@"document.getElementById('{Model.DisplayElementId}').innerHTML=event.currentTarget.getAttribute('data-name');
+                                const cid = event.currentTarget.getAttribute('data-id');const categoryProps = document.getElementById('{Model.TargetElementId}');
+                                categoryProps.setAttribute('hx-vals', JSON.stringify({{categoryId: cid}}));
+                                categoryProps.dispatchEvent(new Event('fire', {{cancelable:true, bubbles:true}}));document.getElementById('{Model.InputElementId}').value=cid;
+                              ";
     }
-</div>
-
-@functions{
-    public IHtmlContent RenderCategory(Category category, bool root = false)
-    {
-        var categoryId = $"category{category.Id}";
-        var childrenId = $"{category.Id}Children";
-        var inputAssignment = Model.InputId != null ? $"document.getElementById('{Model.InputId}').value='{category.Id}'" : "";
-
-        var categoryHtml = $@"
-            <div class=""row collapse {(root ? "show" : "")}"" id=""{categoryId}"">
-                <div onclick=""{inputAssignment}"" class=""position-relative p-5 border-1 border-secondary"">
-                    <p>{category.Name}</p>
-                </div>";
-
-        if (category.Children.Any())
-        {
-            categoryHtml += $@"
-                <i onmouseenter=""document.getElementById('{childrenId}').classList.add('show')"" class=""position-absolute bi bi-arrow-right"" style=""height: 1em;""></i>";
-        }
-
-        categoryHtml += $@"
-                <div id=""{childrenId}"" onmouseleave=""this.classList.remove('show')"" class=""col-auto collapse"">";
-
-        // Recursively render children within the Razor syntax
-        foreach (var child in category.Children)
-        {
-            categoryHtml += RenderCategory(child).ToString();
-        }
-
-        categoryHtml += $@"
-                </div>
-            </div>";
-
-        return new HtmlString(categoryHtml);
+    @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", ($"document.getElementById('{Model.DisplayElementId}').innerHTML='Tümü';document.getElementById('{Model.TargetElementId}').innerHTML='';document.getElementById('{Model.InputElementId}').value=null;", new Category(){Name = "Tümü", Id = 0}, new HashSet<Category>()))
+    @foreach (var category in Model.Categories){
+        <partial name="Shared/SearchBar/_CategoryItemPartial" model="(onClickHandler, category, new HashSet<Category>())"/>
     }
-}
+</ul>

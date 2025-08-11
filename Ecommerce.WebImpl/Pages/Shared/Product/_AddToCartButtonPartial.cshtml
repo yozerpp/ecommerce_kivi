@@ -1,0 +1,12 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Product._AddToCartButtonPartial
+
+<form class="container-fluid" hx-post="/Cart" hx-target="#popupResult" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="productId" value="@Model.ProductId"/>
+    <input type="hidden" name="sellerId" value="null"/>
+    <div class="row" onmouseenter="this.lastElementChild.classList.add('col-lg-7');this.firstElementChild.classList.remove('d-none')"
+         onmouseleave="this.lastElementChild.classList.remove('col-lg-7');this.firstElementChild.classList.add('d-none')">
+        <input type="number" style="height: 100%;" class="col-lg-5 col-12 rounded-1 shadow-sm d-none" name="quantity" step="1" placeholder="Miktar"/>
+        <button type="submit" class="col-12 btn rounded-1 btn-primary" style="background-color: darkorange">Sepete Ekle</button>
+    </div>
+</form>

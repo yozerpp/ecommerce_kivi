@@ -1,26 +1,28 @@
 ﻿@page
+@using System.Text.Json
+@using Ecommerce.WebImpl.Pages.Shared.Product
 @model HomepageModel
 @{
     ViewData["Title"] = "Home page";
+    ViewBag.User = Model.CurrentUser;
+    if (Model.CurrentCustomer != null || Model.CurrentUser == null){
+        ViewBag.Cart = Model.CurrentSession.Cart;
+    }
 }
-<div class="text-center">
-        <table class="table">
-            <thead>
-            <tr>
-                @foreach (var colName in Model.ProductMapper.ColumnNames()){
-                    <th scope="col">@colName</th>
-                }
-            </tr>
-            </thead>
-            <tbody>
-            @foreach (var item in Model.Products){
-                <tr>
-                    @foreach (var kv in Model.ProductMapper.ToPairs(item)){
-                        <td @Html.DisplayName(kv.Item1)>@kv.Item2.ToString()</td>
-                    }
-                </tr>
-            }
-            </tbody>
-            
-        </table>
+<div class="container-fluid d-flex flex-column">
+    <div  class="row g-3">
+        <partial name="Shared/Product/_VerticalListPartial" model="new _VerticalListPartial(){ 
+                     Products = Model.Products, Categories = Model.Categories, SellerRecommendations = Model.SellerRecommendations, 
+                     CategoryRecommendations = Model.CategoryRecommendations,
+                     PageIndex = Model.PageIndex         
+        }"/>
+        <form hx-trigger="revealed" 
+              hx-on::after-settle="event.detail.target.removeAttribute('data-hx-revealed')" 
+              hx-get="/Index?handler=more" hx-target="this" hx-swap="beforebegin" hx-on::trigger="let that = event.detail.elt;that.firstElementChild.value = parseInt(that.firstElementChild.value)+1;" class="container-fluid" style="height: 1px;">
+            <input type="hidden" name="@(nameof(Model.PageIndex))" value="1"/>
+            <input type="hidden" name="@(nameof(Model.SearchName))" value="@Model.SearchName"/>
+            <input type="hidden" name="@nameof(Model.AggregatesJson)" value="@JsonSerializer.Serialize(Model.AggregateFilters)"/>
+            <input type="hidden" name="@(nameof(Model.OrdersJson))" value="@(JsonSerializer.Serialize(Model.Orders))"/>
+        </form>
+    </div>
 </div>

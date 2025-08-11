@@ -36,7 +36,7 @@ namespace Ecommerce.DesktopImpl
 
         private void doSearch(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders)
         {
-            var results = Task.Run(()=> _productManager.SearchWithAggregates(preds, orders,false, false, page:_page));
+            var results = Task.Run(()=> _productManager.Search(preds, orders,false, false, page:_page));
             results.ContinueWith((r) => {
                 Invoke(() => {
                     searchResults.Rows.Clear();

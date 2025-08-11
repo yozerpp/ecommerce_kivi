@@ -1,0 +1,45 @@
+﻿@using Ecommerce.WebImpl.Pages.Shared
+@model Ecommerce.WebImpl.Pages.Seller._CouponsPartial
+
+@if (Model.Coupons.Count > 0){
+    <ul class="d-flex overflow-x-scroll">
+        @foreach (var coupon in Model.Coupons){
+            <li>
+                <div class="card">
+                    <div class="card-header my-3">
+                        <div class="d-flex gap-1">
+                            <p class="fw-bold card-title fs-5">@coupon.Id</p>
+                            <button data-bs-toggle="tooltip" data-bs-placement="top" title="Panoya Kopyala" class="btn btn-secondary p-0 py-0 d-inline-flex align-items-center justify-content-center">
+                                <i onclick="navigator.clipboard.writeText(event.currentTarget.previousElementSibling.innerText);" class="bi m-0 bi-clipboard text-dark bg-light"></i>
+                            </button>
+                            <div class="card-img-top">
+                                <img src="kupon.jpg" class="img-fluid" style="height: 5em;" alt="Kupon"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-2 container-fluid my-3">
+                        <div class="card-text gap-1 d-flex">
+                            <p >İndirim:</p>
+                            <p class="fw-bold">%@(decimal.Round((1m - coupon.DiscountRate)*100m,2).ToString("F1"))</p>
+                            @if (Model.Editable){
+                                @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                            }    
+                        </div>
+                        @if (Model.ShowSeller){
+                            <div class="card-text gap-2 d-flex">
+                                <p>Satıcı:</p>
+                                <p class="fs-4">@coupon.Seller.ShopName</p>
+                            </div>    
+                        }
+                    </div>
+
+                </div>
+            </li>
+        }
+    </ul>    
+}
+else{
+    <div class="container-fluid d-flex justify-content-center">
+        <p style="margin-right: 5em;">Kullanılabilir Kupon Yok.</p>
+    </div>
+}

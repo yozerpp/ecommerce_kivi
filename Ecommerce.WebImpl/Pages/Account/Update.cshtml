@@ -1,0 +1,28 @@
+﻿@page
+@model UpdateModel
+
+<div class="container-fluid">
+    <div style="height: 150px;"></div>
+    <div class="card d-flex w-75 mx-5 p-2 justify-content-center align-content-center align-items-center rounded-2">
+        <div class="card-header">
+            <h4 class="card-title">@(Model.UpdateType == UpdateModel.Type.Email ? "E-Posta" : "Şifre") Değiştir</h4>
+        </div>
+        <div class="card-body gap-2 d-flex justify-content-start px-5">
+            <div class="ps-3">
+                <form hx-post="/Account/Update?handler=complete" method="post" hx-target="#updateResult" hx-swap="innerHTML">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="@(Model.Referer)" value="@(Model.Referer)"/>
+                    <div>
+                        <label class="fs-5">Şifrenizi Girin</label>
+                        <input class="input-group-text" type="text" name="@(nameof(Model.OldPassword))" required/>
+                    </div>
+                    <div>
+                        <label class="fs-5">Yeni @((Model.UpdateType switch{ UpdateModel.Type.Email => "E-Postanızı", UpdateModel.Type.Password => "Şifrenizi", _ => throw new ArgumentOutOfRangeException() }))</label>
+                        <input class="input-group-text" type="text" name="@(Model.UpdateType switch{ UpdateModel.Type.Email => nameof(UpdateModel.NewEmail), UpdateModel.Type.Password => nameof(UpdateModel.NewPassword), _ => throw new ArgumentOutOfRangeException() })" required/>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="updateResult" class="my-3"></div>
+    </div>
+</div>

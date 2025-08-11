@@ -8,6 +8,7 @@ public class ProductReview
     public uint ProductId { get; set; }
     public uint? ReviewerId { get; set;}
     public decimal Rating { get; set; }
+    public DateTime Created { get; set; }
     public string? Comment { get; set; }
     public string? Name { get; set; }
     public Session Session { get; set; }
@@ -19,14 +20,14 @@ public class ProductReview
     public ICollection<ReviewComment> Comments { get; set; } = new List<ReviewComment>();
     public override bool Equals(object? obj) {
         if (obj is not ProductReview review) return false;
-        if(ProductId == default && SellerId == default && ReviewerId == default)
+        if(Id==default && (ProductId==default || SellerId==default||SessionId==default) )
             return ReferenceEquals(this,obj);
-        return ProductId==review.ProductId && SellerId == review.SellerId && ReviewerId == review.ReviewerId;
+        return Id == default && (ProductId == default || SellerId == default || SessionId == default);
     }
 
     public override int GetHashCode() {
-        if (ProductId == default && SellerId == default && ReviewerId == default)
+        if (Id==default && (SessionId==default || ProductId == default || SellerId == default))
             return base.GetHashCode();
-        return HashCode.Combine(ProductId, SellerId, ReviewerId);
+        return HashCode.Combine(Id,ProductId, SellerId, SessionId);
     }
 }

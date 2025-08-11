@@ -1,0 +1,30 @@
+﻿@using System.Text.Json
+@model Ecommerce.WebImpl.Pages._FeaturedPartial
+
+<div class="container-fluid h-100">
+    <p class="fs-3 text-secondary">
+        @Html.Raw(Model.Type switch{
+            HomepageModel.RecommendationType.Category=>"Ziyaret Ettiğiniz Ürünlere Benzer Ürünler",
+            HomepageModel.RecommendationType.Seller=>"Sepetinizdeki Satıcılar Bu Ürünleri de Satıyor",
+            _ => throw new ArgumentOutOfRangeException()
+        })
+    </p>
+    <ul class="list-unstyled d-flex g-3 gap-3 overflow-x-scroll"
+        style="min-height: 1px;"
+        data-loading="0"
+        data-page="@(Model.PageIndex)"
+        hx-get="/Index?handler=recommended&Type=@(Model.Type.ToString())" hx-trigger="revealed,loadMore"
+        hx-swap="beforeend" hx-target="this"
+        data-empty="true"
+        hx-vals="@Html.Raw(JsonSerializer.Serialize(new{ PageNumber = Model.PageIndex.ToString() }))"
+        onscroll="if(event.currentTarget.dataset.loading=='1'||event.currentTarget.scrollLeft < (event.currentTarget.scrollWidth - event.currentTarget.offsetWidth * 1.25)) return; 
+        const _p = Number.parseInt(event.currentTarget.getAttribute('data-page'));
+        event.currentTarget.setAttribute('data-page', (_p +1).toString());
+        event.currentTarget.setAttribute('hx-vals', JSON.stringify({PageNumber: _p.toString()}));
+        htmx.trigger(event.currentTarget,'loadMore');"
+        hx-on::before-request="event.detail.elt.dataset.loading='1';"
+        hx-on::after-request="event.detail.elt.dataset.loading='0';if(event.detail.xhr.status==204){event.detail.target.removeAttribute('hx-get');
+        if(event.detail.target.getAttribute('data-empty')=='true')event.detail.target.parentElement.remove();}else{event.detail.target.setAttribute('data-empty', 'false');}">
+        @await Html.PartialAsync("Shared/Product/" + nameof(_FeaturedItemsPartial), new _FeaturedItemsPartial(){ Items = Model.Products, Categories = Model.Categories, PageIndex = Model.PageIndex })
+    </ul>
+</div>

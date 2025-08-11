@@ -1,0 +1,88 @@
+﻿@model Ecommerce.WebImpl.Pages.Seller._OffersPartial
+
+<div class="my-3" id="offers">
+    <div class="d-flex justify-content-start align-items-center">
+        <form id="offersPageSizeForm" method="get" hx-get="/Seller/SellerPage?handler=offers" hx-target="#offers" hx-swap="outerHTML" class="form-check-inline">
+            <input type="hidden" name="@(nameof(Model.OffersPage))" value="@(Model.OffersPage)"/>
+            <input type="hidden" name="@(nameof(SellerModel.Id))" value="@(Model.Id)"/>
+            <div class="row">
+                <label class="col">Sayfa boyutu</label>
+                <select onchange="document.getElementById('offersPageSizeForm').dispatchEvent(new Event('submit',{cancelable:true, bubbles:true}))" class="col" name="@(nameof(Model.OffersPageSize))">
+                    @{ var ar = new int[]{ 20, 10, 50, 100 }; }
+                    @for (int i = 0; i < ar.Length; i++){
+                        <option selected="@(Model.OffersPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+    <div class="row">
+        <div class="col-4">
+            <p>Ana Görsel</p></div>
+        <div class="col-2">
+            <p>İsim</p></div>
+        <div class="col-2">
+            <p>Kategori İsmi</p></div>
+        <div class="col-2">
+            <p>Fiyat</p></div>
+        <div class="col-2">
+            <p>İndirim</p></div>
+    </div>
+    @foreach (var offer in Model.ProductOffers){
+        var src = offer.Product.Images.FirstOrDefault(i => i.IsMain)?.Data ?? offer.Product.Images.FirstOrDefault()?.Data ?? "/default.jpg";
+        src = !src.Equals("/default.jpg") ? "data:image/jpeg;base64, " + src : src;
+        <a asp-page="/Product" asp-route-ProductId="@(offer.Product.Id)" class="text-decoration-none text-dark">
+            <div class="row g-2">
+                <div class="col-4">
+                    <img src="@(src)" sizes="max-height: 100px" alt="image of @(offer.Product.Name)"/>
+                </div>
+                <div class="col-2">
+                    <p>@(offer.Product.Name)</p>
+                </div>
+                <div class="col-2">
+                    <p>@(offer.Product.Category?.Name ?? "Kategori yok")</p>
+                </div>
+                <div class="col-2">
+                    <p>@(offer.Price.ToString("C"))</p>
+                </div>
+                <div class="col-2">
+                    <p>@(((1m - offer.Discount) * 100).ToString("F"))</p>
+                </div>
+            </div>
+        </a>
+    }
+    <nav>
+        <ul class="pagination justify-content-center align-items-center">
+            <li class="page-item m-3">
+                <a class="text-decoration-none text-dark" hx-trigger="click" hx-target="#offers" hx-swap="outerHTML" hx-get="@GetHrefString(1)">
+                    <span>İlk</span>
+                </a>
+            </li>
+            <li class="page-item m-3">
+                <a class="text-decoration-none text-dark" hx-trigger="click" hx-target="#offers" hx-swap="outerHTML" hx-get="@GetHrefString(Model.OffersPage - 1)">
+                    <i class="bi-arrow-left"></i>
+                </a>
+            </li>
+
+            <li class="page-item m-3">
+                <a class="text-decoration-none text-dark" hx-trigger="click" hx-target="#offers" hx-swap="outerHTML" hx-get="@GetHrefString(Model.OffersPage + 1)">
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </li>
+            <li class="page-item m-3">
+                <a class="text-decoration-none text-dark" hx-trigger="click" hx-target="#offers" hx-swap="outerHTML" hx-get="@GetHrefString(-1)">
+                    <span>Son</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+</div>
+@functions{
+    private string GetHrefString(int? offersPage=null,int? offserPageSize = null) {
+        offersPage??= Model.OffersPage;
+        offserPageSize ??= Model.OffersPageSize;
+        return $"/Seller/SellerPage?handler=offers&{nameof(SellerModel.Id)}={Model.Id}&{nameof(Model.OffersPage)}={offersPage}&{nameof(Model.OffersPageSize)}={offserPageSize}";
+    }
+
+}

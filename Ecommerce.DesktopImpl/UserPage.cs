@@ -186,7 +186,7 @@ public partial class UserPage : UserControl, IPage
     private void confirmBtn_Click(object sender, EventArgs e) {
         foreach (int i in orderItemsView.SelectedIndices){
             var order = (Order)orderItemsView.Groups[i].Tag;
-            order.Status = OrderStatus.DELIVERED;
+            order.Status = OrderStatus.Delivered;
             _orderManager.Complete(order);
         }
     }

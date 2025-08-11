@@ -1,0 +1,194 @@
+@page
+@using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.Shared
+@model Ecommerce.WebImpl.Pages.SellerModel
+@{
+    ViewBag.User = Model.CurrentUser;
+    var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
+}
+<div class="container">
+    <div class="container-fluid">
+        <div class="d-flex row justify-content-center">
+            <b id="shopNameField" style="font-size: xx-large" class="col-auto">@Model.ViewedSeller.ShopName</b>
+            @if (editable){
+                <a href="javascript:void(0);" onclick="this.previousElementSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none col-auto">
+                    <i class="bi bi-pencil text-secondary bg-white" style="height: 1em;"></i>
+                </a>
+            }
+        </div>
+        <div class="row align-items-start">
+            <p class="col-auto">@float.Round(Model.ViewedSeller.ReviewAverage,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
+            <p class="col-auto">@Model.ViewedSeller.ReviewCount Toplam Değerlendirme</p>
+        </div>
+        <div class="row justify-content-start">
+            <label class="col-auto">Email: </label><p id="emailField" class="col-auto">@Model.ViewedSeller.Email</p>
+            @if (editable){
+            <a class="col-auto text-decoration-none" onclick="this.previousElementSibling.setAttribute('contenteditable','true');" href="javascript:void(0);"><i class="bi bi-pencil text-secondary bg-light"></i></a>
+            }
+        </div>
+        <div class="d-flex row">
+            <div class="col justify-content-start">
+                <partial name="Shared/_AddressPartial" model="new _AddressPartial(){Address=@Model.ViewedSeller.Address!,Editable=editable}"/>
+            </div>
+            <div class="col justify-content-end">
+                <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){PhoneNumber=Model.ViewedSeller.PhoneNumber, Editable=editable}"/>
+            </div>
+        </div>
+        <form id="editForm" method="post" hx-post="/Seller/SellerPage?handler=edit">
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).Id" value="@(Model.ViewedSeller.Id)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" id="ShopNameInput" value="@(Model.ViewedSeller.ShopName)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" id="EmailInput" value="@(Model.ViewedSeller.Email)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Line1)}")" id="AddressStreetInput" value="@(Model.ViewedSeller.Address.Line1)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.District)}")" id="AddressNeighborhoodInput" value="@(Model.ViewedSeller.Address.District)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Country)}")" id="AddressStateInput" value="@(Model.ViewedSeller.Address.Country)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.City)}")" id="AddressCityInput" value="@(Model.ViewedSeller.Address.City)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.ZipCode)}")" id="AddressZipCodeInput" value="@(Model.ViewedSeller.Address.ZipCode)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.CountryCode)}")" id="PhoneNumberCountryCodeInput" value="@(Model.ViewedSeller.PhoneNumber.CountryCode)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.Number)}")" id="PhoneNumberNumberInput" value="@(Model.ViewedSeller.PhoneNumber.Number)"/>
+        </form>
+    </div> 
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#coupons" role="button" aria-expanded="false" aria-controls="coupons">
+            Satıcıya ait kuponları Gör.
+        </a>
+    </div>
+    <div class="collapse mx-2" id="coupons">
+        @if (Model.ViewedSeller.Coupons.Count == 0){
+            <p>Satıcının listelenmiş kuponu yok.</p>
+        }
+        else{
+            <div class="container px-5">
+            @foreach (var coupon in Model.ViewedSeller.Coupons){
+                <div class="row">
+                    <label class="col">Kod</label>
+                    <p id="couponIdField_@(coupon.Id)" class="col">@coupon.Id</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
+                </div>
+                <div class="row">
+                    <label class="col">İndirim Miktarı</label>
+                    <p id="couponDiscountRateField_@coupon.Id" class="col">@(((1 - coupon.DiscountRate) * 100m).ToString("F"))</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
+                    <div class="col m-5"></div>
+                    <label class="col">Son Kullanma Tarihi</label>
+                    <p id="couponExpirationDateField_@coupon.Id" class="col">@coupon.ExpirationDate</p>
+                    @if (editable)
+                    {
+                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
+                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
+                        </a>
+                    }
+                    @if (editable){
+                        <form id="couponEditForm_@coupon.Id" method="post" hx-post="/Seller/SellerPage?handler=editCoupon">
+                            <input type="hidden" name="Coupon.Id" value="@coupon.Id" id="couponIdInput_@coupon.Id"/>
+                            <input type="hidden" name="Coupon.DiscountRate" value="@coupon.DiscountRate" id="couponDiscountRateInput_@coupon.Id"/>
+                            <input type="hidden" name="Coupon.ExpirationDate" value="@coupon.ExpirationDate" id="couponExpirationDateInput_@coupon.Id"/>
+                            <button type="submit" class="btn btn-primary btn-sm">Update Coupon</button>
+                        </form>    
+                    }
+                    
+                </div>
+            }
+            </div>
+        }
+    </div>
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#offersSection" role="button" aria-expanded="false" aria-controls="offersSection">
+            İlanları Gör
+        </a>
+    </div>
+    <div class="collapse" id="offersSection">
+        <div class="d-flex justify-content-between px-5 mx-5">
+            <p>@Model.ViewedSeller.OfferCount Listelenen Ürün Saysı</p>
+            <div class="m-3"></div>
+            <p>@Model.ViewedSeller.SaleCount Toplam Satış Sayısı</p>
+        </div>
+        @if (editable){
+            <a asp-page="AddProduct" class="text-decoration-none text-dark">
+                <i class="bi bi-plus-circle"></i>
+                <span>Yeni Bir Ürün İlanı Ver</span>
+            </a>
+        }
+        <div id="offers" hx-get="/Seller/SellerPage?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+    </div>
+    <div class="container-fluid justify-content-center my-2">
+        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#reviewsSection" role="button" aria-expanded="false" aria-controls="reviewsSection">
+            Değerlendirmeleri Gör
+        </a>
+    </div>
+    <div class="collapse" id="reviewsSection">
+    <div class="d-flex justify-content-start align-items-center">
+        <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="form-check-inline">
+            <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
+            <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
+            <div class="row">
+                <label class="col">Sayfa boyutu</label>
+                <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="col" name="@(nameof(Reviews.PageSize))">
+                    @{ var ar = new int[]{ 20, 10, 50, 100 }; }
+                    @for (int i = 0; i < ar.Length; i++){
+                        <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+    <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const editForm = document.getElementById('editForm');
+        if (editForm) {
+            editForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                // Update hidden input values from displayed elements
+                document.getElementById('ShopNameInput').value = document.getElementById('shopNameField').innerText;
+                document.getElementById('EmailInput').value = document.getElementById('emailField').innerText;
+
+                // Update Address fields
+                document.getElementById('AddressStreetInput').value = document.getElementById('street').value;
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('neighbourhood').value;
+                document.getElementById('AddressStateInput').value = document.getElementById('State').value;
+                document.getElementById('AddressCityInput').value = document.getElementById('City').value;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('Zipcode').value;
+
+                // Update Phone Number fields
+                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('countrycode').value;
+                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('number').value;
+
+                // Trigger HTMX submit
+                htmx.trigger(editForm, 'submit');
+            });
+        }
+
+        // Handle coupon forms
+        document.querySelectorAll('[id^="couponEditForm_"]').forEach(form => {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const couponId = this.id.replace('couponEditForm_', '');
+
+                // Update hidden input values from displayed elements
+                document.getElementById(`couponIdInput_${couponId}`).value = document.getElementById(`couponIdField_${couponId}`).innerText;
+                // For DiscountRate, you might need to convert the displayed percentage back to a decimal
+                const discountRateText = document.getElementById(`couponDiscountRateField_${couponId}`).innerText;
+                document.getElementById(`couponDiscountRateInput_${couponId}`).value = (1 - parseFloat(discountRateText) / 100).toFixed(2);
+                document.getElementById(`couponExpirationDateInput_${couponId}`).value = document.getElementById(`couponExpirationDateField_${couponId}`).innerText;
+
+                // Trigger HTMX submit
+                htmx.trigger(form, 'submit');
+            });
+        });
+    });
+</script>

@@ -26,53 +26,57 @@ public class ReviewManagerTests
     public void SetupUsersAndProducts()
     {
         // Register a main user (reviewer)
+        var e = new Faker().Internet.Email();
         _reviewerCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "password",
             FirstName = "Reviewer",
             LastName = "User",
-            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         });
         _reviewerCustomer = TestContext._userManager.LoginCustomer(_reviewerCustomer.NormalizedEmail, _reviewerCustomer.PasswordHash, out _);
         _reviewerSession = _reviewerCustomer.Session;
-        
+        e = new Faker().Internet.Email();
         // Register a commenter user
         _commenterCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "password",
             FirstName = "Commenter",
             LastName = "User",
-            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         });
         _commenterCustomer = TestContext._userManager.LoginCustomer(_commenterCustomer.NormalizedEmail, _commenterCustomer.PasswordHash, out _);
         _commenterSession = _commenterCustomer.Session;
-        
+        e = new Faker().Internet.Email();
         // Register a voter user
         _voterCustomer = (Customer)TestContext._userManager.Register(new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
-            PasswordHash = "password",
+            NormalizedEmail = e.ToUpper(),
+            Email = e,PasswordHash = "password",
             FirstName = "Voter",
             LastName = "User",
-            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         });
         _voterCustomer = TestContext._userManager.LoginCustomer(_voterCustomer.NormalizedEmail, _voterCustomer.PasswordHash, out _);
         _voterSession = _voterCustomer.Session;
-        
+        e = new Faker().Internet.Email();
         // Register and Login as a Seller for product listing
         _testSeller = (Seller)TestContext._userManager.Register(new Seller
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop",
-            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
 
         });
@@ -90,14 +94,15 @@ public class ReviewManagerTests
             Stock = 10,
             SellerId = _testSeller.Id // Use the registered seller's ID
         };
-        _testOffer = TestContext._sellerManager.ListProduct(_testSeller, _testOffer);
+        _testOffer = TestContext._sellerManager.ListOffer(_testSeller, _testOffer);
 
         // Simulate a purchase by _reviewerUser for _testOffer
         // First, ensure reviewer is logged in to create a cart item
         TestContext._cartManager.Add(_reviewerSession.Cart, _testOffer, 1);
         var payment = new Payment { TransactionId = "REVIEW_PURCHASE_" + Guid.NewGuid().ToString(), Amount = _testOffer.Price, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
-        TestContext._orderManager.CreateOrder(_reviewerSession);
+        TestContext._orderManager.CreateOrder(_reviewerSession, out var n,_reviewerCustomer);
+        _reviewerSession = n;
     }
 
     [SetUp]
@@ -131,8 +136,7 @@ public class ReviewManagerTests
         Assert.That(leftReview.Comment, Is.EqualTo(_testReview.Comment));
         Assert.That(leftReview.HasBought, Is.True); // Should be true because we simulated a purchase
         TestContext._reviewRepository.Detach(leftReview);
-        
-        var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(_reviewerCustomer, leftReview.ProductId, leftReview.SellerId, leftReview.ReviewerId,false);
+        var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(leftReview.ProductId, leftReview.SellerId, _reviewerCustomer);
         // assert that name is blurred
         Assert.That(reviewWithAggregates.Reviewer.FirstName, Is.EqualTo(_reviewerCustomer.FirstName[0] + "***"));
         Assert.That(reviewWithAggregates.Reviewer.LastName, Is.EqualTo(_reviewerCustomer.LastName[0] + "***"));
@@ -224,13 +228,15 @@ public class ReviewManagerTests
     [Test, Order(6)]
     public void VoteReview_Downvote_Success() {
         // Login as a different voter to downvote
+        var e = new Faker().Internet.Email();
         var anotherVoterUser = (Customer)TestContext._userManager.Register(new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "password",
             FirstName = "Another",
             LastName = "Voter",
-            Address = new Address(){City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd"},
+            Address = new Address(){City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd"},
             PhoneNumber = new PhoneNumber(){CountryCode = 90,Number = "5551234567"}
         });
         anotherVoterUser = TestContext._userManager.LoginCustomer(anotherVoterUser.NormalizedEmail, anotherVoterUser.PasswordHash, out _);
@@ -258,7 +264,7 @@ public class ReviewManagerTests
         _voterSession = _voterCustomer.Session;
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
-            _voterCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
+             _testReview.ProductId, _testReview.SellerId, _reviewerCustomer);
 
         Assert.That(review, Is.Not.Null);
 
@@ -301,7 +307,7 @@ public class ReviewManagerTests
         TestContext._reviewVoteRepository.Flush();
 
         var review = TestContext._reviewManager.GetReviewWithAggregates(
-            _voterCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
+             _testReview.ProductId, _testReview.SellerId,_voterCustomer);
 
         Assert.That(review.OwnVote, Is.EqualTo(0)); // _voterUser's vote removed
         Assert.That(review.Votes, Is.EqualTo(-1)); // Only the downvote remains
@@ -320,7 +326,7 @@ public class ReviewManagerTests
         TestContext._reviewCommentRepository.Flush();
 
         var reviewWithAggregates = TestContext._reviewManager.GetReviewWithAggregates(
-            _reviewerCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, true);
+             _testReview.ProductId, _testReview.SellerId, _reviewerCustomer);
         Assert.That(reviewWithAggregates.CommentCount, Is.EqualTo(0));
     }
 
@@ -333,7 +339,7 @@ public class ReviewManagerTests
         TestContext._reviewRepository.Flush();
 
         var reviews = TestContext._reviewManager.GetReviewWithAggregates(
-            _reviewerCustomer, _testReview.ProductId, _testReview.SellerId, _testReview.ReviewerId, false);
+            _testReview.ProductId, _testReview.SellerId, _reviewerCustomer);
 
         Assert.That(reviews, Is.Null);
     }

@@ -1,0 +1,33 @@
+﻿@model Ecommerce.WebImpl.Pages.Account._SecurityPartial
+
+<ul class="list-unstyled  gap-2 rounded-0">
+    <li class="card-header">
+        <div class="card rounded-2">
+            <div class="row px-3 py-1 w-75">
+                <label class="fs-4 col-2 fw-bold">Email</label>
+                <div class="col-6"></div>
+                <div class="d-inline-flex col-4 justify-content-between pe-2">
+                    <p class="fs-4 fw-bold">@Model.ViewedUser.Email</p>
+                    <form hx-post="/Account/Update" hx-target="#updateMessage" hx-swap="innerHTML">
+                        <input type="hidden" name="@(nameof(UpdateModel.UpdateType))" value="@UpdateModel.Type.Email"/>
+                        <button class="btn btn-outline-secondary rounded-1" hx-post="/Account/Update" hx-target="#updateMessage" hx-swap="innerHTML" class="fs-5 btn btn-secondary">Değiştir</button>
+                    </form>
+                </div>
+
+            </div>
+            <div class="row px-3 py-1 w-75">
+                <label class="col-2 fs-4 fw-bold">Şifre</label>
+                <div class="col-6"></div>
+                <div class="col-4 d-inline-flex justify-content-between pe-2">
+                    <p class="fs-4 fw-bold">***********</p>
+                    <form hx-post="/Account/Update" hx-target="#updateMessage" hx-swap="innerHTML" >
+                        <input type="hidden" name="@(nameof(UpdateModel.UpdateType))" value="@UpdateModel.Type.Password"/>
+                        <button class="btn btn-outline-secondary rounded-1" hx-post="/Account/Update" hx-target="#updateMessage" hx-swap="innerHTML" >Değiştir</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+        <div id="updateMessage" class=""></div>
+    </li>
+</ul>    

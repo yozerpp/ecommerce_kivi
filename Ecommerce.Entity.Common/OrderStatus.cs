@@ -2,11 +2,29 @@
 
 public enum OrderStatus
 {
-    PENDING=0,
-    SHIPPED=1,
-    DELIVERED=2,
-    CANCELLED=3,
-    COMPLETE=4,
-    RETURNING =5,
-    RETURNED=6,
+    WaitingConfirmation=0,
+    Shipped=1,
+    Delivered=2,
+    Cancelled=3,
+    Complete=4,
+    ReturnRequested =5,
+    Returned=6,
+}
+
+public static class OrderStatusExtensions
+{
+    public static string ToLocalizedString(this OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.WaitingConfirmation => "Onay Bekliyor",
+            OrderStatus.Shipped => "Kargolandı",
+            OrderStatus.Delivered => "Teslim Edildi",
+            OrderStatus.Cancelled => "İptal Edildi",
+            OrderStatus.Complete => "Tamamlandı",
+            OrderStatus.ReturnRequested => "İade Talebinde",
+            OrderStatus.Returned => "İade Edildi",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
+    }
 }

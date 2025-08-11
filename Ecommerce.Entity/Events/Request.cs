@@ -1,7 +1,7 @@
 ﻿namespace Ecommerce.Entity.Events;
 
 // Notification => User is the Requestee.
-public class Request : Notification
+public abstract class Request : Notification
 {
     public bool IsApproved { get; set; }
     public uint RequesterId { get; set; }

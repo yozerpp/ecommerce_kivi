@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Events;
 
 namespace Ecommerce.Entity;
@@ -18,14 +19,16 @@ public class ProductOffer
     public override bool Equals(object? obj)
     {
         if (obj is ProductOffer other){
-            if (ProductId == default && SellerId == default) return ReferenceEquals(this, other);
-                return ProductId == other.ProductId && SellerId == other.SellerId;
+            if (ProductId == default || SellerId == default) return ReferenceEquals(this, other);
+            return ProductId == other.ProductId && SellerId == other.SellerId;
         }
         return false;
     }
 
+
     public override int GetHashCode()
     {
+        if(ProductId==default || SellerId==default) return base.GetHashCode();
         return HashCode.Combine(ProductId, SellerId);
     }
 }

@@ -27,24 +27,30 @@ public class ReviewManager : IReviewManager
     public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, Customer? customer=null, Session? session = null,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
         var includes = GetReviewIncludes(includeComments, includeSeller);
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id;
-        var ret =  _reviewRepository.Where(ReviewProjection(sessionId),r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
+        var rid = customer?.Id;
+        var ret =  _reviewRepository.Where(ReviewProjection(rid),r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
             offset:(page - 1) * pageSize, limit:pageSize * page);
         foreach (var r in ret){
-            if (!r.CensorName) continue;
-            else{
-                r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
-                r.Reviewer.LastName = r.Reviewer.LastName[0] + "***";
-            }
+            if (r.Reviewer==null || !r.CensorName ) continue;
+            r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
+            r.Reviewer.LastName = r.Reviewer.LastName[0] + "***";
         }
         return ret;
     }
 
+    public List<ReviewCommentWithAggregates> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null,
+        Customer? customer = null,
+        Session? session = null, int page = 1, int pageSize = 20) {
+        return _reviewCommentRepository.WhereP(CommentProjection(customer?.Id),rc =>
+            (commentId == null || rc.ParentId == commentId) && rc.ReviewId == reviewId, offset: (page - 1)*pageSize, limit:
+            page*pageSize);
+    }
     public ReviewWithAggregates? GetReviewWithAggregates(uint productId, uint sellerId,Customer? customer=null, Session? session = null,
         bool includeComments=false, bool includeSeller =true) {
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id ?? throw new ArgumentException("Either commenterId or reviewerId must be provided.");
         var reviewerId = customer?.Id;
         var includes = GetReviewIncludes(includeComments,includeSeller );
-        var r= _reviewRepository.First(ReviewProjection(sessionId),
+        var r= _reviewRepository.FirstP(ReviewProjection(reviewerId),
             r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == reviewerId&& r.SessionId==sessionId, includes: includes);
         if (!(r?.CensorName ?? false)) return r;
         r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
@@ -66,22 +72,22 @@ public class ReviewManager : IReviewManager
 
     public ProductReview LeaveReview(Session session, ProductReview review) {
         review.SessionId = session.Id;
-        review.HasBought = _orderItemRepository.Exists(oi => oi.Order.SessionId == session.Id && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
+        var uid = session.User?.Id ?? session.UserId;
+        review.HasBought = _orderItemRepository.Exists(oi => oi.Order.UserId==uid && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
         try{
             var ret = _reviewRepository.Add(review);
             _reviewRepository.Flush();
             return ret;
         }
         catch (Exception e){
-            if (e.InnerException is not DbUpdateException && e.InnerException is not InvalidOperationException ) throw;
-            if (e.InnerException.Message.Contains("already") || e.InnerException.Message.Contains("duplicate")){
-                throw new ArgumentException("You have already left a review for this product.");
-            }
-            throw;
+            if ((e.InnerException is not DbUpdateException du ||
+                 !(du.InnerException?.Message.Contains("duplicate") ?? false)) &&
+                (e.InnerException is not InvalidOperationException io || !io.Message.Contains("already"))) throw;
+            throw new ArgumentException("You have already left a review for this product.");
         }
     }
-    
-    public void UpdateReview(Session session, ProductReview review) {
+
+    public void UpdateReview(Session? session, ProductReview review) {
         var c = _reviewRepository.UpdateExpr([
                 (r => r.Rating, review.Rating),
                 (r=>r.Comment, review.Comment),
@@ -92,20 +98,28 @@ public class ReviewManager : IReviewManager
         }
     }
 
-    public void DeleteReview(Session session, ProductReview review) {
-        var c = _reviewRepository.Delete(r => r.ProductId == review.ProductId && r.SellerId == review.SellerId && r.SessionId == session.Id);
+    public ReviewComment CommentReview(Session session, ReviewComment comment) {
+        comment.CommenterId = session.Id;
+        try{
+            var ret = _reviewCommentRepository.Add(comment);
+            _reviewCommentRepository.Flush();
+            return ret;
+        }
+        catch (Exception e){
+            if ((e.InnerException is not DbUpdateException du ||
+                 !(du.InnerException?.Message.Contains("duplicate") ?? false)) &&
+                (e.InnerException is not InvalidOperationException io || !io.Message.Contains("already"))) throw;
+            throw new ArgumentException("You have already left a review for this product.");
+        }
+    }
+
+    public void DeleteReview(Session? session, ProductReview review) {
+        var c = _reviewRepository.Delete(r => r.Id==review.Id|| r.ProductId == review.ProductId && r.SellerId == review.SellerId && session!=null &&r.SessionId == session.Id);
         if (c == 0)
             throw new ArgumentException("Review or offer cannot be found.");
     }
 
-    public ReviewComment CommentReview(Session session, ReviewComment comment) {
-        comment.CommenterId = session.Id;
-        var ret =_reviewCommentRepository.Add(comment);
-        _reviewCommentRepository.Flush();
-        return ret;
-    }
-
-    public void UpdateComment(Session session, ReviewComment comment) {
+    public void UpdateComment(Session? session, ReviewComment comment) {
         var c =_reviewCommentRepository.UpdateExpr([
             (r=>r.Comment, comment.Comment )
         ], r => r.Id==comment.Id && r.CommenterId == session.Id); // Use comment.Id
@@ -113,7 +127,7 @@ public class ReviewManager : IReviewManager
             throw new ArgumentException("Either your comment or the review cannot be found.");
     }
 
-    public void DeleteComment(Session session, ReviewComment comment) {
+    public void DeleteComment(Session? session, ReviewComment comment) {
         var c = _reviewCommentRepository.Delete(r => r.Id==comment.Id && r.CommenterId == session.Id); // Use comment.Id
         if (c == 0)
             throw new ArgumentException("Either your comment or the review cannot be found.");
@@ -125,13 +139,34 @@ public class ReviewManager : IReviewManager
     }
 
     public void UnVote(Session session, ReviewVote vote) {
-        var c = _reviewVoteRepository.Delete(v=>v.Id==vote.Id && v.VoterId == session.Id);
+        var c = _reviewVoteRepository.Delete(v=> (v.ReviewId == vote.ReviewId || v.CommentId == vote.CommentId) && v.VoterId == session.Id);
         if (c==0){
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
     }
-    private static Expression<Func<ProductReview, ReviewWithAggregates>> ReviewProjection(ulong? sessionId) {
+
+    private static Expression<Func<ReviewComment, ReviewCommentWithAggregates>> CommentProjection(uint? userId) {
+        return r => new ReviewCommentWithAggregates(){
+            Id = r.Id,
+            ReviewId = r.ReviewId,
+            Review = r.Review,
+            ParentId = r.ParentId,
+            Parent = r.Parent,
+            CommenterId = r.CommenterId,
+            Commenter = r.Commenter,
+            UserId = r.UserId,
+            User=r.User,
+            Name = r.Name,
+            Replies = r.Replies,
+            Created = r.Created,
+            Votes = r.Votes.Sum(v => v.Up ? 1 : -1),
+            Comment = r.Comment,
+            OwnVote = r.Votes.Where(v => v.UserId == userId).Select(v => v.Up ? 1 : -1).FirstOrDefault() as int? ?? 0,
+        };
+    }
+    private static Expression<Func<ProductReview, ReviewWithAggregates>> ReviewProjection(uint? userId) {
         return r => new ReviewWithAggregates{
+            Id = r.Id,
             SellerId = r.SellerId,
             ProductId = r.ProductId,
             ReviewerId = r.ReviewerId,
@@ -141,7 +176,7 @@ public class ReviewManager : IReviewManager
                 Id = c.Id, // Use c.Id
                 CommenterId = c.CommenterId,
                 Comment = c.Comment,
-                OwnVote = c.Votes.Where(v=>v.VoterId==sessionId).Select(v=>v.Up?1:-1).FirstOrDefault() as int? ??0,
+                OwnVote = c.Votes.Where(v=>v.UserId==userId).Select(v=>v.Up?1:-1).FirstOrDefault() as int? ??0,
                 Votes = c.Votes.Sum(v=>v.Up?1:-1),
                 Review = c.Review,
             }),
@@ -149,12 +184,12 @@ public class ReviewManager : IReviewManager
             HasBought = r.HasBought,
             Offer = r.Offer,
             Rating = r.Rating,
-            Reviewer = new Customer{
+            Reviewer = r.Reviewer==null?null:new Customer(){
                 FirstName = r.Reviewer.FirstName,
-                LastName = r.Reviewer.LastName
+                LastName = r.Reviewer.LastName,
             },
             Votes =r.Votes.Sum(v => v.Up ? 1 : -1),
-            OwnVote = (int?)r.Votes.Where(v => v.VoterId == sessionId).Select(v=>v.Up?1:-1).FirstOrDefault() ?? 0,
+            OwnVote = (int?)r.Votes.Where(v => v.UserId==userId).Select(v=>v.Up?1:-1).FirstOrDefault() ?? 0,
         };
     }
 }

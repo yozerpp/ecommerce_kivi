@@ -3,7 +3,9 @@
 @using Ecommerce.Entity.Projections
 @using Ecommerce.WebImpl.Pages.Shared
 @using Ecommerce.WebImpl.Pages.Shared.Product
+@using Ecommerce.WebImpl.Pages.Shared.SearchBar
 @inject EntityMapper EntityMapper;
+@inject Dictionary<uint, Category> Categories;
 @model AddProduct
 @{
     ViewBag.User = Model.CurrentUser;
@@ -31,6 +33,11 @@
                 console.error("Error parsing response:", e);
             }
         }
+        function HandleCategoryClick(evt){
+            document.getElementById('productCategory').value = evt.currentTarget.getAttribute('data-id');
+            document.getElementById('categoryProperties').setAttribute('hx-vals', JSON.stringify({CategoryId: evt.currentTarget.getAttribute('data-id')}));
+            htmx.trigger('#categoryProperties', 'fire');
+        }
     </script>
 }
 <div class="container">
@@ -39,7 +46,7 @@
     </div>
     <div id="addExistingProduct" class="collapse">
         @{ var handler = "HandleProducts";}
-        <partial name="Shared/SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){ EntityMapper = EntityMapper, IsJson = true, Target = handler }"/>
+        <partial name="Shared/SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){Categories=Categories.Values, EntityMapper = EntityMapper, IsJson = true, Target = handler }"/>
         <form method="post" hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
             <select id="productSelect" name="@(nameof(Model.NewOffer)).ProductId"></select>
             <label>Fiyat</label><input type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
@@ -52,30 +59,44 @@
         <label class="col-auto">Yeni Bir ürün Oluştur</label><input class="col-auto" id="addNewProductBtn" type="radio" onclick="document.getElementById('addExistingBtn').checked=false; document.getElementById('addExistingProduct').classList.remove('show');document.getElementById('addNewProduct').classList.add('show');"/>
     </div>
     <div class="collapse" id="addNewProduct">
-        <form id="addNewForm" method="post" hx-post="/Seller/AddProduct?handler=addNew" hx-target="#addNewResult" hx-swap="innerHTML" enctype="multipart/form-data">
+        <form  id="addNewForm" method="post" hx-post="/Seller/AddProduct?handler=addNew" hx-target="#addNewResult" hx-swap="innerHTML" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="productCategory">Kategori Seçin: </label>
+                <br/>
+                @{
+                    const string onClickHandler = "HandleCategoryClick(event)";
+                }
+                <div id="categoryPicker">
+                    @* <partial name="Shared/SearchBar/_CategoryPicker" model="new _CategoryPicker(Model.Categories, onClickHandler, false)"/> *@
+                </div>
+                <input type="hidden" class="form-control" id="productCategory" name="@(nameof(Model.NewOffer)).Product.CategoryId">
+            </div>
+            <div id="categoryProperties" hx-trigger="fire" hx-get="/Seller/AddProduct?handler=categoryProperties" hx-target="this" hx-swap="innerHTML">
+                
+            </div>
             <div class="form-group">
                 <label for="productName">Ürün Adı</label>
-                <input type="text" class="form-control" id="productName" name="@(nameof(Model.NewProduct.Name))" required>
+                <input type="text" class="form-control" id="productName" name="@(nameof(Model.NewOffer)).Product.Name" required>
             </div>
             <div class="form-group">
                 <label for="productDescription">Açıklama</label>
-                <textarea class="form-control" id="productDescription" name="@(nameof(Model.NewProduct.Description))"></textarea>
+                <textarea class="form-control" id="productDescription" name="@(nameof(Model.NewOffer)).Product.Description"></textarea>
             </div>
             <div class="form-group">
                 <label for="productPrice">Fiyat</label>
-                <input type="number" step="0.01" class="form-control" id="productPrice" name="@(nameof(Model.NewProduct.Price))" required>
+                <input type="number" step="0.01" class="form-control" id="productPrice" name="@(nameof(Model.NewOffer)).Price" required>
             </div>
             <div class="form-group">
                 <label for="productStock">Stok</label>
-                <input type="number" class="form-control" id="productStock" name="@(nameof(Model.NewProduct.Stock))" required>
+                <input type="number" class="form-control" id="productStock" name="@(nameof(Model.NewOffer)).Stock" required>
             </div>
             <div class="form-group">
-                <label for="productCategory">Kategori</label>
-                <input type="text" class="form-control" id="productCategory" name="@(nameof(Model.NewProduct.Category.Name))">
+                <label for="productDiscount">İndirim</label>
+                <input type="number" class="form-control" id="productDiscount" name="@(nameof(Model.NewOffer)).Discount" required>
             </div>
             <div class="form-group">
                 <label for="productImages">Ürün Resimleri</label>
-                <input type="file" class="form-control-file" id="productImages" name="productImages" multiple>
+                <input type="file" class="form-control-file" id="productImages" name="@(nameof(Model.productImages))" multiple>
             </div>
             <button type="submit" class="btn btn-light mt-3">Yeni Ürün Oluştur</button>
         </form>

@@ -31,17 +31,18 @@ public class ProductManagerTests
     private Session _reviewerSession;
 
     [OneTimeSetUp]
-    public void OneTimeSetupAggregates()
-    {
+    public void OneTimeSetupAggregates() {
+        var e = new Faker().Internet.Email();
         // 1. Register and Login a Seller
         _testSeller = new Seller
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "sellerpass",
             FirstName = "Agg",
             LastName = "Seller",
             ShopName = "AggTestShop",
-            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",District = "n",Country = "s",Line1 = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
@@ -62,15 +63,16 @@ public class ProductManagerTests
             SellerId = _testSeller.Id,
             Discount = 0.1m // 10% discount
         };
-        _offer1 = TestContext._sellerManager.ListProduct(_testSeller, _offer1); // This will add the product too
-        
+        _offer1 = TestContext._sellerManager.ListOffer(_testSeller, _offer1); // This will add the product too
+        e = new Faker().Internet.Email();
         var secondSeller =(Seller) TestContext._userManager.Register(new Seller{
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "sellerpass",
             FirstName = "Agg",
             LastName = "Seller",
             ShopName = "AggTestShop",
-            Address = new Address{ City = "c", Neighborhood = "n", State = "s", Street = "st", ZipCode = "z" },
+            Address = new Address{ City = "c", District = "n", Country = "s", Line1 = "st", ZipCode = "z" },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "345345345" }
         });
         var sellerSession2 = TestContext._userManager.LoginSeller(secondSeller.NormalizedEmail, secondSeller.PasswordHash,out _);
@@ -82,16 +84,17 @@ public class ProductManagerTests
             SellerId = secondSeller.Id,
             Discount = 0.0m // No discount
         };
-        _offer2 = TestContext._sellerManager.ListProduct(secondSeller, _offer2);
+        _offer2 = TestContext._sellerManager.ListOffer(secondSeller, _offer2);
 
-        // 3. Register Buyer User
+        e = new Faker().Internet.Email();
         _buyerCustomer = new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "buyerpass",
             FirstName = "Agg",
             LastName = "Buyer",
-            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",District = "n",Country = "s",Line1 = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         _buyerCustomer = (Customer) TestContext._userManager.Register(_buyerCustomer);
@@ -105,24 +108,26 @@ public class ProductManagerTests
         TestContext._cartRepository.Flush();
         var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.CARD };
         payment1 = TestContext._paymentRepository.Add(payment1);
-        TestContext._orderManager.CreateOrder(_buyerSession);
+        TestContext._orderManager.CreateOrder(_buyerSession, out _buyerSession, _buyerCustomer);
         TestContext._orderRepository.Flush();
 
         // Purchase from offer2
         TestContext._cartManager.Add(_buyerSession.Cart, _offer2, 1); // Buy 1 unit
         var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.CARD };
         payment2 = TestContext._paymentRepository.Add(payment2);
-        TestContext._orderManager.CreateOrder(_buyerSession);
+        TestContext._orderManager.CreateOrder(_buyerSession, out _buyerSession, _buyerCustomer);
         TestContext._orderRepository.Flush();
 
         // 5. Register Reviewer User
+        e = new Faker().Internet.Email();
         _reviewerCustomer = new Customer
         {
-            NormalizedEmail =new Faker().Internet.Email(),
+            NormalizedEmail =e.ToUpper(),
+            Email = e,
             PasswordHash = "reviewerpass",
             FirstName = "Agg",
             LastName = "Reviewer",
-            Address = new Address{City = "c",Neighborhood = "n",State = "s",Street = "st",ZipCode = "z"},
+            Address = new Address{City = "c",District = "n",Country = "s",Line1 = "st",ZipCode = "z"},
             PhoneNumber = new PhoneNumber{CountryCode = 90,Number = "345345345"}
         };
         _reviewerCustomer = (Customer)TestContext._userManager.Register(_reviewerCustomer);
@@ -219,7 +224,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(1));
@@ -238,7 +243,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Apple iPhone and Apple iPad
@@ -256,7 +261,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Dell Laptop and HP Printer (CategoryId 3 and 4)
@@ -274,7 +279,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPad, Dell Laptop, HP Printer (CategoryId 2, 3, 4)
@@ -292,7 +297,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
@@ -310,7 +315,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(3)); // Apple iPhone, Samsung Galaxy, Apple iPad (CategoryId 1, 1, 2)
@@ -357,7 +362,7 @@ public class ProductManagerTests
                 productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // CategoryId 0 is not greater than 100
@@ -376,7 +381,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Apple iPhone and Apple iPad match both conditions
@@ -398,7 +403,7 @@ public class ProductManagerTests
         ordering.Add(new SearchOrder { PropName = "CategoryId", Ascending = false });
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(5)); // All products should be returned
@@ -415,7 +420,7 @@ public class ProductManagerTests
         int pageSize = 2;
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering, page:page,pageSize: pageSize);
+        var result = _productManager.Search(predicates, ordering, page:page,pageSize: pageSize);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(2)); // Should return 2 products for page 1 with pageSize 2
@@ -430,7 +435,7 @@ public class ProductManagerTests
         var ordering = new List<SearchOrder>();
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(5)); // All test products should be returned
@@ -462,7 +467,7 @@ public class ProductManagerTests
                 productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // Null values should not match Like operator
@@ -494,7 +499,7 @@ public class ProductManagerTests
                 productsWithNull.Select(select.Compile()).Where(predicate.Compile()).Skip(offset).Take(limit).ToList());
 
         // Act
-        var result = _productManager.SearchWithAggregates(predicates, ordering);
+        var result = _productManager.Search(predicates, ordering);
 
         // Assert
         Assert.That(result.Count, Is.EqualTo(0)); // Null values should not equal non-null values
@@ -520,7 +525,7 @@ public class ProductManagerTests
         Assert.That(result.ReviewCount, Is.EqualTo(2));
 
         // ReviewAverage: (5 + 3) / 2 = 4.0
-        Assert.That(result.ReviewAverage, Is.EqualTo(4.0f));
+        Assert.That(result.RatingAverage, Is.EqualTo(4.0f));
 
         // MinPrice: Should be the minimum price among offers (100m)
         Assert.That(result.MinPrice, Is.EqualTo(100m));

@@ -10,10 +10,16 @@ public class Category
     public uint? ParentId { get; set; }
     [SelfReferencingProperty(BreakCycle = true)]
     public Category? Parent { get; set; }
-
     public ISet<Category> Children { get; set; } = new HashSet<Category>();
     public ICollection<Product> Products { get; set; } = new List<Product>();
-
+    public ICollection<CategoryProperty> CategoryProperties { get; set; } = new List<CategoryProperty>();
+    public class CategoryProperty
+    {
+        public string PropertyName { get; set; }
+        public string[]? EnumValues { get; set; }
+        public bool IsRequired { get; set; }
+        public bool IsNumber { get; set; }
+    }
     public override bool Equals(object? obj)
     {
         if (obj is Category other)

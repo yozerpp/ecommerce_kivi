@@ -1,0 +1,29 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Product._VerticalListPartial
+
+@{ var i = 0;}
+@foreach (var item in Model.Products){
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <partial name="Shared/Product/_ProductMainCardPartial" model="(item, Model.Categories)"/>
+    </div>
+    if (i ==7){
+        <div class="col-12 my-2 px-0">
+            @await Html.PartialAsync("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
+                Products = Model.CategoryRecommendations,
+                Type = HomepageModel.RecommendationType.Category,
+                Categories = Model.Categories,
+                PageIndex = Model.PageIndex
+            })
+        </div>
+            
+    } else if (i ==15){
+        <div class="col-12 container-fluid my-2 px-0">
+            @await Html.PartialAsync("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
+                Products = Model.SellerRecommendations,
+                Type = HomepageModel.RecommendationType.Seller,
+                Categories = Model.Categories,
+                PageIndex = Model.PageIndex
+            })
+        </div>
+    }
+    i++;
+}

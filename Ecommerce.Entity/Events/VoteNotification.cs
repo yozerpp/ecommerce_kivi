@@ -7,7 +7,7 @@ public class VoteNotification : Notification
     public ProductReview? Review { get; set; }
     public ReviewComment? Comment { get; set; }
     public uint NumVotes { get; set; }
-
+    public Customer Customer { get; set; }
     protected bool Equals(VoteNotification other) {
         return base.Equals(other) && ReviewId == other.ReviewId && CommentId == other.CommentId;
     }

@@ -5,8 +5,9 @@ public class DiscountNotification : Notification
     public uint SellerId {get;set;}
     public uint ProductId {get;set;}
     public ProductOffer ProductOffer {get;set;}
-    public decimal Discount {get;set;}
-
+    public decimal DiscountAmount {get;set;}
+    public decimal DiscountRate { get; set; }
+    public Customer Customer {get;set;} 
     protected bool Equals(DiscountNotification other) {
         return base.Equals(other) && SellerId == other.SellerId && ProductId == other.ProductId;
     }

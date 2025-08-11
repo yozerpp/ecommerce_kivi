@@ -1,52 +1,84 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared._AdressPartial
+﻿@using Ecommerce.Entity.Common
+@model Ecommerce.WebImpl.Pages.Shared._AddressPartial
 
 
 <div class="container">
-    <div class="d-flex flex-row">
-        <label class="flex-column">Sokak: </label>
-        <p id="@("street" + (Model.Id??""))" class="flex-column">@Model.Address.Street</p>
-        @if (Model.Editable)
-        {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
-                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
-            </a>
-        }
-        <div class="mx-5 col"></div>
-        <label class="flex-column">Mahalle: </label>
-        <p id="@("neighbourhood" + (Model.Id??""))" class="flex-column">@Model.Address.Neighborhood</p>
-        @if (Model.Editable)
-        {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
-                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
-            </a>
-        }
+    <div class="d-flex justify-content-between">
+        <div class="d-flex gap-2">
+            <label>1. Satır: </label>
+            @if (Model.AsInput){
+                <input id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
+            }
+            else{
+                <p id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" class="">@Model.Address.Line1</p>
+                if (Model.Editable){
+                    @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                }
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <label>2. Satır: </label>
+            @if (Model.AsInput){
+                <input id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
+            }
+            else{
+                <p id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" class="">@Model.Address.Line2</p>
+                if (Model.Editable){
+                    @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                }
+            }
+        </div>
     </div>
-    <div class="d-flex flex-row">
-        <label class="flex-column">İlçe</label>
-        <p id="@("State" + (Model.Id??""))" class="flex-column">@Model.Address.State</p>
-        @if (Model.Editable)
-        {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
-                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
-            </a>
-        }
-        <label class="flex-column">Şehir</label>
-        <p id="@("City" + (Model.Id??""))" class="flex-column">@Model.Address.City</p>
-        @if (Model.Editable)
-        {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
-                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
-            </a>
-        }
+    <div class="d-flex justify-content-between">
+        <div class="d-flex gap-2">
+            <label>İlçe: </label>
+            @if (Model.AsInput){
+                <input id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@nameof(Address.District)"/>
+            }
+            else{
+                <p id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" class="">@Model.Address.District</p>
+                if (Model.Editable){
+                    @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                }
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <label>Şehir: </label>
+            @if (Model.AsInput){
+                <input id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))" class="rounded-1 " type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.Country)"/>
+            }
+            else{
+                <p id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))">@Model.Address.Country</p>
+                if (Model.Editable){
+                    @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                }
+
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <label class="">Ülke: </label>
+            @if (Model.AsInput){
+                <input id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="rounded-1 " type="text" name="@(Model.InputPrefix ?? "").@(nameof(Address.City))"/>
+            }
+            else{
+                <p id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="">@Model.Address.City</p>
+                if (Model.Editable){
+                    @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+                }
+            }
+        </div>
     </div>
-     <div class="d-flex flex-row">
-        <label class="flex-column">Posta Kodu</label>
-        <p id="@("Zipcode" + (Model.Id??""))" class="flex-column">@Model.Address.ZipCode</p>
-        @if (Model.Editable)
-        {
-            <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none  col">
-                <i class="bi bi-pencil-fill bg-white text-secondary" style="height: 1em;"></i>
-            </a>
-        }
+     <div class="d-inline-flex gap-2">
+         <label>Posta Kodu:</label>
+         @if (Model.AsInput){
+             <input id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="rounded-1 " type="text" name="@(Model.InputPrefix??"").@(nameof(Address.ZipCode))"/>
+         }
+         else{
+             <p id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="">@Model.Address.ZipCode</p>
+             if (Model.Editable)
+             {
+                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+             }     
+         }
     </div>
 </div>

@@ -16,7 +16,7 @@ public class OrderValidator : IValidator<Order>
         if(entity.Email == null && entity.UserId==default && entity.User == default)
             return new ValidationResult("You must enter Email for anonymous orders.");
         var oldStatus = _orderRepository.FirstP(o => o.Status, o => o.Id == entity.Id);
-        if((oldStatus != OrderStatus.PENDING || oldStatus == OrderStatus.SHIPPED) && entity.Status!=OrderStatus.RETURNED && entity.Status!=OrderStatus.RETURNING )
+        if((oldStatus != OrderStatus.WaitingConfirmation || oldStatus == OrderStatus.Shipped) && entity.Status!=OrderStatus.Returned && entity.Status!=OrderStatus.ReturnRequested )
             return new ValidationResult("You cannot change order status after it was cancelled or refunded.");
         return new ValidationResult(null);
     }

@@ -13,9 +13,11 @@ public class CartManager : ICartManager
     private readonly IRepository<Cart> _cartRepository;
     private readonly IRepository<Session> _sessionRepository;
     private readonly IRepository<CartItem> _cartItemRepository;
-    private readonly IRepository<Coupon> _couponRepository;
-    public CartManager(IRepository<Session> sessionRepository, IRepository<Coupon> couponRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository) {
-        _couponRepository = couponRepository;
+    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Product> _productRepository;
+    public CartManager(IRepository<User> userRepository, IRepository<Product> productRepository,IRepository<Session> sessionRepository, IRepository<Coupon> couponRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository) {
+        _productRepository = productRepository;
+        _userRepository = userRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _sessionRepository = sessionRepository;
@@ -31,7 +33,7 @@ public class CartManager : ICartManager
         var includes = new List<string[]>();
         if (!items) return includes.ToArray();
         includes.Add([nameof(Cart.Items), nameof(CartItem.Coupon)]);
-        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product)]);
+        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product), nameof(Product.Images)]);
         if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
         return includes.ToArray();
     }
@@ -39,13 +41,18 @@ public class CartManager : ICartManager
         var ret = _cartRepository.First(CartAggregateProjection, c => c.Id == cartId, 
             includes: includes);
         if (ret == null) return null;
+        if (ret.ItemCount == 0) return ret;
+        var b = ret.Items.Sum(i => i.BasePrice);
+        ret.DiscountPercentage = b!=0?ret.Items.Sum(i => i.BasePrice - i.DiscountedPrice) / b:0;
+        b = ret.Items.Sum(i => i.DiscountedPrice);
+        ret.CouponDiscountPercentage = b != 0 ? ret.Items.Sum(i => i.DiscountedPrice - i.CouponDiscountedPrice) / b : 0;
         ret.TotalPrice = ret.Items.Sum(i => i.BasePrice);
         ret.DiscountedPrice = ret.Items.Sum(i => i.DiscountedPrice);
         ret.TotalDiscountedPrice = ret.Items.Sum(i => i.CouponDiscountedPrice);
         ret.DiscountAmount = ret.Items.Sum(i => i.BasePrice - i.DiscountedPrice);
         ret.CouponDiscountAmount = ret.Items.Sum(i => i.DiscountedPrice - i.CouponDiscountedPrice);
-        var bottom = ret.Items.Sum(i => i.BasePrice);
-        ret.TotalDiscountPercentage = bottom!=0?1-(ret.Items.Sum(i => i.CouponDiscountedPrice)/bottom):0;
+        b = ret.Items.Sum(i => i.BasePrice);
+        ret.TotalDiscountPercentage = b!=0?1-(ret.Items.Sum(i => i.CouponDiscountedPrice)/b):0;
         
         return ret;
     }
@@ -56,11 +63,15 @@ public class CartManager : ICartManager
     public Session newSession(User? newUser, bool flush = false) {
         var session = new Session(){Cart = _cartRepository.Add(new Cart{}) };
         session.Cart.Session = session;
-        session.UserId = newUser.Id;
-        session.User = newUser.Id != 0 ? null! : newUser;
         session = _sessionRepository.Add(session);
-        session.User = newUser;
-        newUser.Session = session;
+        if (newUser != null){
+            session.UserId = newUser.Id;
+            session.User = newUser.Id != 0 ? null! : newUser;
+            newUser.Session = session;
+            if (newUser.Id != 0)
+                _userRepository.Update(newUser);
+            else _userRepository.Add(newUser);
+        }
         if(flush) _sessionRepository.Flush();
         return session;
     }
@@ -78,27 +89,46 @@ public class CartManager : ICartManager
             // throw new ArgumentException("You do not have this item in your cart.");
         // }
     }
-    public CartItem Add(Cart cart, ProductOffer offer, uint amount = 1)
+
+    public ICollection<Coupon> GetAvailableCoupons(Session session) {
+        var cid = session.CartId;
+        var coupons = _cartItemRepository.WhereP(ci => ci.ProductOffer.Seller!.Coupons, ci => ci.CartId == cid,
+            includes:[[nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.Coupons)]]).SelectMany(c=>c).ToList();
+        return coupons;
+    }
+    public ICollection<ProductWithAggregates> GetMoreProductsFromSellers(Session session, int page = 1, int pageSize = 20) {
+        var cid = session.CartId;
+        var items = _cartItemRepository.WhereP(ci=>ci.SellerId,ci => ci.CartId == cid);
+        return _productRepository.Where(p => p.Offers.Any(o => items.Contains(o.SellerId)), offset:
+            (page-1)*pageSize, limit:
+            page*pageSize).Select(p=>p.WithAggregates()).ToArray();
+    }   
+
+
+    public CartItem Add(Cart cart, ProductOffer offer, int amount = 1)
     {
         return Add(new CartItem()
         {
             CartId = cart.Id, Cart = cart.Id==0?cart:null!, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null!:offer,SellerId = offer.SellerId, Quantity = amount
-        });
+        }, amount);
     }
-    public CartItem Add(CartItem item, uint amount = 1) {
+    public CartItem Add(CartItem item, int amount = 1) {
         var cartId = item.Cart?.Id??item.CartId;
-        if (item.Quantity<=0){
-            throw new ArgumentException("Quantity must be greater than 0.");
-        }
+
         CartItem? existing;
         CartItem ret;
         if ((existing = _cartItemRepository.First(ci=>ci.CartId == cartId && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId))!=null){
             existing.Quantity += amount;
             ret = _cartItemRepository.Update(existing);
-        } 
-        else ret = _cartItemRepository.Add(item);
+        }
+        else{
+            if (item.Quantity<=0){
+                throw new ArgumentException("Quantity must be greater than 0.");
+            }
+            ret = _cartItemRepository.Add(item);
+        }
         _cartItemRepository.Flush();
-        _cartItemRepository.Detach(ret);
+        // _cartItemRepository.Detach(ret);
         return ret;
     }
 
@@ -112,7 +142,7 @@ public class CartManager : ICartManager
 
     public CartItem? Decrement(CartItem item, uint amount = 1)
     {
-        item.Quantity-=amount;
+        item.Quantity= (int)(item.Quantity - amount);
         if (item.Quantity <= 0)
         {
             Remove(item);
@@ -121,7 +151,7 @@ public class CartManager : ICartManager
 
         uint productId = item.ProductId;
         uint sellerId = item.SellerId;
-        uint quantity = item.Quantity;
+        var quantity = item.Quantity;
         _cartItemRepository.UpdateExpr([
             (c=>c.Quantity, quantity)
             ], c=>c.ProductId == productId && c.SellerId ==sellerId);
@@ -139,7 +169,6 @@ public class CartManager : ICartManager
     }
     private static readonly Expression<Func<Cart, CartWithAggregates>> CartAggregateProjection= c => new CartWithAggregates{
             Id = c.Id,
-            SessionId = c.SessionId,
             Session = c.Session,
             Items = c.Items.Select<CartItem,CartItemWithAggregates>(ci =>
                 new CartItemWithAggregates{

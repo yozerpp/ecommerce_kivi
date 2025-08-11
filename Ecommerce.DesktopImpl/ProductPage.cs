@@ -227,7 +227,7 @@ namespace Ecommerce.DesktopImpl
         private void addOfferBtn_Click(object sender, EventArgs e) {
             var offer = (ProductOffer)Utils.GetInput(typeof(ProductOffer), "Ürün İlanı Ver");
             offer.ProductId = _loaded.Value;
-            _sellerManager.ListProduct(offer);
+            _sellerManager.ListOffer(offer);
             Utils.Info("Ürün ilanınız başarıyla verildi.");
             Go();
         }

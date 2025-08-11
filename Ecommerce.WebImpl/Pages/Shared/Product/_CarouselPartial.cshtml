@@ -1,0 +1,29 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Product._CarouselPartial
+
+<div id="imageSlide" class="carousel slide">
+    <div id="images" class="carousel-inner rounded-4">
+        @if (Model.Images.Count == 0){
+            var defaultImage = "/default.jpg";
+            <div id="image0" class="carousel-item active">
+                <img  src="default.jpg" class="d-block w-100" alt="Varsayılan Resim">
+            </div>        
+        }
+        else{
+            var i = 0;
+            foreach (var image in Model.Images){
+                <div id="image@(i)" class="carousel-item @(i == 0 ? "active" : "")">
+                    <img src="@(!image.Data.StartsWith("data:") ? "data:image/jpeg;base64, " + image.Data :image.Data)" class="d-block w-100" alt="@(i)'th image of product">
+                </div>                
+                i++;
+            }    
+        }
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#imageSlide" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button id="imagesNextBtn" class="carousel-control-next" type="button" data-bs-target="#imageSlide" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
+</div>

@@ -9,24 +9,37 @@ namespace Ecommerce.Bl.Concrete;
 public class CustomerManager : ICustomerManager
 {
     private readonly IRepository<Customer> _customerRepository;
-
-    public CustomerManager(IRepository<Customer> customerRepository) {
+    private readonly IRepository<Order> _orderRepository;
+    private readonly IRepository<Image> _imageRepository;
+    public CustomerManager(IRepository<Image> imageRepository,IRepository<Customer> customerRepository, IRepository<Order> orderRepository) {
         _customerRepository = customerRepository;
+        _imageRepository = imageRepository;
+        _orderRepository = orderRepository;
     }
-    public Customer Update(Customer customer) {
-        var ret =  _customerRepository.Update(customer);
+    public Customer Update(Customer customer, bool updateImage =false) {
+        if (updateImage){
+            customer.ProfilePicture = _imageRepository.Add(new Image(){
+                Data = customer.ProfilePicture.Data,
+            });
+        }
+        else{
+            customer.ProfilePictureId = null;
+            customer.ProfilePicture = null;
+        }
+        var ret =  _customerRepository.Update(customer, true);
         _customerRepository.Flush();
         return ret;
     }
 
+    public ICollection<OrderWithAggregates> GetOrders(uint customerId, int page = 1, int pageSize =10) {
+        return _orderRepository.WhereP(OrderManager.OrderWithItemsAggregateProjection, o => o.UserId == customerId, offset:
+            (page -1)*pageSize, pageSize*pageSize);
+    }
     public Customer? GetCustomer(uint id) {
         return _customerRepository.First(c => c.Id == id);
-
     }
-
     public CustomerWithAggregates? GetWithAggregates(uint id) {
         return _customerRepository.First(UserAggregateProjection, u => u.Id == id, includes:[[nameof(Customer.Session)]]);
-
     }
     
     private static readonly Expression<Func<Customer, CustomerWithAggregates>> UserAggregateProjection = 
@@ -43,14 +56,10 @@ public class CustomerManager : ICustomerManager
             TotalReviews = ((int?)u.Reviews.Count())??0,
             TotalReplies = ((int?)u.ReviewComments.Count())??0,
             TotalKarma = ((int?) u.Reviews.SelectMany(r=>r.Votes).Sum(v=>(int?)((v.Up) ? 1 : -1)) )??0,
-            Address = u.Address,
+            Addresses = u.Addresses,
             PhoneNumber = u.PhoneNumber,
             Active = u.Active, 
             Session= u.Session,
             SessionId = u.SessionId,
-            Orders = u.Orders,
-            Reviews = u.Reviews,
-            ReviewComments = u.ReviewComments,
-            
         };
 }

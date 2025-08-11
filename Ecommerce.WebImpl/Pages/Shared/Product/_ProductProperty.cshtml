@@ -1,0 +1,13 @@
+﻿@model (bool, KeyValuePair<string, string>)
+
+<li class="col-4 row container-fluid gap-3">
+    <div class="col-auto justify-content-start align-self-start">
+        <b>@(Model.Item2.Key):</b>
+    </div>
+    <div class="d-flex col-auto ms-auto align-self-end justify-content-end">
+        <p id="@(Model.Item2.Key)Value">@(Model.Item2.Value)</p>
+        @if (Model.Item1){
+            @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial(){ OnClick = "edited=true;" })
+        }
+    </div>
+</li>

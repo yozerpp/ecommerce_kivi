@@ -14,30 +14,33 @@ public class OrderManagerTests
     private static Session _session;
 
     [OneTimeSetUp]
-    public void SetupUsersAndProducts()
-    {
+    public void SetupUsersAndProducts() {
+        var e = new Faker().Internet.Email(); 
         // Register and login a customer to get a session
         _customer = (Customer)TestContext._userManager.Register(new Customer
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "customerpass",
             FirstName = "Test",
             LastName = "Customer",
             Address = new Address()
-                { City = "Trabzon", State = "Trabzon", Neighborhood = "Ortahisar", Street = "Main St", ZipCode = "61000" },
+                { City = "Trabzon", Country = "Trabzon", District = "Ortahisar", Line1 = "Main St", ZipCode = "61000" },
             PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551112233" }
         });
         _customer = UserManagerTests.Login(_customer, out _);
         _session = _customer.Session;
         // Register and login a seller to list product offers
+        e = new Faker().Internet.Email();
         var _testSeller = new Seller
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop",
-            Address = new Address() { City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd" },
+            Address = new Address() { City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd" },
             PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551234567" }
         };
         _testSeller = (Seller)TestContext._userManager.Register(_testSeller);
@@ -54,18 +57,20 @@ public class OrderManagerTests
             Stock = 10,
             SellerId = _testSeller.Id // Use the registered seller's ID
         };
-        _offer1 = TestContext._sellerManager.ListProduct(_testSeller, _offer1);
+        _offer1 = TestContext._sellerManager.ListOffer(_testSeller, _offer1);
 
         // Simulate a purchase by _reviewerUser for _testOffer
         // First, login as the reviewer user
+        e= new Faker().Internet.Email();
         var newSeller = new Seller
         {
-            NormalizedEmail = new Faker().Internet.Email(),
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
             PasswordHash = "sellerpass",
             FirstName = "Test",
             LastName = "Seller",
             ShopName = "TestShop2",
-            Address = new Address() { City = "ads", State = "state", Neighborhood = "basd", Street = "casd", ZipCode = "asd" },
+            Address = new Address() { City = "ads", Country = "state", District = "basd", Line1 = "casd", ZipCode = "asd" },
             PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551234567" }
         };
         TestContext._userManager.Register(newSeller);
@@ -73,7 +78,7 @@ public class OrderManagerTests
 
         var product2 = TestContext._productRepository.Detach(product1); // Detach to avoid tracking issues if product1 is still tracked
         product2.Offers.Clear(); // Clear offers if any were attached from previous operations
-        _offer2 = TestContext._sellerManager.ListProduct(newSeller, new ProductOffer
+        _offer2 = TestContext._sellerManager.ListOffer(newSeller, new ProductOffer
         {
             Product = product2,
             Price = 150, // Different price for offer2
@@ -97,18 +102,34 @@ public class OrderManagerTests
         _session = _customer.Session;
     }
 
-    [Test]
-    public void CreateOrder()
+    [Test, Order(1)]
+    public void CreateAnonymously()
     {
         var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
-        var o = TestContext._orderManager.CreateOrder(_session);
-        TestContext._orderRepository.Flush();
-        TestContext._userRepository.Detach(_customer);
-        var userWithOrders = TestContext._userRepository.First(u => u.Id == _customer.Id, includes: [[nameof(Customer.Orders)]]);
+        //anonymous order.
+        var o = TestContext._orderManager.CreateOrder(_session,out var newSession, email:new Faker().Internet.Email(), shippingAddress:new Address(){City = "a", District = "a", Country = "a", Line1 = "a", ZipCode = "a"});
         TestContext._orderRepository.Detach(o);
+        _session = newSession;
+        var o1 = TestContext._orderManager.GetAnonymousOrder(email:o.Email, id:o.Id);
+        Assert.That(o1, Is.Not.Null);
+        Assert.That(o.Id, Is.EqualTo(o1.Id));
+        Assert.That(o1.Items.Count(), Is.EqualTo(1));
+    }
+
+    [Test, Order(2)]
+    public void CreateLogged() {
+        var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.CARD };
+        payment = TestContext._paymentRepository.Add(payment);
+        var offer = TestContext._offerRepository.First(f => true);
+        TestContext._cartManager.Add(_session.Cart, offer);
+        //anonymous order.
+        var o = TestContext._orderManager.CreateOrder(_customer.Session,out _, _customer);
+        TestContext._userRepository.Detach(_customer);
+        TestContext._orderRepository.Detach(o);
+        var userWithOrders = TestContext._userRepository.First(u => u.Id == _customer.Id, includes: [[nameof(Customer.Orders)]]);
         var o1 = TestContext._orderRepository.First(or => or.Id == o.Id, includes: [[nameof(Order.Items)]]);
         Assert.That(o1, Is.Not.Null);
         Assert.That(o.Id, Is.EqualTo(o1.Id));
@@ -117,8 +138,7 @@ public class OrderManagerTests
         Assert.That(userWithOrders.Orders, Contains.Item(o1));
         _customer = userWithOrders;
     }
-
-    [Test]
+    [Test, Order(3)]
     public void CancelOrder()
     {
         // First, create an order to cancel
@@ -126,17 +146,18 @@ public class OrderManagerTests
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
-        var orderToCancel = TestContext._orderManager.CreateOrder(_session);
-        TestContext._orderRepository.Flush();
+        var orderToCancel = TestContext._orderManager.CreateOrder(_session,out _, _customer);
         var cancelledOrder = TestContext._orderManager.CancelOrder(orderToCancel);
         Assert.That(cancelledOrder, Is.Not.Null);
-        Assert.That(cancelledOrder.Status, Is.EqualTo(OrderStatus.CANCELLED));
+        Assert.That(cancelledOrder.Status, Is.EqualTo(OrderStatus.Cancelled));
+        TestContext._orderRepository.Detach(cancelledOrder);
+        _customer.Orders.Remove(cancelledOrder); 
         var fetchedOrder = TestContext._orderRepository.First(o => o.Id == cancelledOrder.Id);
         Assert.That(fetchedOrder, Is.Not.Null);
-        Assert.That(fetchedOrder.Status, Is.EqualTo(OrderStatus.CANCELLED));
+        Assert.That(fetchedOrder.Status, Is.EqualTo(OrderStatus.Cancelled));
     }
 
-    [Test]
+    [Test, Order(4)]
     public void CompleteOrder()
     {
         // First, create an order to complete
@@ -144,22 +165,23 @@ public class OrderManagerTests
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
-        var orderToComplete = TestContext._orderManager.CreateOrder(_session);
+        var orderToComplete = TestContext._orderManager.CreateOrder(_session,out _, _customer);
         TestContext._orderRepository.Flush();
         // Now, complete the order
         TestContext._orderManager.Complete(orderToComplete);
         TestContext._orderRepository.Detach(orderToComplete);
+        _customer.Orders.Remove(orderToComplete);
         var completedOrder = TestContext._orderRepository.First(o => o.Id == orderToComplete.Id);
         // Assertions
         Assert.That(completedOrder, Is.Not.Null);
-        Assert.That(completedOrder.Status, Is.EqualTo(OrderStatus.DELIVERED));
+        Assert.That(completedOrder.Status, Is.EqualTo(OrderStatus.Delivered));
 
         var fetchedOrder = TestContext._orderRepository.First(o => o.Id == completedOrder.Id);
         Assert.That(fetchedOrder, Is.Not.Null);
-        Assert.That(fetchedOrder.Status, Is.EqualTo(OrderStatus.DELIVERED));
+        Assert.That(fetchedOrder.Status, Is.EqualTo(OrderStatus.Delivered));
     }
 
-    [Test]
+    [Test, Order(5)]
     public void UpdateOrder()
     {
         // First, create an order to update
@@ -167,20 +189,21 @@ public class OrderManagerTests
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
-        var orderToUpdate = TestContext._orderManager.CreateOrder(_session);
+        var orderToUpdate = TestContext._orderManager.CreateOrder(_session,out _, _customer);
         // Change a property of the order (e.g., ShippingAddress)
         var originalAddress = orderToUpdate.ShippingAddress;
         orderToUpdate.ShippingAddress = new Address
         {
             City = "NewCity",
             ZipCode = "99999",
-            Street = "NewStreet",
-            Neighborhood = "NewNeighborhood",
-            State = "NewState"
+            Line1 = "NewStreet",
+            District = "NewNeighborhood",
+            Country = "NewState"
         };
         TestContext._orderManager.UpdateOrder(orderToUpdate); // Call the manager method
         TestContext._orderRepository.Flush();
         TestContext._orderRepository.Detach(orderToUpdate);
+        _customer.Orders.Remove(orderToUpdate);
         var updatedOrder = TestContext._orderRepository.First(o => o.Id == orderToUpdate.Id);
         // Assertions
         Assert.That(updatedOrder, Is.Not.Null);
@@ -194,7 +217,7 @@ public class OrderManagerTests
         Assert.That(fetchedOrder.ShippingAddress.ZipCode, Is.EqualTo("99999"));
     }
 
-    [Test]
+    [Test, Order(6)]
     public void TestGetOrderWithItemsAggregates()
     {
         // Clear cart first to ensure a clean state for creating a new order
@@ -216,7 +239,7 @@ public class OrderManagerTests
         // Create the order
         var payment = new Payment() { TransactionId = "ORDER_AGG_TEST", Amount = 100, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
-        var createdOrder = TestContext._orderManager.CreateOrder(_session);
+        var createdOrder = TestContext._orderManager.CreateOrder(_session,out _, _customer);
 
         // Get the order with aggregates
         var orderWithAggregates = TestContext._orderManager.GetOrderWithItems(createdOrder.Id);

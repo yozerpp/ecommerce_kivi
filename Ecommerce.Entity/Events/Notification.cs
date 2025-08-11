@@ -1,9 +1,9 @@
 ﻿namespace Ecommerce.Entity.Events;
 
-public class Notification
+public abstract class Notification
 {
     public ulong Id { get; set; }
-    public uint UserId { get; set; }
+    public required uint UserId { get; set; }
     public User User { get; set; }
     public bool IsRead { get; set; }
     public DateTime Time { get; set; }

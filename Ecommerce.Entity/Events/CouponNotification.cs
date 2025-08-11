@@ -8,7 +8,7 @@ public class CouponNotification : Notification
     public string CouponId { get; set; }
     public Seller Seller { get; set; }
     public Coupon Coupon { get; set; }
-
+    public Customer Customer { get; set; }
     protected bool Equals(CouponNotification other) {
         return base.Equals(other) && SellerId == other.SellerId && CouponId == other.CouponId;
     }

@@ -1,0 +1,304 @@
+﻿@page
+@using System.Reflection.Metadata
+@using Ecommerce.Entity
+@using Ecommerce.Entity.Common
+@using Ecommerce.Entity.Projections
+@using Ecommerce.WebImpl.Pages.CustomerPartials
+@using Ecommerce.WebImpl.Pages.Shared
+@using Ecommerce.WebImpl.Pages.Shared.Order
+@using Org.BouncyCastle.Crypto.Engines
+@model Ecommerce.WebImpl.Pages.Checkout
+
+@section Scripts{
+    @if (Model.SelectedTab == 1){
+        <script>
+            let selectedTab = @(Model.SelectedTab);
+            let navTabs = document.getElementById('nav-tab').children;
+            function goBack(event){
+                event.currentTarget.classList.add('d-none');
+                goToTab(selectedTab, --selectedTab);
+            }
+            function goToTab(oldTabIdx, newTabIdx){
+                let oldTabId = navTabs[oldTabIdx].getAttribute('data-bs-target').replace('#','');
+                document.getElementById(oldTabId).classList.remove('show','active');
+                navTabs[oldTabIdx].classList.remove('active');
+                navTabs[newTabIdx].classList.add('active');
+                let targetId = navTabs[newTabIdx].getAttribute('data-bs-target').replace('#','');
+                document.getElementById(targetId).classList.add('show', 'active');
+            }
+            function goForward(){
+                goToTab(selectedTab, ++selectedTab);
+                document.getElementById('backBtn').classList.remove('d-none');
+            }
+            @if (Model.CurrentCustomer == null){
+            <text>
+                function assignCheckoutInputs() {
+                       const addrIdPostfix = document._selectedAddress?.id ?? '';
+                       document.getElementById('@(nameof(Checkout.Name))Input').value = document.getElementById('name').value;
+                       document.getElementById('@(nameof(Checkout.Email))Input').value= document._selectedAddress.getElementById('email').@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('@(nameof(Address.City))Input').value = document._selectedAddress.getElementById( '@(nameof(Address.City))_'+addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('@(nameof(Address.Line1))Input').value= document._selectedAddress.getElementById('@nameof(Address.Line1)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('@nameof(Address.Line2)Input').value= document._selectedAddress.getElementById('@nameof(Address.Line2)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('@(nameof(Address.District))Input').value = document._selectedAddress.getElementById( '@nameof(Address.District)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('@(nameof(Address.ZipCode))Input').value = document._selectedAddress.getElementById('@nameof(Address.Country)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('countrycodeInput').value = document._selectedAddress.getElementById('@nameof(Address.ZipCode)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
+                       document.getElementById('numberInput').value = document._selectedAddress.getElementById('number').@(Model.CurrentCustomer==null?"value":"innerText");
+                }
+            </text>
+            }
+            
+            let selectedOffers = new Map();
+            function selectOffer(event, sellerId){
+                event.currentTarget.classList.add('bg-light');
+                const offerId =  event.currentTarget.id.replace('offer-', '');
+                selectedOffers.set(sellerId, offerId);
+                document.getElementById('group-' + sellerId + '-input').value =offerId;
+            }
+        </script>
+            
+    }
+    else if (Model.SelectedTab == 3){
+        <script src="https://js.stripe.com/basil/stripe.js"></script>
+        <script>
+            let stripe = Stripe('@(ViewData["StripePublicKey"])')
+            let elems;
+            document.addEventListener("DOMContentLoaded", () => {
+                elems = stripe.elements({
+                    clientSecret: '@(ViewData["IntentSecret"] ?? throw new ArgumentNullException("IntentSecret"))',
+                    customerSessionClientSecret: '@(ViewData["SessionSecret"]?? throw new ArgumentNullException("SessionSecret"))',
+                    loader: 'always',
+                });
+                let paymentElement = elems.create('payment', {layout: 'accordion'});
+                paymentElement.mount('#paymentElements');
+            })
+            document.getElementById('paymentForm').addEventListener('submit', async e=>{
+                e.preventDefault();
+                const {error} = await stripe.confirmPayment({
+                    elems,
+                    confirmParams: {
+                        return_url: '@(Url.Page(nameof(Checkout), "created", new {}))',
+                    },
+                });
+            })
+        </script>
+    } else if (Model.SelectedTab == 4){
+        
+    }
+}
+<div class="container-fluid">
+    <nav>
+        <div class="nav nav-tabs flex-row container-fluid align-content-center justify-content-center" id="nav-tab" role="tablist">
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==1?"active":"")" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">Sepeti Onayla</button>
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link" id="nav-shipment-tab" data-bs-toggle="tab" data-bs-target="#nav-shipment" type="button" role="tab" aria-controls="nav-shipment" aria-selected="false">Kargo Seçimi</button>
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==2?"active":"")" id="nav-payment-tab" data-bs-toggle="tab" data-bs-target="#nav-payment" type="button" role="tab" aria-controls="nav-payment" aria-selected="false">Ödeme</button>
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==3?"active":"")" id="nav-result-tab" data-bs-toggle="tab" data-bs-target="#nav-result" type="button" role="tab" aria-controls="nav-result" aria-selected="false">Siparişi Görüntüle</button>
+        </div>
+    </nav>
+    <div class="tab-content" id="nav-tabContent">
+        <div class="tab-pane fade @(Model.SelectedTab==1?"show active":"")" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+            @if (Model.SelectedTab == 1){
+                <div class="row g-4">
+                    <div class="col-12 col-lg-7">
+                        <div class="section rounded border p-4 h-100">
+                            @if (Model.CurrentCustomer == null)
+                            {
+                                <div class="mb-3 ps-3">
+                                    <div>
+                                        <h2 class="align-self-start">E-Posta Bilgilerini Gir</h2>
+                                        <input class="border-1 shadow-sm" id="email" type="email"/>
+                                    </div>
+                                </div>
+                                <div class="stripe"></div>
+                            }
+                            <div class="mb-3">
+                                <h2 class="align-self-start mx-3">Teslimat Adresini @(Model.CurrentCustomer == null ? "Gir" : "Onayla")</h2>
+                                <div id="address" class="mx-3">
+                                    @if (Model.CurrentCustomer == null || Model.CurrentCustomer.Addresses.Count==0){
+                                        <partial name="Shared/_AddressPartial"
+                                                 model="new _AddressPartial(){ Address = Model.CurrentCustomer?.PrimaryAddress ?? new Address(), Editable = true, AsInput=Model.CurrentCustomer==null }"/>
+                                    }else {
+                                        @await Html.PartialAsync("Shared/"+nameof(_CustomerAddressPartial), new _CustomerAddressPartial(){Addresses = Model.CurrentCustomer.Addresses, Updateable = false, Editable = true, CustomerId = Model.CurrentCustomer.Id})
+                                    }
+                                </div>
+                            </div>
+                            <div class="m-3">
+                                <h2 class="mx-1">
+                                    Telefon Numaranı @(Model.CurrentCustomer!=null?"Onayla":"Gir")
+                                </h2>
+                                <div id="phone">
+                                    @if (Model.CurrentCustomer == null){
+                                        @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){IsInput = true})
+                                    }
+                                    else{
+                                        @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){Editable = true, PhoneNumber = Model.CurrentCustomer.PhoneNumber})
+                                        <div class="container-fluid justify-content-end mx-4 d-flex">
+                                            <input type="hidden"/>
+                                            <button class="btn btn-secondary">Telefon Numaranı Güncelle</button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <div class="section rounded border p-4 h-100">
+                            <ul class="list-unstyled">
+                                @foreach (var item in Model.Cart.Items)
+                                {
+                                    <li class="row mb-3">
+                                        <!-- Product Image -->
+                                        <div class="col-auto">
+                                            
+                                            <img src="@(Utils.GetImageUrlOrDefault(item.ProductOffer.Product.MainImage?.Data))" style="height: 10em;" class="img-fluid rounded" alt="image of @item.ProductOffer.Product.Name" />
+                                        </div>
+                                        <!-- Product Info -->
+                                        <div class="col">
+                                            <p class="fw-bold mb-1">@item.ProductOffer.Product.Name</p>
+                                            <p class="text-muted mb-1">@item.ProductOffer.Seller.ShopName</p>
+                                            <p class="text-success mb-1">
+                                                @((item.ProductOffer.Price * item.ProductOffer.Discount * (item.Coupon?.DiscountRate ?? 1m)).ToString("C"))
+                                            </p>
+                                            <p class="mb-1">Adet: @item.Quantity</p>
+                                            <p class="fw-semibold">Toplam: @decimal.Round(item.CouponDiscountedPrice,2).ToString("C")</p>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="container-fluid d-flex justify-content-start align-content-center align-items-center">
+                                <button onclick="assignCheckoutInputs();goForward();" class="btn btn-success align-self-start mx-3" type="submit">Kargo Seçimine</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="container-fluid row my-3">
+                    @if (Model.SelectedTab <= 2){
+                        <div class="mx-3">
+                            <button id="backBtn" class="btn btn-outline-secondary" onclick="goBack(event)">Geri</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="tab-pane fade" id="nav-shipment" role="tabpanel" aria-labelledby="nav-shipment-tab">
+            @if (Model.SelectedTab == 1){
+                <div class="container-fluid row g-4">
+                    <ul id="items" class="col-8 list-unstyled px-5">
+                        @foreach (var itemGroup in Model.Cart.Items.GroupBy(i => i.ProductOffer.Seller).OrderBy(i=>i.Key.Id.GetHashCode())){
+                            <li>
+                                <ul onclick="" id="group-@itemGroup.Key.Id" class="list-group hover-darken">
+                                    <li class="mb-4 border-top-0 border-start-0 border-end-0">
+                                        <p class="fw-bold fs-6">@itemGroup.Key.ShopName Satıcısının Ürünleri</p>
+                                    </li>
+                                    @foreach (var item in itemGroup.OrderBy(i=>i.ProductId.GetHashCode())){
+                                        <li class="list-group-item">
+                                            <div class="row">
+                                                <div class="col-3">
+                                                    <img src="@(Utils.GetImageUrlOrDefault(item.ProductOffer.Product.MainImage?.Data))"/>
+                                                </div>
+                                                <div class="col-2">
+                                                    <p class="fs-5">@(item.ProductOffer.Product.Name)</p>
+                                                </div>
+                                                <div class="col-3"></div>
+                                            </div>
+                                        </li>
+                                    }     
+                                </ul> 
+                            </li>
+                        }
+                    </ul>
+                    <div class="col-4">
+                        <div id="offers">
+                            @foreach (var (sellerId, offers) in Model.ShippingOffersGrouped){
+                                <ul class="list-group rounded-2" id="offers-@(sellerId)">  
+                                    @foreach (var offer in offers){
+                                        <li onclick="selectOffer(event, @(sellerId))" id="offer-@(offer.Id)" class="hover-darken ps-3 list-group-item g-2">
+                                            <div>@offer.Provider.Name</div>
+                                            <div class="row">
+                                                <div class="col-2"></div>
+                                                <div class="fs-5 col-3 d-flex">
+                                                    <p>@offer.Amount </p>
+                                                    <p>@offer.Currency</p>
+                                                </div>
+                                                <div class="col-1"></div>
+                                                <div class="fs-5 col-3 d-flex">
+                                                    <p>@offer.AmountTax</p>
+                                                    <p>@offer.Currency</p>
+                                                    <p> Vergi</p>
+                                                </div>
+                                                <div class="col-3"></div>
+                                            </div>    
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                        <div class="container-fluid d-flex justify-content-center me-4">
+                            <form method="post" hx-post="/@(nameof(Checkout))" hx-target="#InfoErrorResult" hx-swap="innerHTML">
+                                <input id="@nameof(Address.City)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.City))"/>
+                                <input id="@nameof(Address.District)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.District))"/>
+                                <input id="@nameof(Address.Line1)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line1))"/>
+                                <input id="@(nameof(Address.Line2))Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line2))"/>
+                                <input id="@nameof(Address.Country)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Country))"/>
+                                <input id="@(nameof(Checkout.Name))Input" type="hidden" name="@nameof(Checkout.Name)"/>
+                                <input id="@nameof(Checkout.Email)Input" type="hidden" name="@(nameof(Checkout.Email))"/>
+                                <input id="countrycodeInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@nameof(PhoneNumber.CountryCode)"/>
+                                <input id="numberInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@(nameof(PhoneNumber.Number))"/>
+                                @foreach(var itemGroup in Model.Cart.Items.GroupBy(i => i.ProductOffer.Seller)){
+                                    <input type="hidden" id="group-@(itemGroup.Key.Id)-input" name="@(nameof(Checkout.SelectedShippingOffers))[@(itemGroup.Key.Id)]" value="@(Model.ShippingOffersGrouped[itemGroup.Key.Id].First().Id)"/>
+                                }
+                                <button class="btn btn-success">Seçimleri Onayla</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="container-fluid row ps-3">
+            <div class="col-4" id="InfoErrorResult">
+            </div>
+            <div class="col-8"></div>
+        </div>
+        <div class="tab-pane fade @(Model.SelectedTab==3?"show active":"")" id="nav-payment" role="tabpanel" aria-labelledby="nav-payment-tab">
+            @if (Model.SelectedTab == 3){
+                <div class="container-fluid">
+                    <form class="container-fluid" id="paymentForm">
+                        <div id="paymentElements">
+                        </div>
+                        <div class="d-flex container-fluid justify-content-center align-content-center">
+                            <button class="btn" style="background-color: darkorange" type="submit" id="submitPayment"></button>
+                        </div>
+                        <div id="errorMessage"></div>
+                    </form>
+                </div>
+            }
+        </div>
+        <div class="tab-pane fade @(Model.SelectedTab == 4 ? "show active" : "")" id="nav-result" role="tabpanel" aria-labelledby="nav-result-tab">
+            @if (Model.SelectedTab == 4){
+                <div class="container-fluid ps-5">
+                    @{ var (title, text) = @Model.OrderResult switch{
+                           Checkout.Result.Success => ("Sipariş Başarılı", "Siparişiniz başarı ile tamamlandı. Sipariş detaylarını görüntüleyebilirsiniz"),
+                           Checkout.Result.Fail => ("Ödeme Başarısız", "Ödemeniz başarısız, lütfen tekrar deneyin"),
+                           Checkout.Result.NonExistent => ("Aktif Sipariş Yok", "İşlenmekte olan aktif siparişiniz yok. Lütfen yeni sipariş oluşturun")
+                       };}
+                    <div class="container-fluid d-flex align-content-center justify-content-center">
+                        <p class="fs-3 fw-bold ms-2">@title</p>
+                    </div>
+                    <div class="card container-fluid pt-2 ps-3 rounded-3 mx-5 mt-2 shadow-lg">
+                        <div class="pb-2 mb-2 container-fluid d-flex justify-content-start border-bottom">
+                            <p class="fs-4">@text</p>
+                        </div>
+                        <div class="container-fluid d-flex justify-content-start mb-3">
+                            <p class="fs-4 fw-bold">Sipariş Detayları</p>
+                        </div>
+                        <div id="order">
+                            @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
+                                IsCollapsable = false, Order = Model.CreatedOrder
+                            })
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

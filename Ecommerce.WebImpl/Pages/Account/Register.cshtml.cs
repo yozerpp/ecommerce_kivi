@@ -13,14 +13,14 @@ public class Register : PageModel
         _userManager = userManager;
     }
     [BindProperty]
-    public Customer FormCustomer { get; set; }
+    public Entity.Customer FormCustomer { get; set; }
     public IActionResult OnPostUser() {
         _userManager.Register(FormCustomer);
         TempData["SuccessMessage"] = "Kayıt Başarılı! Giriş yapabilirsiniz.";
         return RedirectToPage("/Index");
     }
     [BindProperty]
-    public Seller FormSeller { get; set; }
+    public Ecommerce.Entity.Seller FormSeller { get; set; }
     public IActionResult OnPostSeller() {
         _userManager.Register(FormSeller);
         TempData["SuccessMessage"] = "Kayıt Başarılı! Giriş yapabilirsiniz.";

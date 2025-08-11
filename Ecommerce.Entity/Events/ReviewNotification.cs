@@ -4,7 +4,7 @@ public class ReviewNotification : Notification
 {
     public ulong ReviewId { get; set; }
     public ProductReview Review { get; set; }
-
+    public Seller Seller { get; set; }
     protected bool Equals(ReviewNotification other) {
         return base.Equals(other) && ReviewId == other.ReviewId;
     }

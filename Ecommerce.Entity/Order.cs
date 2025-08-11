@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Common.Meta;
 using Ecommerce.Entity.Events;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
@@ -13,11 +14,14 @@ public class Order
     public uint? PaymentId { get; set; }
     public string? Email { get; set; }
     public DateTime Date { get; set; } = DateTime.Now;
-    public OrderStatus? Status { get; set; }
+    public OrderStatus Status { get; set; }
     public Address ShippingAddress { get; set; }
+    public AnonymousUser? AnonymousUser { get; set; }
+    public OrderStats Stats { get; set; }
     public Session Session { get; set; }
     public Customer? User { get; set; }
     public Payment? Payment { get; set; }
+    public CancellationRequest? CancellationRequest { get; set; }
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     public ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
     public override bool Equals(object? obj) {

@@ -35,6 +35,8 @@ public static class TestContext
     public static readonly IRepository<ProductReview> _reviewRepository;
     public static readonly IRepository<ReviewComment> _reviewCommentRepository;
     public static readonly IRepository<ReviewVote> _reviewVoteRepository;
+    public static readonly IRepository<Customer> _customerRepository;
+    public static readonly IRepository<Staff> _staffRepository;
     static TestContext(){
         DefaultDbContext context = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>()
             .UseSqlServer("Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;")
@@ -47,6 +49,8 @@ public static class TestContext
         _productRepository= RepositoryFactory.Create<Product>(context);
         _cartItemRepository = RepositoryFactory.Create<CartItem>(context);
         _paymentRepository = RepositoryFactory.Create<Payment>(context);
+        _staffRepository = RepositoryFactory.Create<Staff>(context);
+        _customerRepository = RepositoryFactory.Create<Customer>(context);
         _categoryRepository = RepositoryFactory.Create<Category>(context);
         _sessionRepository = RepositoryFactory.Create<Session>(context);
         _offerRepository = RepositoryFactory.Create<ProductOffer>(context);
@@ -69,12 +73,12 @@ public static class TestContext
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = ClaimTypes.Role,
-        },new SigningCredentials(k,SecurityAlgorithms.HmacSha256),_userRepository,_sellerRepository,_sessionRepository);
+        },new SigningCredentials(k,SecurityAlgorithms.HmacSha256),_userRepository);
         _productManager = new ProductManager(_productRepository);
-        _cartManager = new CartManager(_sessionRepository, _couponRepository, _cartRepository, _cartItemRepository);
+        _cartManager = new CartManager(_userBaseRepository,_sessionRepository, _couponRepository, _cartRepository, _cartItemRepository);
         _orderManager = new OrderManager(_cartManager,_orderRepository);
-        _userManager = new UserManager(_jwtmanager,_userRepository, _userBaseRepository, _sellerRepository, s => s, _cartManager);
-        _sellerManager = new SellerManager(_couponRepository,_productRepository,_sellerRepository, _offerRepository);
+        _userManager = new UserManager(_jwtmanager,_customerRepository ,_staffRepository, _userBaseRepository, _sellerRepository, s => s, _cartManager);
+        _sellerManager = new SellerManager(_categoryRepository,_couponRepository,_productRepository,_sellerRepository, _offerRepository);
         _reviewManager = new ReviewManager(_reviewRepository, _reviewCommentRepository, _reviewVoteRepository,
             _orderItemRepository);
     }

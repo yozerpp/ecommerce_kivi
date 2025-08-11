@@ -5,53 +5,53 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Ecommerce.WebImpl.Data.Identity;
 
-public class PasswordStore : IUserPasswordStore<Customer>
+public class PasswordStore : IUserPasswordStore<User>
 {
-    private readonly IRepository<Customer> _userRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly UserManager.HashFunction _hashFunction;
 
-    public PasswordStore(IRepository<Customer> userRepository, UserManager.HashFunction hashFunction) {
+    public PasswordStore(IRepository<User> userRepository, UserManager.HashFunction hashFunction) {
         _userRepository = userRepository;
         _hashFunction = hashFunction;
     }
-    public Task<string> GetUserIdAsync(Customer customer, CancellationToken cancellationToken) {
-        var e = customer.NormalizedEmail;
-        var p = _hashFunction(customer.PasswordHash);
+    public Task<string> GetUserIdAsync(User User, CancellationToken cancellationToken) {
+        var e = User.NormalizedEmail;
+        var p = _hashFunction(User.PasswordHash);
         return Task.Run(() => {
             return _userRepository.FirstP(u => u.Id, u => u.NormalizedEmail == e && u.PasswordHash == p ).ToString();
         }, cancellationToken);
     }
 
-    public Task<string> GetUserNameAsync(Customer customer, CancellationToken cancellationToken) {
-        return Task.FromResult(customer.NormalizedEmail);
+    public Task<string> GetUserNameAsync(User User, CancellationToken cancellationToken) {
+        return Task.FromResult(User.NormalizedEmail);
     }
 
-    public Task SetUserNameAsync(Customer customer, string? userName, CancellationToken cancellationToken) {
+    public Task SetUserNameAsync(User User, string? userName, CancellationToken cancellationToken) {
         if(userName == null) throw new ArgumentNullException(nameof(userName));
         return Task.Run(() => {
-            customer.NormalizedEmail = userName;
-            _userRepository.Update(customer);
+            User.NormalizedEmail = userName;
+            _userRepository.Update(User);
         }, cancellationToken);
     }
 
-    public Task<string> GetNormalizedUserNameAsync(Customer customer, CancellationToken cancellationToken) {
-        return Task.FromResult(customer.NormalizedEmail.ToUpper());
+    public Task<string> GetNormalizedUserNameAsync(User User, CancellationToken cancellationToken) {
+        return Task.FromResult(User.NormalizedEmail.ToUpper());
     }
 
-    public Task SetNormalizedUserNameAsync(Customer customer, string? normalizedName, CancellationToken cancellationToken) {
+    public Task SetNormalizedUserNameAsync(User User, string? normalizedName, CancellationToken cancellationToken) {
         return Task.CompletedTask;
     }
 
-    public Task<IdentityResult> CreateAsync(Customer customer, CancellationToken cancellationToken) {
-        var ret =_userRepository.AddAsync(customer, true, cancellationToken).Result;
+    public Task<IdentityResult> CreateAsync(User User, CancellationToken cancellationToken) {
+        var ret =_userRepository.AddAsync(User, true, cancellationToken).Result;
         if (ret == null) {
             return Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Failed to create user." }));
         }
         return Task.FromResult(IdentityResult.Success);
     }
 
-    public Task<IdentityResult> UpdateAsync(Customer customer, CancellationToken cancellationToken) {
-        return _userRepository.UpdateAsync(customer,true, cancellationToken).ContinueWith(r => {
+    public Task<IdentityResult> UpdateAsync(User User, CancellationToken cancellationToken) {
+        return _userRepository.UpdateAsync(User,true, cancellationToken).ContinueWith(r => {
             if(cancellationToken.IsCancellationRequested || r.IsCanceled)
                 return IdentityResult.Failed(new IdentityError { Description = "Update operation was cancelled." });
             else if(r.IsFaulted)
@@ -60,43 +60,42 @@ public class PasswordStore : IUserPasswordStore<Customer>
         }, cancellationToken);
     }
 
-    public Task<IdentityResult> DeleteAsync(Customer customer, CancellationToken cancellationToken) {
-        return _userRepository.DeleteAsync(customer, true,cancellationToken).IsCompleted?
+    public Task<IdentityResult> DeleteAsync(User User, CancellationToken cancellationToken) {
+        return _userRepository.DeleteAsync(User, true,cancellationToken).IsCompleted?
             Task.FromResult(IdentityResult.Success) :
             Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Failed to delete user." }));;
     }
 
-    public Task<Customer?> FindByIdAsync(string userId, CancellationToken cancellationToken) {
+    public Task<User?> FindByIdAsync(string userId, CancellationToken cancellationToken) {
         return Task.Run(() => {
             var id = uint.Parse(userId);
             return _userRepository.First(u => u.Id == id);
         }, cancellationToken);
     }
 
-    public Task<Customer?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken) {
+    public Task<User?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken) {
         return Task.Run(() => {
             return _userRepository.First(u => u.NormalizedEmail.ToUpper() == normalizedUserName);
         });
     }
 
-    public Task SetPasswordHashAsync(Customer customer, string? passwordHash, CancellationToken cancellationToken) {
+    public Task SetPasswordHashAsync(User User, string? passwordHash, CancellationToken cancellationToken) {
         return passwordHash!=null? Task.Run(() => {
-            customer.PasswordHash = passwordHash;
+            User.PasswordHash = passwordHash;
             return _userRepository.UpdateExpr([
             (u =>u.PasswordHash ,passwordHash!)
                 ]
-                , u => u.Id == customer.Id);
+                , u => u.Id == User.Id);
         }, cancellationToken):throw new ArgumentNullException(nameof(passwordHash));
     }
 
-    public Task<string> GetPasswordHashAsync(Customer customer, CancellationToken cancellationToken) {
-        return Task.FromResult(customer.PasswordHash);
+    public Task<string> GetPasswordHashAsync(User User, CancellationToken cancellationToken) {
+        return Task.FromResult(User.PasswordHash);
     }
 
-    public Task<bool> HasPasswordAsync(Customer customer, CancellationToken cancellationToken) {
-        return Task.FromResult(customer.PasswordHash != null);
+    public Task<bool> HasPasswordAsync(User User, CancellationToken cancellationToken) {
+        return Task.FromResult(User.PasswordHash != null);
     }
     public void Dispose() {
-        _userRepository.Dispose();
     }
 }

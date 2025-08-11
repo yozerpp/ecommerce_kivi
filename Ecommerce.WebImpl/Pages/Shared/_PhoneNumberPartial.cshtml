@@ -1,0 +1,23 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared._PhoneNumberPartial
+
+<div>
+    @if (Model.IsInput){
+        <div class="input-group g-0 rounded-2 d-flex justify-content-center align-content-center">
+            <span class="bg-secondary">+</span>
+            <input placeholder="Ülke Kodu" id="countrycode@(Model.Id??"")" type="number"/>
+            <input placeholder="Numara" id="phonenumber" type="number"/>
+        </div>
+    }
+    else{
+        <div class="input-group d-flex">
+            <span id="countrycode@(Model.Id??"")" class="bg-secondary">+@Model.PhoneNumber!.CountryCode</span>
+            @if (Model.Editable){
+                @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+            }
+            <p id="phonenumber@(Model.Id??"")">@Model.PhoneNumber.Number</p>
+            @if (Model.Editable){
+                @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
+            }
+        </div>
+    }
+</div>

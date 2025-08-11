@@ -1,0 +1,18 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared._InfoPartial
+
+<div 
+    class="alert card shadow-sm small alert-@(Model.Success?"success":"danger") alert-dismissible fade show mt-2"
+    role="alert"
+    hx-swap="outerHTML"
+    hx-target="this"
+    hx-include="this"
+    hx-on::load="setTimeout(()=>{@(Model.Redirect!=null?$"window.location.href='{Model.Redirect}';":"this.remove();")},@(Model.TimeOut))"
+    >
+    <div class="card-body">
+        @if (Model.Title != null){
+        <p class="card-title">@Model.Title</p>
+        }
+        <p class="card-text">@Model.Message</p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

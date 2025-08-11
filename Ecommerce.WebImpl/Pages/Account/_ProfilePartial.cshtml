@@ -1,0 +1,146 @@
+﻿@using Ecommerce.Entity
+@using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.CustomerPartials
+@using Ecommerce.WebImpl.Pages.Shared
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Html
+@using Customer = Ecommerce.WebImpl.Pages.Customer
+@model Ecommerce.WebImpl.Pages.Account._ProfilePartial
+@{ var editable = Model.Editable;
+    var customer = Model.User as Entity.Customer;
+}
+@functions{
+    IHtmlContent SectionHeader(string title, string? iconClass = null) {
+        return Html.Raw($""""
+            <div class="card-header d-inline-flex justify-content-end border-bottom-0 py-3 text-end bg-white">
+                <div class="gap-2 d-inline-flex flex-row align-items-center">
+                    <h5 class="card-title fs-4 fw-bold me-4">{title}</h5>{(iconClass != null ? $"<i class='{iconClass}'></i>" : "")}
+                </div>
+            </div>
+            <div class="border-dark-subtle border-bottom border-2 mx-4"></div>
+        """");
+    }
+}
+<script>
+    function assignAddressInputs() {
+        @if (customer != null){
+            @Utils.GenerateAssignAddressInputsFunction(customer.Addresses.Count, inputPrefix:"address")
+        }
+    }
+    document.addEventListener("DOMContentLoaded", ()=>{
+        document.getElementById('profil@(Model.User.Id)Form').addEventListener('submit',()=>{
+            console.log('submitting');
+            document.getElementById('p_editedImage').value=_p_editedImage@(Model.User.Id).toString();
+            assignProfileInputs();
+            assignAddressInputs();
+        });    
+    })
+    
+    function assignProfileInputs(){
+        document.getElementById('p_@(nameof(Model.User.FirstName))Input').value = document.getElementById('p_@(nameof(Model.User.FirstName))').innerText;
+        document.getElementById('p_@(nameof(Model.User.LastName))Input').value = document.getElementById('p_@(nameof(Model.User.LastName))').innerText;
+        document.getElementById('p_@(nameof(Model.User.PhoneNumber.CountryCode))Input').value = document.getElementById('p_phoneCC').innerText;
+        document.getElementById('p_@(Model.User.PhoneNumber.Number)Input').value = document.getElementById('p_phoneNum').innerText;
+    }
+    let _p_editedImage@(Model.User.Id) = false;
+</script>
+
+<ul id="profil@(Model.User.Id)" class="list-group gap-5 rounded-0">
+    <li class="card pt-5">
+        @(SectionHeader("Kişisel Bilgiler", "bi-person fs-3 text-dark bg-white"))
+        <div class="container-fluid mt-5 pt-1 mb-5 row g-4">
+            <div class="col-5 pt-2 gap-5 ps-3">
+                <div class="d-flex container-fluid justify-content-between">
+                    <label class="fw-bold fs-5">İsim:</label>
+                    <div class="d-inline-flex">
+                        <p id="p_@(nameof(Model.User.FirstName))" class="fs-5">@(Model.User.FirstName)</p>
+                        @if (editable){
+                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                        }
+                    </div>
+                </div>
+                <div class="d-flex container-fluid justify-content-between">
+                    <label class="fw-bold fs-5">Soyisim:</label>
+                    <div class="d-inline-flex">
+                        <p id="p_@(nameof(Model.User.LastName))" class="fs-5">@(Model.User.LastName)</p>
+                        @if (editable){
+                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-1"></div>
+            <div class="col-6 me-0 pe-0 row">
+                <div class="col-8">
+                    <img id="profilePic" class="card-img img-fluid rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
+                         alt="Profil Resmi"/>
+                </div>
+                @if (editable){
+                    <div class="edit-control col-4 gap-3 justify-content-center">
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" class="btn mb-3 btn-secondary p-1 shadow-sm rounded-1 w-100">
+                            Değiştir
+                            @* <i class="col-auto bi bi-pencil-fill bg-white text-secondary"></i> *@
+                        </button>
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-1 rounded-1 w-100 btn btn-danger shadow-sm">
+                            Sil
+                            @* <i class="col-auto bi bi-pencil-fill bg-white text-danger"></i> *@
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </li>
+    @if (customer!=null && editable){
+        <li class="card">
+            @SectionHeader("Adresler", "fs-3 bi bi-building text-dark b-white")
+            @await Html.PartialAsync("CustomerPartials/_CustomerAddressPartial", new _CustomerAddressPartial(){
+                CustomerId = Model.User.Id, Editable = Model.IsOwner, Updateable = false, Addresses = customer.Addresses
+            })
+        </li>
+    }
+    <li class="card">
+        @SectionHeader("Telefon Numarası", "fs-3 bi bi-telephone-fill text-dark bg-white")
+            @{
+                var num = Model.User.PhoneNumber.Number.Replace("(", "").Replace(")", "");
+                num = !editable
+                    ? num.Substring(0, 3) + string.Concat(Enumerable.Range(0, num.Length - 3).Select(_ => '*'))
+                    : num;
+            }
+            <div class="border-2 container-fluid d-flex justify-content-end align-content-center align-items-center mt-3 border-black border-1 gap-3 rounded-2">
+                <div class="rounded border-black d-inline-flex rounded p-0 gap-2">
+                    <p id="p_phoneCC" class="bg-secondary rounded-2 rounded-end-0 d-block bg-secondary-subtle">@Model.User.PhoneNumber.CountryCode</p>
+                    <p id="p_phoneNum" class="bg-white rounded-2 rounded-start-0 shadow-sm">@num</p>
+                    @if (editable){
+                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                            Target = "p_phoneNum,p_phoneCC"
+                        })
+                    }    
+                </div>
+                
+            </div>
+    </li>
+    <li class="d-none">
+        <form id="profil@(Model.User.Id)Form" hx-post="/@(Model.User switch{Entity.Customer=>"Customer", Seller=>"Seller", Staff=>"Staff", _=>throw new ArgumentOutOfRangeException()})?handler=update" hx-trigger="submit" hx-target="#popupResult" hx-swap="innerHTML">
+            @Html.AntiForgeryToken()
+            <input id="p_@(nameof(Model.User.Id))" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Id))" value="@(Model.User.Id)"/>
+            <input id="p_@(nameof(Model.User.NormalizedEmail))" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.NormalizedEmail))" value="@Model.User.NormalizedEmail"/>
+            <input id="p_@(nameof(Model.User.FirstName))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.FirstName))" value="@(Model.User.FirstName)"/>
+            <input id="p_@(nameof(Model.User.LastName))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.LastName))" value="@(Model.User.LastName)"/>
+            <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))"/>
+            <input id="p_@(nameof(Model.User.PhoneNumber.CountryCode))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))" value="@(Model.User.PhoneNumber.CountryCode)"/>
+            <input id="p_@(Model.User.PhoneNumber.Number)Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))" value="@(Model.User.PhoneNumber.Number)"/>
+            <input id="p_editedImage" name="@(nameof(Customer.IsImageEdited))" type="hidden"/>
+            @if (customer!=null){
+                for (int i = 0; i < customer.Addresses.Count; i++){
+                    <input id="address@(i)_@(nameof(Address.City))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.City))" value="@customer.Addresses[i].City"/>
+                    <input id="address@(i)_@(nameof(Address.Country))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Country))" value="@customer.Addresses[i].Country"/>
+                    <input id="address@(i)_@(nameof(Address.District))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.District))" value="@customer.Addresses[i].District"/>
+                    <input id="address@(i)_@(nameof(Address.Line1))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line1))" value="@customer.Addresses[i].Line1"/>
+                    <input id="address@(i)_@(nameof(Address.Line2))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line2))" value="@customer.Addresses[i].Line2"/>
+                    <input id="address@(i)_@(nameof(Address.ZipCode))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.ZipCode))" value="@customer.Addresses[i].ZipCode"/>
+                }
+            }
+            @* <button type="submit" onclick="event.preventDefault();assignProfileInputs();assignAddressInputs();event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))"></button> *@
+        </form>
+    </li>
+</ul>

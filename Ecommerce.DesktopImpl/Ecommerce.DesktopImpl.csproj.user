@@ -13,16 +13,10 @@
     <Compile Update="LoginPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="OrdersPage.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Update="ProductPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="RegisterSeller.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="RegisterUser.cs">
+    <Compile Update="RegisteryPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="SellerPage.cs">

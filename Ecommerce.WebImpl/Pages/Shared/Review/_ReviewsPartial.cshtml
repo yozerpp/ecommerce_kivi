@@ -1,0 +1,25 @@
+﻿@model _ReviewsPartial
+
+@if (Model.Reviews.Count > 0){
+    <div class="list-unstyled ms-3 flex-column gap-3">
+        @foreach(var review in Model.Reviews)
+        {
+            <div>
+            @if (Model.IsStaff || Model.CurrentUserId!=null && Model.CurrentUserId == review.ReviewerId){
+                <div class="d-flex justify-content-end align-items-center">
+                    <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
+                        <input type="hidden" name="@(nameof(Reviews.SentReview)).Id" value="@(review.Id)"/>
+                        <button type="submit" class="btn-danger">Sil</button>
+                    </form>
+                </div>
+            }
+            <partial name="Review/_ReviewPartial" model="review" />
+            </div>
+        }
+    </div>
+    <br>
+    <a href="#" id="reviews@(Model.NextPage)"  hx-trigger="click" hx-get="/@nameof(Reviews)?ReviewsPage=@(Model.NextPage)" hx-target="#reviews@(Model.NextPage)" hx-swap="outerHTML">Daha fazla yükle</a>
+}
+else{
+    <div class="invisible" hx-on::afterSwap="detail.elt.remove()"></div>
+}

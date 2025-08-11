@@ -11,35 +11,44 @@ public class SellerManagerTests
 {
     private static Seller _seller;
     private static ProductOffer _offer; // Moved to class level for reuse
-
+    private static Customer _user;
     [OneTimeSetUp]
     public static void CreateSeller() {
+        var e = new Faker().Internet.Email();
         _seller = new Seller(){
             ShopName = "ShopName",
             FirstName = new Faker().Name.FirstName(),
             LastName = new Faker().Name.LastName(),
-            NormalizedEmail = new Faker().Internet.Email(), PasswordHash = "pass",Address = new Address{
-                City = "Trabzon", ZipCode = "35450", Street = "SFSD", Neighborhood = "Other", State = "Gaziemir"
+            NormalizedEmail = e.ToUpper(),
+            Email = e,
+            PasswordHash = "pass",Address = new Address{
+                City = "Trabzon", ZipCode = "35450", Line1 = "SFSD", District = "Other", Country = "Gaziemir"
             },
             PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "5551234567" }
         };
-        _seller =(Seller) TestContext._userManager.Register(_seller);
-        TestContext._sellerRepository.Flush();
+        _seller = TestContext._userManager.Register(_seller);
+        e = new Faker().Internet.Email();
+        _user = new Customer(){
+            Email =e, NormalizedEmail = e.ToUpper(), FirstName = new Faker().Name.FirstName(),
+            LastName = new Faker().Name.LastName(), PasswordHash = "pass", Address = new Address{
+                City = "Trabzon", ZipCode = "35450", Line1 = "SFSD", District = "Other", Country = "Gaziemir"
+            },
+            PhoneNumber = new PhoneNumber{ CountryCode = 90, Number = "5551234567" }
+
+        };
+        _user = TestContext._userManager.Register(_user);
     }
     [SetUp]
     public void Login(){
-        TestContext._userManager.LoginCustomer(_seller.NormalizedEmail, _seller.PasswordHash, out SecurityToken token);
+        _seller = TestContext._userManager.LoginSeller(_seller.NormalizedEmail, _seller.PasswordHash, out SecurityToken token);
+        Assert.That(_seller, Is.Not.Null);
+        Assert.That(_seller, Is.InstanceOf<Seller>());
     }
-    [Test,Order(2)]
-    public void LoginSeller() {
-        TestContext._userManager.LoginSeller(_seller.NormalizedEmail, _seller.PasswordHash, out _);
-        Assert.That(ContextHolder.Session?.User, Is.Not.Null);
-        Assert.That(ContextHolder.Session.User, Is.InstanceOf<Seller>());
-    }
+
     [Test,Order(3)]
     public void ListOfferOnExistingProduct() {
         var product = TestContext._productRepository.First(_=>true);
-        var offer = TestContext._sellerManager.ListProduct(new ProductOffer(){
+        var offer = TestContext._sellerManager.ListOffer(_seller,new ProductOffer(){
             Price = 100,ProductId = product.Id, Stock = 10
         });
         TestContext._offerRepository.Flush();
@@ -50,15 +59,15 @@ public class SellerManagerTests
     [Test,Order(4)]
     public void ListOfferOnNonExistingProduct() {
         var cat = TestContext._categoryRepository.First(_ => true);
-        var product = new Product{ Description = "desc", Name = "Name", Image = null, CategoryId = cat.Id};
-        var listed = TestContext._sellerManager.ListProduct(new ProductOffer(){
-            ProductId = 100, Stock = 10, Product = product, SellerId = ContextHolder.Session!.User!.Id
+        var product = new Product{ Description = "desc", Name = "Name",  CategoryId = cat.Id};
+        var listed = TestContext._sellerManager.ListOffer(_seller,new ProductOffer(){
+            ProductId = 100, Stock = 10, Product = product, SellerId = _seller.Id
         });
         TestContext._productRepository.Flush();
         var retrieved = TestContext._productRepository.First(p => p.Id == listed.ProductId);
         Assert.That( product.Description, Is.EqualTo(retrieved?.Description));
         Assert.That(product.Name, Is.EqualTo(retrieved?.Name));
-        var retrievedOffer = TestContext._offerRepository.First(o => o.ProductId == retrieved!.Id && o.SellerId==ContextHolder.Session.User.Id);
+        var retrievedOffer = TestContext._offerRepository.First(o => o.ProductId == retrieved!.Id && o.SellerId==_seller.Id);
         Assert.That(retrievedOffer, Is.Not.Null);
         Assert.That(retrievedOffer.ProductId, Is.EqualTo(listed.ProductId));
         _offer = retrievedOffer;
@@ -69,7 +78,7 @@ public class SellerManagerTests
         var oldStock = _offer.Stock;
         _offer.Stock += 10;
         _offer.Product = null;
-        TestContext._sellerManager.updateOffer(_offer, _offer.ProductId);
+        TestContext._sellerManager.updateOffer(_seller,_offer, _offer.ProductId);
         TestContext._offerRepository.Flush();
         TestContext._offerRepository.Detach(_offer);
         var newOffer = TestContext._offerRepository.First(o=>o.ProductId==_offer.ProductId && o.SellerId==_offer.SellerId);
@@ -80,7 +89,7 @@ public class SellerManagerTests
 
     [Test,Order(6)]
     public void DeleteOffer() {
-        TestContext._sellerManager.UnlistOffer(_offer);
+        TestContext._sellerManager.UnlistOffer(_seller,_offer);
         TestContext._offerRepository.Flush();
         var exists = TestContext._offerRepository.Exists(o => o.ProductId == _offer.ProductId && o.SellerId == _offer.SellerId);
         Assert.That(exists, Is.False);
@@ -98,8 +107,8 @@ public class SellerManagerTests
 
         // List a new product
         var cat = TestContext._categoryRepository.First(_ => true);
-        var product = new Product { Description = "New Product Desc", Name = "New Product Name", Image = null, CategoryId = cat.Id };
-        var newOffer = TestContext._sellerManager.ListProduct(new ProductOffer
+        var product = new Product { Description = "New Product Desc", Name = "New Product Name",  CategoryId = cat.Id };
+        var newOffer = TestContext._sellerManager.ListOffer(_seller,new ProductOffer
         {
             Price = 50,
             Stock = 5,
@@ -119,16 +128,13 @@ public class SellerManagerTests
     [Test, Order(8)]
     public void TestSellerAggregatesAfterSale()
     {
-        // Ensure seller is logged in
-        Login();
-
         // List a product if not already listed for this test
         var offerForSale = TestContext._offerRepository.First(o => o.SellerId == _seller.Id);
         if (offerForSale == null)
         {
             var cat = TestContext._categoryRepository.First(_ => true);
-            var product = new Product { Description = "Sale Product Desc", Name = "Sale Product Name", Image = null, CategoryId = cat.Id };
-            offerForSale = TestContext._sellerManager.ListProduct(new ProductOffer
+            var product = new Product { Description = "Sale Product Desc", Name = "Sale Product Name",  CategoryId = cat.Id };
+            offerForSale = TestContext._sellerManager.ListOffer(_seller,new ProductOffer
             {
                 Price = 25,
                 Stock = 10,
@@ -143,13 +149,13 @@ public class SellerManagerTests
         uint initialSaleCount = initialSellerAggregates?.SaleCount ?? 0;
 
         // Simulate a sale: Add item to cart and create an order
-        TestContext._cartManager.newSession(); // Ensure a fresh cart for the user
-        TestContext._cartManager.Add(offerForSale, 2); // Add 2 units of the product
+        TestContext._cartManager.newSession(_user); // Ensure a fresh cart for the user
+        TestContext._cartManager.Add(_user.Session.Cart,offerForSale, 2); // Add 2 units of the product
         TestContext._cartRepository.Flush();
 
         var payment = new Payment { TransactionId = "SALE_TEST_" + Guid.NewGuid().ToString(), Amount = offerForSale.Price * 2, PaymentMethod = PaymentMethod.CARD };
         payment = TestContext._paymentRepository.Add(payment);
-        TestContext._orderManager.CreateOrder();
+        TestContext._orderManager.CreateOrder(_user.Session, out _, _user);
         TestContext._orderRepository.Flush();
 
         // Get updated seller aggregates
@@ -171,8 +177,8 @@ public class SellerManagerTests
         if (offerForReview == null)
         {
             var cat = TestContext._categoryRepository.First(_ => true);
-            var product = new Product { Description = "Review Product Desc", Name = "Review Product Name", Image = null, CategoryId = cat.Id };
-            offerForReview = TestContext._sellerManager.ListProduct(new ProductOffer
+            var product = new Product { Description = "Review Product Desc", Name = "Review Product Name",  CategoryId = cat.Id };
+            offerForReview = TestContext._sellerManager.ListOffer(_seller,new ProductOffer
             {
                 Price = 15,
                 Stock = 1,
@@ -186,13 +192,14 @@ public class SellerManagerTests
         var initialSellerAggregates = TestContext._sellerManager.GetSellerWithAggregates(_seller.Id, false, true);
         uint initialReviewCount = initialSellerAggregates?.ReviewCount ?? 0;
         double initialReviewAverage = initialSellerAggregates?.ReviewAverage ?? 0.0;
-        var reviewer = _seller;
+        var reviewer = _user;
         // Simulate a review
         var review = new ProductReview
         {
             ProductId = offerForReview.ProductId,
             SellerId = offerForReview.SellerId,
             ReviewerId = reviewer.Id, // Assuming TestContext.User is the current logged-in user
+            SessionId = reviewer.Session?.Id??reviewer.SessionId,
             Rating = 4,
             Comment = "Great product!"
         };

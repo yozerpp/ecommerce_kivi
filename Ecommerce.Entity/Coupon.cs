@@ -5,8 +5,8 @@ namespace Ecommerce.Entity;
 public class Coupon
 {
     public string Id { get; set; }
-    public uint? SellerId { get; set; }
-    public Seller? Seller { get; set; }
+    public uint SellerId { get; set; }
+    public Seller Seller { get; set; }
     public DateTime ExpirationDate { get; set; } = DateTime.Now + TimeSpan.FromDays(7);
     public decimal DiscountRate { get; set; }
     public override bool Equals(object? obj) {

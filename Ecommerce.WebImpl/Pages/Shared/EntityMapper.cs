@@ -53,6 +53,7 @@ public class EntityMapper
         throw new ArgumentException("Type deserialization not supported: " + tp.FullName);
     }
     private static readonly string _btn = "<button type='submit' class='btn btn-primary'>Kaydol</button>\n";
+    [Obsolete("This method doesn't work with serialized list properties.")]
     public HtmlString GetFormInputs(string proprety,Type? type=null, string[]? includeProperties = null, string[]? excludeProperties = null, bool root = true) {
         includeProperties ??= _includeProperties;
         excludeProperties ??= _excludeProperties;

@@ -1,4 +1,5 @@
 ﻿@page
+@using Ecommerce.Entity
 @using Ecommerce.WebImpl.Pages.Shared
 @model Login
 @inject EntityMapper EntityMapper
@@ -15,27 +16,30 @@
 <body>
 <div class="text-center">
     <ul class="nav nav-tabs" id="forms" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#customer" type="button" role="tab">Müşteri Girişi</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#seller" type="button" role="tab">Satıcı Girişi</button>
-        </li>
+        @{ var first = true;}
+        @foreach (var userType in new[]{ typeof(Customer), typeof(Entity.Seller), typeof(Staff) }){
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@userType.Name Girişi</button>
+            </li>
+            first = false;
+        }
     </ul>
     <div class="tab-content mt-2" id="formsContent">
-        <div class="tab-pane fade show active" id="customer" role="tabpanel">
-            <form asp-page="/Account/Login" asp-page-handler="User">
-                @EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential));
-                <button type="submit">Giriş Yap</button>
-            </form>
-        </div>
-        <div class="tab-pane fade" id="seller" role="tabpanel">
-            <form asp-page="/Account/Login" asp-page-handler="Seller">
-                @EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential));
-                <button type="submit">Giriş Yap</button>
-            </form>
-        </div>
+        @{ first = true;}
+        @foreach(var userType in new[]{typeof(Customer), typeof(Entity.Seller), typeof(Staff)}){
+            <div class="tab-pane fade show @(first? "active" : "")" id="@userType.Name" role="tabpanel">
+                <form hx-post="/Account/Login?handler=@userType.Name" hx-swap="innerHTML" hx-target="#loginResult" method="post">
+                    @(EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential)))
+                    <div class="flex-row">
+                        <label class="col">Beni Hatırla</label><input class="col" type="checkbox" name="@nameof(Login.RememberMe)" value="@false"/>
+                    </div>
+                    <button type="submit">Giriş Yap</button>
+                </form>
+            </div>
+            first = false;
+        }
     </div>
+    <div id="loginResult"></div>
 </div>
 </body>
 </html>

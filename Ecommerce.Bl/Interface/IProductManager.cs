@@ -8,13 +8,25 @@ namespace Ecommerce.Bl.Interface;
 
 public interface IProductManager
 {
-    public List<ProductWithAggregates> SearchWithAggregates(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering,
-       bool includeImage, bool fetchReviews = false, int page = 1, int pageSize = 20);
-    public List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering,
-        int page = 1, int pageSize = 20);
-    public ProductWithAggregates? GetByIdWithAggregates(uint productId, bool fetchReviews = true, bool fetchImage=true);
-    public Product? GetById(int id, bool fetchImage=true);
+    public ICollection<Category> GetCategories(bool includeChildren = true, bool includeProperties = false);
+    public void VisitCategory(SessionVisitedCategory category);
+    public Category? GetCategoryById(uint id, bool includeChildren = false, bool includeProperties = true);
+    public ICollection<Category> GetCategoriesByName(string name, bool includeChildren = false,
+        bool includeProperties = true);
 
+    public List<ProductWithAggregates> Search(ICollection<SearchPredicate> predicates,
+        ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false,
+        bool fetchOffers = false, int page = 1, int pageSize = 20);
+    public ICollection<ProductFavor> GetFavorites(Customer customer);
+    public ICollection<ProductFavor> GetFavorers(uint productId);
+    public ICollection<ProductWithAggregates> GetMoreProductsFromCategories(Session session, int page = 1,
+        int pageSize = 20);
+    public bool Favor(ProductFavor favor);
+    public ProductWithAggregates? GetByIdWithAggregates(uint productId, bool fetchOffers = false, bool fetchReviews = true, bool fetchImage=true);
+    public ICollection<OfferWithAggregates> GetOffersWithAggregates(uint? productId = null, uint? sellerId = null);
+    public Product? GetById(uint id, bool withOffers = true);
+    public void UnlistOffer(ProductOffer offer);
+    public void Delete(Product product);
     public static (ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders) ParseQuery(string query) {
         ICollection<SearchPredicate> preds=[];
         ICollection<SearchOrder> orders= [];
@@ -99,7 +111,7 @@ public interface IProductManager
         return predicates;
     }
 }
-public struct SearchPredicate
+public class SearchPredicate
 {
     public enum OperatorType
     {
@@ -115,7 +127,7 @@ public struct SearchPredicate
     public OperatorType Operator { get; set; }
 }
 
-public struct SearchOrder
+public class SearchOrder
 {
     public string PropName { get; set; }
     public bool Ascending { get; set; }

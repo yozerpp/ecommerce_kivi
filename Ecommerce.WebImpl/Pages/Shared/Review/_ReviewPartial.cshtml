@@ -1,0 +1,61 @@
+﻿@model Ecommerce.Entity.Projections.ReviewWithAggregates
+
+
+<div class="rounded-1 container-fluid flex-column gap-3 ps-3">
+    <div class="list-group flex-column gap-1">
+        <div class="w-100 mt-2 list-group-item">
+            <div class="row w-100 justify-content-between">
+                <div class="col-5"></div>
+                <div class="col-2">
+                    @await Html.PartialAsync(nameof(_ReviewStarPartial), new _ReviewStarPartial(){ Rating = Model.Rating })
+                </div>
+                <div class="col-4"></div>
+                <div class="col-1">
+                    <small>@(Utils.GetRelativeTime(Model.Created) ?? "şimdi")</small>
+                </div>
+            </div>
+            @if (Model.Reviewer != null){
+                <div class="m-1">
+                    <p class="fs-5">@(Model.Reviewer.FullName)</p>
+                </div>
+            }
+            @if (Model.Comment != null){
+                <div class="m-2 d-flex">
+                    <p class="mb-1">@Model.Comment</p>
+                </div>
+            }
+            @if (Model.HasBought){
+                <div class="container-fluid d-flex justify-content-end align-content-center">
+                    <small>Bu kullanıcının bu ürünü satın aldığı doğrulandı.</small>
+                </div>
+            }
+        </div>
+
+        <div class="list-group-item small d-flex mx-0 px-0 row align-self-center justify-content-center">
+            <a data-bs-toggle="tooltip" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Id)" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#comments@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Id">
+                <i class="bi bg-light text-dark bi-chat-dots"></i>
+            </a>
+            <div class="col-8"></div>
+            <a onload="new bootstrap.Tooltip(event.currentTarget)" data-bs-placement="right" title="Cevapla" class="d-flex col-2 gap-1 p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Id)" aria-expanded="false" aria-controls="reply@(Model.Id)">
+                <i class="bg-light text-dark bi bi-reply"></i>
+            </a>
+        </div>
+    </div>
+    <div>
+        <div hx-on::after-swap="document.getElementById('commentsBtn@(Model.Id)')?.remove()" id="comments@(Model.Id)"></div>
+        <div class="collapse mt-3 card" id="reply@(Model.Id)">
+            <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Id)" hx-swap="innerHTML">
+                <input type="hidden" name="SentComment.ReviewId" value="@Model.Id"/>
+                <div class="row g-2">
+                    <div class="col-9 rounded-2 input-group mb-3">
+                        <textarea class="input-group-text form-control" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
+                    </div>
+                    <div class="col-3 pt-5">
+                        <button type="submit" class="btn btn-outline-primary">Gönder</button>
+                    </div>
+                </div>
+            </form>
+            <div class="mt-3" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentResult@(Model.Id)"></div>
+        </div>    
+    </div>
+</div>

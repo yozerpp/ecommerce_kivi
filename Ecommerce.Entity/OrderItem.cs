@@ -2,24 +2,26 @@
 
 namespace Ecommerce.Entity;
 
-public class OrderItem
+public class OrderItem : IItem
 {
     public OrderItem() { }
-    public OrderItem(CartItem cartItem, Order order) {
+    public OrderItem(CartItem cartItem) {
         ProductId = cartItem.ProductId;
         SellerId = cartItem.SellerId;
-        OrderId = order.Id;
         ProductOffer = cartItem.ProductOffer;
-        Order = order;
         Quantity = cartItem.Quantity;
         CouponId = cartItem.CouponId;
         Coupon = cartItem.Coupon;
     }
+    public ulong ShipmentId { get; set; }
+    public ulong? RefundShipmentId { get; set; }
     public uint SellerId { get; set; }
     public uint ProductId { get; set; }
     public uint OrderId { get; set; }
-    public uint Quantity { get; set; }
-    public ProductOffer ProductOffer { get; set; }
+    public int Quantity { get; set; }
+    public Shipment SentShipment { get; set; }
+    public Shipment? RefundShipment { get; set; }
+    public ProductOffer? ProductOffer { get; set; }
     public Order Order { get; set; }
     public string? CouponId { get; set; }
     public Coupon? Coupon { get; set; }

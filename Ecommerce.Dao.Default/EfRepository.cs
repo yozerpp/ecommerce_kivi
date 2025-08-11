@@ -1,22 +1,38 @@
 ﻿using System.Linq.Expressions;
+using System.Reflection;
 using Ecommerce.Dao.Spi;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace Ecommerce.Dao.Default;
 //TODO async methods need to be rewritten. to use async/await properly
-public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable where TEntity : class, new()
+public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
 {
     private DbContext _context;
+    private readonly IReadOnlyList<IProperty> _idProperties;
+    private readonly IEntityType _entityType;
     public EfRepository(DbContext context)
     {
         this._context = context;
+        _entityType = context.Model.FindEntityType(typeof(TEntity));
+        _idProperties = _context.Model.FindEntityType(typeof(TEntity)).GetKeys().First(k => k.IsPrimaryKey())
+            .Properties;
     }
     public  List<TEntity> All(string[][]? includes = null)
     {
         return doIncludes(_context.Set<TEntity>(),includes).ToList();
     }
 
+
+    public int Count(Expression<Func<TEntity, bool>> predicate) {
+        return _context.Set<TEntity>().Where(predicate).Count();
+    }
+
+    public int CountProjected<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate) {
+        return _context.Set<TEntity>().Select(select).Where(predicate).Count();
+    }
     public List<TP> All<TP>(Expression<Func<TEntity, TP>> select, string[][]? includes = null) {
         return doIncludes(_context.Set<TEntity>(),includes).Select(select).ToList();
     }
@@ -31,6 +47,31 @@ public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable wher
         return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy).Skip(offset).Take(limit).ToList();
     }
 
+    public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, int offset = 0, int limit = 20,
+        (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes), orderBy).Where(predicate)
+            .Select(select)
+            .Skip(offset).Take(limit).AsEnumerable().ToList();
+    }
+    public List<TP> WhereProjectGroup<TP, TG>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, TG>> groupBy, int offset = 0, int limit = 20,
+        (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
+        return doOrderBy(_context.Set<TEntity>().Where(predicate),orderBy).Select(select) //trust that EF Core auto includes
+            .Skip(offset).Take(limit).ToList();
+    }
+
+    public bool TryAdd(TEntity entity) {
+        if (_context.Set<TEntity>().Local.Any(e=>e.Equals(entity))){
+            return false;
+        }
+        try{
+            _context.Set<TEntity>().Add(entity);
+            _context.SaveChanges();
+            return true;
+        }
+        catch (Exception){
+            return false;
+        }
+    }
     public  TEntity? First(Expression<Func<TEntity, bool>> predicate, string[][]? includes=null, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null)
     {
         return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).FirstOrDefault(predicate);
@@ -117,6 +158,17 @@ public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable wher
         
     }
 
+    public TEntity Update(TEntity entity, bool ignoreNull) {
+        if (!ignoreNull) return _context.Update(entity).Entity;
+        var entry = _context.Attach(entity);
+        foreach (var memberEntry in _entityType.GetMembers().Where(p=>p.PropertyInfo.GetValue(entity)!=null && 
+                                                                      !((p as IProperty)?.IsPrimaryKey() ?? false))
+                     .Select(p=>entry.Member(p.Name))){
+            memberEntry.IsModified = true;
+        }
+        return _context.Update(entity).Entity;
+    }
+
     public TEntity Update(TEntity entity) {
         Detach(entity);
         return _context.Set<TEntity>().Update(entity).Entity;
@@ -158,7 +210,7 @@ public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable wher
         },cancellationToken);
     }
     public void Flush() {
-        _context.SaveChanges();
+            _context.SaveChanges();
     }
 
     public TEntity Detach(TEntity entity) {
@@ -177,10 +229,45 @@ public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable wher
     public TEntity Merge(TEntity entity) {
         throw new NotImplementedException();
     }
-    private static IQueryable<T> doOrderBy<T>(IQueryable<T> p,(Expression<Func<T, object>>, bool)[]? orderings) {
-        if (orderings == null) return p;
-        foreach (var order in orderings) p = order.Item2 ? p.OrderBy(order.Item1) : p.OrderByDescending(order.Item1);
+    private IQueryable<T> doOrderBy<T>(IQueryable<T> p,(Expression<Func<T, object>>, bool)[]? orderings) {
+        
+        if (orderings == null || orderings.Length== 0){
+            var param = Expression.Parameter(typeof(T), "t");
+            return doOrderBy(p, _idProperties.Select(p =>
+                (Expression.Lambda<Func<T, object>>( Expression.Convert(Expression.Property(param,p.PropertyInfo),typeof(object) ), param), false)).ToArray());
+        }
+        // if (orderings == null) return p;
+        bool first = true;
+        foreach (var order in orderings){
+            string methodName = (first ? "OrderBy" : "ThenBy") + (order.Item2?"" : "Descending");
+            var method = typeof(Queryable)
+                .GetMethods()
+                .First(m => m.Name == methodName
+                            && m.GetParameters().Length == 2)
+                .MakeGenericMethod(typeof(T), typeof(object));
+            p = (IQueryable<T>)method.Invoke(null,[ p, order.Item1 ])!;
+            first = false;
+        }
         return p;
+    }
+
+    private static readonly Lock _lck = new();
+    private static MethodInfo _ıdTupleCreateMethod = null!;
+    private IQueryable<IGrouping<object,TEntity>> doGroup(IQueryable<TEntity> query) {
+        var idTypes = _idProperties.Select(p => p.ClrType).ToArray();
+        lock (_lck){
+            _ıdTupleCreateMethod??=typeof(Tuple).GetMethods().First(m => m.IsStatic && m.Name.Equals(nameof(Tuple.Create)) &&
+                                                  m.GetGenericArguments().Length == _idProperties.Count)
+                .MakeGenericMethod(idTypes);
+        }
+        var param = Expression.Parameter(typeof(TEntity), "t");
+        var props = _idProperties.Select(p => Expression.Property(param, p.PropertyInfo));
+        var expr = Expression.Lambda<Func<TEntity, object>>(
+           Expression.Convert(
+                _idProperties.Count>1?Expression.Call(_ıdTupleCreateMethod, props):props.First(),
+                typeof(object)),
+                param);
+        return query.Distinct().GroupBy(expr);
     }
     private static IQueryable<TEntity> doIncludes(IQueryable<TEntity> query, string[][]? includes) {
         if (includes==null) return query;
@@ -189,10 +276,6 @@ public class EfRepository<TEntity> : IRepository<TEntity>, IAsyncDisposable wher
             ret = ret.Include(string.Join('.',include));
         }
         return ret;
-    }
-
-    public void Dispose() {
-        _context.Dispose();
     }
 
     public async ValueTask DisposeAsync() {

@@ -137,8 +137,7 @@ namespace Ecommerce.DesktopImpl
         }
 
         private SellerWithAggregates GetSeller() {
-            return _sellerManager.GetSellerWithAggregates(_loaded, false, false, true,
-                offersPage: _offersPage, offersPageSize: 20)!;
+            return _sellerManager.GetSellerWithAggregates(_loaded, false, false, true)!;
         }
         private void LoadSeller(Seller seller)
         {
@@ -212,7 +211,7 @@ namespace Ecommerce.DesktopImpl
             var offer = (ProductOffer)Utils.GetInput(typeof(ProductOffer), "Stok ve Fiyat bilgileri");
             if (offer == null) return;
             offer.Product = p;
-            _sellerManager.ListProduct(offer);
+            _sellerManager.ListOffer(offer);
             Utils.Info("Ürün başarıyla oluşturuldu.");
             Go();
         }

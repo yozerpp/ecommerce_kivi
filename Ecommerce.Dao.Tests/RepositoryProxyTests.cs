@@ -20,8 +20,6 @@ public class RepositoryProxyTests
 
     [OneTimeTearDown]
     public void TearDown() {
-        _repo1.Dispose();
-        _repo2.Dispose();
     }
     [Test]
     public void TestTransactions() {
@@ -68,6 +66,13 @@ public class RepositoryProxyTests
     {
         public List<T> All(string[][]? includes = null) => new List<T>();
         public List<TP> All<TP>(Expression<Func<T, TP>> select, string[][]? includes = null) => new List<TP>();
+        public int Count(Expression<Func<T, bool>> predicate) {
+            throw new NotImplementedException();
+        }
+
+        public int CountProjected<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate) {
+            throw new NotImplementedException();
+        }
 
         public List<T> Where(Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20, (Expression<Func<T, object>>, bool)[]? orderBy = null,
             string[][]? includes = null) {
@@ -76,6 +81,11 @@ public class RepositoryProxyTests
 
         public List<TP> Where<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate, int offset = 0, int limit = 20,
             (Expression<Func<TP, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
+            return[];
+        }
+
+        public List<TP> WhereP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20,
+            (Expression<Func<T, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
             return[];
         }
 

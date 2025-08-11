@@ -1,0 +1,39 @@
+﻿@using Product = Ecommerce.WebImpl.Pages.Product
+@model Ecommerce.WebImpl.Pages.Shared.Product._CategoryPropertiesPartial
+
+<div class="container @(Model.InputNamePrefix!=null?"h-50":"")">
+    @if (Model.InputNamePrefix!=null){
+        if (Model.Properties.Count > 0){
+            <input type="hidden" name="@(Model.InputNamePrefix)[@(HomepageModel.HasPropertiesKey)]" value="true"/>
+        }
+        foreach (var prop in Model.Properties){
+            <div class="row">
+                <label class="col-1" for="@Model.InputNamePrefix-@prop.PropertyName">@prop.PropertyName</label>
+                @if (prop.EnumValues != null){
+                    <select class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)" name="@(Model.InputNamePrefix)[@(prop.PropertyName)]">
+                        @if (!prop.IsRequired){
+                            <option>Seçiniz</option>
+                        }
+                        @foreach (var val in prop.EnumValues){
+                            <option value="@val">@val</option>
+                        }
+                    </select>    
+                }
+                else{
+                    <input class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)" name="@(Model.InputNamePrefix)[@prop.PropertyName]" type="@(prop.IsNumber?$"number":$"text")" @(prop.IsRequired?"required":"")/>
+                }
+            </div>
+        }    
+    }
+    else{
+        foreach (var property in Model.Properties){
+            <div class="row">
+                <b class="col-auto">@property.PropertyName: </b>
+                <p id="@(property.PropertyName)Val" class="col-auto">@property.PropertyName</p>
+                @if (Model.IsEditable){
+                    <a href="javascript:void(0);" onclick="this.previousElementSibling.setAttribute('contenteditable','true');" class="col-auto text-decoration-none bg-white text-secondary"><i class="bi bi-pencil"></i></a>
+                }
+            </div>
+        }
+    }
+</div>

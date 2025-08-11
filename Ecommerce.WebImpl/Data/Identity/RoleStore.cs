@@ -12,8 +12,6 @@ public class RoleStore : IRoleStore<Role>
         _roleRepository = roleRepository;
     }
     public void Dispose() {
-        GC.SuppressFinalize(this);
-        _roleRepository.Dispose();
     }
 
     public Task<IdentityResult> CreateAsync(Role role, CancellationToken cancellationToken) {

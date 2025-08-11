@@ -1,44 +1,49 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
+using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Entity;
 
-public class User
+public abstract class User
 {
     public uint Id { get; set; }
     public ulong SessionId { get; set; }
     public Session? Session { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
+    [NotMapped]
+    public string FullName => FirstName + " " + LastName;
     public string Email { get; set; }
     [EmailAddress]
     public string NormalizedEmail { get; set; }
     public string PasswordHash { get; set; }
-    public Address Address { get; set; }
+    public uint? ProfilePictureId { get; set; }
+    public Image? ProfilePicture { get; set; }
     public PhoneNumber PhoneNumber { get; set; }
     public bool Active { get; set; }
     public ICollection<Request> Requests { get; set; }
     public ICollection<Notification> Notifications { get; set; }
+    public ICollection<ReviewCommentNotification> ReviewCommentNotifications { get; set; } = new List<ReviewCommentNotification>();
     public override bool Equals(object? obj)
     {
         if (obj is Customer other)
         {
-            if (Id == default && NormalizedEmail == default)
+            if (Id == default)
             {
                 return base.Equals(obj);
             }
-            return Id == other.Id&&NormalizedEmail == other.NormalizedEmail;
+            return Id == other.Id;
         }
         return false;
     }
-
-    public override int GetHashCode()
+    public UserRole Role { get; set; }
+    public enum UserRole
     {
-        if (Id == default&&NormalizedEmail==default)
-        {
-            return base.GetHashCode();
-        }
-        return HashCode.Combine(Id, NormalizedEmail);
+        Customer,Seller,Staff
+    }
+    public override int GetHashCode() {
+        return Id == default ? base.GetHashCode() : Id.GetHashCode();
     }
 }

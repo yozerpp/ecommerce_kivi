@@ -2,8 +2,20 @@
 
 public class Permission
 {
-    public uint Id { get; set; }
-    public string Name { get; set; }
+    public static Permission EditProduct = new(){
+        Id = "edit_product",
+        Description = "Allows editing product details"
+    };
+    public static Permission EditUser = new(){
+        Id = "edit_user",
+        Description = "Allows editing user information"
+    };
+    public static Permission DeleteUser = new(){
+        Id = "delete_user",
+        Description = "Allows deleting user accounts"
+    };
+    public string Id { get; set; }
+
     public string Description { get; set; }
 
     protected bool Equals(Permission other) {
@@ -15,7 +27,6 @@ public class Permission
     }
 
     public override int GetHashCode() {
-        if (Id == default) return base.GetHashCode();
-        return (int)Id;
+        return Id == default ? base.GetHashCode() : Id.GetHashCode();
     }
 }
