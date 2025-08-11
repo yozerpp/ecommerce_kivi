@@ -207,17 +207,23 @@ public class DefaultDbContext : DbContext
         orderBuilder.OwnsOne<OrderStats>(o => o.Stats, c => {
             c.HasKey(v => v.OrderId);
             c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id);
-            c.ToView($"{nameof(OrderStats)}_{nameof(Coupon)}", DefaultSchema, v => {
+            c.ToView($"{nameof(OrderStats)}", DefaultSchema, v => {
                 v.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                v.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
-            c.SplitToView(nameof(OrderStats) + '_' + nameof(Coupon), DefaultSchema, vb => {
+            c.SplitToView($"{nameof(OrderStats)}_{nameof(Coupon)}", DefaultSchema, vb => {
                 vb.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.TotalDiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
                 
             });

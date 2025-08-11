@@ -80,9 +80,9 @@ public class View : Initialize
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderStats)}] WITH SCHEMABINDING AS
             SELECT o.Id as {nameof(OrderStats.OrderId)},
-            SELECT SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(OrderStats.ItemCount)},
-            SELECT SUM(po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)}) as {nameof(OrderStats.BasePrice)},
-            SELECT SUM(po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) as {nameof(OrderStats.DiscountedPrice)},
+            SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(OrderStats.ItemCount)},
+            SUM(po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)}) as {nameof(OrderStats.BasePrice)},
+            SUM(po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) as {nameof(OrderStats.DiscountedPrice)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON o.{nameof(Order.Id)} = oi.{nameof(OrderItem.OrderId)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(OrderItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = po.{nameof(ProductOffer.SellerId)} 
@@ -94,11 +94,11 @@ public class View : Initialize
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderStats)}]_{nameof(Coupon)} WITH SCHEMABINDING AS
             SELECT os.Id as {nameof(OrderStats.OrderId)},
-            SELECT os.{nameof(OrderStats.DiscountedPrice)} - SUM(COALESCE((1-c.{nameof(Coupon.DiscountRate)})*oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Price)}, 0)) as {nameof(OrderStats.CouponDiscountedPrice)},
-            SELECT os.{nameof(OrderStats.BasePrice)} - os.{nameof(OrderStats.DiscountedPrice)} as {nameof(OrderStats.DiscountAmount)},
-            SELECT os.{nameof(OrderStats.DiscountedPrice)} - {nameof(OrderStats.CouponDiscountedPrice)} as {nameof(OrderStats.CouponDiscountAmount)},
-            SELECT os.{nameof(OrderStats.BasePrice)} - os.{nameof(OrderStats.CouponDiscountedPrice)} as {nameof(OrderStats.TotalDiscountAmount)},
-            SELECT {nameof(OrderStats.TotalDiscountAmount)} / os.{nameof(OrderStats.BasePrice)} as {nameof(OrderStats.TotalDiscountPercentage)}
+            os.{nameof(OrderStats.DiscountedPrice)} - SUM(COALESCE((1-c.{nameof(Coupon.DiscountRate)})*oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Price)}, 0)) as {nameof(OrderStats.CouponDiscountedPrice)},
+            os.{nameof(OrderStats.BasePrice)} - os.{nameof(OrderStats.DiscountedPrice)} as {nameof(OrderStats.DiscountAmount)},
+            os.{nameof(OrderStats.DiscountedPrice)} - (os.{nameof(OrderStats.DiscountedPrice)} - SUM(COALESCE((1-c.{nameof(Coupon.DiscountRate)})*oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Price)}, 0))) as {nameof(OrderStats.CouponDiscountAmount)},
+            os.{nameof(OrderStats.BasePrice)} - (os.{nameof(OrderStats.DiscountedPrice)} - SUM(COALESCE((1-c.{nameof(Coupon.DiscountRate)})*oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Price)}, 0))) as {nameof(OrderStats.TotalDiscountAmount)},
+            (os.{nameof(OrderStats.BasePrice)} - (os.{nameof(OrderStats.DiscountedPrice)} - SUM(COALESCE((1-c.{nameof(Coupon.DiscountRate)})*oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Price)}, 0)))) / os.{nameof(OrderStats.BasePrice)} as {nameof(OrderStats.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderStats)}] os
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON os.{nameof(OrderStats.OrderId)} = oi.{nameof(OrderItem.OrderId)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(OrderItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
@@ -157,5 +157,15 @@ public class View : Initialize
         migrationBuilder.Sql($@"
         DROP VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}]
     ");
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(OrderStats)}",
+            nameof(OrderStats),
+            DefaultDbContext.DefaultSchema);
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(OrderStats)}_{nameof(Coupon)}",
+            $"{nameof(OrderStats)}_{nameof(Coupon)}",
+            DefaultDbContext.DefaultSchema);
+        migrationBuilder.Sql($"DROP VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderStats)}]");
+        migrationBuilder.Sql($"DROP VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderStats)}]_{nameof(Coupon)}");
     }
 }
