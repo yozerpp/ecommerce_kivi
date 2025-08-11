@@ -172,9 +172,9 @@ public class DefaultDbContext : DbContext
             entity.HasIndex(e => new { e.CartId })
                 .IsClustered(true);
             entity.OwnsOne<CartItemAggregates>(o => o.Aggregates, e => {
-                e.HasKey(a => new{ a.CartId, a.SellerId, a.ProductId });
-                e.WithOwner().HasForeignKey(a => new{ a.CartId, a.SellerId, a.ProductId })
-                    .HasPrincipalKey(o => new{ o.CartId, o.SellerId, o.ProductId }).Metadata.IsUnique = true;
+                e.HasKey(a => new{ a.SellerId, a.ProductId,a.CartId });
+                e.WithOwner().HasForeignKey(a => new{ a.SellerId, a.ProductId,a.CartId })
+                    .HasPrincipalKey(o => new{ o.SellerId, o.ProductId,o.CartId }).Metadata.IsUnique = true;
                 e.ToView(nameof(CartItemAggregates), DefaultSchema, v => {
                     v.Property(a => a.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     v.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
@@ -216,15 +216,16 @@ public class DefaultDbContext : DbContext
                 v.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.TotalPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.DiscountPercentage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
             });
             c.SplitToView($"{nameof(CartAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
                 vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.TotalDiscountedPrice).Overrides.Property.ValueGenerated =
+                vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
