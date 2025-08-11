@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Net.Http.Headers;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
@@ -22,5 +23,6 @@ public class Customer : User
     public ICollection<Order> Orders { get; init; } 
     public ICollection<ProductReview> Reviews { get; init; }
     public ICollection<ReviewComment> ReviewComments { get; init; }
+    public CustomerStats Stats { get; set; }
 
 }

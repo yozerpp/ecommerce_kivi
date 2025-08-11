@@ -1,7 +1,8 @@
-﻿namespace Ecommerce.Entity.Views;
+namespace Ecommerce.Entity.Views;
 
 public class CustomerStats
 {
+    public uint CustomerId { get; set; }
     public decimal TotalSpent { get; set; }
     public decimal TotalDiscountUsed { get; set; }
     public int TotalOrders { get; set; }

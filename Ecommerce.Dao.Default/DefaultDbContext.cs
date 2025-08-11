@@ -94,6 +94,22 @@ public class DefaultDbContext : DbContext
                         .IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 e=>e.HasKey(t=>new {t.CustomerId, t.SellerId})
             );
+        customerBuilder.OwnsOne<CustomerStats>(c => c.Stats, cs => {
+            cs.HasKey(s => s.CustomerId);
+            cs.WithOwner().HasForeignKey(s => s.CustomerId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
+            cs.ToView($"{nameof(CustomerStats)}", DefaultSchema, v => {
+                v.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                v.Property(s => s.TotalSpent).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.TotalDiscountUsed).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.TotalOrders).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
+                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.TotalKarma).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.TotalReplies).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+        });
         var sellerBuilder = modelBuilder.Entity<Seller>();
         sellerBuilder.HasBaseType<User>();
         sellerBuilder.ComplexProperty<Address>(s => s.Address).IsRequired();
