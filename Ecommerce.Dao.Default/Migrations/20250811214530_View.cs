@@ -163,8 +163,8 @@ public class View : Initialize
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] WITH SCHEMABINDING AS
             SELECT 
                 s.Id as {nameof(SellerStats.SellerId)},
-                COUNT_BIG(pr.{nameof(ProductReview.Id)}) as {nameof(SellerStats.ReviewCount)},
-                AVG(CAST(pr.{nameof(ProductReview.Rating)} AS FLOAT)) as {nameof(SellerStats.ReviewAverage)}
+                COUNT_BIG(*) as {nameof(SellerStats.ReviewCount)},
+                SUM(pr.{nameof(ProductReview.Rating)}) as {nameof(SellerStats.RatingTotal)},
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Seller)}] s
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON s.Id = po.{nameof(ProductOffer.SellerId)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] pr ON po.{nameof(ProductOffer.ProductId)} = pr.{nameof(ProductReview.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = pr.{nameof(ProductReview.SellerId)}
@@ -180,7 +180,7 @@ public class View : Initialize
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}] WITH SCHEMABINDING AS
             SELECT 
                 s.Id as {nameof(SellerStats.SellerId)},
-                SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(SellerStats.SaleCount)}
+                COUNT_BIG(*) as {nameof(SellerStats.SaleCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Seller)}] s
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON s.Id = oi.{nameof(OrderItem.SellerId)}
             GROUP BY s.Id
