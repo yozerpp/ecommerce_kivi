@@ -15,7 +15,7 @@
             @OrderHeadingItem(("Sipariş Tarihi", Model.Order.Date.ToString("D", CultureInfo.CurrentCulture),4))
             @OrderHeadingItem(("Sipariş Durumu", Model.Order.Status.ToLocalizedString(),2 ))
             @OrderHeadingItem(("Teslimat Adresi",Model.Order.ShippingAddress.ToString(),4))
-            @OrderHeadingItem(("Ürün Sayısı",Model.Order.ItemCount.ToString(), 1))
+            @OrderHeadingItem(("Ürün Sayısı",Model.Order.Aggregates.ItemCount.ToString(), 1))
         </ul>
     </a>
     <ul id="order@(Model.Order.Id)-body" class="list-group container-fluid border-top-0 @(Model.IsCollapsable?"collapse":"")">

@@ -5,6 +5,7 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Projections;
+using Ecommerce.Entity.Views;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,17 +91,17 @@ public class OrderManager : IOrderManager
     }
 
     public Order? GetOrderWithItems( uint orderId) {
-        var ret = _orderRepository.First(o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)], [nameof(Order.Stats)]]);
+        var ret = _orderRepository.First(o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)], [nameof(Order.Aggregates)]]);
         return ret;
     }
 
     public Order? GetAnonymousOrder(string email, uint id) {
-        return _orderRepository.First(o => o.Email == email && o.UserId == null && o.Id==id, includes:[[nameof(Order.Stats)]]);
+        return _orderRepository.First(o => o.Email == email && o.UserId == null && o.Id==id, includes:[[nameof(Order.Aggregates)]]);
     }
     public List<Order> GetAllOrders(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
         var uid = user.Id;
         var ret = _orderRepository.Where(o => o.UserId == uid,
-            includes:[[nameof(Order.Stats)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
+            includes:[[nameof(Order.Aggregates)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
         return ret;
     }
     public static readonly Expression<Func<Order, Order>> OrderWithoutItemsAggregateProjection = o => new Order
@@ -113,7 +114,7 @@ public class OrderManager : IOrderManager
         Status = o.Status,
         Payment = o.Payment,
         User = o.User,
-        Stats = o.Stats
+        Aggregates = o.Aggregates
     };
 
     public static readonly Expression<Func<Order, Order>> OrderWithItemsAggregateProjection = o =>
@@ -126,22 +127,24 @@ public class OrderManager : IOrderManager
             Status = o.Status,
             Payment = o.Payment,
             User = o.User,
-            Items = o.Items.Select(o =>(OrderItem) new OrderItemWithAggregates{
+            Items = o.Items.Select(o => new OrderItem(){
                 ProductId = o.ProductId,
                 SellerId = o.SellerId,
                 OrderId = o.OrderId,
                 ProductOffer = o.ProductOffer,
                 Order = o.Order,
                 Quantity = o.Quantity,
+                Aggregates = new OrderItemAggregates(){
                 BasePrice = o.ProductOffer.Price * o.Quantity,
-                CouponId = o.CouponId,
-                Coupon = o.Coupon,
                 DiscountedPrice =(decimal?) o.ProductOffer.Price *(decimal?) o.Quantity *(decimal) o.ProductOffer.Discount??0m,
                 CouponDiscountedPrice = (decimal?)o.ProductOffer.Price * (decimal?)o.Quantity * (decimal)o.ProductOffer.Discount *
                     (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : (decimal?)1m)??0m,
                 TotalDiscountPercentage =(decimal) o.ProductOffer.Discount *
                     (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : (decimal?)1m)??0m,
+                },
+                CouponId = o.CouponId,
+                Coupon = o.Coupon,
             }).ToArray(),
-            Stats = o.Stats
+            Aggregates = o.Aggregates
         };
 }

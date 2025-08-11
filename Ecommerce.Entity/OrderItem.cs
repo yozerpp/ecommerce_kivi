@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
@@ -22,6 +23,7 @@ public class OrderItem : IItem
     public Shipment SentShipment { get; set; }
     public Shipment? RefundShipment { get; set; }
     public ProductOffer? ProductOffer { get; set; }
+    public OrderItemAggregates Aggregates { get; set; }
     public Order Order { get; set; }
     public string? CouponId { get; set; }
     public Coupon? Coupon { get; set; }

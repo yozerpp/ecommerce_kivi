@@ -1,6 +1,6 @@
 ﻿namespace Ecommerce.Entity.Views;
 
-public class OrderStats
+public class OrderAggregates
 {
     public uint OrderId { get; set; }
     public int ItemCount { get; set; }

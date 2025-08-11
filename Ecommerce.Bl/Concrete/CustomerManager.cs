@@ -31,7 +31,7 @@ public class CustomerManager : ICustomerManager
         return ret;
     }
 
-    public ICollection<OrderWithAggregates> GetOrders(uint customerId, int page = 1, int pageSize =10) {
+    public ICollection<Entity.Order> GetOrders(uint customerId, int page = 1, int pageSize =10) {
         return _orderRepository.WhereP(OrderManager.OrderWithItemsAggregateProjection, o => o.UserId == customerId, offset:
             (page -1)*pageSize, pageSize*pageSize);
     }

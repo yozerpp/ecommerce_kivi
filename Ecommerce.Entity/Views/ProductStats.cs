@@ -3,7 +3,7 @@ using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Entity.Views;
 
-public class ProductStats : IProductStats
+public class ProductStats
 {
     public uint? ProductId { get; set; }
     public int? SaleCount { get; set; }

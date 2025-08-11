@@ -34,13 +34,13 @@
                 type: 'line',
                 color: '#@ToHex(Color.DarkOrange)',
                 smooth: true,
-                data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g=>g.Sum(o=>o.CouponDiscountedPrice))))
+                data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g=>g.Sum(o=>o.Aggregates.CouponDiscountedPrice))))
         },{
             name: 'Kullanılan İndirim',
             type: 'bar',
             color: '#@ToHex(Color.ForestGreen)',
             smooth: false,
-            data: @(Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g=>g.Sum(o=>o.TotalDiscountAmount))))
+            data: @(Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g=>g.Sum(o=>o.Aggregates.TotalDiscountAmount)))))
         }
         ]
     });

@@ -55,7 +55,7 @@ public class Customer : BaseModel
     public int PageNumber { get; set; }
     [BindProperty(SupportsGet = true)]
     public int PageSize { get; set; }
-    public ICollection<OrderWithAggregates> Orders { get; set; }
+    public ICollection<Order> Orders { get; set; }
     [HasRole(nameof(Staff), nameof(Entity.Customer))]
     public IActionResult OnGetOrders() {
         if (CustomerId == 0){

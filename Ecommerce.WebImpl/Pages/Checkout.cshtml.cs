@@ -49,7 +49,7 @@ public class Checkout : BaseModel
     [BindProperty]
     public int SelectedTab { get; set; } = 1;
     [BindProperty]
-    public OrderWithAggregates CreatedOrder { get; set; }  
+    public Order CreatedOrder { get; set; }  
     [BindProperty] 
     public Dictionary<uint,ShippingOffer[]> ShippingOffersGrouped { get; set; }
     [BindProperty]

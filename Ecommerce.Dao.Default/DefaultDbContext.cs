@@ -63,7 +63,7 @@ public class DefaultDbContext : DbContext
                     l.HasOne<Product>(f => f.Product).WithMany().HasForeignKey(f => f.ProductId)
                         .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 r => 
-                    r.HasOne<Customer>(f => f.Customer).WithMany().HasForeignKey(c => c.Id)
+                    r.HasOne<Customer>(f => f.Customer).WithMany().HasForeignKey(c => c.CustomerId)
                         .HasPrincipalKey(c => c.Id)
                         .IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 e=>e.HasKey(e=>new {e.CustomerId, e.ProductId})
@@ -204,39 +204,16 @@ public class DefaultDbContext : DbContext
         orderBuilder.Property(o => o.Status).HasDefaultValue(OrderStatus.WaitingConfirmation);
         orderBuilder.HasMany<OrderItem>(o => o.Items).WithOne(oi=>oi.Order).HasForeignKey(oi=>oi.OrderId)
             .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<OrderItemAggregates>(e => {
-            e.HasNoKey();
-            e.ToView(nameof(OrderItemAggregates), DefaultSchema);
-            e.Property(o => o.OrderId).HasColumnName(nameof(OrderItem.OrderId));
-            e.Property(o => o.ProductId).HasColumnName(nameof(OrderItem.ProductId));
-            e.Property(o => o.SellerId).HasColumnName(nameof(OrderItem.SellerId));
-            e.Property(o => o.Quantity).HasColumnName(nameof(OrderItem.Quantity));
-            e.Property(o => o.BasePrice).HasColumnName(nameof(OrderItemAggregates.BasePrice));
-            e.Property(o => o.DiscountedPrice).HasColumnName(nameof(OrderItemAggregates.DiscountedPrice));
-            e.Property(o => o.ShipmentId).HasColumnName(nameof(OrderItem.ShipmentId));
-            e.Property(o => o.RefundShipmentId).HasColumnName(nameof(OrderItem.RefundShipmentId));
-            e.Property(o => o.ProductOfferId).HasColumnName(nameof(OrderItemAggregates.ProductOfferId));
-        });
-        modelBuilder.Entity<OrderItemCouponAggregates>(e => {
-            e.HasNoKey();
-            e.ToView($"{nameof(OrderItemAggregates)}_{nameof(Coupon)}", DefaultSchema);
-            e.Property(o => o.OrderId).HasColumnName(nameof(OrderItem.OrderId));
-            e.Property(o => o.ProductId).HasColumnName(nameof(OrderItem.ProductId));
-            e.Property(o => o.SellerId).HasColumnName(nameof(OrderItem.SellerId));
-            e.Property(o => o.CouponId).HasColumnName(nameof(OrderItem.CouponId));
-            e.Property(o => o.CouponDiscountedPrice).HasColumnName(nameof(OrderItemCouponAggregates.CouponDiscountedPrice));
-            e.Property(o => o.TotalDiscountPercentage).HasColumnName(nameof(OrderItemCouponAggregates.TotalDiscountPercentage));
-        });
-        orderBuilder.OwnsOne<OrderStats>(o => o.Stats, c => {
+        orderBuilder.OwnsOne<OrderAggregates>(o => o.Aggregates, c => {
             c.HasKey(v => v.OrderId);
             c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
-            c.ToView($"{nameof(OrderStats)}", DefaultSchema, v => {
+            c.ToView($"{nameof(OrderAggregates)}", DefaultSchema, v => {
                 v.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
-            c.SplitToView($"{nameof(OrderStats)}_{nameof(Coupon)}", DefaultSchema, vb => {
+            c.SplitToView($"{nameof(OrderAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
                 vb.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
@@ -359,15 +336,33 @@ public class DefaultDbContext : DbContext
                 .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
             entity.Property<int>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired().ValueGeneratedNever();
             entity.HasIndex(e => e.ProductId)
-                
                 .IsClustered(false)
                 .IncludeProperties(e => e.Quantity);
             entity.HasIndex(e => e.SellerId)
-                
                 .IsClustered(false);
             entity.HasIndex(e => e.OrderId)
-                
                 .IsClustered();
+            entity.OwnsOne<OrderItemAggregates>(o => o.Aggregates, e => {
+                e.HasKey(a => new{ a.OrderId, a.SellerId, a.ProductId });
+                e.WithOwner().HasForeignKey(a => new{ a.OrderId, a.SellerId, a.ProductId })
+                    .HasPrincipalKey(o => new{ o.OrderId, o.SellerId, o.ProductId }).Metadata.IsUnique = true;
+                e.ToView(nameof(OrderItemAggregates), DefaultSchema, v => {
+                    v.Property(a => a.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    v.Property(a => a.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                e.SplitToView($"{nameof(OrderItemAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
+                    vb.Property(a => a.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                        ValueGenerated.OnAddOrUpdate;
+                    vb.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                        ValueGenerated.OnAddOrUpdate;
+                });
+            });
         });
         var reviewBuilder = modelBuilder.Entity<ProductReview>(entity => {
             entity.HasKey(r => r.Id).IsClustered(false);

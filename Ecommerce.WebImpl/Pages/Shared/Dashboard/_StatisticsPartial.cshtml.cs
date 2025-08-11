@@ -5,5 +5,5 @@ namespace Ecommerce.WebImpl.Pages.Shared.Dashboard;
 
 public class _StatisticsPartial
 {
-    public ICollection<OrderWithAggregates> Orders { get; set; }
+    public ICollection<Entity.Order> Orders { get; set; }
 }
