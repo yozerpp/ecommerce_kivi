@@ -206,7 +206,7 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         orderBuilder.OwnsOne<OrderStats>(o => o.Stats, c => {
             c.HasKey(v => v.OrderId);
-            c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id);
+            c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
             c.ToView($"{nameof(OrderStats)}", DefaultSchema, v => {
                 v.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
