@@ -114,18 +114,13 @@ public class View : Initialize
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] WITH SCHEMABINDING AS
             SELECT 
-                oi.{nameof(OrderItem.OrderId)},
-                oi.{nameof(OrderItem.ProductId)},
-                oi.{nameof(OrderItem.SellerId)},
-                oi.{nameof(OrderItem.Quantity)},
+                oi.{nameof(OrderItem.OrderId)} as {nameof(OrderItemAggregates.OrderId)},
+                oi.{nameof(OrderItem.ProductId)} as {nameof(OrderItemAggregates.ProductId)},
+                oi.{nameof(OrderItem.SellerId)} as {nameof(OrderItemAggregates.SellerId)},
                 (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)}) AS {nameof(OrderItemAggregates.BasePrice)},
                 (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(OrderItemAggregates.DiscountedPrice)},
                 (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(OrderItemAggregates.CouponDiscountedPrice)},
                 (po.{nameof(ProductOffer.Discount)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(OrderItemAggregates.TotalDiscountPercentage)},
-                oi.{nameof(OrderItem.CouponId)},
-                oi.{nameof(OrderItem.ShipmentId)},
-                oi.{nameof(OrderItem.RefundShipmentId)},
-                po.{nameof(ProductOffer.ProductId)} AS {nameof(OrderItemAggregates.ProductOfferId)} -- Assuming ProductOfferId is a composite key or a unique identifier for ProductOffer
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(OrderItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(OrderItem.CouponId)} = c.{nameof(Coupon.Id)}

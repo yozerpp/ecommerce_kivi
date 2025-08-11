@@ -126,7 +126,7 @@ public class OrderManager : IOrderManager
             Status = o.Status,
             Payment = o.Payment,
             User = o.User,
-            Items = o.Items.Select(o => new OrderItemWithAggregates{
+            Items = o.Items.Select(o =>(OrderItem) new OrderItemWithAggregates{
                 ProductId = o.ProductId,
                 SellerId = o.SellerId,
                 OrderId = o.OrderId,
@@ -138,10 +138,10 @@ public class OrderManager : IOrderManager
                 Coupon = o.Coupon,
                 DiscountedPrice =(decimal?) o.ProductOffer.Price *(decimal?) o.Quantity *(decimal) o.ProductOffer.Discount??0m,
                 CouponDiscountedPrice = (decimal?)o.ProductOffer.Price * (decimal?)o.Quantity * (decimal)o.ProductOffer.Discount *
-                                        (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : (decimal?)1m)??0m,
+                    (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : (decimal?)1m)??0m,
                 TotalDiscountPercentage =(decimal) o.ProductOffer.Discount *
-                                          (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : (decimal?)1m)??0m,
-            }),
+                    (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : (decimal?)1m)??0m,
+            }).ToArray(),
             Stats = o.Stats
         };
 }
