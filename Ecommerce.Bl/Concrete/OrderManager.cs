@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
@@ -42,7 +42,7 @@ public class OrderManager : IOrderManager
         var s = _cartManager.newSession(user, flush:true);
         newSession = s;
         _orderRepository.Flush();
-        return OrderWithItemsAggregateProjection.Compile().Invoke(o);
+        return o;
     }
     public Order CancelOrder(Order order)
     {
@@ -90,36 +90,21 @@ public class OrderManager : IOrderManager
     }
 
     public Order? GetOrderWithItems( uint orderId) {
-        var ret = _orderRepository.First(OrderWithItemsAggregateProjection, o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]]);
-        if (ret == null) return null;
-        ret.CouponDiscountedPrice = ret.Items.Sum(o => o.CouponDiscountedPrice);
-        ret.BasePrice = ret.Items.Sum(o => o.BasePrice);
-        ret.DiscountedPrice = ret.Items.Sum(o => o.DiscountedPrice);
-        ret.DiscountAmount = ret.Items.Sum(o => o.BasePrice - o.DiscountedPrice);
-        ret.CouponDiscountAmount = ret.Items.Sum(o => o.DiscountedPrice - o.CouponDiscountedPrice);
-        ret.TotalDiscountAmount = ret.DiscountAmount + ret.CouponDiscountAmount;
+        var ret = _orderRepository.First(o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)], [nameof(Order.Stats)]]);
         return ret;
     }
 
     public Order? GetAnonymousOrder(string email, uint id) {
-        return _orderRepository.FirstP(OrderWithItemsAggregateProjection,o => o.Email == email && o.UserId == null && o.Id==id);
+        return _orderRepository.First(o => o.Email == email && o.UserId == null && o.Id==id, includes:[[nameof(Order.Stats)]]);
     }
     public List<Order> GetAllOrders(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
         var uid = user.Id;
-        var ret = _orderRepository.Where(OrderWithItemsAggregateProjection, o => o.UserId == uid,
-            includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
-        foreach (var order in ret){
-            order.DiscountAmount = order.BasePrice - order.DiscountedPrice;
-            order.CouponDiscountAmount = order.DiscountedPrice - order.CouponDiscountedPrice;
-        }
+        var ret = _orderRepository.Where(o => o.UserId == uid,
+            includes:[[nameof(Order.Stats)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
         return ret;
     }
     public static readonly Expression<Func<Order, Order>> OrderWithoutItemsAggregateProjection = o => new Order
     {
-        BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*i.ProductOffer.Price) ?? 0m,
-        DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
-        CouponDiscountedPrice = o.Items.Sum(i=>i.Quantity * i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
-        ItemCount = 0,
         Id = o.Id,
         PaymentId = o.PaymentId,
         UserId = o.UserId,
@@ -128,11 +113,11 @@ public class OrderManager : IOrderManager
         Status = o.Status,
         Payment = o.Payment,
         User = o.User,
+        Stats = o.Stats
     };
 
     public static readonly Expression<Func<Order, Order>> OrderWithItemsAggregateProjection = o =>
         new Order{
-            ItemCount = o.Items.Count(),
             Id = o.Id,
             PaymentId = o.PaymentId,
             UserId = o.UserId,
@@ -141,9 +126,6 @@ public class OrderManager : IOrderManager
             Status = o.Status,
             Payment = o.Payment,
             User = o.User,
-            BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*(decimal?)i.ProductOffer.Price) ?? 0m,
-            DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * (decimal?)i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
-            CouponDiscountedPrice = o.Items.Sum(i=>(decimal?)i.Quantity *(decimal?) i.ProductOffer.Price * (decimal?)i.ProductOffer.Discount * (i.Coupon != null ? (decimal?)i.Coupon.DiscountRate : 1m))?? 0m,
             Items = o.Items.Select(o => new OrderItemWithAggregates{
                 ProductId = o.ProductId,
                 SellerId = o.SellerId,
@@ -159,6 +141,7 @@ public class OrderManager : IOrderManager
                                         (o.Coupon != null ? (decimal)o.Coupon.DiscountRate : (decimal?)1m)??0m,
                 TotalDiscountPercentage =(decimal) o.ProductOffer.Discount *
                                           (o.Coupon != null ?(decimal) o.Coupon.DiscountRate : (decimal?)1m)??0m,
-            })
+            }),
+            Stats = o.Stats
         };
 }
