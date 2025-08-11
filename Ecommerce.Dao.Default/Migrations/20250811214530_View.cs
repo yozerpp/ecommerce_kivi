@@ -82,10 +82,10 @@ public class View : Initialize
             SELECT o.Id as {nameof(OrderAggregates.OrderId)},
             SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(OrderAggregates.ItemCount)},
             SUM(oa.{nameof(OrderItemAggregates.BasePrice)}) as {nameof(OrderAggregates.BasePrice)},
-            SUM oa.{nameof(OrderItemAggregates.DiscountedPrice)} as {nameof(OrderAggregates.DiscountedPrice)}
+            SUM(oa.{nameof(OrderItemAggregates.DiscountedPrice)}) as {nameof(OrderAggregates.DiscountedPrice)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON o.{nameof(Order.Id)} = oi.{nameof(OrderItem.OrderId)}
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa ON oa.{nameof(OrderItemAggregates.OrderId)} = o.{nameof(Order.Id)} 
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa ON oa.{nameof(OrderItemAggregates.OrderId)} = o.{nameof(Order.Id)} AND oa.{nameof(OrderItemAggregates.ProductId)} = oi.{nameof(OrderItem.ProductId)} AND oa.{nameof(OrderItemAggregates.SellerId)} = oi.{nameof(OrderItem.SellerId)}
             GROUP BY o.Id
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(OrderAggregates)}", nameof(OrderAggregates), nameof(OrderAggregates.OrderId),
@@ -94,15 +94,15 @@ public class View : Initialize
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}]_{nameof(Coupon)} WITH SCHEMABINDING AS
             SELECT os.Id as {nameof(OrderAggregates.OrderId)},
-            SUM(oa.{nameof(OrderItemAggregates.CouponDiscountedPrice)}) as {nameof(OrderAggregates.CouponDiscountedPrice)},
+            SUM(oac.{nameof(OrderItemAggregates.CouponDiscountedPrice)}) as {nameof(OrderAggregates.CouponDiscountedPrice)},
             os.{nameof(OrderAggregates.BasePrice)} - os.{nameof(OrderAggregates.DiscountedPrice)} as {nameof(OrderAggregates.DiscountAmount)},
-            os.{nameof(OrderAggregates.DiscountedPrice)} - {nameof(OrderAggregates.CouponDiscountedPrice)} as {nameof(OrderAggregates.CouponDiscountAmount)},
-            os.{nameof(OrderAggregates.BasePrice)} - {nameof(OrderAggregates.CouponDiscountedPrice)} as {nameof(OrderAggregates.TotalDiscountAmount)},
-            (os.{nameof(OrderAggregates.BasePrice)} - {nameof(OrderAggregates.CouponDiscountedPrice)}) / os.{nameof(OrderAggregates.BasePrice)} as {nameof(OrderAggregates.TotalDiscountPercentage)}
+            os.{nameof(OrderAggregates.DiscountedPrice)} - SUM(oac.{nameof(OrderItemAggregates.CouponDiscountedPrice)}) as {nameof(OrderAggregates.CouponDiscountAmount)},
+            os.{nameof(OrderAggregates.BasePrice)} - SUM(oac.{nameof(OrderItemAggregates.CouponDiscountedPrice)}) as {nameof(OrderAggregates.TotalDiscountAmount)},
+            (os.{nameof(OrderAggregates.BasePrice)} - SUM(oac.{nameof(OrderItemAggregates.CouponDiscountedPrice)})) / os.{nameof(OrderAggregates.BasePrice)} as {nameof(OrderAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}] os
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON os.{nameof(OrderAggregates.OrderId)} = oi.{nameof(OrderItem.OrderId)}
-            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}] oa ON oi.{nameof(OrderItem.OrderId)} = oa.{nameof(OrderItemAggregates.OrderId)}
-            GROUP BY os.Id
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}] oac ON oi.{nameof(OrderItem.OrderId)} = oac.{nameof(OrderItemAggregates.OrderId)} AND oi.{nameof(OrderItem.ProductId)} = oac.{nameof(OrderItemAggregates.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = oac.{nameof(OrderItemAggregates.SellerId)}
+            GROUP BY os.Id, os.{nameof(OrderAggregates.BasePrice)}, os.{nameof(OrderAggregates.DiscountedPrice)}
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(OrderAggregates)}_{nameof(Coupon)}",
             $"{nameof(OrderAggregates)}_{nameof(Coupon)}", nameof(OrderAggregates.OrderId), DefaultDbContext.DefaultSchema, true);
@@ -117,7 +117,7 @@ public class View : Initialize
                 oi.{nameof(OrderItem.ProductId)},
                 oi.{nameof(OrderItem.SellerId)},
                 (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)}) AS {nameof(OrderItemAggregates.BasePrice)},
-                (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(OrderItemAggregates.DiscountedPrice)},
+                (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(OrderItemAggregates.DiscountedPrice)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(OrderItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
         ");
@@ -131,11 +131,10 @@ public class View : Initialize
                 oi.{nameof(OrderItem.ProductId)},
                 oi.{nameof(OrderItem.SellerId)},
                 (oa.{nameof(OrderItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(OrderItemAggregates.CouponDiscountedPrice)},
-                (oa.{nameof(OrderItemAggregates.BasePrice)} - {nameof(OrderItemAggregates.CouponDiscountedPrice)})*100/oa.{nameof(OrderItemAggregates.BasePrice)} AS {nameof(OrderItemAggregates.TotalDiscountPercentage)}
+                (oa.{nameof(OrderItemAggregates.BasePrice)} - (oa.{nameof(OrderItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/oa.{nameof(OrderItemAggregates.BasePrice)} AS {nameof(OrderItemAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa on oa.{nameof(OrderItemAggregates.OrderId)} = oi.{nameof(OrderItem.OrderId)} AND oa.{nameof(OrderItemAggregates.ProductId)} = oi.{nameof(OrderItem.ProductId)} AND oa.{nameof(OrderItem.SellerId)} = oi.{nameof(OrderItem.SellerId)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa on oa.{nameof(OrderItemAggregates.OrderId)} = oi.{nameof(OrderItem.OrderId)} AND oa.{nameof(OrderItemAggregates.ProductId)} = oi.{nameof(OrderItem.ProductId)} AND oa.{nameof(OrderItemAggregates.SellerId)} = oi.{nameof(OrderItem.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(OrderItem.CouponId)} = c.{nameof(Coupon.Id)}
-            GROUP BY oi.{nameof(OrderItem.OrderId)}, oi.{nameof(OrderItem.SellerId)}, oi.{nameof(OrderItem.ProductId)}
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
             $"{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
@@ -143,6 +142,54 @@ public class View : Initialize
                 nameof(OrderItemAggregates.OrderId),nameof(OrderItemAggregates.SellerId), nameof(OrderItemAggregates.ProductId)
             },
             DefaultDbContext.DefaultSchema, true);
+
+        // SellerStats Views
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}] WITH SCHEMABINDING AS
+            SELECT 
+                s.Id as {nameof(SellerStats.SellerId)},
+                COUNT_BIG(po.{nameof(ProductOffer.ProductId)}) as {nameof(SellerStats.OfferCount)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Seller)}] s
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON s.Id = po.{nameof(ProductOffer.SellerId)}
+            GROUP BY s.Id
+        ");
+        migrationBuilder.CreateIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductOffer)}",
+            $"{nameof(SellerStats)}_{nameof(ProductOffer)}",
+            nameof(SellerStats.SellerId), DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] WITH SCHEMABINDING AS
+            SELECT 
+                s.Id as {nameof(SellerStats.SellerId)},
+                COUNT_BIG(pr.{nameof(ProductReview.Id)}) as {nameof(SellerStats.ReviewCount)},
+                AVG(CAST(pr.{nameof(ProductReview.Rating)} AS FLOAT)) as {nameof(SellerStats.ReviewAverage)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Seller)}] s
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON s.Id = po.{nameof(ProductOffer.SellerId)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] pr ON po.{nameof(ProductOffer.ProductId)} = pr.{nameof(ProductReview.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = pr.{nameof(ProductReview.SellerId)}
+            GROUP BY s.Id
+        ");
+        migrationBuilder.CreateIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductReview)}",
+            $"{nameof(SellerStats)}_{nameof(ProductReview)}",
+            nameof(SellerStats.SellerId), DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}] WITH SCHEMABINDING AS
+            SELECT 
+                s.Id as {nameof(SellerStats.SellerId)},
+                SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(SellerStats.SaleCount)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Seller)}] s
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON s.Id = oi.{nameof(OrderItem.SellerId)}
+            GROUP BY s.Id
+        ");
+        migrationBuilder.CreateIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(OrderItem)}",
+            $"{nameof(SellerStats)}_{nameof(OrderItem)}",
+            nameof(SellerStats.SellerId), DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
     }
     protected override void Down(MigrationBuilder migrationBuilder)
     {
@@ -212,5 +259,23 @@ public class View : Initialize
             $"{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
             DefaultDbContext.DefaultSchema);
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}]");
+
+        // Drop SellerStats Views
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductOffer)}",
+            $"{nameof(SellerStats)}_{nameof(ProductOffer)}",
+            DefaultDbContext.DefaultSchema);
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductReview)}",
+            $"{nameof(SellerStats)}_{nameof(ProductReview)}",
+            DefaultDbContext.DefaultSchema);
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(OrderItem)}",
+            $"{nameof(SellerStats)}_{nameof(OrderItem)}",
+            DefaultDbContext.DefaultSchema);
+
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}]");
     }
 }
