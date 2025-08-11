@@ -6,5 +6,6 @@ public class SellerStats
     public uint OfferCount { get; set; }
     public uint ReviewCount { get; set; }
     public float ReviewAverage { get; set; }
+    public float RatingTotal { get; set; }
     public uint SaleCount { get; set; }
 }

@@ -103,8 +103,14 @@ public class DefaultDbContext : DbContext
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                vb.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
+                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.TotalKarma).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
+                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             //non-materialized
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
