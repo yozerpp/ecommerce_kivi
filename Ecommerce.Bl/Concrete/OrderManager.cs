@@ -19,7 +19,7 @@ public class OrderManager : IOrderManager
         _orderRepository = orderRepository;
     }
 
-    public OrderWithAggregates CreateOrder(Session session,out Session? newSession, ICollection<Shipment> shipments, Customer? user=null, string? email = null, Address? shippingAddress = null) {
+    public Order CreateOrder(Session session,out Session? newSession, ICollection<Shipment> shipments, Customer? user=null, string? email = null, Address? shippingAddress = null) {
         var o = new Order{
             Date = DateTime.Now, 
             // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
@@ -89,7 +89,7 @@ public class OrderManager : IOrderManager
         _orderRepository.Detach(oldOrder);
     }
 
-    public OrderWithAggregates? GetOrderWithItems( uint orderId) {
+    public Order? GetOrderWithItems( uint orderId) {
         var ret = _orderRepository.First(OrderWithItemsAggregateProjection, o =>  o.Id == orderId, includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]]);
         if (ret == null) return null;
         ret.CouponDiscountedPrice = ret.Items.Sum(o => o.CouponDiscountedPrice);
@@ -101,10 +101,10 @@ public class OrderManager : IOrderManager
         return ret;
     }
 
-    public OrderWithAggregates? GetAnonymousOrder(string email, uint id) {
+    public Order? GetAnonymousOrder(string email, uint id) {
         return _orderRepository.FirstP(OrderWithItemsAggregateProjection,o => o.Email == email && o.UserId == null && o.Id==id);
     }
-    public List<OrderWithAggregates> GetAllOrders(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
+    public List<Order> GetAllOrders(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
         var uid = user.Id;
         var ret = _orderRepository.Where(OrderWithItemsAggregateProjection, o => o.UserId == uid,
             includes:[[nameof(Order.Items), nameof(OrderItem.ProductOffer), nameof(ProductOffer.Product)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
@@ -114,7 +114,7 @@ public class OrderManager : IOrderManager
         }
         return ret;
     }
-    public static readonly Expression<Func<Order, OrderWithAggregates>> OrderWithoutItemsAggregateProjection = o => new OrderWithAggregates
+    public static readonly Expression<Func<Order, Order>> OrderWithoutItemsAggregateProjection = o => new Order
     {
         BasePrice = o.Items.Sum(i=>(decimal?)i.Quantity*i.ProductOffer.Price) ?? 0m,
         DiscountedPrice = o.Items.Sum(i=>(decimal?)(i.Quantity * i.ProductOffer.Price *(decimal?)i.ProductOffer.Discount)) ??0m,
@@ -130,8 +130,8 @@ public class OrderManager : IOrderManager
         User = o.User,
     };
 
-    public static readonly Expression<Func<Order, OrderWithAggregates>> OrderWithItemsAggregateProjection = o =>
-        new OrderWithAggregates{
+    public static readonly Expression<Func<Order, Order>> OrderWithItemsAggregateProjection = o =>
+        new Order{
             ItemCount = o.Items.Count(),
             Id = o.Id,
             PaymentId = o.PaymentId,
