@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
@@ -7,6 +8,7 @@ public class Cart
     public uint Id { get; set; }
     public Session? Session { get; set; }
     public ICollection<CartItem> Items { get; set; } = new List<CartItem>();
+    public CartAggregates Aggregates { get; set; }
 
     public override bool Equals(object? obj)
     {

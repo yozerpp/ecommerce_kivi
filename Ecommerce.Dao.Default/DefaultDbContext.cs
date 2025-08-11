@@ -171,6 +171,27 @@ public class DefaultDbContext : DbContext
                 .HasAnnotation(nameof(Annotations.Validation_MaxValue), 100).IsRequired().ValueGeneratedNever();
             entity.HasIndex(e => new { e.CartId })
                 .IsClustered(true);
+            entity.OwnsOne<CartItemAggregates>(o => o.Aggregates, e => {
+                e.HasKey(a => new{ a.CartId, a.SellerId, a.ProductId });
+                e.WithOwner().HasForeignKey(a => new{ a.CartId, a.SellerId, a.ProductId })
+                    .HasPrincipalKey(o => new{ o.CartId, o.SellerId, o.ProductId }).Metadata.IsUnique = true;
+                e.ToView(nameof(CartItemAggregates), DefaultSchema, v => {
+                    v.Property(a => a.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    v.Property(a => a.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    v.Property(a => a.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                e.SplitToView($"{nameof(CartItemAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
+                    vb.Property(a => a.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                        ValueGenerated.OnAddOrUpdate;
+                    vb.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                        ValueGenerated.OnAddOrUpdate;
+                });
+            });
         });
         var sessionBuilder = modelBuilder.Entity<Session>();
         sessionBuilder.HasKey(s => s.Id);
@@ -188,6 +209,29 @@ public class DefaultDbContext : DbContext
         cartBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
         cartBuilder.HasOne<Session>(c => c.Session).WithOne(s => s.Cart).HasForeignKey<Session>(s => s.CartId)
             .HasPrincipalKey<Cart>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        cartBuilder.OwnsOne<CartAggregates>(o => o.Aggregates, c => {
+            c.HasKey(v => v.CartId);
+            c.WithOwner().HasForeignKey(v => v.CartId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
+            c.ToView($"{nameof(CartAggregates)}", DefaultSchema, v => {
+                v.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.TotalPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            c.SplitToView($"{nameof(CartAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
+                vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.TotalDiscountedPrice).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+                vb.Property(os => os.CouponDiscountPercentage).Overrides.Property.ValueGenerated =
+                    ValueGenerated.OnAddOrUpdate;
+            });
+        });
         var anonymousUserBuilder = modelBuilder.Entity<AnonymousUser>();
         anonymousUserBuilder.HasKey(a => a.Email);
         anonymousUserBuilder.HasMany<Order>(a => a.Orders).WithOne(o => o.AnonymousUser).HasForeignKey(o => o.Email)

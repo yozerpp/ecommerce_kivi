@@ -1,7 +1,8 @@
-namespace Ecommerce.Entity.Projections;
+namespace Ecommerce.Entity.Views;
 
-public class CartWithAggregates : Cart
+public class CartAggregates
 {
+    public uint CartId { get; set; }
     public uint ItemCount { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal CouponDiscountAmount { get; set; }
@@ -11,5 +12,4 @@ public class CartWithAggregates : Cart
     public decimal CouponDiscountPercentage { get; set; }
     public decimal TotalDiscountedPrice { get; set; }
     public decimal TotalDiscountPercentage { get; set; }
-    public new IEnumerable<CartItemWithAggregates> Items { get; set; }
 }

@@ -1,4 +1,5 @@
-using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
@@ -12,6 +13,21 @@ public class CartItem : IItem
     public Cart Cart { get; set; }
     public string? CouponId { get; set; }
     public Coupon? Coupon { get; set; }
+    public CartItemAggregates Aggregates { get; set; }
+
+    public CartItem() { }
+
+    public CartItem(CartItem item) {
+        ProductId = item.ProductId;
+        SellerId = item.SellerId;
+        CartId = item.CartId;
+        Quantity = item.Quantity;
+        CouponId = item.CouponId;
+        ProductOffer = item.ProductOffer;
+        Cart = item.Cart;
+        Coupon = item.Coupon;
+    }
+
     public override bool Equals(object? obj) {
         if (obj is not CartItem other) return false;
         if (ProductId == default && SellerId == default && CartId == default) return ReferenceEquals(this, other);
