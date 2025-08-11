@@ -2,7 +2,6 @@
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 

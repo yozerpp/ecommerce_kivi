@@ -4,7 +4,6 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -23,8 +22,8 @@ public class SellerManager : ISellerManager
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
-    public SellerWithAggregates? GetSellerWithAggregates(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false) {
-        var s =  _sellerRepository.First(GetAggregateProjection(),s=>s.Id == sellerId,
+    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false) {
+        var s =  _sellerRepository.First(s=>s.Id == sellerId,
             includes:GetIncludes(includeOffers,includeReviews, includeCoupons));
         if(s!=null && includeCoupons)
             s.Coupons = s.Coupons.Where(s => s.ExpirationDate > DateTime.UtcNow + TimeSpan.FromHours(3)).ToList();
@@ -34,9 +33,7 @@ public class SellerManager : ISellerManager
         page = page == -1 ? _productOfferRepository.Count(p => p.SellerId == sellerId) / pageSize + 1 : page;
         return _productOfferRepository.Where(p => p.SellerId == sellerId, includes:[[nameof(ProductOffer.Product), nameof(Product.Images)],[nameof(ProductOffer.Product), nameof(Product.Category)]], offset: (page-1) * pageSize, limit: pageSize*page);
     }
-    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false) {
-        return _sellerRepository.First(s => s.Id == sellerId, includes: GetIncludes(includeOffers, includeReviews, includeCoupons));
-    }
+ 
     //@param Seller should contain user information as well.
     public void UpdateSeller(Seller seller) {
         _sellerRepository.Update(seller);
@@ -118,44 +115,6 @@ public class SellerManager : ISellerManager
         _couponRepository.Flush();
     }
 
-    private static Expression<Func<Seller, SellerWithAggregates>> GetAggregateProjection(bool includeReviews = false, bool includeOffers = false) {
-        return s =>
-            new SellerWithAggregates{
-                ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
-                ReviewAverage = (float)(s.Offers.SelectMany(o => o.Reviews).Average(r => (decimal?)r.Rating) ?? 0m),
-                SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (int?)oi.Quantity) ?? 0),
-                OfferCount = (uint)s.Offers.Count(),
-                Id = s.Id,
-                Email = s.Email,
-                Address = s.Address,
-                PhoneNumber = s.PhoneNumber,
-                ShopName = s.ShopName,
-                Offers = includeOffers?s.Offers:null!,
-                Coupons = s.Coupons,
-                ProductReviews =(ICollection<ProductReview>)s.Offers.SelectMany(o=>o.Reviews),
-            };
-    }
-
-    private static readonly Expression<Func<Seller, SellerWithAggregates>> AggregateProjectionWithUser = s =>
-        new SellerWithAggregates{
-            ReviewCount = (uint)s.Offers.SelectMany(o => o.Reviews).Count(),
-            ReviewAverage = (float)(s.Offers.SelectMany(o => o.Reviews).Average(r => (decimal?)r.Rating)??0),
-            SaleCount = (uint)(s.Offers.SelectMany(o => o.BoughtItems).Sum(oi => (decimal?)oi.Quantity)??0),
-            OfferCount = (uint)s.Offers.Count,
-            Id = s.Id,
-            ShopName = s.ShopName,
-            Offers = s.Offers,
-            Coupons = s.Coupons,
-            
-            FirstName = s.FirstName,
-            LastName = s.LastName,
-            NormalizedEmail = s.NormalizedEmail,
-            Address = s.Address,
-            PhoneNumber = s.PhoneNumber,
-            Active = s.Active,
-            SessionId = s.SessionId,
-            Session = s.Session,
-        };
     private static string[][] GetIncludes(bool offer, bool reviews, bool coupons) {
         ICollection<string[]> ret = new List<string[]>();
         if (offer){

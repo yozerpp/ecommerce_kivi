@@ -3,7 +3,6 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -38,22 +37,8 @@ public class CartManager : ICartManager
         return includes.ToArray();
     }
     private Cart? GetWithAggregates(uint cartId, string[][] includes) {
-        var ret = _cartRepository.First(CartAggregateProjection, c => c.Id == cartId, 
+        var ret = _cartRepository.First(c => c.Id == cartId, 
             includes: includes);
-        if (ret == null) return null;
-        if (ret.ItemCount == 0) return ret;
-        var b = ret.Items.Sum(i => i.BasePrice);
-        ret.DiscountPercentage = b!=0?ret.Items.Sum(i => i.BasePrice - i.DiscountedPrice) / b:0;
-        b = ret.Items.Sum(i => i.DiscountedPrice);
-        ret.CouponDiscountPercentage = b != 0 ? ret.Items.Sum(i => i.DiscountedPrice - i.CouponDiscountedPrice) / b : 0;
-        ret.TotalPrice = ret.Items.Sum(i => i.BasePrice);
-        ret.DiscountedPrice = ret.Items.Sum(i => i.DiscountedPrice);
-        ret.TotalDiscountedPrice = ret.Items.Sum(i => i.CouponDiscountedPrice);
-        ret.DiscountAmount = ret.Items.Sum(i => i.BasePrice - i.DiscountedPrice);
-        ret.CouponDiscountAmount = ret.Items.Sum(i => i.DiscountedPrice - i.CouponDiscountedPrice);
-        b = ret.Items.Sum(i => i.BasePrice);
-        ret.TotalDiscountPercentage = b!=0?1-(ret.Items.Sum(i => i.CouponDiscountedPrice)/b):0;
-        
         return ret;
     }
 
@@ -96,12 +81,12 @@ public class CartManager : ICartManager
             includes:[[nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.Coupons)]]).SelectMany(c=>c).ToList();
         return coupons;
     }
-    public ICollection<ProductWithAggregates> GetMoreProductsFromSellers(Session session, int page = 1, int pageSize = 20) {
+    public ICollection<Product> GetMoreProductsFromSellers(Session session, int page = 1, int pageSize = 20) {
         var cid = session.CartId;
         var items = _cartItemRepository.WhereP(ci=>ci.SellerId,ci => ci.CartId == cid);
         return _productRepository.Where(p => p.Offers.Any(o => items.Contains(o.SellerId)), offset:
             (page-1)*pageSize, limit:
-            page*pageSize).Select(p=>p.WithAggregates()).ToArray();
+            page*pageSize).ToArray();
     }   
 
 
@@ -167,43 +152,15 @@ public class CartManager : ICartManager
         _cartItemRepository.Detach(item);
         _cartItemRepository.Flush();
     }
-    private static readonly Expression<Func<Cart, CartWithAggregates>> CartAggregateProjection= c => new CartWithAggregates{
-            Id = c.Id,
-            Session = c.Session,
-            Items = c.Items.Select<CartItem,CartItemWithAggregates>(ci =>
-                new CartItemWithAggregates{
-                    ProductId = ci.ProductId,
-                    SellerId = ci.SellerId,
-                    CartId = ci.CartId,
-                    ProductOffer = ci.ProductOffer,
-                    Cart = ci.Cart,
-                    Quantity = ci.Quantity,
-                    BasePrice = ci.ProductOffer.Price * ci.Quantity,
-                    CouponId = ci.CouponId,
-                    Coupon = ci.Coupon,
-                    DiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount,
-                    CouponDiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount *
-                                            (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
-                    TotalDiscountPercentage = (1m - ci.ProductOffer.Discount) * ( ci.Coupon != null ? 1m- ci.Coupon.DiscountRate : 0m),
-                }),
-            ItemCount = c.Items.Sum(ci=>(uint?)ci.Quantity) as uint? ?? 0,
-    };
 
-    private static readonly Expression<Func<CartItem, CartItemWithAggregates>> CartItemAggregateProjection = ci =>
-        new CartItemWithAggregates{
-            ProductId = ci.ProductId,
-            SellerId = ci.SellerId,
-            CartId = ci.CartId,
-            ProductOffer = ci.ProductOffer,
-            Cart = ci.Cart,
-            Quantity = ci.Quantity,
-            BasePrice = ci.ProductOffer.Price * ci.Quantity,
-            CouponId = ci.CouponId,
-            Coupon = ci.Coupon,
-            DiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount,
-            CouponDiscountedPrice = ci.ProductOffer.Price * ci.Quantity * ci.ProductOffer.Discount *
-                                    (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
-            TotalDiscountPercentage = ci.ProductOffer.Discount *
-                                      (ci.Coupon != null ? ci.Coupon.DiscountRate : 1m),
-        };
+    private static readonly Expression<Func<Cart, Cart>> WithoutAggregatesProjection = c => new Cart{
+        Id = c.Id,
+        Session = c.Session,
+        Items = c.Items.Select(i=>new CartItem(){
+            Aggregates = null,
+            SellerId = i.SellerId, ProductId = i.ProductId, CartId = i.CartId,ProductOffer = i.ProductOffer,CouponId = i.CouponId, Quantity = i.Quantity
+            //Cart=i.Cart, Coupon = i.Coupon
+        }).ToArray(),
+        Aggregates = null,
+    };
 }

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text.Json;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Entity.Views;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
@@ -61,7 +60,7 @@ public class HomepageModel : BaseModel
     public IActionResult OnGet() {
         var (preds, orders) = GetParams();
         var favorites = GetFavorites();
-        Products = Search(preds, orders, PageIndex).Select(p=>ProductWithAggregatesCustomerView.Promote(p,favorites?.Contains(p.Id))).ToList();
+        Products = Search(preds, orders, PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){Product = p, CurrentFavored = favorites?.Contains(p.Id)}).ToList();
         if (JsonResult) return new JsonResult(Products);
         // var c =_productManager.GetMoreProductsFromCategories(CurrentSession).Select(p => ProductWithAggregatesCustomerView.Promote(p, favorites?.Contains(p.Id))).ToArray();
         // if (c.Length > 0) 
@@ -73,7 +72,7 @@ public class HomepageModel : BaseModel
         return Page();
     }
 
-    private List<ProductWithAggregates> Search(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders, int page) {
+    private List<Entity.Product> Search(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders, int page) {
          return _productManager.Search(preds, orders, includeImage:true,fetchOffers:false, fetchReviews:false,page: page, pageSize: PageSize);
     }
     private ICollection<uint>? GetFavorites() {

@@ -4,7 +4,6 @@ using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Entity.Views;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.EntityFrameworkCore;

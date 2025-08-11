@@ -8,5 +8,5 @@ public class CustomerStats
     public int TotalOrders { get; set; }
     public int TotalReviews { get; set; }
     public int TotalKarma { get; set; }
-    public int TotalReplies { get; set; }
+    public int TotalComments { get; set; }
 }

@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Microsoft.EntityFrameworkCore;
 using static Ecommerce.Bl.Concrete.SellerManager;
 
@@ -14,16 +13,16 @@ public interface IProductManager
     public ICollection<Category> GetCategoriesByName(string name, bool includeChildren = false,
         bool includeProperties = true);
 
-    public List<ProductWithAggregates> Search(ICollection<SearchPredicate> predicates,
+    public List<Product> Search(ICollection<SearchPredicate> predicates,
         ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false,
         bool fetchOffers = false, int page = 1, int pageSize = 20);
     public ICollection<ProductFavor> GetFavorites(Customer customer);
     public ICollection<ProductFavor> GetFavorers(uint productId);
-    public ICollection<ProductWithAggregates> GetMoreProductsFromCategories(Session session, int page = 1,
+    public ICollection<Product> GetMoreProductsFromCategories(Session session, int page = 1,
         int pageSize = 20);
     public bool Favor(ProductFavor favor);
-    public ProductWithAggregates? GetByIdWithAggregates(uint productId, bool fetchOffers = false, bool fetchReviews = true, bool fetchImage=true);
-    public ICollection<OfferWithAggregates> GetOffersWithAggregates(uint? productId = null, uint? sellerId = null);
+    public Product? GetByIdWithAggregates(uint productId, bool fetchOffers = false, bool fetchReviews = true, bool fetchImage=true);
+    public ICollection<ProductOffer> GetOffers(uint? productId = null, uint? sellerId = null, bool includeAggregates = true);
     public Product? GetById(uint id, bool withOffers = true);
     public void UnlistOffer(ProductOffer offer);
     public void Delete(Product product);

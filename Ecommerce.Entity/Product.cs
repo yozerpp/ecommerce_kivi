@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Common.Meta;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
@@ -24,16 +23,7 @@ public class Product
     public Dictionary<string, string> CategoryProperties { get; set; } = new();
     public bool Active { get; set; }
 
-    public ProductWithAggregates WithAggregates() {
-        var ret = new ProductWithAggregates();
-        foreach (var property in typeof(Product).GetProperties().Where(p=>p.CanWrite)){
-            property.SetValue(ret, property.GetValue(this));
-        }
-        foreach (var property in typeof(IProductStats).GetProperties().Where(p=>p.CanWrite)){
-            property.SetValue(ret, property.GetValue(Stats));
-        }
-        return ret;
-    }
+
     public override bool Equals(object? obj)
     {
         if (obj is not Product other) return false;

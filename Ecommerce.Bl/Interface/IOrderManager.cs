@@ -1,7 +1,6 @@
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Microsoft.EntityFrameworkCore;
-using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Interface;
 

@@ -1,6 +1,8 @@
+using Ecommerce.Entity.Iface;
+
 namespace Ecommerce.Entity.Views;
 
-public class OrderItemAggregates
+public class OrderItemAggregates : IPrice
 {
     public uint OrderId { get; set; }
     public uint ProductId { get; set; }

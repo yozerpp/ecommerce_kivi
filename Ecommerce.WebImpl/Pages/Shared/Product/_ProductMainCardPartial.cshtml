@@ -2,46 +2,46 @@
 @model (ProductWithAggregatesCustomerView, Dictionary<uint, Ecommerce.Entity.Category>)
 
 <div class="card m-1 w-100 @("h-100") rounded-1 justify-content-between">
-    <div onclick="window.location='/@nameof(Product)?ProductId=@Model.Item1.Id'" class="text-decoration-none text-dark">
+    <div onclick="window.location='/@nameof(Product)?ProductId=@Model.Item1.Product.Id'" class="text-decoration-none text-dark">
         <div class="d-flex flex-column align-items-start align-content-start">
             <div class="mb-1">
-                <img src="@(Utils.GetImageUrlOrDefault((Model.Item1.Images.FirstOrDefault(i => i.IsMain) ?? Model.Item1.Images.FirstOrDefault())?.Data))" class="card-img-top img-fluid" alt="Resim mevcut değil.">
+                <img src="@(Utils.GetImageUrlOrDefault((Model.Item1.Product.Images.FirstOrDefault(i => i.IsMain) ?? Model.Item1.Product.Images.FirstOrDefault())?.Data))" class="card-img-top img-fluid" alt="Resim mevcut değil.">
             </div>
             <div class="card-body gap-2 flex-column d-flex justify-content-center container-fluid pt-1">
                 <div class="flex-column container-fluid d-flex justify-content-center mb-0 p-0 align-content-center align-items-center">
-                    <partial name="Shared/Product/_CategoryHierarchyPartial" model="(Model.Item1.CategoryId, Model.Item2)"/>
+                    <partial name="Shared/Product/_CategoryHierarchyPartial" model="(Model.Item1.Product.CategoryId, Model.Item2)"/>
                     <div class="card-title d-flex justify-content-center mt-1 p-0">
-                        <h5 class="fs-4">@Model.Item1.Name</h5>
+                        <h5 class="fs-4">@Model.Item1.Product.Name</h5>
                     </div>
                 </div>
                 <div class="flex-column d-flex mx-0 mt-1 p-0">
                     <div class="small">
-                        @await Html.PartialAsync($"Shared/{nameof(_ReviewStarPartial)}", new _ReviewStarPartial(){ Rating = Model.Item1.RatingAverage??-0m, RatingCount = (int)(Model.Item1.ReviewCount ?? 0u) })
+                        @await Html.PartialAsync($"Shared/{nameof(_ReviewStarPartial)}", new _ReviewStarPartial(){ Rating = Model.Item1.Product.Stats.RatingAverage??-0m, RatingCount = (int)(Model.Item1.Product.Stats.ReviewCount ?? 0u) })
                     </div>
                     <div class="d-flex container-fluid justify-content-between align-content-center">
-                        <p class="fw-bold my-0" style="font-size: x-small">@(Model.Item1.SaleCount??0) Kere Satıldı</p>
+                        <p class="fw-bold my-0" style="font-size: x-small">@(Model.Item1.Product.Stats.SaleCount??0) Kere Satıldı</p>
                         <div class="d-flex align-items-center justify-content-center gap-2 align-content-center text-center align-items-center">
                             @if (Model.Item1.CurrentFavored.HasValue){
-                                <form hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" hx-on::after-request="event.detail.elt.getElementById('favor@(Model.Item1.Id)').classList.toggle('text-danger')">
-                                    <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.Item1.Id"/>
+                                <form hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" hx-on::after-request="event.detail.elt.getElementById('favor@(Model.Item1.Product.Id)').classList.toggle('text-danger')">
+                                    <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.Item1.Product.Id"/>
                                     <button class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0" onclick="event.stopPropagation()">
-                                        <i id="favor@(Model.Item1.Id)" class="hover-grow text-danger-emphasis bi bi-heart bi-border-all @(Model.Item1.CurrentFavored.Value ? "text-danger" : "") small me-1"></i>
+                                        <i id="favor@(Model.Item1.Product.Id)" class="hover-grow text-danger-emphasis bi bi-heart bi-border-all @(Model.Item1.CurrentFavored.Value ? "text-danger" : "") small me-1"></i>
                                     </button>
                                 </form>
                             }
                             else{
                                 <button disabled class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0">
-                                    <i id="favor@(Model.Item1.Id)" class="bi bi-heart text-danger small me-1"></i>
+                                    <i id="favor@(Model.Item1.Product.Id)" class="bi bi-heart text-danger small me-1"></i>
                                 </button>
                             }
-                            <p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item1.FavorCount??0)</p>
+                            <p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item1.Product.Stats.FavorCount??0)</p>
                         </div>
                     </div>
                 </div>
-                @if (Model.Item1.Description != null!){
+                @if (Model.Item1.Product.Description != null!){
                     <div class="container-fluid text-center m-0 p-0 overflow-hidden">
                         <p class="m-0 p-0 ">
-                            @Model.Item1.Description
+                            @Model.Item1.Product.Description
                         </p>
                     </div>
                 }
@@ -50,10 +50,10 @@
     </div>
     <div>
         <div class="card-text mx-2 g-1 d-flex">
-            @if (Model.Item1.MinPrice != null){
+            @if (Model.Item1.Product.Stats.MinPrice != null){
                 <p class="text-nowrap">Fiyat Aralığı:</p>
                 <div class="container-fluid flex-column text-wrap">
-                    <p class="fs-5 fw-bold text-wrap">@(decimal.Round(Model.Item1.MinPrice.Value, 2).ToString("C")) - @(decimal.Round(Model.Item1.MaxPrice!.Value, 2).ToString("C"))</p>
+                    <p class="fs-5 fw-bold text-wrap">@(decimal.Round(Model.Item1.Product.Stats.MinPrice.Value, 2).ToString("C")) - @(decimal.Round(Model.Item1.Product.Stats.MaxPrice!.Value, 2).ToString("C"))</p>
                 </div>
             }
             else{
@@ -62,7 +62,7 @@
                 </div>
             }
         </div>    
-        <partial name="Shared/Product/_AddToCartButtonPartial" model="new _AddToCartButtonPartial(){ProductId=Model.Item1.Id}"/>
+        <partial name="Shared/Product/_AddToCartButtonPartial" model="new _AddToCartButtonPartial(){ProductId=Model.Item1.Product.Id}"/>
     </div>
     
 </div>

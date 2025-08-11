@@ -3,7 +3,6 @@ using Ecommerce.Entity;
 using System.Linq.Expressions;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +32,7 @@ public class ProductManager : IProductManager
         return true;
     }
 
-    public List<ProductWithAggregates> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false, bool fetchOffers=false, int page=1, int pageSize=20) {
+    public List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false, bool fetchOffers=false, int page=1, int pageSize=20) {
         var offset = (page - 1) * pageSize;
         var limit = page * pageSize;
         // predicates.Add(new SearchPredicate(){PropName = "Active", Operator = SearchPredicate.OperatorType.Equals, Value = "true"});
@@ -49,7 +48,7 @@ public class ProductManager : IProductManager
         string[][] includes = GetIncludes(true,false,false);
         includes =[];
         return _productRepository.WhereP(CardProjection, predicateExpr, offset, limit,orderByExpr.ToArray(), includes)
-            .Select(p=>p.WithAggregates()).GroupBy(p=>p.Id).Select(p=>p.First()).ToList();
+            .GroupBy(p=>p.Id).Select(p=>p.First()).ToList();
     }
     public void VisitCategory(SessionVisitedCategory category) {
         _customerVisitedCategoryRepository.TryAdd(category);
@@ -71,12 +70,12 @@ public class ProductManager : IProductManager
         return _productFavorRepository.Where(p => p.ProductId == productId).ToArray();
     }
 
-    public ICollection<ProductWithAggregates> GetMoreProductsFromCategories(Session session, int page = 1,
+    public ICollection<Product> GetMoreProductsFromCategories(Session session, int page = 1,
         int pageSize = 20) {
         var cid=session.Id;
         var categories = _customerVisitedCategoryRepository.WhereP(c => c.CategoryId, c => c.SessionId == cid).ToArray();
         return _productRepository.WhereP(CardProjection,p => categories.Contains(p.CategoryId), includes: GetIncludes(true, false,false), offset: pageSize * (page - 1),
-            limit: pageSize * page).GroupBy(p=>p.Id).Select(p=>p.First().WithAggregates()).ToArray();
+            limit: pageSize * page).GroupBy(p=>p.Id).DistinctBy(p=>p.Key).Select(g=>g.First()).ToArray();
     }
     public ICollection<Category> GetCategories(bool includeChildren =true, bool includeProperties = false ) {
         return _categoryRepository.All(includes:GetCategoryIncludes(includeChildren, includeProperties));
@@ -94,25 +93,18 @@ public class ProductManager : IProductManager
         if (includeProperties) includes.Add([nameof(Category.CategoryProperties)]);
         return includes.ToArray();
     }
-    public ICollection<OfferWithAggregates> GetOffersWithAggregates(uint? productId = null, uint? sellerId = null) {
+    public ICollection<ProductOffer> GetOffers(uint? productId = null, uint? sellerId = null, bool includeAggregates = true) {
         if (productId == null && sellerId == null)
             throw new ArgumentNullException("productId and sellerId cannot be null.");
         return RetrieveOffersWithAggregates(o=>(productId==null|| o.ProductId == productId) && (sellerId==null || o.SellerId == sellerId), null, [[nameof(ProductOffer.Seller)]]);
     }
-
-    private ICollection<OfferWithAggregates> RetrieveOffersWithAggregates(Expression<Func<ProductOffer, bool>> predicate, (Expression<Func<ProductOffer,object>>, bool)[]? orderBy=null, string[][]? includes=null, int offset = 0, int limit = 20) {
+    private ICollection<ProductOffer> RetrieveOffersWithAggregates(Expression<Func<ProductOffer, bool>> predicate, (Expression<Func<ProductOffer,object>>, bool)[]? orderBy=null, string[][]? includes=null, int offset = 0, int limit = 20) {
         orderBy=orderBy==null||orderBy.Length==0?[(o=>o.ProductId, false), (o=>o.SellerId,false)]:orderBy;
         includes??=[];
-        var offers = _productOfferRepository.Where(predicate,
-            orderBy:orderBy, includes:includes, offset:offset, limit:limit).ToDictionary(o=>$"{o.ProductId},{o.SellerId}", o=>o);
-        var ids = offers.Select(a => a.Key).ToArray();
-        var aggregates= _productOfferRepository.WhereP(OfferAggregateProjection, o=>
-            ids.Contains(o.SellerId.ToString()+','+o.ProductId), offset, limit, orderBy: orderBy);
-        aggregates.ForEach(a=>OfferWithAggregates.AssignFrom(offers[$"{a.SellerId},{a.ProductId}"], a));
-        return aggregates;
+        return _productOfferRepository.Where(predicate, offset,limit, orderBy, includes);
     }
-    public ProductWithAggregates? GetByIdWithAggregates(uint productId, bool fetchOffer = false, bool fetchReviews = true, bool fetchImage=true) {
-       return _productRepository.FirstP(CardProjection,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews))?.WithAggregates();
+    public Product? GetByIdWithAggregates(uint productId, bool fetchOffer = false, bool fetchReviews = true, bool fetchImage=true) {
+       return _productRepository.FirstP(CardProjection,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews));
     }
     public Product? GetById(uint id, bool withOffers = true) {
         return _productRepository.FirstP(CardProjection, p => p.Id == id , 
@@ -194,15 +186,5 @@ public class ProductManager : IProductManager
             RefundCount = p.Stats.RefundCount ?? 0,
         },
     };
-    public static Expression<Func<ProductOffer, OfferWithAggregates>> OfferAggregateProjection = 
-         o => new OfferWithAggregates{
-            ProductId = o.ProductId,
-            SellerId = o.SellerId,
-            Price = o.Price,
-            Discount = o.Discount,
-            Stock = o.Stock,
-            RefundCount = o.RefundRequests.Count(r => r.IsApproved),
-            ReviewAverage = o.Reviews.Average(r => (decimal?)r.Rating)??0m,
-            ReviewCount =o.Reviews.Count(),
-        };
+
 }

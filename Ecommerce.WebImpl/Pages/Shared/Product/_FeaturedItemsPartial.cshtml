@@ -2,7 +2,7 @@
 @model Ecommerce.WebImpl.Pages.Shared.Product._FeaturedItemsPartial
 
 @foreach (var product in Model.Items){
-    product.Description = null!;
+    product.Product.Description = null!;
     <li class="mx-1">
         <partial name="Shared/Product/_ProductMainCardPartial" model="(product, Model.Categories)"/>
     </li>

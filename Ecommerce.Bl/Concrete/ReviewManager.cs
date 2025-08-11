@@ -7,7 +7,6 @@ namespace Ecommerce.Bl.Concrete;
 
 using System.Linq.Expressions;
 using Entity;
-using Entity.Projections;
 
 
 public class ReviewManager : IReviewManager
@@ -24,11 +23,11 @@ public class ReviewManager : IReviewManager
         _reviewVoteRepository = reviewVoteRepository;
     }
 
-    public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, Customer? customer=null, Session? session = null,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
+    public List<ProductReview> GetReviewsWithAggregates(bool includeComments, Customer? customer=null, Session? session = null,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
         var includes = GetReviewIncludes(includeComments, includeSeller);
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id;
         var rid = customer?.Id;
-        var ret =  _reviewRepository.Where(ReviewProjection(rid),r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
+        var ret =  _reviewRepository.Where(r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
             offset:(page - 1) * pageSize, limit:pageSize * page);
         foreach (var r in ret){
             if (r.Reviewer==null || !r.CensorName ) continue;
@@ -38,19 +37,19 @@ public class ReviewManager : IReviewManager
         return ret;
     }
 
-    public List<ReviewCommentWithAggregates> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null,
+    public List<ReviewComment> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null,
         Customer? customer = null,
         Session? session = null, int page = 1, int pageSize = 20) {
-        return _reviewCommentRepository.WhereP(CommentProjection(customer?.Id),rc =>
+        return _reviewCommentRepository.Where(rc =>
             (commentId == null || rc.ParentId == commentId) && rc.ReviewId == reviewId, offset: (page - 1)*pageSize, limit:
             page*pageSize);
     }
-    public ReviewWithAggregates? GetReviewWithAggregates(uint productId, uint sellerId,Customer? customer=null, Session? session = null,
+    public ProductReview? GetProductReview(uint productId, uint sellerId,Customer? customer=null, Session? session = null,
         bool includeComments=false, bool includeSeller =true) {
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id ?? throw new ArgumentException("Either commenterId or reviewerId must be provided.");
         var reviewerId = customer?.Id;
         var includes = GetReviewIncludes(includeComments,includeSeller );
-        var r= _reviewRepository.FirstP(ReviewProjection(reviewerId),
+        var r= _reviewRepository.First(
             r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == reviewerId&& r.SessionId==sessionId, includes: includes);
         if (!(r?.CensorName ?? false)) return r;
         r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
@@ -143,53 +142,5 @@ public class ReviewManager : IReviewManager
         if (c==0){
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
-    }
-
-    private static Expression<Func<ReviewComment, ReviewCommentWithAggregates>> CommentProjection(uint? userId) {
-        return r => new ReviewCommentWithAggregates(){
-            Id = r.Id,
-            ReviewId = r.ReviewId,
-            Review = r.Review,
-            ParentId = r.ParentId,
-            Parent = r.Parent,
-            CommenterId = r.CommenterId,
-            Commenter = r.Commenter,
-            UserId = r.UserId,
-            User=r.User,
-            Name = r.Name,
-            Replies = r.Replies,
-            Created = r.Created,
-            Votes = r.Votes.Sum(v => v.Up ? 1 : -1),
-            Comment = r.Comment,
-            OwnVote = r.Votes.Where(v => v.UserId == userId).Select(v => v.Up ? 1 : -1).FirstOrDefault() as int? ?? 0,
-        };
-    }
-    private static Expression<Func<ProductReview, ReviewWithAggregates>> ReviewProjection(uint? userId) {
-        return r => new ReviewWithAggregates{
-            Id = r.Id,
-            SellerId = r.SellerId,
-            ProductId = r.ProductId,
-            ReviewerId = r.ReviewerId,
-            Comment = r.Comment,
-            CensorName = r.CensorName,
-            Comments = r.Comments.Select(c=>new ReviewCommentWithAggregates(){
-                Id = c.Id, // Use c.Id
-                CommenterId = c.CommenterId,
-                Comment = c.Comment,
-                OwnVote = c.Votes.Where(v=>v.UserId==userId).Select(v=>v.Up?1:-1).FirstOrDefault() as int? ??0,
-                Votes = c.Votes.Sum(v=>v.Up?1:-1),
-                Review = c.Review,
-            }),
-            CommentCount = r.Comments.Count(),
-            HasBought = r.HasBought,
-            Offer = r.Offer,
-            Rating = r.Rating,
-            Reviewer = r.Reviewer==null?null:new Customer(){
-                FirstName = r.Reviewer.FirstName,
-                LastName = r.Reviewer.LastName,
-            },
-            Votes =r.Votes.Sum(v => v.Up ? 1 : -1),
-            OwnVote = (int?)r.Votes.Where(v => v.UserId==userId).Select(v=>v.Up?1:-1).FirstOrDefault() ?? 0,
-        };
     }
 }

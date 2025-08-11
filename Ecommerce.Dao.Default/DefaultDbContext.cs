@@ -3,7 +3,6 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -97,17 +96,21 @@ public class DefaultDbContext : DbContext
         customerBuilder.OwnsOne<CustomerStats>(c => c.Stats, cs => {
             cs.HasKey(s => s.CustomerId);
             cs.WithOwner().HasForeignKey(s => s.CustomerId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
-            cs.ToView($"{nameof(CustomerStats)}", DefaultSchema, v => {
+            cs.ToView($"{nameof(CustomerStats)}_{nameof(Order)}", DefaultSchema, v => {
                 v.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                v.Property(s => s.TotalSpent).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                v.Property(s => s.TotalDiscountUsed).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(s => s.TotalOrders).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 vb.Property(s => s.TotalKarma).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                vb.Property(s => s.TotalReplies).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            //non-materialized
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
+                v.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                v.Property(s => s.TotalSpent).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.TotalDiscountUsed).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
         });
         var sellerBuilder = modelBuilder.Entity<Seller>();
@@ -127,6 +130,23 @@ public class DefaultDbContext : DbContext
             .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         sellerBuilder.HasMany<RefundRequest>(s => s.RefundRequests).WithOne(r => r.Seller).HasForeignKey(r => r.UserId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        sellerBuilder.OwnsOne<SellerStats>(s => s.Stats, ss => {
+            ss.HasKey(s => s.SellerId);
+            ss.WithOwner().HasForeignKey(s => s.SellerId).HasPrincipalKey(s => s.Id).Metadata.IsUnique = true;
+            ss.ToView($"{nameof(SellerStats)}_{nameof(ProductOffer)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.OfferCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            ss.SplitToView($"{nameof(SellerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.ReviewAverage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            ss.SplitToView($"{nameof(SellerStats)}_{nameof(OrderItem)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.SaleCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+        });
         sellerBuilder.HasMany<Product>(s => s.Products).WithMany(p => p.Sellers).UsingEntity<ProductOffer>(r =>
                 r.HasOne<Product>(o => o.Product).WithMany(p => p.Offers).HasForeignKey(o => o.ProductId)
                     .HasPrincipalKey(o => o.Id)
@@ -145,6 +165,25 @@ public class DefaultDbContext : DbContext
                 entity.Property<uint>(p => p.Stock).HasAnnotation(nameof(Annotations.Validation_Positive), true).HasAnnotation(nameof(Annotations.Validation_MaxValue), 10000).IsRequired().ValueGeneratedNever();
                 entity.HasIndex(o => o.ProductId).IsClustered();
                 entity.HasIndex(o => o.SellerId).IsClustered(false);
+                entity.OwnsOne<OfferStats>(o => o.Stats, e => {
+                    e.HasKey(os => new{ os.SellerId, os.ProductId });
+                    e.WithOwner().HasForeignKey(os => new{ os.SellerId, os.ProductId })
+                        .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).Metadata.IsUnique = true;
+                    e.ToView($"{nameof(OfferStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
+                        vb.Property(os => os.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                        vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                        vb.Property(os => os.ReviewCount).Overrides.Property.ValueGenerated =
+                            ValueGenerated.OnAddOrUpdate;
+                        vb.Property(os => os.ReviewAverage).Overrides.Property.ValueGenerated =
+                            ValueGenerated.OnAddOrUpdate;
+                    });
+                    e.SplitToView($"{nameof(OfferStats)}_{nameof(RefundRequest)}", DefaultSchema, vb => {
+                        vb.Property(os => os.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                        vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                        vb.Property(os => os.RefundCount).Overrides.Property.ValueGenerated =
+                            ValueGenerated.OnAddOrUpdate;
+                    });
+                });
             });
         var staffBuilder = modelBuilder.Entity<Staff>();
         staffBuilder.HasBaseType<User>();
@@ -231,7 +270,7 @@ public class DefaultDbContext : DbContext
             c.ToView($"{nameof(CartAggregates)}", DefaultSchema, v => {
                 v.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                v.Property(os => os.TotalPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountPercentage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
@@ -450,6 +489,15 @@ public class DefaultDbContext : DbContext
             entity.HasIndex(e => e.SellerId)
                 .IsClustered(false)
                 .IncludeProperties(e => e.Rating);
+            entity.OwnsOne<ReviewStats>(e => e.Stats, c => {
+                c.HasKey(s => s.ReviewId);
+                c.WithOwner().HasForeignKey(s => s.ReviewId).HasPrincipalKey(r => r.Id).Metadata.IsUnique = true;
+                c.ToView(nameof(ReviewStats), DefaultSchema, vb => {
+                    vb.Property(s => s.ReviewId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(s => s.CommentCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    vb.Property(s => s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+            });
         });
         
         var commentBuilder = modelBuilder.Entity<ReviewComment>(entity => {
@@ -467,8 +515,19 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Customer>(c => c.User).WithMany(u => u.ReviewComments).HasForeignKey(c => c.UserId)
                 .HasPrincipalKey(c => c.Id)
                 .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
-            entity.Property(c => c.Created).HasDefaultValue(DateTime.UtcNow + TimeSpan.FromHours(3));
-
+            entity.Property(c => c.Created).HasDefaultValueSql("GETUTCDATE() + INTERVAL '3' HOUR");
+            entity.OwnsOne<ReviewCommentStats>(e => e.Stats, c => {
+                c.HasKey(s => s.CommentId);
+                c.WithOwner().HasForeignKey(s => s.CommentId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
+                c.ToView($"{nameof(ReviewCommentStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
+                    vb.Property(s => s.CommentId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(s => s.ReplyCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                c.SplitToView($"{nameof(ReviewCommentStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
+                    vb.Property(s => s.CommentId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    vb.Property(s => s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+            });
         });
         var voteBuilder = modelBuilder.Entity<ReviewVote>();
         voteBuilder.HasKey(v=>v.Id);

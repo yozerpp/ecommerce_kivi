@@ -9,7 +9,7 @@ using Ecommerce.Dao.Default.Validation;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Projections;
+using Ecommerce.Entity.Views;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
@@ -172,7 +172,7 @@ app.Run();
 
 Localizer BuildLocalizer(IServiceProvider sp) {
     return new Localizer.Builder()
-        .Add<ProductWithAggregates>(
+        .Add<ProductStats>(
             (p=>p.MaxPrice, "Maksimum Fiyat"),
             (p=>p.MinPrice, "Minimum Fiyat"),
             (p=>p.SaleCount, "Satış Sayısı"),

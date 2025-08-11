@@ -7,7 +7,6 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
@@ -56,7 +55,7 @@ public class Checkout : BaseModel
     public string? Email { get; set; }
     [BindProperty]
     public Address? Address { get; set; } 
-    [BindProperty] public CartWithAggregates Cart { get; set; }
+    [BindProperty] public Entity.Cart Cart { get; set; }
     
     [BindProperty]
     public PhoneNumber? PhoneNumber { get; set; }
@@ -190,10 +189,10 @@ public class Checkout : BaseModel
         else customer = _customerService.Get(CurrentCustomer?.StripeId ?? anonymousUser.StripeId);
 
         var s = (Session)HttpContext.Items[nameof(Session)];
-        var cart = (CartWithAggregates)_cartManager.Get(s, true,true, false);
+        var cart = _cartManager.Get(s, true,true, false);
 
         var o = new PaymentIntentCreateOptions(){
-            Amount = ((long)cart.TotalDiscountedPrice)*100, CaptureMethod = "automatic",
+            Amount = ((long)cart.Aggregates.CouponDiscountedPrice)*100, CaptureMethod = "automatic",
             Shipping = new ChargeShippingOptions(){
                 Address = ao,
                 Name = customerName,
@@ -235,7 +234,7 @@ public class Checkout : BaseModel
     public IActionResult OnGet() {
         SelectedTab = 1;
         var s= (Session)HttpContext.Items[nameof(Session)];
-        Cart = (CartWithAggregates)_cartManager.Get(s, true, true, true);
+        Cart = _cartManager.Get(s, true, true, true);
         ShippingOffersGrouped = Cart.Items.GroupBy(i => i.SellerId).ToDictionary(items =>
             items.Key ,items => _shippingService.GetOffers(items.OrderBy(i=>i.ProductId.GetHashCode()).Select(i => i.ProductOffer.Product.Dimensions), new Address(),
                 new Address()).ToArray());

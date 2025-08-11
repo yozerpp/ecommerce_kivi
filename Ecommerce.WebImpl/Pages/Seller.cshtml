@@ -17,8 +17,8 @@
             }
         </div>
         <div class="row align-items-start">
-            <p class="col-auto">@float.Round(Model.ViewedSeller.ReviewAverage,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
-            <p class="col-auto">@Model.ViewedSeller.ReviewCount Toplam Değerlendirme</p>
+            <p class="col-auto">@float.Round(Model.ViewedSeller.Stats.ReviewAverage,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
+            <p class="col-auto">@Model.ViewedSeller.Stats.ReviewCount Toplam Değerlendirme</p>
         </div>
         <div class="row justify-content-start">
             <label class="col-auto">Email: </label><p id="emailField" class="col-auto">@Model.ViewedSeller.Email</p>
@@ -108,9 +108,9 @@
     </div>
     <div class="collapse" id="offersSection">
         <div class="d-flex justify-content-between px-5 mx-5">
-            <p>@Model.ViewedSeller.OfferCount Listelenen Ürün Saysı</p>
+            <p>@Model.ViewedSeller.Stats.OfferCount Listelenen Ürün Saysı</p>
             <div class="m-3"></div>
-            <p>@Model.ViewedSeller.SaleCount Toplam Satış Sayısı</p>
+            <p>@Model.ViewedSeller.Stats.SaleCount Toplam Satış Sayısı</p>
         </div>
         @if (editable){
             <a asp-page="AddProduct" class="text-decoration-none text-dark">

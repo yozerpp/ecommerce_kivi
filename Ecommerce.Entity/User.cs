@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Entity;
 

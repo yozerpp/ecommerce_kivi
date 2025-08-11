@@ -1,6 +1,4 @@
-﻿using Ecommerce.Entity.Projections;
-
-namespace Ecommerce.WebImpl.Pages.Shared.Order;
+﻿namespace Ecommerce.WebImpl.Pages.Shared.Order;
 
 public class _OrderPartial
 {

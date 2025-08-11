@@ -1,6 +1,5 @@
 ﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Ecommerce.WebImpl.Pages.Seller;
 using Ecommerce.WebImpl.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
@@ -52,10 +51,11 @@ public class SellerModel : BaseModel
     [BindProperty(SupportsGet = true)] public int OffersPageSize { get; set; } = 20;
     [BindProperty(SupportsGet = true)] public int ReviewsPage { get; set; } = 1;
     [BindProperty(SupportsGet = true)] public int ReviewsPageSize { get; set; } = 20;
-    [BindProperty] public SellerWithAggregates ViewedSeller { get; set; }
+    [BindProperty] public Entity.Seller ViewedSeller { get; set; }
     public IActionResult OnGet() {
-        ViewedSeller = _sellerManager.GetSellerWithAggregates(Id, false, false, true);
-        if (ViewedSeller == null!) return new NotFoundResult();
+        var s = _sellerManager.GetSeller(Id, false, false, true);
+        if (s == null!) return new NotFoundResult();
+        ViewedSeller = s;
         return Page();
     }
 }

@@ -2,7 +2,6 @@
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Projections;
 using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
@@ -36,9 +35,9 @@ public class Product : BaseModel
     [BindProperty(SupportsGet = true)]
     public uint ProductId { get; set; }
     [BindProperty]
-    public ProductWithAggregates ViewedProduct { get; set; } 
+    public Entity.Product ViewedProduct { get; set; } 
     [BindProperty]
-    public ICollection<OfferWithAggregates> Offers { get; set; }
+    public ICollection<ProductOffer> Offers { get; set; }
     [BindProperty]
     public string? SentImages { get; set; }
     public IActionResult OnGet() {  
@@ -47,7 +46,7 @@ public class Product : BaseModel
         if (pr == null) return new NotFoundObjectResult(new{ Message = "Product not found" });
         _productManager.VisitCategory(new SessionVisitedCategory(){SessionId = session.Id, CategoryId = pr.CategoryId});
         ViewedProduct = pr;
-        Offers = _productManager.GetOffersWithAggregates(productId: ProductId);
+        Offers = _productManager.GetOffers(productId: ProductId);
         return new PageResult();
     }
     public IActionResult OnGetCategoryProperties([FromQuery] uint categoryId,[FromQuery] bool jsonResponse=false,[FromQuery] string? idPrefix = null,[FromQuery] bool isEditable=false) {

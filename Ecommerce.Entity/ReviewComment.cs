@@ -1,4 +1,6 @@
-﻿namespace Ecommerce.Entity;
+﻿using Ecommerce.Entity.Views;
+
+namespace Ecommerce.Entity;
 
 public class ReviewComment
 {
@@ -14,6 +16,7 @@ public class ReviewComment
     public string Comment { get; set; }
     public string? Name { get; set; }
     public DateTime Created { get; set; }
+    public ReviewCommentStats Stats { get; set; }
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     public ICollection<ReviewComment> Replies { get; set; } = new List<ReviewComment>();
     protected bool Equals(ReviewComment other) {

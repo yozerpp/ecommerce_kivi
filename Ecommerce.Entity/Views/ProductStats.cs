@@ -1,7 +1,4 @@
-﻿using System.Reflection.Metadata;
-using Ecommerce.Entity.Projections;
-
-namespace Ecommerce.Entity.Views;
+﻿namespace Ecommerce.Entity.Views;
 
 public class ProductStats
 {

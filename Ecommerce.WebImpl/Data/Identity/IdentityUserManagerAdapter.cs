@@ -1,6 +1,5 @@
 ﻿using Ecommerce.Bl.Interface;
-using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
+using Ecommerce.Entity; 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

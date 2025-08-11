@@ -1,6 +1,8 @@
+using Ecommerce.Entity.Iface;
+
 namespace Ecommerce.Entity.Views;
 
-public class CartItemAggregates
+public class CartItemAggregates : IPrice
 {
     public uint CartId { get; set; }
     public uint ProductId { get; set; }

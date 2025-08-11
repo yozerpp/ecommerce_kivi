@@ -1,16 +1,15 @@
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Interface;
 
 public interface IReviewManager
 {
-    public List<ReviewWithAggregates> GetReviewsWithAggregates(bool includeComments, Customer? customer = null,
+    public List<ProductReview> GetReviewsWithAggregates(bool includeComments, Customer? customer = null,
         Session? session = null, bool includeSeller = false, uint? productId = null, uint? sellerId = null,
         int page = 1, int pageSize = 20);
-    public List<ReviewCommentWithAggregates> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null, Customer? customer = null,
+    public List<ReviewComment> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null, Customer? customer = null,
         Session? session = null, int page = 1, int pageSize = 20);
-    public ReviewWithAggregates? GetReviewWithAggregates(uint productId, uint sellerId, Customer? customer = null,
+    public ProductReview? GetProductReview(uint productId, uint sellerId, Customer? customer = null,
         Session? session = null,
         bool includeComments = false, bool includeSeller = true);
     

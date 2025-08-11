@@ -1,5 +1,4 @@
 ﻿using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 

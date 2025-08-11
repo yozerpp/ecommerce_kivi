@@ -2,7 +2,6 @@
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
-using Ecommerce.Entity.Projections;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
@@ -21,7 +20,7 @@ public class Customer : BaseModel
         _customerManager = customerManager;
     }
     [BindProperty]
-    public Entity.Projections.CustomerWithAggregates ViewedCustomer { get; set; }
+    public Entity.Customer ViewedCustomer { get; set; }
     [BindProperty]
     public ICollection<Address> Addresses { get; set; }
     [BindProperty(SupportsGet = true)]

@@ -7,7 +7,6 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;

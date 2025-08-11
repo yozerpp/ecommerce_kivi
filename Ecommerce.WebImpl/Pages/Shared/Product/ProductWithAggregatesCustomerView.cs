@@ -1,21 +1,20 @@
-﻿using Ecommerce.Entity.Projections;
+﻿namespace Ecommerce.WebImpl.Pages.Shared.Product;
 
-namespace Ecommerce.WebImpl.Pages.Shared.Product;
-
-public class ProductWithAggregatesCustomerView() : ProductWithAggregates
+public class ProductWithAggregatesCustomerView()
 {
-    public bool? CurrentFavored { get; set; } = null;
-    public static ProductWithAggregatesCustomerView Promote(ProductWithAggregates product, bool? currrentFavored = null) {
-        var ret =Activator.CreateInstance<ProductWithAggregatesCustomerView>();
-        foreach (var propertyInfo in typeof(ProductWithAggregates).GetProperties().Where(p=>p.SetMethod!=null && !p.SetMethod.IsPrivate)){
-            propertyInfo.SetValue(ret, propertyInfo.GetValue(product));
-        }
-        ret.CurrentFavored = currrentFavored;
-        return ret;
-    }
+    public required Entity.Product Product { get; init; }  
+    public bool? CurrentFavored { get; init; }
 
-    public static ICollection<ProductWithAggregatesCustomerView> PromoteAll(IEnumerable<ProductWithAggregates> products,
-        ICollection<uint>? favoriteIds=null) {
-        return products.Select(p => Promote(p, favoriteIds?.Contains(p.Id))).ToArray();
-    }
+    public static ProductWithAggregatesCustomerView Promote(Entity.Product product, ICollection<uint>? favorites) =>
+        new(){
+            Product = product,
+            CurrentFavored = favorites?.Contains(product.Id)
+        };
+    public static ICollection<ProductWithAggregatesCustomerView> PromoteAll(ICollection<Entity.Product> products,
+        ICollection<uint>? favorites) {
+        return products.Select(p => new ProductWithAggregatesCustomerView(){
+            Product = p,
+            CurrentFavored = favorites?.Contains(p.Id)
+        }).ToArray();
+    } 
 }

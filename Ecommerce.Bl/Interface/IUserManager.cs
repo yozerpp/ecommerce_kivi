@@ -1,7 +1,4 @@
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Interface;
 

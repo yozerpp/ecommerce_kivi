@@ -1,4 +1,6 @@
-﻿namespace Ecommerce.Entity;
+﻿using Ecommerce.Entity.Views;
+
+namespace Ecommerce.Entity;
 
 public class ProductReview
 {
@@ -16,6 +18,7 @@ public class ProductReview
     public Customer? Reviewer { get; set; }
     public bool CensorName { get; set; }
     public bool HasBought { get; set; }
+    public ReviewStats Stats { get; set; }
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     public ICollection<ReviewComment> Comments { get; set; } = new List<ReviewComment>();
     public override bool Equals(object? obj) {

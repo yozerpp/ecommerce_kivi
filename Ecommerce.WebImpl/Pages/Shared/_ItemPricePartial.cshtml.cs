@@ -2,9 +2,6 @@
 
 namespace Ecommerce.WebImpl.Pages.Shared;
 
-public class _ItemPricePartial : PageModel
+public class _ItemPricePartial 
 {
-    public void OnGet() {
-        
-    }
 }

@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Projections;
 using Ecommerce.WebImpl.Pages.Seller;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
@@ -24,7 +23,7 @@ public class Cart : BaseModel
     [BindProperty( Name = "quantity")]
     public int? Quantity { get; set; }
     [BindProperty]
-    public CartWithAggregates ViewedCart { get; set; }
+    public Entity.Cart ViewedCart { get; set; }
     public IActionResult OnPostDelete() {
         var s = (Session) HttpContext.Items[nameof(Session)];
         _cartManager.Remove(s.Cart, new ProductOffer(){SellerId = (uint)SellerId!, ProductId = ProductId});
@@ -72,6 +71,6 @@ public class Cart : BaseModel
     // }
     public void OnGet() {
         var s = (Session)HttpContext.Items[nameof(Session)];
-        ViewedCart = (CartWithAggregates)_cartManager.Get(s, true,true);
+        ViewedCart = _cartManager.Get(s, true,true);
     }
 }

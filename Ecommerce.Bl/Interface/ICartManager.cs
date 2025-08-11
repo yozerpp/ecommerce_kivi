@@ -1,6 +1,5 @@
 using Ecommerce.Entity;
 using Microsoft.EntityFrameworkCore;
-using Ecommerce.Entity.Projections;
 
 namespace Ecommerce.Bl.Interface;
 
@@ -12,7 +11,7 @@ public interface ICartManager
     CartItem Add(CartItem item, int amount = 1);
     public void AddCoupon(Cart cart,ProductOffer offer, Coupon coupon);
     public ICollection<Coupon> GetAvailableCoupons(Session session);
-    public ICollection<ProductWithAggregates> GetMoreProductsFromSellers(Session session, int page=1, int pageSize=20);
+    public ICollection<Product> GetMoreProductsFromSellers(Session session, int page=1, int pageSize=20);
 
 
     CartItem? Decrement(Cart cart,ProductOffer productOffer, uint amount = 1);

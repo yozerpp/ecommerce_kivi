@@ -1,5 +1,4 @@
-﻿using Ecommerce.Entity.Projections;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages.Shared.Dashboard;
 
