@@ -93,6 +93,7 @@ public class View : Initialize
                 o.{nameof(OfferStats.ProductId)} as {nameof(OfferStats.ProductId)},
                 o.{nameof(OfferStats.SellerId)} as {nameof(OfferStats.SellerId)},
                 COUNT_BIG(*) as {nameof(OfferStats.ReviewCount)}
+                SUM(r.{nameof(ProductReview.Rating)}) as {nameof(OfferStats.RatingTotal)},
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] o
             INNER JOIN o.{nameof(ProductReview)} r ON r.{nameof(ProductReview.SellerId)} = o.{nameof(ProductOffer.SellerId)} AND r.{nameof(ProductReview.ProductId)} = o.{nameof(ProductOffer.ProductId)}
             GROUP BY o.{nameof(ProductOffer.SellerId)}, o.{nameof(ProductOffer.ProductId)}
