@@ -4,6 +4,7 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -22,8 +23,8 @@ public class SellerManager : ISellerManager
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
     }
-    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeCoupons = false) {
-        var s =  _sellerRepository.First(s=>s.Id == sellerId,
+    public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeAggregates, bool includeCoupons = false) {
+        var s =  _sellerRepository.FirstP(includeAggregates?WithAggregates:WithoutAggregates,s=>s.Id == sellerId,
             includes:GetIncludes(includeOffers,includeReviews, includeCoupons));
         if(s!=null && includeCoupons)
             s.Coupons = s.Coupons.Where(s => s.ExpirationDate > DateTime.UtcNow + TimeSpan.FromHours(3)).ToList();
@@ -125,4 +126,45 @@ public class SellerManager : ISellerManager
         if(coupons) ret.Add([nameof(Seller.Coupons)]);
         return ret.ToArray();
     }
+
+    private static readonly Expression<Func<Seller, Seller>> WithoutAggregates = s => new Seller(){
+        Id = s.Id,
+        ShopName = s.ShopName,
+        Active = s.Active,
+        Address = s.Address,
+        Coupons = s.Coupons,
+        Email = s.Email,
+        FirstName = s.FirstName,
+        LastName = s.LastName,
+        NormalizedEmail = s.NormalizedEmail,
+        PasswordHash = s.PasswordHash,
+        PhoneNumber = s.PhoneNumber,
+        ProfilePicture = s.ProfilePicture,
+        ProfilePictureId = s.ProfilePictureId,
+        Stats = null,
+    };
+    private static readonly Expression<Func<Seller, Seller>> WithAggregates = s => new Seller{
+        Id = s.Id,
+        ShopName = s.ShopName,
+        Active = s.Active,
+        Address = s.Address,
+        Coupons = s.Coupons,
+        Email = s.Email,
+        FirstName = s.FirstName,
+        LastName = s.LastName,
+        NormalizedEmail = s.NormalizedEmail,
+        PasswordHash = s.PasswordHash,
+        PhoneNumber = s.PhoneNumber,
+        ProfilePicture = s.ProfilePicture,
+        ProfilePictureId = s.ProfilePictureId,
+        Stats = new SellerStats(){
+            SellerId = s.Stats.SellerId,
+            OfferCount = s.Stats.OfferCount ?? 0,
+            RefundCount = s.Stats.RefundCount ?? 0,
+            ReviewAverage = (s.Stats.RatingTotal / s.Stats.ReviewCount) ?? 0f,
+            ReviewCount = s.Stats.ReviewCount ?? 0,
+            SaleCount = s.Stats.SaleCount ?? 0,
+            TotalSold = s.Stats.TotalSold ?? 0,
+        }
+    };
 }

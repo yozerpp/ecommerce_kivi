@@ -26,11 +26,9 @@ public class JwtManager : IJwtManager
         this._sessionRepository = sessionRepository;
         _credentials = signingCredentials;
     }
-
     public string Serialize(SecurityToken securityToken) {
         return _tokenHandler.WriteToken(securityToken);
     }
-
     public void Deserialize(string token, out User? user, out Session? session) {
         try{
             var p = _tokenHandler.ValidateToken(token, _tokenValidationParameters, out _);
@@ -42,7 +40,6 @@ public class JwtManager : IJwtManager
             return;
         }
     }
-
     private const string AuthTokenKey = "^+?'QaoAaHAS2*23qwe";
     public string CreateAuthToken(string key, TimeSpan lifetime) {
         var claims = new[]{ new Claim(ClaimTypes.Authentication, key) };
@@ -58,7 +55,6 @@ public class JwtManager : IJwtManager
         });
         return salt.ToBinary() + "|" +  _tokenHandler.WriteToken(t);
     }
-
     public string? ReadAuthToken(string token) {
         var (salt, tokenValue) = ParseAuthToken(token);
         var tokenValidationParameters = _tokenValidationParameters.Clone();
@@ -67,7 +63,6 @@ public class JwtManager : IJwtManager
         var claims = _tokenHandler.ValidateToken(tokenValue, tokenValidationParameters, out _);
         return claims.FindFirstValue(ClaimTypes.Authentication);
     }
-
     public (DateTime, string) ParseAuthToken(string withSalt) {
         var s = withSalt.Split('|', 2, StringSplitOptions.RemoveEmptyEntries);
         return (DateTime.FromBinary(long.Parse(s[0])), s[1]);

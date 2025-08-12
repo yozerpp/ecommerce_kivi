@@ -2,6 +2,7 @@
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -35,12 +36,11 @@ public class CustomerManager : ICustomerManager
             (page -1)*pageSize, pageSize*pageSize);
     }
     public Customer? GetCustomer(uint id) {
-        return _customerRepository.First(c => c.Id == id);
+        return _customerRepository.FirstP(UserWithoutAggregateProjection,c => c.Id == id, includes:[[nameof(Customer.Session)]]);
     }
     public Customer? GetWithAggregates(uint id) {
-        return _customerRepository.First(u => u.Id == id, includes:[[nameof(Customer.Session)]]);
+        return _customerRepository.FirstP(WithAggregates,u => u.Id == id, includes:[[nameof(Customer.Session)]]);
     }
-    
     private static readonly Expression<Func<Customer, Customer>> UserWithoutAggregateProjection = 
         u => new Customer {
             Id = u.Id, 
@@ -56,4 +56,32 @@ public class CustomerManager : ICustomerManager
             Session= u.Session,
             SessionId = u.SessionId,
         };
+
+    private static Expression<Func<Customer, Customer>> WithAggregates = c => new Customer{
+        Id = c.Id,
+        StripeId = c.StripeId,
+        NormalizedEmail = c.NormalizedEmail,
+        Email = c.Email,
+        FirstName = c.FirstName,
+        LastName = c.LastName,
+        PasswordHash = c.PasswordHash,
+        Stats = new CustomerStats(){
+            CustomerId = c.Stats.CustomerId,
+            CommentVotes = c.Stats.CommentVotes??0,
+            ReviewVotes = c.Stats.ReviewVotes??0,
+            TotalComments = c.Stats.TotalComments??0,
+            TotalDiscountUsed = c.Stats.TotalDiscountUsed,
+            TotalSpent = c.Stats.TotalSpent,
+            TotalKarma = (c.Stats.CommentVotes ?? 0) + (c.Stats.ReviewVotes??0),
+            TotalOrders = c.Stats.TotalOrders??0,
+            TotalReviews = c.Stats.TotalReviews??0,
+        },
+        Addresses = c.Addresses,
+        PhoneNumber = c.PhoneNumber,
+        Active = c.Active,
+        Session = c.Session,
+        SessionId = c.SessionId,
+        ProfilePicture = c.ProfilePicture,
+        ProfilePictureId = c.ProfilePictureId,
+    };
 }

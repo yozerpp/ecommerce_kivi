@@ -22,11 +22,15 @@ public class CartManager : ICartManager
         _sessionRepository = sessionRepository;
     }
 
-    public Cart? Get(Session session, bool includeAggregates = true, bool getItems = true, bool includeSeller =true) {
+    public Cart? Get(Session session, bool includeAggregates = false, bool getItems = false, bool includeItemAggregates = false, bool includeSeller =false) {
         var includes = GetIncludes(getItems, includeSeller);
-        if (!includeAggregates)
-            return _cartRepository.First(c => c.Id == session.CartId, includes: includes);
-        return GetWithAggregates(session.CartId, includes);
+        var cid = session.CartId;
+        if(includeItemAggregates) 
+            return _cartRepository.First(c => c.Id == cid, includes: includes);
+        Expression<Func<Cart, Cart>> projection;
+        if (includeAggregates)
+            return _cartRepository.FirstP(WithoutItemAggregates, c => c.Id == cid, includes: includes);
+        else return _cartRepository.FirstP(WithoutAggregates, c => c.Id == cid, includes: includes);
     }
     private static string[][] GetIncludes(bool items, bool seller) {
         var includes = new List<string[]>();
@@ -35,11 +39,6 @@ public class CartManager : ICartManager
         includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product), nameof(Product.Images)]);
         if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
         return includes.ToArray();
-    }
-    private Cart? GetWithAggregates(uint cartId, string[][] includes) {
-        var ret = _cartRepository.First(c => c.Id == cartId, 
-            includes: includes);
-        return ret;
     }
 
     /**
@@ -152,15 +151,35 @@ public class CartManager : ICartManager
         _cartItemRepository.Detach(item);
         _cartItemRepository.Flush();
     }
-
-    private static readonly Expression<Func<Cart, Cart>> WithoutAggregatesProjection = c => new Cart{
+    private static readonly Expression<Func<Cart, Cart>> WithoutAggregates = c => new Cart{
         Id = c.Id,
         Session = c.Session,
         Items = c.Items.Select(i=>new CartItem(){
             Aggregates = null,
-            SellerId = i.SellerId, ProductId = i.ProductId, CartId = i.CartId,ProductOffer = i.ProductOffer,CouponId = i.CouponId, Quantity = i.Quantity
-            //Cart=i.Cart, Coupon = i.Coupon
+            CartId = i.CartId,
+            ProductId = i.ProductId,
+            SellerId = i.SellerId,
+            Coupon = i.Coupon,
+            CouponId = i.CouponId,
+            Quantity = i.Quantity,
+            ProductOffer = i.ProductOffer            
         }).ToArray(),
         Aggregates = null,
+    };
+    
+    private static readonly Expression<Func<Cart, Cart>> WithoutItemAggregates = c => new Cart{
+        Session = c.Session,
+        Id = c.Id,
+        Aggregates = c.Aggregates,
+        Items = c.Items.Select(i => new CartItem{
+            Aggregates = null,
+            CartId = i.CartId,
+            ProductId = i.ProductId,
+            SellerId = i.SellerId,
+            Coupon = i.Coupon,
+            CouponId = i.CouponId,
+            Quantity = i.Quantity,
+            ProductOffer = i.ProductOffer
+        }).ToArray()
     };
 }

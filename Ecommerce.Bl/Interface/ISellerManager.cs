@@ -6,7 +6,7 @@ namespace Ecommerce.Bl.Interface;
 
 public interface ISellerManager
 {
-    Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews,
+    Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews,bool includeAggregates,
         bool includeCoupons = false);
     List<ProductOffer> GetOffers(uint sellerId, int page = 1, int pageSize = 20);
     void UpdateSeller(Seller seller);

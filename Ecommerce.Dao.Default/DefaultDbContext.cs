@@ -149,7 +149,6 @@ public class DefaultDbContext : DbContext
             });
             ss.SplitToView($"{nameof(SellerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                
                 vb.Property(s => s.RatingTotal).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 vb.Property(s => s.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
@@ -203,7 +202,7 @@ public class DefaultDbContext : DbContext
                             ValueGenerated.OnAddOrUpdate;
                     });
                 });
-            });
+        });
         var staffBuilder = modelBuilder.Entity<Staff>();
         staffBuilder.HasBaseType<User>();
         staffBuilder.HasMany<PermissionClaim>(s => s.PermissionClaims).WithOne(p => p.Grantee).HasForeignKey(p=>p.GranteeId).HasPrincipalKey(s=>s.Id);
@@ -296,6 +295,9 @@ public class DefaultDbContext : DbContext
                 vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
+            });
+            c.SplitToView($"{nameof(CartAggregates)}_{nameof(CartAggregates)}", DefaultSchema, vb => {
+                vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
@@ -333,6 +335,9 @@ public class DefaultDbContext : DbContext
                 vb.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
+            });
+            c.SplitToView($"{nameof(OrderAggregates)}_{nameof(OrderAggregates)}", DefaultSchema, vb => {
+                vb.Property(s => s.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =

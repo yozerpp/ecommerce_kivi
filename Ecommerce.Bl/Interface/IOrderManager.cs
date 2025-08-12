@@ -10,6 +10,6 @@ public interface IOrderManager
     public Order CancelOrder(Order order);
     public Order Complete(Order order);
     public void UpdateOrder(Order order);
-    public Order? GetOrderWithItems(uint orderId);
+    public Order? GetOrderWithItems(uint orderId, bool includeItemAggregates=false);
     public List<Order> GetAllOrders(Customer user,bool includeItems=false,int page = 1, int pageSize = 10);
 }

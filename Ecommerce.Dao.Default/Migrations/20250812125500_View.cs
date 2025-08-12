@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
 
 
-[Migration("20250812084000_View")]
+[Migration("20250812125500_View")]
 [DbContext(typeof(DefaultDbContext))]
 public class View : Initialize
 {
@@ -539,23 +539,19 @@ public class View : Initialize
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}]
         ");
-
         // Order Aggregates
         migrationBuilder.DropIndex(
             name: $"IX_{nameof(OrderAggregates)}",
             schema: DefaultDbContext.DefaultSchema,
             table: nameof(OrderAggregates));
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(OrderAggregates)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(Coupon)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}]");
+
         
         // OrderItem Aggregates
         migrationBuilder.DropIndex(
             name: $"IX_{nameof(OrderItemAggregates)}",
             schema: DefaultDbContext.DefaultSchema,
             table: nameof(OrderItemAggregates));
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}]");
+
         // migrationBuilder.DropIndex(
         //     $"IX_{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
         //     $"{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
@@ -601,7 +597,7 @@ public class View : Initialize
         //     DefaultDbContext.DefaultSchema);
         migrationBuilder.DropIndex(
             $"IX_{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}",
-            $"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}",
+            $"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}",
             DefaultDbContext.DefaultSchema);
         migrationBuilder.DropIndex(
             $"IX_{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}",
@@ -655,16 +651,22 @@ public class View : Initialize
             name: $"IX_{nameof(CartAggregates)}",
             schema: DefaultDbContext.DefaultSchema,
             table: nameof(CartAggregates));
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(CartAggregates)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}]");
 
         // CartItem Aggregates
         migrationBuilder.DropIndex(
             name: $"IX_{nameof(CartItemAggregates)}",
             schema: DefaultDbContext.DefaultSchema,
             table: nameof(CartItemAggregates));
+
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(CartAggregates)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(Coupon)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(OrderAggregates)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(Coupon)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}]");
     }
 }

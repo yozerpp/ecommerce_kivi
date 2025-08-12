@@ -5,7 +5,8 @@ namespace Ecommerce.Bl.Interface;
 
 public interface ICartManager
 {
-    Cart? Get(Session session,bool includeAggregates = true, bool getItems = true, bool includeSeller = true);
+    public Cart? Get(Session session, bool includeAggregates = false, bool getItems = false,
+        bool includeItemAggregates = false, bool includeSeller = false);
     Session newSession(User? user, bool flush = false);
     CartItem Add(Cart cart,ProductOffer offer, int amount = 1);
     CartItem Add(CartItem item, int amount = 1);
