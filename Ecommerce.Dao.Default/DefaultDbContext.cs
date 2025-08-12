@@ -106,7 +106,7 @@ public class DefaultDbContext : DbContext
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.ReviewVotes).HasColumnName(nameof(CustomerStats.TotalKarma)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.ReviewVotes).HasColumnName(nameof(CustomerStats.ReviewVotes)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
@@ -114,7 +114,7 @@ public class DefaultDbContext : DbContext
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.CommentVotes).HasColumnName(nameof(CustomerStats.TotalKarma)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.CommentVotes).HasColumnName(nameof(CustomerStats.CommentVotes)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             //non-materialized
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
@@ -149,12 +149,21 @@ public class DefaultDbContext : DbContext
             });
             ss.SplitToView($"{nameof(SellerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.ReviewAverage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                
+                vb.Property(s => s.RatingTotal).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 vb.Property(s => s.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             ss.SplitToView($"{nameof(SellerStats)}_{nameof(OrderItem)}", DefaultSchema, vb => {
                 vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.SaleCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            ss.SplitToView($"{nameof(SellerStats)}_{nameof(RefundRequest)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.RefundCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            ss.SplitToView($"{nameof(SellerStats)}_{nameof(Coupon)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.TotalSold).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
         });
         sellerBuilder.HasMany<Product>(s => s.Products).WithMany(p => p.Sellers).UsingEntity<ProductOffer>(r =>
@@ -184,7 +193,7 @@ public class DefaultDbContext : DbContext
                         vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.ReviewCount).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
-                        vb.Property(os => os.ReviewAverage).Overrides.Property.ValueGenerated =
+                        vb.Property(os => os.RatingTotal).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
                     });
                     e.SplitToView($"{nameof(OfferStats)}_{nameof(RefundRequest)}", DefaultSchema, vb => {
@@ -332,7 +341,6 @@ public class DefaultDbContext : DbContext
                     ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-                
             });
         });
         orderBuilder.HasOne<Session>(o => o.Session).WithMany().HasForeignKey(o => o.SessionId)
@@ -525,7 +533,7 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Customer>(c => c.User).WithMany(u => u.ReviewComments).HasForeignKey(c => c.UserId)
                 .HasPrincipalKey(c => c.Id)
                 .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
-            entity.Property(c => c.Created).HasDefaultValueSql("GETUTCDATE() + INTERVAL '3' HOUR");
+            entity.Property(c => c.Created).HasDefaultValueSql("DATEADD(HOUR, 3, GETUTCDATE())");
             entity.OwnsOne<ReviewCommentStats>(e => e.Stats, c => {
                 c.HasKey(s => s.CommentId);
                 c.WithOwner().HasForeignKey(s => s.CommentId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
