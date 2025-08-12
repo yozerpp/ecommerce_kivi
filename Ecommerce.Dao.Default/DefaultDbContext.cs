@@ -104,13 +104,17 @@ public class DefaultDbContext : DbContext
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.TotalKarma).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.ReviewVotes).HasColumnName(nameof(CustomerStats.TotalKarma)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 vb.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
+                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.CommentVotes).HasColumnName(nameof(CustomerStats.TotalKarma)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             //non-materialized
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
@@ -277,10 +281,7 @@ public class DefaultDbContext : DbContext
                 v.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                v.Property(os => os.DiscountPercentage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                v.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
             });
             c.SplitToView($"{nameof(CartAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
                 vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
@@ -290,7 +291,7 @@ public class DefaultDbContext : DbContext
                     ValueGenerated.OnAddOrUpdate;
                 vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.CouponDiscountPercentage).Overrides.Property.ValueGenerated =
+                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
             });
         });
@@ -498,9 +499,12 @@ public class DefaultDbContext : DbContext
             entity.OwnsOne<ReviewStats>(e => e.Stats, c => {
                 c.HasKey(s => s.ReviewId);
                 c.WithOwner().HasForeignKey(s => s.ReviewId).HasPrincipalKey(r => r.Id).Metadata.IsUnique = true;
-                c.ToView(nameof(ReviewStats), DefaultSchema, vb => {
+                c.ToView($"{nameof(ReviewStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                     vb.Property(s => s.ReviewId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     vb.Property(s => s.CommentCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                c.SplitToView($"{nameof(ReviewStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
+                    vb.Property(s => s.ReviewId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     vb.Property(s => s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
             });
