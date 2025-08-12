@@ -106,7 +106,7 @@ public class DefaultDbContext : DbContext
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.ReviewVotes).HasColumnName(nameof(CustomerStats.ReviewVotes)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.ReviewVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
@@ -114,7 +114,7 @@ public class DefaultDbContext : DbContext
             });
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
                 vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.CommentVotes).HasColumnName(nameof(CustomerStats.CommentVotes)).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.CommentVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
             //non-materialized
             cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
