@@ -53,8 +53,13 @@ public class Cart : BaseModel
     }
 
     public IActionResult OnDeleteCoupon() {
-        if(CouponId == null) throw new ArgumentNullException(nameof(CouponId));
-        _cartManager
+        if (SellerId == null) throw new ArgumentNullException(nameof(SellerId));
+        var s = (Session) HttpContext.Items[nameof(Session)];
+        _cartManager.RemoveCoupon(s.Cart, new ProductOffer(){ProductId = ProductId, SellerId = (uint)SellerId!});
+        return Partial(nameof(_InfoPartial), new _InfoPartial(){
+            Success = true, Message = "Kupon üründen kaldırıldı.", Title = "İşlem Başarılı",
+            Redirect = "/Cart", TimeOut = 1500
+        });
     }
 
 

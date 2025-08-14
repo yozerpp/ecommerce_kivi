@@ -11,6 +11,7 @@ public interface ICartManager
     CartItem Add(Cart cart,ProductOffer offer, int amount = 1);
     CartItem Add(CartItem item, int amount = 1);
     public void AddCoupon(Cart cart,ProductOffer offer, string couponId);
+    public void RemoveCoupon(Cart cart, ProductOffer offer); // Added this line
     public ICollection<Coupon> GetAvailableCoupons(Session session);
     public ICollection<Product> GetMoreProductsFromSellers(Session session, int page=1, int pageSize=20);
 
