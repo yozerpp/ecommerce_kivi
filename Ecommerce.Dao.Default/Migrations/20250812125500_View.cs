@@ -1,5 +1,6 @@
 ﻿namespace Ecommerce.Dao.Default.Migrations;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
 using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -125,6 +126,9 @@ public class View : Initialize
             .Annotation(SqlServerAnnotationNames.Clustered, true);
     }
     private static void _Product(MigrationBuilder migrationBuilder) {
+        var cancelledStatus = (int)OrderStatus.Cancelled;
+        var returnedStatus = (int)OrderStatus.Returned;
+
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}] WITH SCHEMABINDING AS
             SELECT 
@@ -147,6 +151,8 @@ public class View : Initialize
                 SUM(oi.{nameof(OrderItem.Quantity)}) as {nameof(ProductStats.SaleCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Product)}] p
                 INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON p.{nameof(Product.Id)} = oi.{nameof(OrderItem.ProductId)}
+                INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON oi.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY p.Id
         ");
         migrationBuilder.CreateIndex(
@@ -197,6 +203,9 @@ public class View : Initialize
     }
 
     private static void _Order(MigrationBuilder migrationBuilder) {
+        var cancelledStatus = (int)OrderStatus.Cancelled;
+        var returnedStatus = (int)OrderStatus.Returned;
+
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}] WITH SCHEMABINDING AS
             SELECT o.Id as {nameof(OrderAggregates.OrderId)},
@@ -206,6 +215,7 @@ public class View : Initialize
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oa ON oa.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON po.{nameof(ProductOffer.ProductId)} = oa.{nameof(OrderItem.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = oa.{nameof(OrderItem.SellerId)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY o.Id
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(OrderAggregates)}", nameof(OrderAggregates), nameof(OrderAggregates.OrderId),
@@ -220,6 +230,7 @@ public class View : Initialize
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oi ON oi.{nameof(OrderItemAggregates.OrderId)} = o.{nameof(Order.Id)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oii ON oii.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)} AND oii.{nameof(OrderItem.ProductId)} = oi.{nameof(OrderItemAggregates.ProductId)} AND oii.{nameof(OrderItem.SellerId)} = oi.{nameof(OrderItemAggregates.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oii.{nameof(OrderItem.CouponId)} = c.{nameof(Coupon.Id)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY o.{nameof(Order.Id)}
         ");
         migrationBuilder.Sql($@"
@@ -228,15 +239,18 @@ public class View : Initialize
                 o.{nameof(Order.Id)} as {nameof(OrderAggregates.OrderId)},
                 oa.{nameof(OrderAggregates.BasePrice)} - oa.{nameof(OrderAggregates.DiscountedPrice)} as {nameof(OrderAggregates.DiscountAmount)},
                 oa.{nameof(OrderAggregates.DiscountedPrice)} - oac.{nameof(OrderAggregates.CouponDiscountedPrice)} as {nameof(OrderAggregates.CouponDiscountAmount)},
-                oa.{nameof(OrderAggregates.BasePrice)} - oac.{nameof(OrderAggregates.CouponDiscountedPrice)} as {nameof(OrderAggregates.TotalDiscountAmount)},
                 COALESCE((oa.{nameof(OrderAggregates.BasePrice)} - oac.{nameof(OrderAggregates.CouponDiscountedPrice)})/NULLIF(oa.{nameof(OrderAggregates.BasePrice)}, 0),0)*100 as  {nameof(OrderAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}] oa ON oa.{nameof(OrderAggregates.OrderId)}=o.{nameof(Order.Id)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(Coupon)}] oac ON oac.{nameof(OrderAggregates.OrderId)}=o.{nameof(Order.Id)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
         ");
     }
 
     private static void _OrderItem(MigrationBuilder migrationBuilder) {
+        var cancelledStatus = (int)OrderStatus.Cancelled;
+        var returnedStatus = (int)OrderStatus.Returned;
+
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] WITH SCHEMABINDING AS
             SELECT 
@@ -247,6 +261,8 @@ public class View : Initialize
                 (po.{nameof(ProductOffer.Price)} * oi.{nameof(OrderItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(OrderItemAggregates.DiscountedPrice)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(OrderItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(OrderItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON oi.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(OrderItemAggregates)}", nameof(OrderItemAggregates), new[] { nameof(OrderItemAggregates.OrderId), nameof(OrderItemAggregates.SellerId), nameof(OrderItemAggregates.ProductId) },
                 DefaultDbContext.DefaultSchema, true)
@@ -262,6 +278,8 @@ public class View : Initialize
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa on oa.{nameof(OrderItemAggregates.OrderId)} = oi.{nameof(OrderItem.OrderId)} AND oa.{nameof(OrderItemAggregates.ProductId)} = oi.{nameof(OrderItem.ProductId)} AND oa.{nameof(OrderItemAggregates.SellerId)} = oi.{nameof(OrderItem.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(OrderItem.CouponId)} = c.{nameof(Coupon.Id)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON oi.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)}
+            WHERE o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
         ");
         // migrationBuilder.CreateIndex($"IX_{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
         //     $"{nameof(OrderItemAggregates)}_{nameof(Coupon)}",
@@ -272,6 +290,9 @@ public class View : Initialize
     }
 
     private static void _CustomerStats(MigrationBuilder migrationBuilder) {
+        var cancelledStatus = (int)OrderStatus.Cancelled;
+        var returnedStatus = (int)OrderStatus.Returned;
+
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(Order)}] WITH SCHEMABINDING AS
             SELECT 
@@ -279,7 +300,7 @@ public class View : Initialize
                 COUNT_BIG(*) as {nameof(CustomerStats.TotalOrders)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] c
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON c.Id = o.{nameof(Order.UserId)}
-            WHERE c.Role = {(int)User.UserRole.Customer}
+            WHERE c.Role = {(int)User.UserRole.Customer} AND o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY c.Id
         ");
         migrationBuilder.CreateIndex(
@@ -358,7 +379,7 @@ public class View : Initialize
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON c.Id = o.{nameof(Order.UserId)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}] oa ON oa.{nameof(OrderAggregates.OrderId)} = o.{nameof(Order.Id)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(OrderAggregates)}] oag ON o.{nameof(Order.Id)} = oag.{nameof(OrderAggregates.OrderId)}
-            WHERE c.Role = {(int)User.UserRole.Customer}
+            WHERE c.Role = {(int)User.UserRole.Customer} AND o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY c.Id
         ");
         // migrationBuilder.CreateIndex(
@@ -429,6 +450,9 @@ public class View : Initialize
     }
 
     private static void _SellerStats(MigrationBuilder migrationBuilder) {
+        var cancelledStatus = (int)OrderStatus.Cancelled;
+        var returnedStatus = (int)OrderStatus.Returned;
+
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}] WITH SCHEMABINDING AS
             SELECT 
@@ -469,7 +493,8 @@ public class View : Initialize
                 COUNT_BIG(*) as {nameof(SellerStats.SaleCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] s
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi ON s.Id = oi.{nameof(OrderItem.SellerId)}
-            WHERE  s.Role = {(int)User.UserRole.Seller}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON oi.{nameof(OrderItem.OrderId)} = o.{nameof(Order.Id)}
+            WHERE  s.Role = {(int)User.UserRole.Seller} AND o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY s.Id
         ");
         migrationBuilder.CreateIndex(
@@ -497,7 +522,8 @@ public class View : Initialize
                 SUM(oia.{nameof(OrderItemAggregates.CouponDiscountedPrice)}) as {nameof(SellerStats.TotalSold)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] s
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}_{nameof(Coupon)}] oia ON oia.{nameof(OrderItemAggregates.SellerId)} = s.{nameof(Seller.Id)}
-            WHERE  s.Role = {(int)User.UserRole.Seller}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o ON oia.{nameof(OrderItemAggregates.OrderId)} = o.{nameof(Order.Id)}
+            WHERE  s.Role = {(int)User.UserRole.Seller} AND o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY s.Id
         ");
     }
