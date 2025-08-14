@@ -5,6 +5,7 @@ using Ecommerce.WebImpl.Pages.Seller;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Ecommerce.WebImpl.Pages;
 
@@ -37,7 +38,7 @@ public class Cart : BaseModel
         if (SellerId == null) throw new ArgumentNullException(nameof(SellerId));
         var s = (Session) HttpContext.Items[nameof(Session)];
         try{ 
-            _cartManager.AddCoupon(s.Cart, new ProductOffer(){ProductId = ProductId, SellerId = (uint)SellerId!}, new Coupon(){Id = CouponId});
+            _cartManager.AddCoupon(s.Cart, new ProductOffer(){ProductId = ProductId, SellerId = (uint)SellerId!}, couponId:CouponId);
         }
         catch (ValidationException e){
             Console.WriteLine(e);
@@ -47,10 +48,14 @@ public class Cart : BaseModel
         }
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Ürüne kupon eklendi", Title = "İşlem Başarılı",
-            Redirect = "/Cart"
+            Redirect = "/Cart", TimeOut = 1500
         });
     }
 
+    public IActionResult OnDeleteCoupon() {
+        if(CouponId == null) throw new ArgumentNullException(nameof(CouponId));
+        _cartManager
+    }
 
 
     public PartialViewResult OnGetCoupon() {
@@ -59,8 +64,12 @@ public class Cart : BaseModel
     }
     public IActionResult OnPost() {
         var s = (Session)HttpContext.Items[nameof(Session)];
-        SellerId ??= _productManager.Search([new SearchPredicate(){Operator = SearchPredicate.OperatorType.Equals, PropName = "Id", Value = ProductId.ToString()}], [new SearchOrder(){Ascending = true, PropName = string.Join('_', nameof(Entity.Product.Offers), nameof(ProductOffer.Price))}],pageSize:1,includeImage:false)
-            .First().Offers.OrderBy(o=>o.Price).First().SellerId;
+        SellerId ??= _productManager.GetOffers(ProductId,includeAggregates:false).OrderBy(o=>o.Price).FirstOrDefault()?.SellerId;
+        if (SellerId == null)
+            return Partial(nameof(_InfoPartial), new _InfoPartial(){
+                Success = false, Message = "Ürünü satan bir satıcı bulunamadı.",
+                Title = "Ürün Sepete Eklenemdi"
+            });
         _cartManager.Add(s.Cart, new ProductOffer(){ ProductId = ProductId, SellerId = (uint)SellerId }, Quantity??1);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Sepet Güncellendi."
@@ -71,6 +80,6 @@ public class Cart : BaseModel
     // }
     public void OnGet() {
         var s = (Session)HttpContext.Items[nameof(Session)];
-        ViewedCart = _cartManager.Get(s, true,true);
+        ViewedCart = _cartManager.Get(s, true,true, true,includeSeller:true);
     }
 }
