@@ -3,6 +3,8 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Views;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -22,25 +24,39 @@ public class CartManager : ICartManager
         _sessionRepository = sessionRepository;
     }
 
-    public Cart? Get(Session session, bool includeAggregates = false, bool getItems = false, bool includeItemAggregates = false, bool includeSeller =false) {
-        var includes = GetIncludes(getItems, includeSeller);
+    public Cart? Get(Session session, bool includeAggregates = false, bool getItems = false, bool includeItemAggregates = false, bool includeSeller =false, bool nonTracking = false) {
+        // var includes = GetIncludes(getItems, includeSeller);
+        var projection = GetProjection(includeAggregates, includeItemAggregates);
         var cid = session.CartId;
-        if(includeItemAggregates) 
-            return _cartRepository.First(c => c.Id == cid, includes: includes);
-        Expression<Func<Cart, Cart>> projection;
-        if (includeAggregates)
-            return _cartRepository.FirstP(WithoutItemAggregates, c => c.Id == cid, includes: includes);
-        else return _cartRepository.FirstP(WithoutAggregates, c => c.Id == cid, includes: includes);
+        var c = _cartRepository.FirstP(projection,c => c.Id == cid, includes: [], nonTracking:nonTracking);
+        if (c.Items.Count > 0)
+            c.Aggregates = _cartRepository.FirstP(c => c.Aggregates, c => c.Id == cid, nonTracking: true);
+        else
+            c.Aggregates = new CartAggregates(){
+                BasePrice = 0,
+                DiscountedPrice = 0,
+                CouponDiscountedPrice = 0,
+                CouponDiscountAmount = 0,
+                DiscountAmount = 0,
+                TotalDiscountPercentage = 0,
+                ItemCount = 0,
+                CartId = c.Id,
+            };
+        return c;
     }
     private static string[][] GetIncludes(bool items, bool seller) {
         var includes = new List<string[]>();
         if (!items) return includes.ToArray();
         includes.Add([nameof(Cart.Items), nameof(CartItem.Coupon)]);
-        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product), nameof(Product.Images)]);
+        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer)]);
         if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
         return includes.ToArray();
     }
-
+    private static Expression<Func<Cart, Cart>> GetProjection(bool includeAggregates, bool includeItemAggregates) {
+        if (includeAggregates) return WithAggregates;
+        if (includeItemAggregates) return WithoutItemAggregates;
+        return WithoutAggregates;
+    }
     /**
      * updates user too.
      */
@@ -60,11 +76,11 @@ public class CartManager : ICartManager
         return session;
     }
 
-    public void AddCoupon(Cart cart, ProductOffer offer, Coupon coupon) {
+    public void AddCoupon(Cart cart, ProductOffer offer, string couponId) {
         _cartItemRepository.Update(new CartItem(){
-            CartId = cart.Id, CouponId = coupon.Id, ProductId = offer.ProductId,
+            CartId = cart.Id, CouponId = couponId, ProductId = offer.ProductId,
             SellerId = offer.SellerId
-        });
+        }, true, nameof(CartItem.Quantity));
         // var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
         // var c = _cartItemRepository.UpdateExpr([
             // ( ci=>ci.CouponId, coupon.Id)
@@ -77,13 +93,13 @@ public class CartManager : ICartManager
     public ICollection<Coupon> GetAvailableCoupons(Session session) {
         var cid = session.CartId;
         var coupons = _cartItemRepository.WhereP(ci => ci.ProductOffer.Seller!.Coupons, ci => ci.CartId == cid,
-            includes:[[nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.Coupons)]]).SelectMany(c=>c).ToList();
+            includes:[[nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller), nameof(Seller.Coupons), nameof(Coupon.Seller)]]).SelectMany(c=>c).ToList();
         return coupons;
     }
     public ICollection<Product> GetMoreProductsFromSellers(Session session, int page = 1, int pageSize = 20) {
         var cid = session.CartId;
         var items = _cartItemRepository.WhereP(ci=>ci.SellerId,ci => ci.CartId == cid);
-        return _productRepository.Where(p => p.Offers.Any(o => items.Contains(o.SellerId)), offset:
+        return _productRepository.WhereP(ProductManager.CardProjection,p => p.Offers.Any(o => items.Contains(o.SellerId)), offset:
             (page-1)*pageSize, limit:
             page*pageSize).ToArray();
     }   
@@ -151,10 +167,29 @@ public class CartManager : ICartManager
         _cartItemRepository.Detach(item);
         _cartItemRepository.Flush();
     }
-    private static readonly Expression<Func<Cart, Cart>> WithoutAggregates = c => new Cart{
+
+    private static readonly Expression<Func<Product, Product>> ProductProjection = p => new Product(){
+        Id = p.Id,
+        Active = p.Active,
+        CategoryId = p.CategoryId,
+        Dimensions = p.Dimensions,
+        MainImage = p.Images.FirstOrDefault(),
+        Name = p.Name,
+    };
+
+    public static readonly Expression<Func<ProductOffer, ProductOffer>> ProductOfferProjection = po => new ProductOffer(){
+        Price = po.Price,
+        ProductId = po.ProductId,
+        SellerId = po.SellerId,
+        Seller = po.Seller,
+        Discount = po.Discount,
+        Stock = po.Stock,
+        Product = ProductProjection.Invoke(po.Product)
+    };
+    private static readonly Expression<Func<Cart, Cart>> WithoutAggregates = ((Expression<Func<Cart,Cart>>)(c => new Cart{
         Id = c.Id,
         Session = c.Session,
-        Items = c.Items.Select(i=>new CartItem(){
+        Items = c.Items.Select(i => new CartItem(){
             Aggregates = null,
             CartId = i.CartId,
             ProductId = i.ProductId,
@@ -162,15 +197,33 @@ public class CartManager : ICartManager
             Coupon = i.Coupon,
             CouponId = i.CouponId,
             Quantity = i.Quantity,
-            ProductOffer = i.ProductOffer            
+            ProductOffer = ProductOfferProjection.Invoke(i.ProductOffer),
         }).ToArray(),
         Aggregates = null,
-    };
-    
-    private static readonly Expression<Func<Cart, Cart>> WithoutItemAggregates = c => new Cart{
+    })).Expand();
+    private static readonly Expression<Func<CartAggregates, CartAggregates?>> CartAggregatesProjection = ca => (CartAggregates?) new CartAggregates(){
+        BasePrice = ca.BasePrice ?? 0m,
+        DiscountedPrice = ca.DiscountedPrice ?? 0m,
+        CouponDiscountedPrice = ca.CouponDiscountedPrice ?? 0m,
+        CouponDiscountAmount = ca.CouponDiscountAmount ?? 0m,
+        DiscountAmount = ca.DiscountAmount ?? 0m,
+        TotalDiscountPercentage = ca.TotalDiscountPercentage ?? 0m,
+        ItemCount = ca.ItemCount ?? 0,
+        CartId = ca.CartId ?? 0,
+    }??null;
+    private static readonly Expression<Func<CartItemAggregates, CartItemAggregates?>> CartItemAggregatesProjection = cia => (CartItemAggregates?) new CartItemAggregates(){
+        BasePrice = cia.BasePrice ?? 0m,
+        DiscountedPrice = cia.DiscountedPrice ?? 0m,
+        CouponDiscountedPrice = cia.CouponDiscountedPrice ?? 0m,
+        TotalDiscountPercentage = cia.TotalDiscountPercentage ?? 0m,
+        CartId = cia.CartId ?? 0,
+        ProductId = cia.ProductId ?? 0,
+        SellerId = cia.SellerId ?? 0,
+    }??null;
+    public static readonly Expression<Func<Cart, Cart>> WithoutItemAggregates = ((Expression<Func<Cart,Cart>>)(c => new Cart{
         Session = c.Session,
         Id = c.Id,
-        Aggregates = c.Aggregates,
+        Aggregates = CartAggregatesProjection.Invoke(c.Aggregates),
         Items = c.Items.Select(i => new CartItem{
             Aggregates = null,
             CartId = i.CartId,
@@ -179,7 +232,22 @@ public class CartManager : ICartManager
             Coupon = i.Coupon,
             CouponId = i.CouponId,
             Quantity = i.Quantity,
-            ProductOffer = i.ProductOffer
+            ProductOffer = ProductOfferProjection.Invoke(i.ProductOffer),   
         }).ToArray()
-    };
+    })).Expand();
+    private static readonly Expression<Func<Cart, Cart>> WithAggregates = ((Expression<Func<Cart,Cart>>)(c => new Cart(){
+        //Leave aggregates for split query
+        Session = c.Session,
+        Id = c.Id,
+        Items = c.Items.Select(i=>new CartItem(){
+            CartId = i.CartId,
+            CouponId = i.CouponId,
+            ProductId = i.ProductId,
+            Quantity = i.Quantity,
+            ProductOffer = ProductOfferProjection.Invoke(i.ProductOffer),
+            Coupon = i.Coupon,
+            SellerId = i.SellerId,
+            Aggregates = CartItemAggregatesProjection.Invoke(i.Aggregates),
+        }).ToArray(),
+    })).Expand();
 }
