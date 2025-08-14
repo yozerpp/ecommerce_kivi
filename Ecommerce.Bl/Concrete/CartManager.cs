@@ -90,6 +90,17 @@ public class CartManager : ICartManager
         // }
     }
 
+    public void RemoveCoupon(Cart cart, ProductOffer offer)
+    {
+        _cartItemRepository.Update(new CartItem()
+        {
+            CartId = cart.Id,
+            CouponId = null, // Set CouponId to null to remove the coupon
+            ProductId = offer.ProductId,
+            SellerId = offer.SellerId
+        }, true, nameof(CartItem.Quantity));
+    }
+
     public ICollection<Coupon> GetAvailableCoupons(Session session) {
         var cid = session.CartId;
         var coupons = _cartItemRepository.WhereP(ci => ci.ProductOffer.Seller!.Coupons, ci => ci.CartId == cid,
