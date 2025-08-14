@@ -93,5 +93,8 @@ public class Orders : BaseModel
     public IActionResult OnPostRefund() {
         DoAuth();
         _orderManager.Refund(OrderId);
+        return Partial(nameof(_InfoPartial), new _InfoPartial(){
+            Success = true, TimeOut = 5000, Title = "Sipariş İade Edildi."
+        });
     }
 }

@@ -74,6 +74,15 @@ public class OrderManager : IOrderManager
             Id = orderId, Status = OrderStatus.Complete
         },ignoreNulls:true);
     }
+
+    public void Refund(uint orderId)
+    {
+        _orderRepository.Update(new Order()
+        {
+            Id = orderId, Status = OrderStatus.Returned
+        }, ignoreNulls: true);
+    }
+
     public void UpdateAddress(Address address, uint orderId) {
         var c = _orderRepository.UpdateExpr([
         (o=>o.ShippingAddress.City, address.City),
