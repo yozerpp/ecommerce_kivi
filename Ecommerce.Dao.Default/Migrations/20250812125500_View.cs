@@ -77,7 +77,7 @@ public class View : Initialize
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}] WITH SCHEMABINDING AS
             SELECT 
                 o.{nameof(Cart.Id)} as {nameof(CartAggregates.CartId)},
-                SUM(oi.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(1 - c.{nameof(Coupon.DiscountRate)}, 1)) as {nameof(CartAggregates.CouponDiscountedPrice)}
+                SUM(oi.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) as {nameof(CartAggregates.CouponDiscountedPrice)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] o
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] oi ON oi.{nameof(CartItemAggregates.CartId)} = o.{nameof(Cart.Id)}
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oii ON oii.{nameof(CartItem.CartId)} = o.{nameof(Cart.Id)} AND oii.{nameof(CartItem.ProductId)} = oi.{nameof(CartItemAggregates.ProductId)} AND oii.{nameof(CartItem.SellerId)} = oi.{nameof(CartItemAggregates.SellerId)}
@@ -417,7 +417,7 @@ public class View : Initialize
             SELECT
                 r.{nameof(ProductReview.Id)} AS {nameof(ReviewStats.ReviewId)},
                 SUM(CASE rv.{nameof(ReviewVote.Up)} WHEN 1 THEN 1 ELSE -1 END) AS {nameof(ReviewStats.Votes)},
-                COUNT_BIG(*) AS VOTE_COUNT
+                COUNT_BIG(*) AS {nameof(ReviewStats.VoteCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] r
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewVote)}] rv ON r.{nameof(ProductReview.Id)} = rv.{nameof(ReviewVote.ReviewId)}
             GROUP BY r.Id
