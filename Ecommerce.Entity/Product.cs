@@ -15,9 +15,16 @@ public class Product
     public Category Category { get; set; }
     public Dimensions Dimensions { get; set; }
     public ProductStats Stats { get; set; }
-    [NotMapped] public Image? MainImage => Images.FirstOrDefault(i => i.IsMain) ?? Images.FirstOrDefault();
+    private readonly Image? _mainImage;
+    [NotMapped]
+    public Image? MainImage
+    {
+        get => _mainImage?? (Images.FirstOrDefault(i => i.IsPrimary) ?? Images.FirstOrDefault())?.Image;
+        init => _mainImage = value;
+    }
+
     public ICollection<Seller> Sellers { get; set; } = new List<Seller>();
-    public IList<Image> Images { get; set; } = new List<Image>();
+    public IList<ImageProduct> Images { get; set; } = new List<ImageProduct>();
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public ICollection<Customer> FavoredCustomers { get; set; } = new List<Customer>();
     public Dictionary<string, string> CategoryProperties { get; set; } = new();
