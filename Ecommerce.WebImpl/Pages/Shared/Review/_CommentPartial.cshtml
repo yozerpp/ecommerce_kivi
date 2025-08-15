@@ -23,7 +23,7 @@
     <div class="collapse mt-3" id="replyComment@(Model.Id)">
         <form class="card card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.Id)" hx-swap="innerHTML">
             <input type="hidden" name="SentComment.ReviewId" value="@Model.ReviewId"/>
-            <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)"/>
+            <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)" value="@Model.Id"/>
             <div class="row g-2">
                 <div class="col-9 rounded-2 input-group mb-3">
                     <textarea class="small input-group-text form-control" style="font-size: unset" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
