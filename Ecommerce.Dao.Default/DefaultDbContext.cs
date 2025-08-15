@@ -419,19 +419,12 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Category>(p => p.Category).WithMany(c=>c.Products).HasForeignKey(p => p.CategoryId)
                 .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
             entity.HasMany<Customer>(p => p.FavoredCustomers).WithMany(c => c.FavoriteProducts);
-            // Configure ProductCategoryProperties as an owned entity
-            entity.OwnsOne(p => p.CategoryProperties, ownedNavigation =>
-            {
-                ownedNavigation.ToJson(); // Store as JSON in a single column
-                // Dynamically add properties based on Category.CategoryProperty definitions
-                // This requires loading categories and their properties at model creation time,
-                // which is generally not recommended for EF Core model building.
-                // A more robust solution would be to store these as a JSON column or
-                // use a separate entity for each property if they need to be queryable.
-                // For now, we'll assume it's stored as JSON and accessed dynamically.
-                // If you need to query these properties directly in the database,
-                // you'll need to reconsider the schema or use database-specific JSON functions.
-            });
+            // Configure ProductCategoryProperties as a collection of EAV entities
+            entity.HasMany(p => p.CategoryProperties)
+                .WithOne(pcp => pcp.Product)
+                .HasForeignKey(pcp => pcp.ProductId)
+                .HasPrincipalKey(p => p.Id)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.Property(p => p.Active).HasDefaultValue(true);
             entity.HasMany<ImageProduct>(e => e.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId)
                 .HasPrincipalKey(i => i.Id).OnDelete(DeleteBehavior.Cascade).IsRequired();
@@ -462,6 +455,38 @@ public class DefaultDbContext : DbContext
                         s => s != null ? s.Split(',', StringSplitOptions.TrimEntries) : null);
                 p.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
             });
+        // Configure Category.CategoryProperty as a regular entity
+        modelBuilder.Entity<Category.CategoryProperty>(entity =>
+        {
+            entity.HasKey(cp => cp.Id);
+            entity.Property(cp => cp.Id).ValueGeneratedOnAdd();
+            entity.HasOne(cp => cp.Category)
+                .WithMany(c => c.CategoryProperties)
+                .HasForeignKey(cp => cp.CategoryId)
+                .HasPrincipalKey(c => c.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(cp => cp.PropertyName).IsRequired().HasMaxLength(100);
+            entity.Property(cp => cp.IsRequired).IsRequired();
+            entity.Property(cp => cp.IsNumber).IsRequired();
+        });
+
+        // Configure ProductCategoryProperties entity
+        modelBuilder.Entity<ProductCategoryProperties>(entity =>
+        {
+            entity.HasKey(pcp => new { pcp.ProductId, pcp.CategoryPropertyId }); // Composite primary key
+            entity.Property(pcp => pcp.Value).IsRequired().HasMaxLength(500); // Max length for the value
+
+            entity.HasOne(pcp => pcp.Product)
+                .WithMany(p => p.CategoryProperties)
+                .HasForeignKey(pcp => pcp.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pcp => pcp.CategoryProperty)
+                .WithMany() // ProductCategoryProperties doesn't have a navigation back to CategoryProperty
+                .HasForeignKey(pcp => pcp.CategoryPropertyId)
+                .OnDelete(DeleteBehavior.Restrict); // Restrict deletion if properties are still in use
+        });
+
         var couponBuilder = modelBuilder.Entity<Coupon>(entity => {
             entity.HasKey(c => c.Id);
             entity.HasIndex(e => e.SellerId)

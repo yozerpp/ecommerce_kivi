@@ -15,7 +15,9 @@ public class Category
     public ICollection<CategoryProperty> CategoryProperties { get; set; } = new List<CategoryProperty>();
     public class CategoryProperty
     {
-        public int Id { get; set; }
+        public int Id { get; set; } // Primary key for CategoryProperty
+        public uint CategoryId { get; set; } // Foreign key to Category
+        public Category Category { get; set; } // Navigation property to Category
         public string PropertyName { get; set; }
         public string[]? EnumValues { get; set; }
         public bool IsRequired { get; set; }

@@ -29,7 +29,8 @@ public class Product
     public IList<ImageProduct> Images { get; set; } = new List<ImageProduct>();
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public ICollection<Customer> FavoredCustomers { get; set; } = new List<Customer>();
-    public ProductCategoryProperties CategoryProperties { get; set; } = new(); // Changed to owned type
+    // Changed to a collection of ProductCategoryProperties for EAV model
+    public ICollection<ProductCategoryProperties> CategoryProperties { get; set; } = new List<ProductCategoryProperties>();
     public bool Active { get; set; }
 
 
