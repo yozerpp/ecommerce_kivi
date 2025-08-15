@@ -9,7 +9,9 @@ public class Product
 {
     public Product(){}
     public uint Id { get; set; }
+    [ProductName]
     public string Name { get; set; }
+    [ProductDescription]
     public string Description { get; set; }
     public uint CategoryId { get; set; }
     public Category Category { get; set; }

@@ -1,11 +1,13 @@
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
+using Ecommerce.Entity.Common.Meta; // Added this using directive
 using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;
 
 public class Seller : User
 {
+    [ShopName]
     public string ShopName { get; set; }
     public SellerStats Stats { get; set; }
     public ICollection<Product> Products { get; set; } = new List<Product>();
