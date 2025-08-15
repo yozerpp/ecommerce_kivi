@@ -108,7 +108,7 @@ public class HomepageModel : BaseModel
         predicates = new List<SearchPredicate>();
         orders = new List<SearchOrder>();
 
-        var parts = query.Split(new[] { "&&" }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = query.Split(["&&"], StringSplitOptions.RemoveEmptyEntries);
 
         // Regex to capture property name, operator, and value
         // It handles operators like >=, <=, >, <, =, % (for LIKE)
