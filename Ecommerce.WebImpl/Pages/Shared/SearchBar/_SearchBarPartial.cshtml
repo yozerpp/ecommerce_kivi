@@ -9,7 +9,7 @@
 @{
     var formId = (Model.Target?.ToLowerInvariant() ?? "searchBar") +"Form";
 }
-<form id="@(formId)" asp-page="/Index" method="get">
+<div id="@(formId)">
     <script>
         let filterDropdown;
         document.addEventListener("DOMContentLoaded", ()=> {
@@ -17,8 +17,18 @@
             filterDropdown= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
                 autoClose: false,reference: document.getElementById('filters')
             });
-            // el = document.getElementById('ordersButton');
-            // el._dd = new bootstrap.Dropdown(el, {autoClose:false, reference: 'parent'});
+            ((s)=>{
+               document.getElementById('@(formId)Submit').addEventListener('click', e=>{
+                   let query = '';
+                   document.getElementById('ranges').querySelectorAll('input-group').forEach(i=>{
+                       if(i._isEntered!==true)return;
+                       query+='&' + i._name + '<=' + i._max + '&' + i._name + '>=' + i._min;
+                   });
+                   query+='&@(nameof(Entity.Product.Name))%'
+                   window.location.replace( '/Index?QueryString=' + encodeURI(query));
+                   
+               });
+            })(document.currentScript)
         });
     </script>
     @Html.AntiForgeryToken()
@@ -26,12 +36,11 @@
     <input type="hidden" name="@nameof(HomepageModel.JsonResult)" value="@((Model.Target != null).ToString().ToLowerInvariant())"/>
     <div class="d-flex gap-1">
         <div class="input-group rounded-start-2">
-            <button class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="submit">
+            <button id="@(formId)Submit" class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="button">
                 <i class="bi bi-search m-0" style="font-size: large"></i> 
             </button>
             <div class="dropdown my-0">
                 <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tümü</button>
-                
                 <div id="categoryPicker" class="dropdown-menu rounded-bottom-2 border-1">
                     @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories,displayElementId:"pickerBtn", inputElementId:"categoryIdInput", targetElementId:"categoryProperties"))
                 </div>
@@ -74,7 +83,7 @@
             <ul class="list-unstyled">
                 <li id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
                 </li>
-                <li class="row row-cols-6 g-2 d-flex ps-2">
+                <li id="ranges" class="row row-cols-6 g-2 d-flex ps-2">
                     <div class="col-6 gap-1">
                         <div>
                             Satılma Sayısı
@@ -83,7 +92,7 @@
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
                                 MinValue = 0,
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.SaleCount)}]",
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.SaleCount)),
                             })
                         </div>
                     </div>
@@ -93,7 +102,7 @@
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
                                 MinValue = 0,
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.RefundCount)}]",
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.RefundCount)),
                             })
                         </div>
                     </div>
@@ -106,7 +115,7 @@
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
                                 MinValue = 0,
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.FavorCount)}]",
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.FavorCount)),
                             })
                         </div>
                     </div>
@@ -118,7 +127,7 @@
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
                                 MinValue = 0,
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.ReviewCount)}]",
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.ReviewCount)),
                             })
                         </div>
                     </div>
@@ -131,7 +140,7 @@
                                 MinValue = 0,
                                 MaxValue = 5,
                                 Step = "0.1",
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductStats.RatingAverage)}]",
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.RatingAverage)),
                             })
                         </div>
                     </div>
@@ -141,7 +150,7 @@
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000, MinValue = 0,
                                 Step = "0.1",
-                                InputNamePrefix = $"{nameof(HomepageModel.AggregateFilters)}[{nameof(ProductOffer.Price)}]", //handle specially
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.MinPrice)),
                             })
                         </div>
                     </div>
@@ -149,4 +158,4 @@
             </ul>
         </div>
     </div>
-</form>
+</div>
