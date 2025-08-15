@@ -20,13 +20,43 @@
             ((s)=>{
                document.getElementById('@(formId)Submit').addEventListener('click', e=>{
                    let query = '';
-                   document.getElementById('ranges').querySelectorAll('input-group').forEach(i=>{
-                       if(i._isEntered!==true)return;
-                       query+='&' + i._name + '<=' + i._max + '&' + i._name + '>=' + i._min;
+                   // Add Product Name
+                   const searchNameInput = document.querySelector('input[name="@(nameof(HomepageModel.SearchName))"]');
+                   if (searchNameInput && searchNameInput.value) {
+                       query += `&${encodeURIComponent(searchNameInput.name)}=${encodeURIComponent(searchNameInput.value)}`;
+                   }
+
+                   // Add Category
+                   const categoryIdInput = document.getElementById('categoryIdInput');
+                   if (categoryIdInput && categoryIdInput.value) {
+                       query += `&${encodeURIComponent(categoryIdInput.name)}=${encodeURIComponent(categoryIdInput.value)}`;
+                   }
+
+                   // Add Range Filters
+                   document.getElementById('ranges').querySelectorAll('.input-group').forEach(i=>{
+                       if(i._isEntered!==true)return; // Assuming _isEntered and _name, _max, _min are set by the slider partial
+                       query+=`&${encodeURIComponent(i._name)}<=${encodeURIComponent(i._max)}&${encodeURIComponent(i._name)}>=${encodeURIComponent(i._min)}`;
                    });
-                   query+='&@(nameof(Entity.Product.Name))%'
-                   window.location.replace( '/Index?QueryString=' + encodeURI(query));
+
+                   // Add Category Properties
+                   const categoryPropertiesDiv = document.getElementById('categoryProperties');
+                   if (categoryPropertiesDiv) {
+                       const hasPropertiesInput = categoryPropertiesDiv.querySelector('input[name="@(nameof(HomepageModel.PropertyFilters))[HomepageModel.HasPropertiesKey]"]');
+                       if (hasPropertiesInput && hasPropertiesInput.value === 'true') {
+                           categoryPropertiesDiv.querySelectorAll('input[type="text"], input[type="number"], select').forEach(input => {
+                               if (input.name && input.value) {
+                                   query += `&${encodeURIComponent(input.name)}=${encodeURIComponent(input.value)}`;
+                               }
+                           });
+                       }
+                   }
+
+                   // Remove leading '&' if present
+                   if (query.startsWith('&')) {
+                       query = query.substring(1);
+                   }
                    
+                   window.location.replace( '/Index?' + query);
                });
             })(document.currentScript)
         });
@@ -140,7 +170,7 @@
                                 MinValue = 0,
                                 MaxValue = 5,
                                 Step = "0.1",
-                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.RatingAverage)),
+                                InputName = string.Join('.', nameof(Entity.Product.Stats), nameof(ProductStats.ReviewAverage)),
                             })
                         </div>
                     </div>
