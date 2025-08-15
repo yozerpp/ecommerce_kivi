@@ -13,10 +13,33 @@
         </div>
     </div>
     <div class="small d-flex row align-self-center justify-content-end">
-        <a data-bs-toggle="tooltip" title="Cevapları Görüntüle" data-bs-placement="left" id="commentRepliesBtn@(Model.Id)" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#commentReplies@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.Id)&ReviewId=@(Model.ReviewId)&NestLevel=@(Model.NestLevel+1)">
+        <script>
+            (()=>{
+                const cs = document.currentScript;
+                document.addEventListener('DOMContentLoaded', () => {
+                    cs.nextElementSibling._tt =  new bootstrap.Tooltip(cs.nextElementSibling);
+                    cs.nextElementSibling.nextElementSibling._tt = new bootstrap.Tooltip(cs.nextElementSibling.nextElementSibling);
+                })    
+            })()
+        </script>
+        <div class="me-auto d-flex gap-2">
+            @if (Model.Stats?.ReplyCount > 0)
+            {
+                <span class="d-inline-flex align-items-center">
+                    <i class="bi bi-chat-dots me-1"></i> @Model.Stats.ReplyCount
+                </span>
+            }
+            @if (Model.Stats?.Votes != null)
+            {
+                <span class="d-inline-flex align-items-center">
+                    <i class="bi bi-hand-thumbs-up me-1"></i> @Model.Stats.Votes
+                </span>
+            }
+        </div>
+        <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.Id)" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#commentReplies@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.Id)&ReviewId=@(Model.ReviewId)&NestLevel=@(Model.NestLevel+1)">
             <i class="bi bg-light text-dark bi-chat-dots"></i>
         </a>
-        <a onload="new bootstrap.Tooltip(event.currentTarget)" data-bs-placement="right" title="Cevapla" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.Id)" aria-expanded="false" aria-controls="replyComment@(Model.Id)">
+        <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="right" title="Cevapla" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.Id)" aria-expanded="false" aria-controls="replyComment@(Model.Id)">
             <i class="bg-light text-dark bi bi-reply"></i>
         </a>
     </div>
