@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Views;
@@ -57,17 +59,18 @@ public class HomepageModel : BaseModel
     [BindProperty]
     public ICollection<ProductWithAggregatesCustomerView>? CategoryRecommendations { get; set; }
     [BindProperty] public ICollection<ProductWithAggregatesCustomerView>? SellerRecommendations { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? QueryString { get; set; }
     public IActionResult OnGet() {
-        var (preds, orders) = GetParams();
+        ICollection<SearchPredicate> preds;
+        ICollection<SearchOrder> orders;
+        if(QueryString!=null)
+            ParseQuery(QueryString, out  preds,out orders  );
+        else GetParams(out preds, out orders);
         var favorites = GetFavorites();
         Products = Search(preds, orders, PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){Product = p, CurrentFavored = favorites?.Contains(p.Id)}).ToList();
         if (JsonResult) return new JsonResult(Products);
-        // var c =_productManager.GetMoreProductsFromCategories(CurrentSession).Select(p => ProductWithAggregatesCustomerView.Promote(p, favorites?.Contains(p.Id))).ToArray();
-        // if (c.Length > 0) 
-        // CategoryRecommendations = c;
         CategoryRecommendations = [];
-        // var s=_cartManager.GetMoreProductsFromSellers(CurrentSession).Select(p=>ProductWithAggregatesCustomerView.Promote(p, favorites?.Contains(p.Id))).ToArray();
-        // if (s.Length > 0) 
         SellerRecommendations = [];
         return Page();
     }
@@ -80,7 +83,7 @@ public class HomepageModel : BaseModel
     }
     [BindProperty(SupportsGet = true)] public int? PageNumber { get; set; }
 
-    [BindProperty(SupportsGet = true, Name = "recommendationType"),]
+    [BindProperty(SupportsGet = true)]
     public RecommendationType Type { get; set; }
 
     public enum RecommendationType
@@ -92,18 +95,53 @@ public class HomepageModel : BaseModel
     public IActionResult OnGetRecommended() {
         var products = Type==RecommendationType.Category?_productManager.GetMoreProductsFromCategories(CurrentSession, PageNumber?? 1): _cartManager.GetMoreProductsFromSellers(CurrentSession, page: PageNumber ?? 1);
         if (products.Count == 0) return new NoContentResult();
-        return Partial("Shared/Product/" + nameof(_FeaturedItemsPartial), new _FeaturedItemsPartial{
-            Items= ProductWithAggregatesCustomerView.PromoteAll(products, GetFavorites()),
+        return Partial("Shared/Product/" + nameof(_FeaturedPartial), new _FeaturedPartial{
+            Products = ProductWithAggregatesCustomerView.PromoteAll(products,
+                GetFavorites()),
             PageIndex = PageNumber ?? 1,
-            Categories = Categories
+            Categories = Categories,
+            Type = Type
         });
+    }
+
+    private void ParseQuery(string query, out ICollection<SearchPredicate> predicates, out ICollection<SearchOrder> orders) {
+        var q = query.Split("&&").First();
+        var r = new Regex(@"([\w\d_])(>)|(<)|(=)|(%)|(<=)|(>=)([\w\d_])", RegexOptions.Compiled);
+        predicates = q.Split('&').Select(m => {
+            var match = r.Match(m);
+            SearchPredicate.OperatorType type;
+            if (match.Groups[2].Success)
+                type = SearchPredicate.OperatorType.GreaterThan;
+            else if (match.Groups[3].Success)
+                type = SearchPredicate.OperatorType.LessThan;
+            else if (match.Groups[4].Success)
+                type = SearchPredicate.OperatorType.Equals;
+            else if (match.Groups[5].Success)
+                type = SearchPredicate.OperatorType.Like;
+            else if (match.Groups[6].Success)
+                type = SearchPredicate.OperatorType.LessThanOrEqual;
+            else if (match.Groups[7].Success)
+                type = SearchPredicate.OperatorType.GreaterThanOrEqual;
+            else type = SearchPredicate.OperatorType.Equals;
+            return new SearchPredicate(){
+                Operator = type, PropName = string.Concat(match.Groups[1].Captures),
+                Value = string.Concat(match.Groups[2].Value)
+            };
+        }).ToArray();
+        orders = query.Split("&&").Skip(1).Select(s => {
+            var parts = s.Split(',');
+            return new SearchOrder(){
+                PropName = parts[1],
+                Ascending = parts[1].Equals("ASC", StringComparison.OrdinalIgnoreCase),
+            };
+        }).ToArray();
     }
     [BindProperty(SupportsGet = true)]public string AggregatesJson { get; set; } = "{}";
     [BindProperty(SupportsGet = true)] public string OrdersJson { get; set; } = "{}";
     public IActionResult OnGetMore() {
         AggregateFilters = JsonSerializer.Deserialize<Dictionary<string, RangeInput>>(AggregatesJson) ?? new();
         Orders = JsonSerializer.Deserialize<Dictionary<string, OrderInput>>(OrdersJson) ?? new();
-        var (preds, orders) = GetParams();
+        GetParams(out var preds, out var orders);
         var favs = GetFavorites();
         var p = new _VerticalListPartial(){
             Products = ProductWithAggregatesCustomerView.PromoteAll(Search(preds, orders, PageIndex),favs),
@@ -114,8 +152,8 @@ public class HomepageModel : BaseModel
         };
         return Partial("Shared/Product/" + nameof(_VerticalListPartial), p);
     }
-    public (ICollection<SearchPredicate>, ICollection<SearchOrder>) GetParams() {
-        var orders = Orders.Where(o=>o.Value?.Selected??false).Select(kv=>new SearchOrder(){
+    public void GetParams(out ICollection<SearchPredicate> preds,out ICollection<SearchOrder> orders) {
+        orders = Orders.Where(o=>o.Value?.Selected??false).Select(kv=>new SearchOrder(){
             PropName = kv.Key,
             Ascending = kv.Value.Ascending?? false,
         }).ToArray();
@@ -146,6 +184,6 @@ public class HomepageModel : BaseModel
                 Value = SearchCategory.Value.ToString()
             });
         }
-        return (predicates.ToArray(), orders);
+        preds = predicates;
     }
 }
