@@ -29,16 +29,23 @@
                     <small>Bu kullanıcının bu ürünü satın aldığı doğrulandı.</small>
                 </div>
             }
-        </div>
-
-        <div class="list-group-item small d-flex mx-0 px-0 row align-self-center justify-content-center">
-            <a data-bs-toggle="tooltip" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Id)" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#comments@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Id">
-                <i class="bi bg-light text-dark bi-chat-dots"></i>
-            </a>
-            <div class="col-8"></div>
-            <a onload="new bootstrap.Tooltip(event.currentTarget)" data-bs-placement="right" title="Cevapla" class="d-flex col-2 gap-1 p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Id)" aria-expanded="false" aria-controls="reply@(Model.Id)">
-                <i class="bg-light text-dark bi bi-reply"></i>
-            </a>
+            <div class="small container-fluid d-inline-flex mx-0 gap-2 pe-1 justify-content-end align-items-center">
+                <script>
+                    (()=>{
+                        const cs = document.currentScript;
+                        document.addEventListener('DOMContentLoaded', () => {
+                            cs.nextElementSibling._tt =  new bootstrap.Tooltip(cs.nextElementSibling);
+                            cs.nextElementSibling.nextElementSibling._tt = new bootstrap.Tooltip(cs.nextElementSibling.nextElementSibling);
+                        })    
+                    })()
+                </script>
+                <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Id)" class="p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#comments@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Id">
+                    <i class="bi bg-light text-dark bi-chat-dots"></i>
+                </a>
+                <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Id)" aria-expanded="false" aria-controls="reply@(Model.Id)">
+                    <i class="bg-light text-dark bi bi-reply"></i>
+                </a>
+            </div>
         </div>
     </div>
     <div>
