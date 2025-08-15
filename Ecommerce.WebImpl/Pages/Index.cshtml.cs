@@ -105,36 +105,60 @@ public class HomepageModel : BaseModel
     }
 
     private void ParseQuery(string query, out ICollection<SearchPredicate> predicates, out ICollection<SearchOrder> orders) {
-        var q = query.Split("&&").First();
-        var r = new Regex(@"([\w\d_])(>)|(<)|(=)|(%)|(<=)|(>=)([\w\d_])", RegexOptions.Compiled);
-        predicates = q.Split('&').Select(m => {
-            var match = r.Match(m);
-            SearchPredicate.OperatorType type;
-            if (match.Groups[2].Success)
-                type = SearchPredicate.OperatorType.GreaterThan;
-            else if (match.Groups[3].Success)
-                type = SearchPredicate.OperatorType.LessThan;
-            else if (match.Groups[4].Success)
-                type = SearchPredicate.OperatorType.Equals;
-            else if (match.Groups[5].Success)
-                type = SearchPredicate.OperatorType.Like;
-            else if (match.Groups[6].Success)
-                type = SearchPredicate.OperatorType.LessThanOrEqual;
-            else if (match.Groups[7].Success)
-                type = SearchPredicate.OperatorType.GreaterThanOrEqual;
-            else type = SearchPredicate.OperatorType.Equals;
-            return new SearchPredicate(){
-                Operator = type, PropName = string.Concat(match.Groups[1].Captures),
-                Value = string.Concat(match.Groups[2].Value)
-            };
-        }).ToArray();
-        orders = query.Split("&&").Skip(1).Select(s => {
-            var parts = s.Split(',');
-            return new SearchOrder(){
-                PropName = parts[1],
-                Ascending = parts[1].Equals("ASC", StringComparison.OrdinalIgnoreCase),
-            };
-        }).ToArray();
+        predicates = new List<SearchPredicate>();
+        orders = new List<SearchOrder>();
+
+        var parts = query.Split(new[] { "&&" }, StringSplitOptions.RemoveEmptyEntries);
+
+        // Regex to capture property name, operator, and value
+        // It handles operators like >=, <=, >, <, =, % (for LIKE)
+        // Property names and values can contain alphanumeric, underscores, and dots.
+        var predicateRegex = new Regex(@"^([\w\d\._]+?)(>=|<=|>|<|=|%)(.*)$", RegexOptions.Compiled);
+
+        foreach (var part in parts)
+        {
+            if (part.Contains(',')) // Likely an order clause
+            {
+                var orderParts = part.Split(',');
+                if (orderParts.Length == 2)
+                {
+                    orders.Add(new SearchOrder()
+                    {
+                        PropName = orderParts[0].Trim(),
+                        Ascending = orderParts[1].Trim().Equals("ASC", StringComparison.OrdinalIgnoreCase),
+                    });
+                }
+            }
+            else // Likely a predicate
+            {
+                var match = predicateRegex.Match(part);
+                if (match.Success)
+                {
+                    var propName = match.Groups[1].Value;
+                    var op = match.Groups[2].Value;
+                    var val = match.Groups[3].Value;
+
+                    SearchPredicate.OperatorType operatorType;
+                    switch (op)
+                    {
+                        case ">=": operatorType = SearchPredicate.OperatorType.GreaterThanOrEqual; break;
+                        case "<=": operatorType = SearchPredicate.OperatorType.LessThanOrEqual; break;
+                        case ">": operatorType = SearchPredicate.OperatorType.GreaterThan; break;
+                        case "<": operatorType = SearchPredicate.OperatorType.LessThan; break;
+                        case "=": operatorType = SearchPredicate.OperatorType.Equals; break;
+                        case "%": operatorType = SearchPredicate.OperatorType.Like; break;
+                        default: continue; // Should not happen with the regex, but good for safety
+                    }
+
+                    predicates.Add(new SearchPredicate()
+                    {
+                        Operator = operatorType,
+                        PropName = propName,
+                        Value = val
+                    });
+                }
+            }
+        }
     }
     [BindProperty(SupportsGet = true)]public string AggregatesJson { get; set; } = "{}";
     [BindProperty(SupportsGet = true)] public string OrdersJson { get; set; } = "{}";
