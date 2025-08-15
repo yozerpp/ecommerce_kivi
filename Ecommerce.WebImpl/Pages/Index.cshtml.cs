@@ -108,54 +108,94 @@ public class HomepageModel : BaseModel
         predicates = new List<SearchPredicate>();
         orders = new List<SearchOrder>();
 
-        var parts = query.Split(["&&"], StringSplitOptions.RemoveEmptyEntries);
-
-        // Regex to capture property name, operator, and value
-        // It handles operators like >=, <=, >, <, =, % (for LIKE)
-        // Property names and values can contain alphanumeric, underscores, and dots.
-        var predicateRegex = new Regex(@"^([\w\d\._]+?)(>=|<=|>|<|=|%)(.*)$", RegexOptions.Compiled);
+        // Split the query string by "&&" to separate potential ordering clauses
+        var parts = query.Split(new[] { "&&" }, StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var part in parts)
         {
-            if (part.Contains(',')) // Likely an order clause
+            // Check if it's an ordering clause (contains a comma)
+            if (part.Contains(','))
             {
                 var orderParts = part.Split(',');
                 if (orderParts.Length == 2)
                 {
                     orders.Add(new SearchOrder()
                     {
-                        PropName = orderParts[0].Trim(),
+                        PropName = Uri.UnescapeDataString(orderParts[0].Trim()),
                         Ascending = orderParts[1].Trim().Equals("ASC", StringComparison.OrdinalIgnoreCase),
                     });
                 }
             }
-            else // Likely a predicate
+            else // Treat as predicate(s)
             {
-                var match = predicateRegex.Match(part);
-                if (match.Success)
+                // Split by "&" to get individual key=value pairs
+                var predicatePairs = part.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var pair in predicatePairs)
                 {
-                    var propName = match.Groups[1].Value;
-                    var op = match.Groups[2].Value;
-                    var val = match.Groups[3].Value;
-
-                    SearchPredicate.OperatorType operatorType;
-                    switch (op)
+                    var keyValue = pair.Split(new[] { '=' }, 2); // Split only on the first '='
+                    if (keyValue.Length == 2)
                     {
-                        case ">=": operatorType = SearchPredicate.OperatorType.GreaterThanOrEqual; break;
-                        case "<=": operatorType = SearchPredicate.OperatorType.LessThanOrEqual; break;
-                        case ">": operatorType = SearchPredicate.OperatorType.GreaterThan; break;
-                        case "<": operatorType = SearchPredicate.OperatorType.LessThan; break;
-                        case "=": operatorType = SearchPredicate.OperatorType.Equals; break;
-                        case "%": operatorType = SearchPredicate.OperatorType.Like; break;
-                        default: continue; // Should not happen with the regex, but good for safety
+                        var propName = Uri.UnescapeDataString(keyValue[0].Trim());
+                        var val = Uri.UnescapeDataString(keyValue[1].Trim());
+
+                        // Determine operator based on common patterns or assume equality for now
+                        // For simplicity, assuming '=' operator for all key=value pairs from this parsing
+                        // If you need to support other operators like <, >, %, etc., within the predicate part,
+                        // you'll need a more sophisticated regex or parsing logic here.
+                        SearchPredicate.OperatorType operatorType = SearchPredicate.OperatorType.Equals;
+
+                        // Special handling for SearchName and SearchCategory if they are part of the query string
+                        if (propName.Equals(nameof(SearchName), StringComparison.OrdinalIgnoreCase))
+                        {
+                            operatorType = SearchPredicate.OperatorType.Like;
+                            SearchName = val; // Also set the bind property
+                        }
+                        else if (propName.Equals(nameof(SearchCategory), StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (uint.TryParse(val, out var categoryId))
+                            {
+                                SearchCategory = categoryId; // Also set the bind property
+                                propName = string.Join('_', nameof(Entity.Product.Category), nameof(Category.Id)); // Adjust propName for backend
+                            }
+                            else
+                            {
+                                continue; // Skip if category ID is not a valid uint
+                            }
+                        }
+                        else if (propName.Contains("AggregateFilters", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // This part needs careful handling as AggregateFilters are ranges (min/max)
+                            // The current query format "propName=value" doesn't directly support ranges.
+                            // If ranges are to be passed via QueryString, their format needs to be defined.
+                            // For now, I'll skip complex aggregate filter parsing from this simple format.
+                            // You might need to adjust the query string generation on the frontend for ranges.
+                            continue;
+                        }
+                        else if (propName.Contains("PropertyFilters", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Example: PropertyFilters[Color]=Red
+                            var match = Regex.Match(propName, @"PropertyFilters\[(.*?)\]");
+                            if (match.Success)
+                            {
+                                var actualPropName = match.Groups[1].Value;
+                                PropertyFilters[actualPropName] = val; // Populate the bind property
+                                predicates.Add(new SearchPredicate()
+                                {
+                                    Operator = operatorType,
+                                    PropName = actualPropName,
+                                    Value = val
+                                });
+                                continue; // Already added to predicates
+                            }
+                        }
+
+                        predicates.Add(new SearchPredicate()
+                        {
+                            Operator = operatorType,
+                            PropName = propName,
+                            Value = val
+                        });
                     }
-
-                    predicates.Add(new SearchPredicate()
-                    {
-                        Operator = operatorType,
-                        PropName = propName,
-                        Value = val
-                    });
                 }
             }
         }
