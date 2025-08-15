@@ -47,7 +47,7 @@ public class View : Initialize
                 oi.{nameof(CartItem.ProductId)},
                 oi.{nameof(CartItem.SellerId)},
                 (oa.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(CartItemAggregates.CouponDiscountedPrice)},
-                (oa.{nameof(CartItemAggregates.BasePrice)} - (oa.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/oa.{nameof(CartItemAggregates.BasePrice)} AS {nameof(CartItemAggregates.TotalDiscountPercentage)}
+                COALESCE((oa.{nameof(CartItemAggregates.BasePrice)} - (oa.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/NULLIF(oa.{nameof(CartItemAggregates.BasePrice)},0),0) AS {nameof(CartItemAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] oa on oa.{nameof(CartItemAggregates.CartId)} = oi.{nameof(CartItem.CartId)} AND oa.{nameof(CartItemAggregates.ProductId)} = oi.{nameof(CartItem.ProductId)} AND oa.{nameof(CartItemAggregates.SellerId)} = oi.{nameof(CartItem.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(CartItem.CouponId)} = c.{nameof(Coupon.Id)}
