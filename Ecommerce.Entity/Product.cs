@@ -29,7 +29,7 @@ public class Product
     public IList<ImageProduct> Images { get; set; } = new List<ImageProduct>();
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public ICollection<Customer> FavoredCustomers { get; set; } = new List<Customer>();
-    public Dictionary<string, string> CategoryProperties { get; set; } = new();
+    public ProductCategoryProperties CategoryProperties { get; set; } = new(); // Changed to owned type
     public bool Active { get; set; }
 
 

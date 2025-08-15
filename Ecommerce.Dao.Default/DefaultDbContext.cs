@@ -419,8 +419,18 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Category>(p => p.Category).WithMany(c=>c.Products).HasForeignKey(p => p.CategoryId)
                 .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
             entity.HasMany<Customer>(p => p.FavoredCustomers).WithMany(c => c.FavoriteProducts);
-            entity.OwnsOne(p => p.CategoryProperties, c => {
-                c.ToJson();
+            // Configure ProductCategoryProperties as an owned entity
+            entity.OwnsOne(p => p.CategoryProperties, ownedNavigation =>
+            {
+                ownedNavigation.ToJson(); // Store as JSON in a single column
+                // Dynamically add properties based on Category.CategoryProperty definitions
+                // This requires loading categories and their properties at model creation time,
+                // which is generally not recommended for EF Core model building.
+                // A more robust solution would be to store these as a JSON column or
+                // use a separate entity for each property if they need to be queryable.
+                // For now, we'll assume it's stored as JSON and accessed dynamically.
+                // If you need to query these properties directly in the database,
+                // you'll need to reconsider the schema or use database-specific JSON functions.
             });
             entity.Property(p => p.Active).HasDefaultValue(true);
             entity.HasMany<ImageProduct>(e => e.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId)
@@ -581,9 +591,9 @@ public class DefaultDbContext : DbContext
         voteBuilder.HasKey(v=>v.Id);
         voteBuilder.Property(v => v.Id).ValueGeneratedOnAdd();
         voteBuilder.HasOne<ProductReview>(r=>r.ProductReview).WithMany(r=>r.Votes).HasForeignKey(v=>v.ReviewId)
-            .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
+            .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
         voteBuilder.HasOne<ReviewComment>(r=>r.ReviewComment).WithMany(r=>r.Votes).HasForeignKey(v=>v.CommentId)
-            .HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
+            .HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
         voteBuilder.HasOne<Session>(v=>v.Voter).WithMany().HasForeignKey(v => v.VoterId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         //notficatinos
         var notificationBuilder = modelBuilder.Entity<Notification>(e => {
