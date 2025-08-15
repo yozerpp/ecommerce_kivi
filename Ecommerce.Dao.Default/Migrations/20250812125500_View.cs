@@ -200,6 +200,20 @@ public class View : Initialize
         // migrationBuilder.CreateIndex($"IX_{nameof(ProductStats)}_{nameof(ProductOffer)}",
         //     $"{nameof(ProductStats)}_{nameof(ProductOffer)}", $"{nameof(ProductStats.ProductId)}",
         //     DefaultDbContext.DefaultSchema, true);
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}Average] WITH SCHEMABINDING AS
+            SELECT 
+                pspr.{nameof(ProductStats.ProductId)},
+                CAST(pspr.{nameof(ProductStats.RatingTotal)} AS DECIMAL(10, 2)) / pspr.{nameof(ProductStats.ReviewCount)} AS {nameof(ProductStats.ReviewAverage)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}] pspr
+            WHERE pspr.{nameof(ProductStats.ReviewCount)} > 0
+        ");
+        migrationBuilder.CreateIndex(
+            $"IX_{nameof(ProductStats)}_{nameof(ProductReview)}Average",
+            $"{nameof(ProductStats)}_{nameof(ProductReview)}Average",
+            nameof(ProductStats.ProductId), DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
     }
 
     private static void _Order(MigrationBuilder migrationBuilder) {
@@ -526,6 +540,20 @@ public class View : Initialize
             WHERE  s.Role = {(int)User.UserRole.Seller} AND o.{nameof(Order.Status)} != {cancelledStatus} AND o.{nameof(Order.Status)} != {returnedStatus}
             GROUP BY s.Id
         ");
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}Average] WITH SCHEMABINDING AS
+            SELECT 
+                spspr.{nameof(SellerStats.SellerId)},
+                CAST(spspr.{nameof(SellerStats.RatingTotal)} AS DECIMAL(10, 2)) / spspr.{nameof(SellerStats.ReviewCount)} AS {nameof(SellerStats.ReviewAverage)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] spspr
+            WHERE spspr.{nameof(SellerStats.ReviewCount)} > 0
+        ");
+        migrationBuilder.CreateIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductReview)}Average",
+            $"{nameof(SellerStats)}_{nameof(ProductReview)}Average",
+            nameof(SellerStats.SellerId), DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -550,6 +578,10 @@ public class View : Initialize
         // migrationBuilder.DropIndex($"IX_{nameof(ProductStats)}_{nameof(ProductOffer)}",
         //     $"{nameof(ProductStats)}_{nameof(ProductOffer)}",
         //     DefaultDbContext.DefaultSchema);
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(ProductStats)}_{nameof(ProductReview)}Average",
+            $"{nameof(ProductStats)}_{nameof(ProductReview)}Average",
+            DefaultDbContext.DefaultSchema);
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}]
         ");
@@ -564,6 +596,9 @@ public class View : Initialize
         ");
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}]
+        ");
+        migrationBuilder.Sql($@"
+            DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}Average]
         ");
         // Order Aggregates
         migrationBuilder.DropIndex(
@@ -601,11 +636,16 @@ public class View : Initialize
             name: $"IX_{nameof(SellerStats)}_{nameof(RefundRequest)}",
             schema: DefaultDbContext.DefaultSchema,
             table: $"{nameof(SellerStats)}_{nameof(RefundRequest)}");
+        migrationBuilder.DropIndex(
+            $"IX_{nameof(SellerStats)}_{nameof(ProductReview)}Average",
+            $"{nameof(SellerStats)}_{nameof(ProductReview)}Average",
+            DefaultDbContext.DefaultSchema);
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(RefundRequest)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(Coupon)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}Average]");
         // Customer Stats
         migrationBuilder.DropIndex(
             $"IX_{nameof(CustomerStats)}_{nameof(Order)}",
