@@ -2,13 +2,18 @@
 @model Ecommerce.WebImpl.Pages.Shared.Product._CategoryPropertiesPartial
 
 <div class="container @(Model.InputNamePrefix!=null?"h-50":"")">
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+        })(document.currentScript)
+    </script>
     @if (Model.InputNamePrefix!=null){
         if (Model.Properties.Count > 0){
             <input type="hidden" name="@(Model.InputNamePrefix)[@(HomepageModel.HasPropertiesKey)]" value="true"/>
         }
         foreach (var prop in Model.Properties){
             <div class="row">
-                <label class="col-1" for="@Model.InputNamePrefix-@prop.PropertyName">@prop.PropertyName</label>
+                <label class="col-1">@prop.PropertyName</label>
                 @if (prop.EnumValues != null){
                     <select class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)" name="@(Model.InputNamePrefix)[@(prop.PropertyName)]">
                         @if (!prop.IsRequired){
