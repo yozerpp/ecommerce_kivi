@@ -39,6 +39,20 @@
                         })    
                     })()
                 </script>
+                <div class="me-auto d-flex gap-2">
+                    @if (Model.Stats?.CommentCount > 0)
+                    {
+                        <span class="d-inline-flex align-items-center">
+                            <i class="bi bi-chat-dots me-1"></i> @Model.Stats.CommentCount
+                        </span>
+                    }
+                    @if (Model.Stats?.Votes != null)
+                    {
+                        <span class="d-inline-flex align-items-center">
+                            <i class="bi bi-hand-thumbs-up me-1"></i> @Model.Stats.Votes
+                        </span>
+                    }
+                </div>
                 <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Id)" class="p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#comments@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Id">
                     <i class="bi bg-light text-dark bi-chat-dots"></i>
                 </a>
