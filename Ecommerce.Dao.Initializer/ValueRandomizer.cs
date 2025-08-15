@@ -90,6 +90,18 @@ internal class ValueRandomizer
                     value = Convert.ToBase64String(bytes);
                 else if(typeof(byte[]) .IsAssignableFrom(propType)) value = bytes;
             }
+            else if (property.GetCustomAttribute<ProductNameAttribute>() != null)
+            {
+                value = new Faker().Commerce.ProductName();
+            }
+            else if (property.GetCustomAttribute<ProductDescriptionAttribute>() != null)
+            {
+                value = new Faker().Commerce.ProductDescription();
+            }
+            else if (property.GetCustomAttribute<ShopNameAttribute>() != null)
+            {
+                value = new Faker().Company.CompanyName();
+            }
             else if ( typeof(PhoneNumber).IsAssignableFrom(propType)) {
                 if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
                     value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = new Bogus.Faker().Phone.PhoneNumber()};    
