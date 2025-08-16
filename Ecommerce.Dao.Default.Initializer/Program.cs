@@ -237,6 +237,13 @@ internal static class Initializer
                         Dimensions = new Dimensions()
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                        },
+                        Properties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "51" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt2" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "-57" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "strVal" }
                         }
                     },
                     new Product()
@@ -248,6 +255,13 @@ internal static class Initializer
                         Dimensions = new Dimensions()
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                        },
+                        Properties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "49" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt3" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "15" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "strstr" }
                         }
                     },
                     new Product()
@@ -259,6 +273,13 @@ internal static class Initializer
                         Dimensions = new Dimensions()
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                        },
+                        Properties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "120" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt1" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "80" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "asdasd" }
                         }
                     },
                     new Product()
@@ -270,6 +291,11 @@ internal static class Initializer
                         Dimensions = new Dimensions()
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                        },
+                        Properties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "124" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "some string" }
                         }
                     },
                     new Product()
@@ -281,6 +307,12 @@ internal static class Initializer
                         Dimensions = new Dimensions()
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                        },
+                        Properties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "89" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "wireless tech" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 7, Value = "very good" }
                         }
                     }
                 };
@@ -291,36 +323,36 @@ internal static class Initializer
             transaction.Commit();
         }
 
-        // Seed Product Category Properties
-        using (var transaction = context.Database.BeginTransaction())
-        {
-            if (!context.Set<ProductCategoryProperties>().Any())
-            {
-                var productCategoryProperties = new[]
-                {
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 1, Value = "51" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 2, Value = "49" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 2, Value = "15" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 3, Value = "120" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 3, Value = "80" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 4, Value = "124" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 4, Value = "some string" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 5, Value = "89" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 7, ProductId = 5, Value = "very good" }
-                };
-                context.Set<ProductCategoryProperties>().AddRange(productCategoryProperties);
-                context.SaveChanges();
-            }
-            transaction.Commit();
-        }
+        // Removed the separate seed for ProductCategoryProperties as it's now part of Product seed
+        // using (var transaction = context.Database.BeginTransaction())
+        // {
+        //     if (!context.Set<ProductCategoryProperties>().Any())
+        //     {
+        //         var productCategoryProperties = new[]
+        //         {
+        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 1, Value = "51" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 2, Value = "49" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 2, Value = "15" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 3, Value = "120" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 3, Value = "80" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 4, Value = "124" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 4, Value = "some string" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 5, Value = "89" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech" },
+        //             new ProductCategoryProperties() { CategoryPropertyId = 7, ProductId = 5, Value = "very good" }
+        //         };
+        //         context.Set<ProductCategoryProperties>().AddRange(productCategoryProperties);
+        //         context.SaveChanges();
+        //     }
+        //     transaction.Commit();
+        // }
     }
 
     
