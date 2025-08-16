@@ -1,0 +1,56 @@
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using Ecommerce.Entity.Common
+@using Microsoft.AspNetCore.Html
+@model _OrderItemsPartial
+<div id="order@(Model.Order.Id)" class="container-fluid">
+    <table id="order@(Model.Order.Id)-body" class="container-fluid ps-5 ms-2 gap-2  table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
+        <thead class="text-center align-middle">
+        <tr class="table-striped-columns">
+            <th scope="col" colspan="3">
+                <p class="fs-5">Resim</p>
+            </th>
+            <th scope="col" colspan="1">
+                <p class="fs-5">Ürün Adı</p>
+            </th>
+            <th scope="col" colspan="1">
+                <p class="fs-5">Satıcı</p>
+            </th>
+            <th scope="col" colspan="3">
+                <p class="fs-5">Gönderi Adresi</p>
+            </th>
+            <th scope="col" colspan="2">
+                <p class="fs-5">Fiyat</p>
+            </th>
+            <th scope="col" colspan="2">
+                <p class="fs-5">Kupon</p>
+            </th>
+        </tr>
+        </thead>
+        <tbody class="text-center pt-3 table-responsive table-striped-columns table-striped align-middle">
+        @foreach (var item in Model.Order.Items){
+            var p = item.ProductOffer!.Product!;
+            <tr class="mt-2">
+                <td colspan="3 align-middle text-center">
+                    <img class="img-fluid text-center rounded-2 align-middle" src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))"/>
+                </td>
+                <td colspan="1" class="align-middle text-center">
+                    <p class="fs-5">@(p.Name)</p>
+                </td>
+                <td colspan="1" class="align-middle text-center">@item.ProductOffer.Seller.ShopName</td>
+                <td colspan="3" class="align-middle text-center">
+                    <p class="fs-5 text-wrap align-middle text-center">@(item.ProductOffer.Seller.Address.ToString())</p>
+                </td>
+                <td colspan="2" class="align-middle text-center">
+                    <partial name="Shared/_ItemPricePartial" model="item.Aggregates"/>
+                </td>
+                <td colspan="2" class="align-middle text-center">
+                    @if (item.CouponId != null){
+                        <p class="overflow-y-scroll">@(item.CouponId)</p>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

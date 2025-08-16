@@ -41,8 +41,8 @@ public class JwtManager : IJwtManager
         }
     }
     private const string AuthTokenKey = "^+?'QaoAaHAS2*23qwe";
-    public string CreateAuthToken(string key, TimeSpan lifetime) {
-        var claims = new[]{ new Claim(ClaimTypes.Authentication, key) };
+    public string CreateAuthToken(string value, TimeSpan lifetime) {
+        var claims = new[]{ new Claim(ClaimTypes.Authentication, value) };
         var salt = DateTime.UtcNow + TimeSpan.FromHours(3);
         var k = new SymmetricSecurityKey(SHA256.HashData(Encoding.UTF8.GetBytes(AuthTokenKey+ "!"+salt.ToBinary())));
         var t = _tokenHandler.CreateToken(new SecurityTokenDescriptor
@@ -60,8 +60,14 @@ public class JwtManager : IJwtManager
         var tokenValidationParameters = _tokenValidationParameters.Clone();
         tokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(
             SHA256.HashData(Encoding.UTF8.GetBytes(AuthTokenKey + "!" + salt.ToBinary())));
-        var claims = _tokenHandler.ValidateToken(tokenValue, tokenValidationParameters, out _);
-        return claims.FindFirstValue(ClaimTypes.Authentication);
+        try{
+            var claims = _tokenHandler.ValidateToken(tokenValue, tokenValidationParameters, out _);
+            return claims.FindFirstValue(ClaimTypes.Authentication);
+        }
+        catch (SecurityTokenExpiredException e){
+            return null;
+        }
+        
     }
     public (DateTime, string) ParseAuthToken(string withSalt) {
         var s = withSalt.Split('|', 2, StringSplitOptions.RemoveEmptyEntries);

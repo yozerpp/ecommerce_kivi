@@ -1,12 +1,14 @@
 ﻿using System.Configuration;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
+using Ecommerce.Mail;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
@@ -34,9 +36,10 @@ public class Checkout : BaseModel
     private readonly INotificationService _notificationService;
     private readonly Aes _encryption;
     private readonly IUserManager _userManager;
-
-    public Checkout(IOrderManager orderManager, IShippingService shippingService, IUserManager userManager, ICartManager cartManager, IJwtManager jwtManager, INotificationService notificationService, IRepository<Entity.Seller> sellerRepository) {
+    private readonly IMailService _mailService;
+    public Checkout(IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager, IJwtManager jwtManager, INotificationService notificationService, IRepository<Entity.Seller> sellerRepository) {
         _orderManager = orderManager;
+        _mailService = mailService;
         _userManager = userManager;
         _shippingService = shippingService;
         _cartManager = cartManager;
@@ -64,52 +67,21 @@ public class Checkout : BaseModel
     public Dictionary<uint,ulong> SelectedShippingOffers { get; set; }
     public enum Result
     {
-        Success,NonExistent,Fail
+        Success,NonExistent,Fail,Processing
     }
     [BindProperty] public Result OrderResult { get; set; }
-    public IActionResult OnGetCreated([FromQuery] string intentId) {
+    public IActionResult OnGetCreated([FromQuery] string intentId, [FromQuery] uint orderId)  {
         SelectedTab = 4;
         var i= _paymentIntentService.Get(Decrypt(intentId));
-        if (i==null)
-            return Partial(nameof(_InfoPartial), new _InfoPartial(){
-                Success = false, Message = "Aktif siparişiniz yok, anasayfaya yönlendiriliyorsunuz",
-                Redirect = "/Index"
-            });
-        if(i.Status!= "succeeded")
-            return Partial(nameof(_InfoPartial), new _InfoPartial(){
-                Success = false, Message = "Ödeme işlemi tamamlanmadı, lütfen tekrar deneyin.",
-                Redirect = "/"+ nameof(Checkout)
-            });
-        var address = new Address(){
-            Line1 = i.Shipping.Address.Line1,
-            City = i.Shipping.Address.City,
-            District = i.Shipping.Address.State,
-            Country = i.Shipping.Address.Country,
-            ZipCode = i.Shipping.Address.PostalCode,
-            Line2 = i.Shipping.Address.Line2
+        OrderResult = i?.Status switch{
+            null => Result.NonExistent,
+            "processing" => Result.Processing,
+            "succeeded" => Result.Success,
+            _ => Result.Fail
         };
-        var phoneNumber  = new PhoneNumber(){
-            CountryCode = int.Parse(i.Shipping.Phone.Split(' ').First()),
-            Number = i.Shipping.Phone.Split(' ').Last()
-        };
-        var email = i.ReceiptEmail;
-        var items = _cartManager.Get(CurrentSession, false, true, true).Items;
-        var shippingItems = SelectedShippingOffers //TODO make shipment item a seperate entity
-            .OrderBy(o => o.Key.GetHashCode()).Select(o => {
-                var shippedItems = items.Where(i => i.SellerId == o.Key);
-                var seller = shippedItems.First().ProductOffer.Seller;
-                return (shippedItems, new IShippingService.ShipmentCreateOptions(){
-                    OfferId = o.Value, RecepientEmail = email,
-                    SenderEmail = seller.Email,
-                    RecepientPhoneNumber = phoneNumber,
-                    SenderPhoneNumber = seller.PhoneNumber
-                });
-            }).ToList();
-        var shippings = _shippingService.AcceptOffer(shippingItems.Select(s=>s.Item2).ToArray()).Select(s=>new Entity.Shipment(){
-                Provider = s.Provider.Name,TrackingNumber = s.TrackingNumber,Status = ShipmentStatus.Shipping,
-                RecepientAddress = s.DeliveryAddress, SenderAddress = s.ShippingAddress
-            }).ToList();
-        CreatedOrder = _orderManager.CreateOrder(CurrentSession, out var newSession, shippings, CurrentCustomer,email,address);
+        Order order;
+        if (OrderResult != Result.Success || (order = _orderManager.GetOrder(orderId, true ,true)!)==null) return Page();
+        var newSession = _cartManager.newSession(CurrentUser, true);
         if (CurrentUser == null){
             Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
             var token = _jwtManager.CreateToken(newSession);
@@ -117,86 +89,95 @@ public class Checkout : BaseModel
                 MaxAge = TimeSpan.FromDays(3),//TODO: Overrrides RememberMe choice
             });
         }
-        _paymentIntentService.Update(i.Id, new PaymentIntentUpdateOptions(){
-            Shipping = new ChargeShippingOptions(){
-                Address = new AddressOptions(){
-                    City = i.Shipping.Address.City,
-                    Country = i.Shipping.Address.Country,
-                    Line1 = i.Shipping.Address.Line1,
-                    Line2 = i.Shipping.Address.Line2,
-                    PostalCode = i.Shipping.Address.PostalCode,
-                    State = i.Shipping.Address.State
-                },
-                Name = i.Shipping.Name, Phone = i.Shipping.Phone,
-                Carrier = string.Join('|', shippings.Select(s => s.Provider)),
-                TrackingNumber = string.Join('|', shippings.Select(s => s.TrackingNumber))
-            }
-        });
-        _notificationService.SendBatchAsync(shippingItems.SelectMany(s => s.shippedItems).Select(i =>
+        var t = _notificationService.SendBatchAsync(order.Items.DistinctBy(i=>i.SellerId).Select(i =>
             new OrderNotification(){
                 UserId = i.SellerId,
-                OrderId = CreatedOrder.Id,
+                OrderId = order.Id,
                 ProductId = i.ProductId
-            }));
+            }).ToArray());
+        _mailService.SendAsync(order?.Email ?? CurrentCustomer?.Email, "Siparişiniz Alındı",
+            "Siparişiniz alınmıştır, sipariş numaranız: " + order.Id + "Sipariş detaylarınızı " +
+            (CurrentCustomer == null
+                ? Url.Page("/Order", new{ OrderId = order.Id }) + " Sayfasından takip edebilirsiniz."
+                : "Kullanıcı sayfanızdan görüntüleyebilirsiniz."), from: "yozer ticaret");
+        t.Wait();
+        CreatedOrder = order;
         return Page();
     }
-    public IActionResult OnGetPayment([FromQuery] string intentSecret, [FromQuery] string sessionSecret, [FromQuery] string intentId) {
+
+    private Order CreateOrder(Dictionary<uint, ulong>selectedShippingOffers, ICollection<CartItem> items,string email,string name,PhoneNumber phoneNumber, Address address) {
+        var shippingItems=selectedShippingOffers //TODO make shipment item a seperate entity
+            .OrderBy(o => o.Key.GetHashCode()).Select(o => {
+                var shippedItems = items.Where(i => i.SellerId == o.Key);
+                var seller = shippedItems.First().ProductOffer.Seller;
+                return (shippedItems, new IShippingService.ShipmentCreateOptions(){
+                    OfferId = o.Value, RecepientEmail = email,
+                    SenderEmail = seller.Email,
+                    RecepientNane =name, 
+                    RecepientPhoneNumber = phoneNumber,
+                    SenderPhoneNumber = seller.PhoneNumber
+                });
+            }).ToList();
+        var shippings = _shippingService.AcceptOffer(shippingItems.Select(s=>s.Item2).ToArray()).Select(s=>new Entity.Shipment(){
+            Provider = s.Provider?.Name,TrackingNumber = s.TrackingNumber,Status = ShipmentStatus.Shipping,
+            RecepientAddress = s.DeliveryAddress, SenderAddress = s.ShippingAddress
+        }).ToList();
+        return _orderManager.CreateOrder(CurrentSession, shippings, items, CurrentCustomer, null, address);
+    }
+    public IActionResult OnGetPayment( string intentSecret, [FromQuery] string customerSessionSecret, [FromQuery] string intentId, [FromQuery] uint orderId) {
         SelectedTab = 3;
         ViewData["StripePublicKey"] = Environment.GetEnvironmentVariable("STRIPE_PK");
         ViewData["IntentSecret"] = Decrypt(intentSecret);
-        ViewData["SessionSecret"] = Decrypt(sessionSecret);
-        ViewData["ReturnUrl"] = Url.Page('/' + nameof(Checkout), "created", new{ intentId= intentId });
+        ViewData["SessionSecret"] = Decrypt(customerSessionSecret);
+        ViewData["ReturnUrl"] = Url.Page('/' + nameof(Checkout), "created", new{ intentId, orderId}, Request.Scheme);
         return Page();
     }
 
-    public void OnPost() {
-        var customerEmail = CurrentCustomer?.Email ?? Email;
+    public IActionResult OnPost() {
+        var customerEmail = Email ?? CurrentCustomer?.Email;
         var deliveryAddress = Address ?? CurrentCustomer?.PrimaryAddress;
         var customerName = CurrentCustomer?.FullName ?? Name;
-        var customerPhoneNumber = CurrentCustomer?.PhoneNumber ?? PhoneNumber;
-
+        var customerPhoneNumber =  PhoneNumber ?? CurrentCustomer?.PhoneNumber;
         if (CurrentCustomer==null&& (deliveryAddress == null || string.IsNullOrWhiteSpace(deliveryAddress.City) || string.IsNullOrWhiteSpace(deliveryAddress.District) ||
             string.IsNullOrWhiteSpace(deliveryAddress.Country) || string.IsNullOrWhiteSpace(deliveryAddress.Line1) ||
             string.IsNullOrWhiteSpace(deliveryAddress.ZipCode) ) || string.IsNullOrWhiteSpace(customerEmail) || 
             string.IsNullOrWhiteSpace(customerPhoneNumber?.ToString()) || string.IsNullOrWhiteSpace(customerName) ){
             throw new ArgumentException("Lütfen Adres ve E-posta bilgilerinizi doldurun veya müşteri hesabınızla giriş yapın.");
         }
+        var cart = _cartManager.Get(CurrentSession, true,true, false);
+        var createTask = Task.Run(Order ()=>CreateOrder(SelectedShippingOffers,cart.Items, customerEmail, customerName, customerPhoneNumber, deliveryAddress));
         var ao = new AddressOptions(){
-            City = deliveryAddress.City, Country = "TR",
-            Line1 = deliveryAddress.Line1,
-            Line2 = deliveryAddress.Line2,  State = deliveryAddress.District, PostalCode = deliveryAddress.ZipCode
+            City = deliveryAddress.City, Country = deliveryAddress.Country, Line1 = deliveryAddress.Line1,
+            Line2 = deliveryAddress.Line2, PostalCode = deliveryAddress.ZipCode, State = deliveryAddress.District
         };
-        Stripe.Customer customer;
-        AnonymousUser? anonymousUser;
-        if (CurrentCustomer?.StripeId == null || (anonymousUser = _userManager.FindAnonymousUser(customerEmail)) == null){
-            customer = _customerService.Create(new CustomerCreateOptions{
-                Address = ao,
-                Shipping = new ShippingOptions(){
-                    Address = ao, Name = Name ?? CurrentCustomer?.FullName,
-                    Phone = customerPhoneNumber.ToString(),
-                },
-                Balance = 0, Email = customerEmail,
-                Phone = customerPhoneNumber!.ToString()
-            });
-            if (CurrentCustomer != null){
-                CurrentCustomer.StripeId = customer.Id;
-                _userManager.Update(CurrentCustomer);
-            }
-            else
-                _userManager.CreateAnonymous(anonymousUser = new AnonymousUser
-                    { Email = customerEmail, StripeId = customer.Id });
+        var customer = CreateStripeCustomer(CurrentCustomer,customerEmail, ao, customerPhoneNumber, out var anonymousUser);
+        var (sessionSecret, intentSecret, intentId) = CreatePaymentIntent(cart, ao, customerName, customerPhoneNumber, customer);
+        
+        createTask.Wait();
+        var order = createTask.Result;
+        Response.Headers.Append("HX-Redirect",Url.Page(nameof(Checkout),"payment",new {
+                intentId,
+                intentSecret, 
+                customerSessionSecret = sessionSecret, 
+                orderId = order.Id
+            } 
+        ));
+        if (CurrentCustomer == null){
+            _orderManager.AssociateWithAnonymousUser(anonymousUser.Email, order,order.Id);
         }
-        else customer = _customerService.Get(CurrentCustomer?.StripeId ?? anonymousUser.StripeId);
+        return new OkResult();
+    }
 
-        var s = (Session)HttpContext.Items[nameof(Session)];
-        var cart = _cartManager.Get(s, true,true, false);
-
+    private (string sessionSecret, string intentSecret, string intentId) CreatePaymentIntent(Entity.Cart? cart, AddressOptions ao,
+        string customerName, PhoneNumber customerPhoneNumber, Stripe.Customer customer) {
         var o = new PaymentIntentCreateOptions(){
             Amount = ((long)cart.Aggregates.CouponDiscountedPrice)*100, CaptureMethod = "automatic",
             Shipping = new ChargeShippingOptions(){
                 Address = ao,
                 Name = customerName,
                 Phone = customerPhoneNumber.ToString(),
+                // Carrier = string.Join('|', shippings.Select(s => s.Provider)), //TODO
+                // TrackingNumber = string.Join('|', shippings.Select(s => s.TrackingNumber))
             },
             Customer = customer.Id,
             Currency = "try",  
@@ -217,9 +198,6 @@ public class Checkout : BaseModel
                         PaymentMethodRemove = "enabled",
                     }
                 },
-                PricingTable = new CustomerSessionComponentsPricingTableOptions(){
-                    Enabled = true
-                },
             }
         };
         var customerSession = _customerSessionService.Create(customerSessionOptions);
@@ -227,17 +205,41 @@ public class Checkout : BaseModel
         var intent = _paymentIntentService.Create(o);
         var intentSecret = Encrypt(intent.ClientSecret);
         var intentId = Encrypt(intent.Id);
-        Response.Headers.Append("HX-Redirect",Url.Page(nameof(Checkout),"payment",new {intentId,intentSecret, customerSessionSecret = sessionSecret}) );
+        return (sessionSecret, intentSecret, intentId);
     }
 
+    private Stripe.Customer CreateStripeCustomer(Entity.Customer?currentCustomer,string customerEmail, AddressOptions ao, PhoneNumber customerPhoneNumber,
+        out AnonymousUser? anonymousUser) {
+        Stripe.Customer customer;
+        anonymousUser = null;
+        if (currentCustomer?.StripeId == null || (anonymousUser = _userManager.FindAnonymousUser(customerEmail)) == null){
+            customer = _customerService.Create(new CustomerCreateOptions{
+                Address = ao,
+                Shipping = new ShippingOptions(){
+                    Address = ao, Name = Name ?? currentCustomer?.FullName,
+                    Phone = customerPhoneNumber.ToString(),
+                },
+                Balance = 0, Email = customerEmail,
+                Phone = customerPhoneNumber!.ToString()
+            });
+            if (currentCustomer != null){
+                currentCustomer.StripeId = customer.Id;
+                _userManager.Update(currentCustomer);
+            }
+            else _userManager.CreateAnonymous(anonymousUser = new AnonymousUser{ Email = customerEmail, StripeId = customer.Id });
+        }
+        else customer = _customerService.Get(currentCustomer?.StripeId ?? anonymousUser.StripeId);
+
+        return customer;
+    }
 
     public IActionResult OnGet() {
         SelectedTab = 1;
         var s= (Session)HttpContext.Items[nameof(Session)];
         Cart = _cartManager.Get(s, true, true, true);
         ShippingOffersGrouped = Cart.Items.GroupBy(i => i.SellerId).ToDictionary(items =>
-            items.Key ,items => _shippingService.GetOffers(items.OrderBy(i=>i.ProductId.GetHashCode()).Select(i => i.ProductOffer.Product.Dimensions), new Address(),
-                new Address()).ToArray());
+            items.Key ,items => _shippingService.GetOffers(items.OrderBy(i=>i.ProductId.GetHashCode()).Select(i => i.ProductOffer.Product.Dimensions), Address.Empty,
+                Address.Empty).ToArray());
         return Page();
     }
     private string Encrypt(string secret) {

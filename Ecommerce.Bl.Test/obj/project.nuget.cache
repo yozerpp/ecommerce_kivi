@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "N1IPqEV1Lhc=",
+  "dgSpecHash": "QR725koOswM=",
   "success": true,
   "projectFilePath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Bl.Test\\Ecommerce.Bl.Test.csproj",
   "expectedPackageFiles": [
@@ -11,6 +11,8 @@
     "C:\\Users\\tipil\\.nuget\\packages\\coverlet.collector\\6.0.2\\coverlet.collector.6.0.2.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\fluentvalidation\\12.0.0\\fluentvalidation.12.0.0.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\jetbrains.annotations\\2025.2.0\\jetbrains.annotations.2025.2.0.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\linqkit.core\\1.2.8\\linqkit.core.1.2.8.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\linqkit.microsoft.entityframeworkcore\\8.1.8\\linqkit.microsoft.entityframeworkcore.8.1.8.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\log4net\\3.1.0\\log4net.3.1.0.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.18\\microsoft.aspnetcore.authentication.jwtbearer.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\1.1.1\\microsoft.bcl.asyncinterfaces.1.1.1.nupkg.sha512",

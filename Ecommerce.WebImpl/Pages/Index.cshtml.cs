@@ -9,6 +9,7 @@ using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
 
@@ -50,9 +51,6 @@ public class HomepageModel : BaseModel
 
     [BindProperty(SupportsGet = true)] 
     private int PageSize { get; set; } = 20;
-
-    [BindProperty(SupportsGet = true)] public bool JsonResult { get; set; }
-
     [BindProperty]
     public List<ProductWithAggregatesCustomerView> Products { get; set; } =[];
 
@@ -61,18 +59,36 @@ public class HomepageModel : BaseModel
     [BindProperty] public ICollection<ProductWithAggregatesCustomerView>? SellerRecommendations { get; set; }
     [BindProperty(SupportsGet = true)]
     public string? QueryString { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? OrderString { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public ViewType_? ViewType { get; set; }
+    public enum ViewType_
+    {
+        Main,Featured,Seller
+    }
     public IActionResult OnGet() {
-        ICollection<SearchPredicate> preds;
-        ICollection<SearchOrder> orders;
-        if(QueryString!=null)
-            ParseQuery(QueryString, out  preds,out orders  );
-        else GetParams(out preds, out orders);
         var favorites = GetFavorites();
-        Products = Search(preds, orders, PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){Product = p, CurrentFavored = favorites?.Contains(p.Id)}).ToList();
-        if (JsonResult) return new JsonResult(Products);
+        // if(QueryString!=null)
+            // ParseQuery(QueryString=QueryString.Replace('.','_'), out  preds,out orders  );
+        // else GetParams(out preds, out orders);
+        // Products = Search(preds, orders, PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){Product = p, CurrentFavored = favorites?.Contains(p.Id)}).ToList();
+        Products = _productManager.Search(QueryString, [], true, false, false, page: PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){
+            Product = p,
+            CurrentFavored = favorites?.Contains(p.Id)
+        }).ToList();
         CategoryRecommendations = [];
         SellerRecommendations = [];
-        return Page();
+        if(ViewType == null || ViewType == ViewType_.Main)
+            return Page();
+        if (ViewType == ViewType_.Featured)
+            return Partial("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
+                PageIndex = PageIndex,
+                Type = null, Categories = Categories, Products = Products,
+            });
+        if (ViewType == ViewType_.Seller){
+            
+        }
     }
 
     private List<Entity.Product> Search(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders, int page) {
@@ -81,7 +97,6 @@ public class HomepageModel : BaseModel
     private ICollection<uint>? GetFavorites() {
         return (CurrentCustomer != null ? _productManager.GetFavorites(CurrentCustomer) :null)?.Select(f=>f.ProductId).ToArray();
     }
-    [BindProperty(SupportsGet = true)] public int? PageNumber { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public RecommendationType Type { get; set; }
@@ -93,161 +108,39 @@ public class HomepageModel : BaseModel
 
     public const string HasPropertiesKey = "HasProperties";
     public IActionResult OnGetRecommended() {
-        var products = Type==RecommendationType.Category?_productManager.GetMoreProductsFromCategories(CurrentSession, PageNumber?? 1): _cartManager.GetMoreProductsFromSellers(CurrentSession, page: PageNumber ?? 1);
+        var products = Type==RecommendationType.Category?_productManager.GetMoreProductsFromCategories(CurrentSession, PageIndex): _cartManager.GetMoreProductsFromSellers(CurrentSession, page: PageIndex);
         if (products.Count == 0) return new NoContentResult();
         return Partial("Shared/Product/" + nameof(_FeaturedPartial), new _FeaturedPartial{
             Products = ProductWithAggregatesCustomerView.PromoteAll(products,
                 GetFavorites()),
-            PageIndex = PageNumber ?? 1,
+            PageIndex = PageIndex,
             Categories = Categories,
             Type = Type
         });
     }
 
-    private void ParseQuery(string query, out ICollection<SearchPredicate> predicates, out ICollection<SearchOrder> orders) {
-        predicates = new List<SearchPredicate>();
-        orders = new List<SearchOrder>();
-
-        // Split the query string by "&&" to separate potential ordering clauses
-        var parts = query.Split(new[] { "&&" }, StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var part in parts)
-        {
-            // Check if it's an ordering clause (contains a comma)
-            if (part.Contains(','))
-            {
-                var orderParts = part.Split(',');
-                if (orderParts.Length == 2)
-                {
-                    orders.Add(new SearchOrder()
-                    {
-                        PropName = Uri.UnescapeDataString(orderParts[0].Trim()),
-                        Ascending = orderParts[1].Trim().Equals("ASC", StringComparison.OrdinalIgnoreCase),
-                    });
-                }
-            }
-            else // Treat as predicate(s)
-            {
-                // Split by "&" to get individual key=value pairs
-                var predicatePairs = part.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var pair in predicatePairs)
-                {
-                    var keyValue = pair.Split(new[] { '=' }, 2); // Split only on the first '='
-                    if (keyValue.Length == 2)
-                    {
-                        var propName = Uri.UnescapeDataString(keyValue[0].Trim());
-                        var val = Uri.UnescapeDataString(keyValue[1].Trim());
-
-                        // Determine operator based on common patterns or assume equality for now
-                        // For simplicity, assuming '=' operator for all key=value pairs from this parsing
-                        // If you need to support other operators like <, >, %, etc., within the predicate part,
-                        // you'll need a more sophisticated regex or parsing logic here.
-                        SearchPredicate.OperatorType operatorType = SearchPredicate.OperatorType.Equals;
-
-                        // Special handling for SearchName and SearchCategory if they are part of the query string
-                        if (propName.Equals(nameof(SearchName), StringComparison.OrdinalIgnoreCase))
-                        {
-                            operatorType = SearchPredicate.OperatorType.Like;
-                            SearchName = val; // Also set the bind property
-                        }
-                        else if (propName.Equals(nameof(SearchCategory), StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (uint.TryParse(val, out var categoryId))
-                            {
-                                SearchCategory = categoryId; // Also set the bind property
-                                propName = string.Join('_', nameof(Entity.Product.Category), nameof(Category.Id)); // Adjust propName for backend
-                            }
-                            else
-                            {
-                                continue; // Skip if category ID is not a valid uint
-                            }
-                        }
-                        else if (propName.Contains("AggregateFilters", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // This part needs careful handling as AggregateFilters are ranges (min/max)
-                            // The current query format "propName=value" doesn't directly support ranges.
-                            // If ranges are to be passed via QueryString, their format needs to be defined.
-                            // For now, I'll skip complex aggregate filter parsing from this simple format.
-                            // You might need to adjust the query string generation on the frontend for ranges.
-                            continue;
-                        }
-                        else if (propName.Contains("PropertyFilters", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Example: PropertyFilters[Color]=Red
-                            var match = Regex.Match(propName, @"PropertyFilters\[(.*?)\]");
-                            if (match.Success)
-                            {
-                                var actualPropName = match.Groups[1].Value;
-                                PropertyFilters[actualPropName] = val; // Populate the bind property
-                                predicates.Add(new SearchPredicate()
-                                {
-                                    Operator = operatorType,
-                                    PropName = actualPropName,
-                                    Value = val
-                                });
-                                continue; // Already added to predicates
-                            }
-                        }
-
-                        predicates.Add(new SearchPredicate()
-                        {
-                            Operator = operatorType,
-                            PropName = propName,
-                            Value = val
-                        });
-                    }
-                }
-            }
-        }
+    private static ICollection<SearchOrder> ParseOrders(string q) {
+        if (q == null) return[];
+            var orders = q.Split("&&",StringSplitOptions.RemoveEmptyEntries);
+        return orders.Select(o => {
+            var splt = o.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            return new SearchOrder(){
+                Ascending = splt.Length==2 && splt[1].Equals("asc", StringComparison.OrdinalIgnoreCase),
+                PropName = splt[0]
+            };
+        }).ToArray();
     }
-    [BindProperty(SupportsGet = true)]public string AggregatesJson { get; set; } = "{}";
-    [BindProperty(SupportsGet = true)] public string OrdersJson { get; set; } = "{}";
     public IActionResult OnGetMore() {
-        AggregateFilters = JsonSerializer.Deserialize<Dictionary<string, RangeInput>>(AggregatesJson) ?? new();
-        Orders = JsonSerializer.Deserialize<Dictionary<string, OrderInput>>(OrdersJson) ?? new();
-        GetParams(out var preds, out var orders);
+        var ps = _productManager.Search(QueryString, ParseOrders(OrderString), true, false, false, page:PageIndex);
+        if(ps.Count == 0) return new NoContentResult();
         var favs = GetFavorites();
         var p = new _VerticalListPartial(){
-            Products = ProductWithAggregatesCustomerView.PromoteAll(Search(preds, orders, PageIndex),favs),
+            Products = ProductWithAggregatesCustomerView.PromoteAll(ps,favs),
             Categories = Categories,
             CategoryRecommendations = [],
             SellerRecommendations = [],
             PageIndex = PageIndex
         };
         return Partial("Shared/Product/" + nameof(_VerticalListPartial), p);
-    }
-    public void GetParams(out ICollection<SearchPredicate> preds,out ICollection<SearchOrder> orders) {
-        orders = Orders.Where(o=>o.Value?.Selected??false).Select(kv=>new SearchOrder(){
-            PropName = kv.Key,
-            Ascending = kv.Value.Ascending?? false,
-        }).ToArray();
-        var predicates = AggregateFilters.Where(f=>f.Value.IsEntered).SelectMany(kv => new[]{
-            new SearchPredicate(){
-                PropName = kv.Key.Equals(nameof(ProductOffer.Price))?nameof(ProductStats.MinPrice):kv.Key, //TODO make generic
-                Operator = SearchPredicate.OperatorType.GreaterThan,
-                Value = kv.Value.Min.ToString(CultureInfo.InvariantCulture),
-            },
-            new SearchPredicate(){
-                PropName = kv.Key.Equals(nameof(ProductOffer.Price))?nameof(ProductStats.MinPrice):kv.Key,
-                Operator = SearchPredicate.OperatorType.LessThan,
-                Value = kv.Value.Max.ToString(),
-            }
-        }).ToList();
-        if(PropertyFilters.ContainsKey(HasPropertiesKey))
-            predicates.AddRange(PropertyFilters.Select(p=>new SearchPredicate(){
-                Operator = SearchPredicate.OperatorType.Equals,
-                PropName = p.Key,
-                Value = p.Value,
-            }));
-        if (SearchName?.Length > 0)
-            predicates.Add(new SearchPredicate()
-                { Operator = SearchPredicate.OperatorType.Like, PropName = nameof(Entity.Product.Name), Value = SearchName });
-        if (SearchCategory !=null){
-            predicates.Add(new SearchPredicate(){
-                Operator = SearchPredicate.OperatorType.Equals, PropName = string.Join('_',nameof(Entity.Product.Category), nameof(Category.Id)),
-                Value = SearchCategory.Value.ToString()
-            });
-        }
-        preds = predicates;
     }
 }

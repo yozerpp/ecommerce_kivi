@@ -3,7 +3,6 @@
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.SellerModel
 @{
-    ViewBag.User = Model.CurrentUser;
     var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
 }
 <div class="container">
@@ -17,7 +16,7 @@
             }
         </div>
         <div class="row align-items-start">
-            <p class="col-auto">@float.Round(Model.ViewedSeller.Stats.ReviewAverage,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
+            <p class="col-auto">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage??0m,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
             <p class="col-auto">@Model.ViewedSeller.Stats.ReviewCount Toplam Değerlendirme</p>
         </div>
         <div class="row justify-content-start">

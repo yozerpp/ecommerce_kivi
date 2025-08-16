@@ -10,7 +10,7 @@ public interface IJwtManager
     public void UnwrapToken(SecurityToken token, out User? user, out Session? session);
     public SecurityToken CreateToken(Session session, bool rememberMe = false);
     public List<Claim> GetClaims(Session session);
-    public string CreateAuthToken(string key, TimeSpan lifetime);
+    public string CreateAuthToken(string value, TimeSpan lifetime);
     public string? ReadAuthToken(string token);
     public void Deserialize(string token, out User? user, out Session? session);
     public string Serialize(SecurityToken securityToken);

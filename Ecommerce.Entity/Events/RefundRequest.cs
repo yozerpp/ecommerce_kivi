@@ -5,8 +5,6 @@ public class RefundRequest : Request
     public uint OrderId { get; set; }
     public uint ProductId { get; set; }
     public OrderItem Item { get; set; }
-    public Customer Customer { get; set; }
-    public Seller Seller { get; set; }
     protected bool Equals(RefundRequest other) {
         return base.Equals(other) && OrderId == other.OrderId && ProductId == other.ProductId;
     }

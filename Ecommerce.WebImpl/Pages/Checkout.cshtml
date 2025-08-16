@@ -1,4 +1,5 @@
 ﻿@page
+@using System.Globalization
 @using System.Reflection.Metadata
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Common
@@ -11,10 +12,26 @@
 @section Scripts{
     @if (Model.SelectedTab == 1){
         <script>
-            let selectedTab = @(Model.SelectedTab);
-            let navTabs = document.getElementById('nav-tab').children;
+            @if (Model.CurrentCustomer != null){
+                <text>
+                    document.addEventListener("DOMContentLoaded", ()=>{
+                       document.querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control')); 
+                    });
+                </text>
+            }
+            let selectedTab = @(Model.SelectedTab -1 );
+            let navTabs = [];
+            document.addEventListener("DOMContentLoaded", () => {
+                const c = document.getElementById('nav-tab').children;
+                for (let i = 0; i < c.length; i++) {
+                    if(c[i].nodeType === Node.ELEMENT_NODE)
+                        navTabs[i] = c[i];
+                }
+            });
             function goBack(event){
                 event.currentTarget.classList.add('d-none');
+                document.getElementById('forwardBtn').classList.remove('d-none');
+                document.getElementById('proceedForm').classList.add('d-none');
                 goToTab(selectedTab, --selectedTab);
             }
             function goToTab(oldTabIdx, newTabIdx){
@@ -25,36 +42,55 @@
                 let targetId = navTabs[newTabIdx].getAttribute('data-bs-target').replace('#','');
                 document.getElementById(targetId).classList.add('show', 'active');
             }
-            function goForward(){
+            function goForward(event){
                 goToTab(selectedTab, ++selectedTab);
                 document.getElementById('backBtn').classList.remove('d-none');
+                document.getElementById('proceedForm').classList.remove('d-none');
+                event.currentTarget.classList.add('d-none');
             }
-            @if (Model.CurrentCustomer == null){
-            <text>
-                function assignCheckoutInputs() {
-                       const addrIdPostfix = document._selectedAddress?.id ?? '';
-                       document.getElementById('@(nameof(Checkout.Name))Input').value = document.getElementById('name').value;
-                       document.getElementById('@(nameof(Checkout.Email))Input').value= document._selectedAddress.getElementById('email').@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('@(nameof(Address.City))Input').value = document._selectedAddress.getElementById( '@(nameof(Address.City))_'+addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('@(nameof(Address.Line1))Input').value= document._selectedAddress.getElementById('@nameof(Address.Line1)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('@nameof(Address.Line2)Input').value= document._selectedAddress.getElementById('@nameof(Address.Line2)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('@(nameof(Address.District))Input').value = document._selectedAddress.getElementById( '@nameof(Address.District)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('@(nameof(Address.ZipCode))Input').value = document._selectedAddress.getElementById('@nameof(Address.Country)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('countrycodeInput').value = document._selectedAddress.getElementById('@nameof(Address.ZipCode)_' + addrIdPostfix).@(Model.CurrentCustomer==null?"value":"innerText");
-                       document.getElementById('numberInput').value = document._selectedAddress.getElementById('number').@(Model.CurrentCustomer==null?"value":"innerText");
-                }
-            </text>
+            function assignCheckoutInputs() {
+                @{ var acsor = Model.CurrentCustomer == null ? "value" : "innerText";}
+               const addrIdPostfix = @(Html.Raw(Model.CurrentCustomer!=null? "'address' + document.getElementById('customerAddress')._selectedIndex?.toString() ?? ''":"''"));
+               @if (Model.CurrentCustomer == null){
+                   <text>
+                   document.getElementById('@(nameof(Checkout.Name))Input').value = document.getElementById('name').@acsor;
+                   document.getElementById('@(nameof(Checkout.Email))Input').value= document.getElementById('email').@acsor;
+                    </text>
+               }
+               document.getElementById('@(nameof(Address.City))Input').value = document.getElementById( '@(nameof(Address.City))_'+addrIdPostfix).@acsor;
+               document.getElementById('@(nameof(Address.Line1))Input').value= document.getElementById('@nameof(Address.Line1)_' + addrIdPostfix).@acsor;
+               document.getElementById('@nameof(Address.Line2)Input').value= document.getElementById('@nameof(Address.Line2)_' + addrIdPostfix).@acsor;
+               document.getElementById('@(nameof(Address.District))Input').value = document.getElementById( '@nameof(Address.District)_' + addrIdPostfix).@acsor;
+               document.getElementById('@(nameof(Address.ZipCode))Input').value = document.getElementById('@nameof(Address.ZipCode)_' + addrIdPostfix).@acsor;
+               document.getElementById('@(nameof(Address.Country))Input').value = document.getElementById('@nameof(Address.Country)_' + addrIdPostfix).@acsor;
+               document.getElementById('countrycodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').@acsor;
+               document.getElementById('numberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))').@acsor;
             }
-            
             let selectedOffers = new Map();
             function selectOffer(event, sellerId){
+                event.currentTarget.parentElement._selectedGroup?.classList?.remove('bg-light');
+                event.currentTarget.parentElement._selectedGroup = event.currentTarget;
                 event.currentTarget.classList.add('bg-light');
                 const offerId =  event.currentTarget.id.replace('offer-', '');
                 selectedOffers.set(sellerId, offerId);
                 document.getElementById('group-' + sellerId + '-input').value =offerId;
             }
+            function selectGroup(event, sellerId){
+                document.getElementById('offers')._active?.classList?.add('d-none');
+                const _new = document.getElementById('offers-' + sellerId.toString());
+                document.getElementById('offers')._active=_new; 
+                _new.classList.remove('d-none');
+            }
+            function assignShippingInputs(event){
+                selectedOffers.forEach((v,k,_) => {
+                    document.getElementById(`group-${k.toString()}-input`).value = v;
+                });
+                if(selectedOffers.size < @(Model.ShippingOffersGrouped.Count)){
+                    alert("Lütfen Sepetinizdeki tüm satıcılar için kargo seçimi yapın.")
+                    event.stopImmediatePropagation();
+                }
+            }
         </script>
-            
     }
     else if (Model.SelectedTab == 3){
         <script src="https://js.stripe.com/basil/stripe.js"></script>
@@ -70,81 +106,83 @@
                 let paymentElement = elems.create('payment', {layout: 'accordion'});
                 paymentElement.mount('#paymentElements');
             })
-            document.getElementById('paymentForm').addEventListener('submit', async e=>{
+            async function sendPayment(e){
                 e.preventDefault();
+                e.stopImmediatePropagation();
+                e.stopPropagation();
                 const {error} = await stripe.confirmPayment({
-                    elems,
+                    elements: elems,
                     confirmParams: {
-                        return_url: '@(Url.Page(nameof(Checkout), "created", new {}))',
-                    },
+                        return_url: '@Html.Raw(ViewData["ReturnUrl"]??throw new ArgumentNullException())'
+                    }
                 });
-            })
+            }
         </script>
-    } else if (Model.SelectedTab == 4){
-        
-    }
+    } 
 }
 <div class="container-fluid">
     <nav>
         <div class="nav nav-tabs flex-row container-fluid align-content-center justify-content-center" id="nav-tab" role="tablist">
             <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==1?"active":"")" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">Sepeti Onayla</button>
             <button disabled onclick="event.stopImmediatePropagation()" class="nav-link" id="nav-shipment-tab" data-bs-toggle="tab" data-bs-target="#nav-shipment" type="button" role="tab" aria-controls="nav-shipment" aria-selected="false">Kargo Seçimi</button>
-            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==2?"active":"")" id="nav-payment-tab" data-bs-toggle="tab" data-bs-target="#nav-payment" type="button" role="tab" aria-controls="nav-payment" aria-selected="false">Ödeme</button>
-            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==3?"active":"")" id="nav-result-tab" data-bs-toggle="tab" data-bs-target="#nav-result" type="button" role="tab" aria-controls="nav-result" aria-selected="false">Siparişi Görüntüle</button>
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==3?"active":"")" id="nav-payment-tab" data-bs-toggle="tab" data-bs-target="#nav-payment" type="button" role="tab" aria-controls="nav-payment" aria-selected="false">Ödeme</button>
+            <button disabled onclick="event.stopImmediatePropagation()" class="nav-link @(Model.SelectedTab==4?"active":"")" id="nav-result-tab" data-bs-toggle="tab" data-bs-target="#nav-result" type="button" role="tab" aria-controls="nav-result" aria-selected="false">Siparişi Görüntüle</button>
         </div>
     </nav>
     <div class="tab-content" id="nav-tabContent">
-        <div class="tab-pane fade @(Model.SelectedTab==1?"show active":"")" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+        <div class="tab-pane section rounded fade @(Model.SelectedTab==1?"show active":"")" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
             @if (Model.SelectedTab == 1){
-                <div class="row g-4">
-                    <div class="col-12 col-lg-7">
-                        <div class="section rounded border p-4 h-100">
+                <div class="row g-5">
+                    <div class="col-12 p-3 col-lg-7">
+                        <div class=" p-4 h-100">
                             @if (Model.CurrentCustomer == null)
                             {
                                 <div class="mb-3 ps-3">
-                                    <div>
-                                        <h2 class="align-self-start">E-Posta Bilgilerini Gir</h2>
-                                        <input class="border-1 shadow-sm" id="email" type="email"/>
+                                    <h2 class="align-self-start">İletişim Bilgilerini Gir</h2>
+                                    <div class="d-flex mt-3 flex-column gap-3">
+                                        <div class="d-inline-flex justify-content-between">
+                                            <div class="gap-3">
+                                                <label class="fs-5">İsim</label>
+                                                <input id="name" class="border-1 mx-2 shadow rounded-1" type="text" placeholder="İsim"/>    
+                                            </div>
+                                            <div class="gap-3">
+                                                <label class="fs-5">E-Posta</label>
+                                                <input class="border-1 mx-2 shadow-sm" id="email" placeholder="Email" type="email"/>
+                                            </div>
+                                        </div>
+                                        <div class="d-inline-flex gap-1">
+                                            <label class="fs-5">Tel</label>
+                                            @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){ IsInput = true })
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="stripe"></div>
+                                <div class="border-bottom my-3 border-secondary-subtle my-3 border-1"></div>
                             }
-                            <div class="mb-3">
+                            <div class="mb-3 gap-2">
                                 <h2 class="align-self-start mx-3">Teslimat Adresini @(Model.CurrentCustomer == null ? "Gir" : "Onayla")</h2>
                                 <div id="address" class="mx-3">
                                     @if (Model.CurrentCustomer == null || Model.CurrentCustomer.Addresses.Count==0){
                                         <partial name="Shared/_AddressPartial"
                                                  model="new _AddressPartial(){ Address = Model.CurrentCustomer?.PrimaryAddress ?? new Address(), Editable = true, AsInput=Model.CurrentCustomer==null }"/>
                                     }else {
-                                        @await Html.PartialAsync("Shared/"+nameof(_CustomerAddressPartial), new _CustomerAddressPartial(){Addresses = Model.CurrentCustomer.Addresses, Updateable = false, Editable = true, CustomerId = Model.CurrentCustomer.Id})
+                                        @await Html.PartialAsync("Shared/Customer/"+nameof(_CustomerAddressPartial), new _CustomerAddressPartial(){Addresses = Model.CurrentCustomer.Addresses, Updateable = false, Editable = true, CustomerId = Model.CurrentCustomer.Id})
                                     }
                                 </div>
                             </div>
-                            <div class="m-3">
-                                <h2 class="mx-1">
-                                    Telefon Numaranı @(Model.CurrentCustomer!=null?"Onayla":"Gir")
-                                </h2>
-                                <div id="phone">
-                                    @if (Model.CurrentCustomer == null){
-                                        @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){IsInput = true})
-                                    }
-                                    else{
-                                        @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){Editable = true, PhoneNumber = Model.CurrentCustomer.PhoneNumber})
-                                        <div class="container-fluid justify-content-end mx-4 d-flex">
-                                            <input type="hidden"/>
-                                            <button class="btn btn-secondary">Telefon Numaranı Güncelle</button>
-                                        </div>
-                                    }
+                            @if (Model.CurrentCustomer != null){
+                                <div  class="m-3 gap-2">
+                                    <h2 class="mx-1">Telefon Numaranı Onayla</h2>
+                                    @await Html.PartialAsync(nameof(_PhoneNumberPartial), new _PhoneNumberPartial(){Editable = true, PhoneNumber = Model.CurrentCustomer.PhoneNumber})
                                 </div>
-                            </div>
+                            }
                         </div>
                     </div>
-                    <div class="col-12 col-lg-5">
-                        <div class="section rounded border p-4 h-100">
-                            <ul class="list-unstyled">
+                    <div class="col-12 border-start p-4 border-light-subtle border-2 col-lg-5">
+                        <div class="h-100">
+                            <ul class="list-group">
                                 @foreach (var item in Model.Cart.Items)
                                 {
-                                    <li class="row mb-3">
+                                    <li class="list-inline-item row mb-3">
                                         <!-- Product Image -->
                                         <div class="col-auto">
                                             
@@ -158,105 +196,109 @@
                                                 @((item.ProductOffer.Price * item.ProductOffer.Discount * (item.Coupon?.DiscountRate ?? 1m)).ToString("C"))
                                             </p>
                                             <p class="mb-1">Adet: @item.Quantity</p>
-                                            <p class="fw-semibold">Toplam: @decimal.Round(item.Aggregates.CouponDiscountedPrice,2).ToString("C")</p>
+                                            <p class="fw-semibold">Toplam: @decimal.Round(item.Aggregates.CouponDiscountedPrice.Value,2).ToString("C")</p>
                                         </div>
                                     </li>
                                 }
                             </ul>
-                            <div class="container-fluid d-flex justify-content-start align-content-center align-items-center">
-                                <button onclick="assignCheckoutInputs();goForward();" class="btn btn-success align-self-start mx-3" type="submit">Kargo Seçimine</button>
-                            </div>
+
                         </div>
 
                     </div>
                 </div>
-                <div class="container-fluid row my-3">
-                    @if (Model.SelectedTab <= 2){
-                        <div class="mx-3">
-                            <button id="backBtn" class="btn btn-outline-secondary" onclick="goBack(event)">Geri</button>
-                        </div>
-                    }
-                </div>
+
             }
         </div>
+        
+        <!--Shipment Tab-->
+        
         <div class="tab-pane fade" id="nav-shipment" role="tabpanel" aria-labelledby="nav-shipment-tab">
             @if (Model.SelectedTab == 1){
                 <div class="container-fluid row g-4">
-                    <ul id="items" class="col-8 list-unstyled px-5">
+                    <div id="items" class="col-8 card-group d-flex flex-column list-unstyled px-5">
                         @foreach (var itemGroup in Model.Cart.Items.GroupBy(i => i.ProductOffer.Seller).OrderBy(i=>i.Key.Id.GetHashCode())){
-                            <li>
-                                <ul onclick="" id="group-@itemGroup.Key.Id" class="list-group hover-darken">
-                                    <li class="mb-4 border-top-0 border-start-0 border-end-0">
-                                        <p class="fw-bold fs-6">@itemGroup.Key.ShopName Satıcısının Ürünleri</p>
-                                    </li>
+                            <div onclick="selectGroup(event, @(itemGroup.Key.Id))" style="cursor: pointer" id="group-@itemGroup.Key.Id" class="card border-start rounded">
+                                <div class="mb-4 card-header bg-light">
+                                    <p class="fw-bold card-title fs-6">@itemGroup.Key.ShopName Satıcısının Ürünleri</p>
+                                </div>
+                                <ul class="card-body pt-1">
                                     @foreach (var item in itemGroup.OrderBy(i=>i.ProductId.GetHashCode())){
-                                        <li class="list-group-item">
+                                        <li class=" my-3 d-flex flex-row justify-content-start text-center align-content-center align-items-center border-secondary-subtle hover-darken row">
+                                            <div class="col-3 d-inline-flex justify-content-center align-content-center align-items-center p-0">
+                                                <img class="img-fluid rounded-1" alt="@item.ProductOffer.Product.Name Resmi" src="@(Utils.GetImageUrlOrDefault(item.ProductOffer.Product.MainImage?.Data))"/>
+                                            </div>
+                                            <div class="col-2 d-inline-flex justify-content-center align-content-center align-items-center">
+                                                <p class="fs-5">@(item.ProductOffer.Product.Name)</p>
+                                            </div>
+                                            <div class="col-3"></div>
+                                        </li>
+                                    }     
+                                </ul>
+                            </div> 
+                        }
+                    </div>
+                    <div class="col-4 section p-0">
+                        <div id="offers">
+                            @foreach (var (sellerId, offers) in Model.ShippingOffersGrouped){
+                                <ul class="list-group p-0 d-none  rounded-2" style="cursor: pointer;" id="offers-@(sellerId)">
+                                    @foreach (var offer in offers){
+                                        <li onclick="selectOffer(event, @(sellerId))" id="offer-@(offer.Id)" class="hover-darken ps-3 pt-2 list-group-item g-2">
+                                            <p class="fw-bold text-center fs-4">@offer.Provider.Name</p>
                                             <div class="row">
-                                                <div class="col-3">
-                                                    <img src="@(Utils.GetImageUrlOrDefault(item.ProductOffer.Product.MainImage?.Data))"/>
+                                                <div class="col-2"></div>
+                                                <div class="fs-5 col-3 d-inline-flex gap-2">
+                                                    <p>@offer.Amount.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})</p>
                                                 </div>
-                                                <div class="col-2">
-                                                    <p class="fs-5">@(item.ProductOffer.Product.Name)</p>
+                                                <div class="col-1"></div>
+                                                <div class="fs-5 col-3 d-inline-flex gap-2">
+                                                    <p>@offer.AmountTax.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})</p>
+                                                    <p>Vergi</p>
                                                 </div>
                                                 <div class="col-3"></div>
                                             </div>
-                                        </li>
-                                    }     
-                                </ul> 
-                            </li>
-                        }
-                    </ul>
-                    <div class="col-4">
-                        <div id="offers">
-                            @foreach (var (sellerId, offers) in Model.ShippingOffersGrouped){
-                                <ul class="list-group rounded-2" id="offers-@(sellerId)">  
-                                    @foreach (var offer in offers){
-                                        <li onclick="selectOffer(event, @(sellerId))" id="offer-@(offer.Id)" class="hover-darken ps-3 list-group-item g-2">
-                                            <div>@offer.Provider.Name</div>
-                                            <div class="row">
-                                                <div class="col-2"></div>
-                                                <div class="fs-5 col-3 d-flex">
-                                                    <p>@offer.Amount </p>
-                                                    <p>@offer.Currency</p>
-                                                </div>
-                                                <div class="col-1"></div>
-                                                <div class="fs-5 col-3 d-flex">
-                                                    <p>@offer.AmountTax</p>
-                                                    <p>@offer.Currency</p>
-                                                    <p> Vergi</p>
-                                                </div>
-                                                <div class="col-3"></div>
-                                            </div>    
                                         </li>
                                     }
                                 </ul>
                             }
                         </div>
                         <div class="container-fluid d-flex justify-content-center me-4">
-                            <form method="post" hx-post="/@(nameof(Checkout))" hx-target="#InfoErrorResult" hx-swap="innerHTML">
-                                <input id="@nameof(Address.City)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.City))"/>
-                                <input id="@nameof(Address.District)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.District))"/>
-                                <input id="@nameof(Address.Line1)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line1))"/>
-                                <input id="@(nameof(Address.Line2))Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line2))"/>
-                                <input id="@nameof(Address.Country)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Country))"/>
-                                <input id="@(nameof(Checkout.Name))Input" type="hidden" name="@nameof(Checkout.Name)"/>
-                                <input id="@nameof(Checkout.Email)Input" type="hidden" name="@(nameof(Checkout.Email))"/>
-                                <input id="countrycodeInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@nameof(PhoneNumber.CountryCode)"/>
-                                <input id="numberInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@(nameof(PhoneNumber.Number))"/>
-                                @foreach(var itemGroup in Model.Cart.Items.GroupBy(i => i.ProductOffer.Seller)){
-                                    <input type="hidden" id="group-@(itemGroup.Key.Id)-input" name="@(nameof(Checkout.SelectedShippingOffers))[@(itemGroup.Key.Id)]" value="@(Model.ShippingOffersGrouped[itemGroup.Key.Id].First().Id)"/>
-                                }
-                                <button class="btn btn-success">Seçimleri Onayla</button>
-                            </form>
+
                         </div>
                     </div>
                 </div>
             }
         </div>
-        <div class="container-fluid row ps-3">
-            <div class="col-4" id="InfoErrorResult">
+        <div class="container-fluid mt-4 ">
+            @if (Model.SelectedTab <= 2){
+                <div class="w-100 d-flex px-3 justify-content-end">
+                    <button id="forwardBtn" onclick="assignCheckoutInputs();goForward(event);"
+                            class="btn btn-success align-self-end" type="submit">Kargo Seçimine Geç</button>
+                </div>
+                <div class="w-100 d-flex px-3 justify-content-between">
+                <button id="backBtn" class="btn d-none btn-outline-secondary" onclick="goBack(event)">Geri</button>
+                <form class="d-none" id="proceedForm" method="post" hx-post="/@(nameof(Checkout))" hx-target="#InfoErrorResult" hx-swap="innerHTML">
+                    <input id="@nameof(Address.City)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.City))"/>
+                    <input id="@nameof(Address.District)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.District))"/>
+                    <input id="@nameof(Address.Line1)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line1))"/>
+                    <input id="@(nameof(Address.Line2))Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Line2))"/>
+                    <input id="@nameof(Address.Country)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.Country))"/>
+                    <input id="@nameof(Address.ZipCode)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.ZipCode))"/>
+                    <input id="@(nameof(Checkout.Name))Input" type="hidden" name="@nameof(Checkout.Name)"/>
+                    <input id="@(nameof(Checkout.Email))Input" type="hidden" name="@(nameof(Checkout.Email))"/>
+                    <input id="countrycodeInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@nameof(PhoneNumber.CountryCode)"/>
+                    <input id="numberInput" type="hidden" name="@(nameof(Checkout.PhoneNumber)).@(nameof(PhoneNumber.Number))"/>
+                    @foreach(var itemGroup in Model.Cart.Items.GroupBy(i => i.ProductOffer.Seller)){
+                        <input type="hidden" id="group-@(itemGroup.Key.Id)-input" name="@(nameof(Checkout.SelectedShippingOffers))[@(itemGroup.Key.Id)]" value="@(Model.ShippingOffersGrouped[itemGroup.Key.Id].First().Id)"/>
+                    }
+                    <button type="submit" onclick="assignShippingInputs(event)" class="btn btn-success">Seçimleri Onayla</button>
+                </form>    
+                </div>
+                
+            }
+        </div>
+        <div class="container-fluid d-flex justify-content-center align-items-center">
+            <div id="InfoErrorResult">
             </div>
-            <div class="col-8"></div>
         </div>
         <div class="tab-pane fade @(Model.SelectedTab==3?"show active":"")" id="nav-payment" role="tabpanel" aria-labelledby="nav-payment-tab">
             @if (Model.SelectedTab == 3){
@@ -265,7 +307,7 @@
                         <div id="paymentElements">
                         </div>
                         <div class="d-flex container-fluid justify-content-center align-content-center">
-                            <button class="btn" style="background-color: darkorange" type="submit" id="submitPayment"></button>
+                            <button class="btn btn-primary" type="button" onclick="sendPayment(event)" id="submitPayment">Ödemeyi Onayla</button>
                         </div>
                         <div id="errorMessage"></div>
                     </form>
@@ -275,25 +317,27 @@
         <div class="tab-pane fade @(Model.SelectedTab == 4 ? "show active" : "")" id="nav-result" role="tabpanel" aria-labelledby="nav-result-tab">
             @if (Model.SelectedTab == 4){
                 <div class="container-fluid ps-5">
-                    @{ var (title, text) = @Model.OrderResult switch{
-                           Checkout.Result.Success => ("Sipariş Başarılı", "Siparişiniz başarı ile tamamlandı. Sipariş detaylarını görüntüleyebilirsiniz"),
+                    @{ var (title, text) = Model.OrderResult switch{
+                           Checkout.Result.Success => ("Sipariş Başarılı", "Siparişiniz başarı ile tamamlandı ve satıcıya bildirildi. Sipariş detaylarını aşağıda görüntüleyebilirsiniz"),
                            Checkout.Result.Fail => ("Ödeme Başarısız", "Ödemeniz başarısız, lütfen tekrar deneyin"),
                            Checkout.Result.NonExistent => ("Aktif Sipariş Yok", "İşlenmekte olan aktif siparişiniz yok. Lütfen yeni sipariş oluşturun")
-                       };}
-                    <div class="container-fluid d-flex align-content-center justify-content-center">
-                        <p class="fs-3 fw-bold ms-2">@title</p>
-                    </div>
-                    <div class="card container-fluid pt-2 ps-3 rounded-3 mx-5 mt-2 shadow-lg">
-                        <div class="pb-2 mb-2 container-fluid d-flex justify-content-start border-bottom">
-                            <p class="fs-4">@text</p>
-                        </div>
-                        <div class="container-fluid d-flex justify-content-start mb-3">
-                            <p class="fs-4 fw-bold">Sipariş Detayları</p>
-                        </div>
-                        <div id="order">
-                            @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
-                                IsCollapsable = false, Order = Model.CreatedOrder
-                            })
+                       };
+                    }
+                    <div class="container-fluid mb-3">
+                        <p class="fs-3 text-center w-100 fw-bold ms-2">@title</p>
+                        @await Html.PartialAsync("Shared/_SeperatorPartial", (3,4, "text-dark"))
+                        <p class="text-start fs-5">@text</p>
+                        <div class="card container-fluid pt-2 rounded-3 mx-0 mt-3 shadow-lg">
+                            <div class="container-fluid d-flex justify-content-start mb-3">
+                                <p class="fs-4 fw-bold">Sipariş Detayları</p>
+                            </div>
+                            <div id="order">
+                                @await Html.PartialAsync("Shared/Order/_OrderListPartial", new _OrderListPartial{
+                                    Orders = [Model.CreatedOrder],
+                                    Url = null,
+                                    Collapsable = false
+                                })
+                            </div>
                         </div>
                     </div>
                 </div>

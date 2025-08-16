@@ -3,6 +3,7 @@ using System.Reflection;
 using Ecommerce.Dao.Spi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query;
 
@@ -47,11 +48,16 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy).Skip(offset).Take(limit).ToList();
     }
 
+    public TEntity Attach(TEntity entity) {
+        return _context.Attach(entity).Entity;
+    }
+
     public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, int offset = 0, int limit = 20,
         (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
         return doOrderBy(doIncludes(_context.Set<TEntity>(), includes), orderBy).Where(predicate)
+            .Skip(offset).Take(limit)
             .Select(select)
-            .Skip(offset).Take(limit).AsEnumerable().ToList();
+            .ToList();
     }
     public List<TP> WhereProjectGroup<TP, TG>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, TG>> groupBy, int offset = 0, int limit = 20,
         (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
@@ -69,6 +75,22 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
             return true;
         }
         catch (Exception){
+            _context.Entry(entity).State = EntityState.Detached;
+            return false;
+        }
+    }
+
+    public async Task<bool> TryAddAsync(TEntity entity, CancellationToken cancellation = default) {
+        if (_context.Set<TEntity>().Local.Any(e=> cancellation.IsCancellationRequested||e.Equals(entity))){
+            return false;
+        }
+        try{
+            await _context.Set<TEntity>().AddAsync(entity, cancellation);
+            await _context.SaveChangesAsync(cancellation);
+            return true;
+        }
+        catch (Exception){
+            _context.Entry(entity).State = EntityState.Detached;
             return false;
         }
     }
@@ -78,13 +100,12 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     }
 
     public TP? FirstP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate,
-        string[][]? includes = null, (Expression<Func<TEntity, object>>, bool)[]? orderBy = null) {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes), orderBy).Where(predicate).Select(select)
+        string[][]? includes = null, (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, bool nonTracking = false) {
+        return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes), orderBy).Where(predicate).Select(select)
             .FirstOrDefault();
     }
     public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null) {
             return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select),orderBy).FirstOrDefault(predicate);
-
     }
 
     public bool Exists(Expression<Func<TEntity, bool>> predicate,string[][]? includes=null)
@@ -96,20 +117,16 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         return doIncludes(_context.Set<TEntity>(),includes).Select(select).Any(predicate);
     }
     public TEntity Add(TEntity entity) {
-        Detach(entity);
+        // Detach(entity);
         return _context.Set<TEntity>().Add(entity).Entity;
     }
 
-    public Task<TEntity> AddAsync(TEntity entity, bool flush=true, CancellationToken cancellationToken = default) {
-        return DetachAsync(entity, cancellationToken).ContinueWith(r => {
-            if (cancellationToken.IsCancellationRequested) return null!;
-            var t = _context.AddAsync(r.Result, cancellationToken).AsTask();
-            if (flush&& !cancellationToken.IsCancellationRequested) {
-                t.ContinueWith(_ => _context.SaveChangesAsync(cancellationToken), cancellationToken).Wait(cancellationToken);
-            }
-            else t.Wait(cancellationToken);
-            return cancellationToken.IsCancellationRequested? null!:t.Result.Entity;
-        }, cancellationToken);
+    public async Task<TEntity> AddAsync(TEntity entity, bool flush=true, CancellationToken cancellationToken = default) {
+        // await DetachAsync(entity, cancellationToken);
+        var ret = await _context.Set<TEntity>().AddAsync(entity, cancellationToken);
+        if (flush)
+            await _context.SaveChangesAsync(cancellationToken);
+        return ret.Entity;
     }
 
     /// <summary>
@@ -118,7 +135,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     /// <param name="entity"></param>
     /// <returns></returns>
     public TEntity Save(TEntity entity, bool flush=true) {
-        Detach(entity);
+        // Detach(entity);
         TEntity ret;
         try{
             ret =  _context.Set<TEntity>().Add(entity).Entity;
@@ -128,7 +145,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         catch (Exception e){
             if (e is InvalidOperationException io && io.Message.Contains("same") ||
                 e is DbUpdateException du &&
-                du.Message.Contains("Conflict")){
+                (du.InnerException?.Message?.Contains("duplicate") ?? false)){
                 ret = _context.Set<TEntity>().Update(entity).Entity;
                 if (flush) _context.SaveChanges();
             }
@@ -137,38 +154,44 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         return ret;
     }
 
-    public Task<TEntity> SaveAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default) {
-        return DetachAsync(entity).ContinueWith(r => {
+    public async Task<TEntity> SaveAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default) {
+        // throw new NotImplementedException();
             try{
-                var t =AddAsync(r.Result, flush, cancellationToken);
-                t.Wait(cancellationToken);
-                return t.Result;
+                return await AddAsync(entity, flush, cancellationToken);
             }
             catch (AggregateException e){
                 if (e.InnerExceptions.Any(e=>e is InvalidOperationException io && io.Message.Contains("same") ||
                                              e is DbUpdateException du &&
-                                             du.Message.Contains("Conflict"))){
-                    var ret = _context.Set<TEntity>().Update(r.Result).Entity;
-                    if (flush) _context.SaveChangesAsync(cancellationToken).Wait(cancellationToken);
+                                             (du.InnerException?.Message.Contains("Conflict") ?? false))){
+                    var ret = _context.Set<TEntity>().Update(entity).Entity;
+                    if (flush) await _context.SaveChangesAsync(cancellationToken);
                     return ret;
                 }
                 throw;
             }
-        }, cancellationToken);
-        
     }
 
-    public TEntity Update(TEntity entity, bool ignoreNull) {
-        if (!ignoreNull) return _context.Update(entity).Entity;
-        var entry = _context.Attach(entity);
-        foreach (var memberEntry in _entityType.GetMembers().Where(p=>p.PropertyInfo.GetValue(entity)!=null && 
-                                                                      !((p as IProperty)?.IsPrimaryKey() ?? false))
-                     .Select(p=>entry.Member(p.Name))){
-            memberEntry.IsModified = true;
+    public TEntity Update(TEntity entity, bool ignoreNull, params string[] updateProperties) {
+        if (updateProperties.Length > 0){
+            var entry = _context.Attach(entity);
+            foreach (var entryComplexProperty in entry.ComplexProperties){
+                var b = entryComplexProperty.IsModified = updateProperties.Contains(entryComplexProperty.Metadata.Name);
+                entryComplexProperty.EntityEntry.State = b?EntityState.Modified:EntityState.Unchanged;
+            }
+            foreach (var member in entry.Members){
+                member.IsModified = updateProperties.Contains(member.Metadata.Name);
+            }
+            return entry.Entity;
+        } 
+        if (ignoreNull){
+            var entry =_context.Attach(entity);
+            foreach (var memberEntry in entry.Members.Where(m=>!m.Metadata.ClrType.IsDefaultValue(m.CurrentValue))){
+                memberEntry.IsModified = true;
+            }
+            return entry.Entity;
         }
-        return _context.Update(entity).Entity;
+        return Update(entity);
     }
-
     public TEntity Update(TEntity entity) {
         Detach(entity);
         return _context.Set<TEntity>().Update(entity).Entity;
@@ -187,8 +210,12 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         var param = Expression.Parameter(typeof(SetPropertyCalls<TEntity>), "setters");
         Expression left = param;
         foreach (var propertyAction in memberAccessorAndValues){
-            left = Expression.Call(left, typeof(SetPropertyCalls<TEntity>).GetMethods().First(m=>m.Name.Equals("SetProperty")&&m.GetParameters().Length==2 && m.GetParameters()[1].ParameterType.IsGenericParameter).MakeGenericMethod(typeof(object)),
-                propertyAction.Item1, Expression.Convert(Expression.Constant(propertyAction.Item2), typeof(object)));
+            left = Expression.Call(left, 
+                typeof(SetPropertyCalls<TEntity>).GetMethods().First(m=>m.Name.Equals("SetProperty")&&
+                    m.GetParameters().Length==2 && 
+                    m.GetParameters()[1].ParameterType.IsGenericParameter).MakeGenericMethod(typeof(object)),
+                propertyAction.Item1, 
+                Expression.Convert(Expression.Constant(propertyAction.Item2, typeof(object)), typeof(object)));
         }
         return q.ExecuteUpdate(Expression.Lambda<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>>(left, param));
     }
@@ -232,9 +259,10 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     private IQueryable<T> doOrderBy<T>(IQueryable<T> p,(Expression<Func<T, object>>, bool)[]? orderings) {
         
         if (orderings == null || orderings.Length== 0){
+            // return p;
             var param = Expression.Parameter(typeof(T), "t");
             return doOrderBy(p, _idProperties.Select(p =>
-                (Expression.Lambda<Func<T, object>>( Expression.Convert(Expression.Property(param,p.PropertyInfo),typeof(object) ), param), false)).ToArray());
+                (Expression.Lambda<Func<T, object>>( Expression.Convert(Expression.Property(param,p.PropertyInfo),typeof(object) ), param), true)).ToArray());
         }
         // if (orderings == null) return p;
         bool first = true;

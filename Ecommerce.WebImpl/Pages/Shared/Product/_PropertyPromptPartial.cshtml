@@ -1,0 +1,105 @@
+﻿@using Ecommerce.Entity
+
+<!--
+properties:
+_dataType: 'string' | 'number' | 'enum'
+_required: boolean
+_enumValues: string (comma separated values for enum)
+_inputName: string
+_value: string (value of the property)
+-->
+<div class="container-fluid">
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+            const metaForm = s.nextElementSibling;
+            document.addEventListener('DOMContentLoaded', (e)=>{
+                const select =  metaForm.querySelector('select');
+                const num = metaForm.querySelector('input[type=checkbox]');
+                const enumInput = metaForm.querySelector('input[type=text]');
+                const minInput = metaForm.querySelector('input[name="min"]');
+                const maxInput = metaForm.querySelector('input[name="max"]');
+                const createButton = metaForm.querySelector('button');
+                parent._dataType = select.value;
+                parent._required = false;
+                select.addEventListener('change', (e)=>{
+                    enumInput.disabled = select.value !== 'enum';
+                    enumInput.required = select.value === 'enum';
+                    minInput.disabled = maxInput.disabled = select.value !== 'number';
+                    parent._dataType = select.value;
+                })
+                num.addEventListener('change', e=>{
+                    parent._required = num.checked=='yes';
+                })
+                enumInput.addEventListener('change', e=>{
+                    parent._enumValues = enumInput.value;
+                })
+                createButton.addEventListener('click', ()=>{
+                    if(parent.lastElementChild.innerHTML!=='') return;
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'text';
+                    nameInput.required = true;
+                    nameInput.placeholder = 'Özellik Adı';
+                    nameInput.addEventListener('change',(e)=>{
+                        parent._inputName = nameInput.value;
+                    })
+                    nameInput.addEventListener('change', (e)=>{
+                       parent._inputName = nameInput.value; 
+                    });
+                    let valueInput;
+                    switch (parent._dataType){
+                        case 'enum':
+                            valueInput = document.createElement('select');
+                            parent._enumValues.split(',').forEach(el=>{
+                                const o = document.createElement('option');
+                                o.value = el.trim();
+                                o.textContent = el.trim();
+                                valueInput.appendChild(o);
+                            })
+                            break;
+                        case 'number':
+                            valueInput = document.createElement('input');
+                            valueInput.type = 'number';
+                            valueInput.min = parseFloat(minInput.value);
+                            valueInput.max = parseFloat(maxInput.value);
+                        break;
+                        case 'string':
+                        default:
+                            valueInput = document.createElement('input');
+                            valueInput.type = 'text';
+                    }
+                    valueInput.classList.add('form-control');
+                    valueInput.required = parent._required;
+                    valueInput.addEventListener('change', e=>{
+                        parent._value = valueInput.value;
+                    })
+                    const cont = parent.lastElementChild;
+                    cont.appendChild(nameInput);
+                    cont.appendChild(valueInput);
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.classList.add('btn', 'btn-danger', 'btn-sm')
+                    removeButton.addEventListener('click',(e)=>{
+                        cont.innerHTML = '';
+                    });
+                })
+            })
+        })(document.currentScript)
+    </script>
+    <div class="d-flex justify-content-start gap-3">
+        <label class="fs-6 fw-bold">Veri tipini belirle:</label>
+        <select name="dataType">
+            <option selected value="string">Metin</option>
+            <option value="number">Sayı</option>
+            <option value="enum">Enum</option>
+        </select>
+        <input type="checkbox" name="@nameof(Category.CategoryProperty.IsRequired)"/>
+        <input type="number" name="min" placeholder="Minimum Değer" value="-10000000" disabled/>
+        <input type="number" name="max" placeholder="Maksimum Değer" value="10000000" disabled/>
+        <input type="text" placeholder=",ile ayrılmış değerler" disabled/>
+        <button class="btn btn-sm" style="background-color: darkorange">Onayla</button>
+    </div>
+    <div class="d-flex justify-content-start gap-4 input-group d-none">
+        
+    </div>
+</div>

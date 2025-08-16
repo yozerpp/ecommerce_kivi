@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Ecommerce.Entity.Iface;
 using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Entity;

@@ -18,9 +18,20 @@ public static class SearchExpressionUtils
         ParseNodes(rootNode, typeof(T), predicates);
         var expr = Visit(param,rootNode);
         predicateExpr = (Expression<Func<T, bool>>)Expression.Lambda(expr, param);
-        orderByExpressions = OrderByExpression<T>(ordering, param);
+        orderByExpressions = OrderByExpression<T>(ordering);
     }
-    
+
+    public static void BuildPredicate<T>(string query, out Expression<Func<T, bool>> predicateExpr) {
+        if (query == null){
+            predicateExpr = Expression.Lambda<Func<T, bool>>(Expression.Constant(true), Expression.Parameter(typeof(T)));
+            return;            
+        }
+        var param = Expression.Parameter(typeof(T), "t");
+        var parser = new Parser(typeof(T), query);
+        var rootNode = parser.Parse();
+        var expr = Visit(param, rootNode);
+        predicateExpr = Expression.Lambda<Func<T, bool>>(expr, param);
+    }
     public static void Build<T>(string queryString, ICollection<SearchOrder> ordering,
         out Expression<Func<T, bool>> predicateExpr, out ICollection<(Expression<Func<T, object>>,bool)> orderByExpressions)
     {
@@ -29,12 +40,12 @@ public static class SearchExpressionUtils
         var rootNode = parser.Parse();
         var expr = Visit(param, rootNode);
         predicateExpr = (Expression<Func<T, bool>>)Expression.Lambda(expr, param);
-        orderByExpressions = OrderByExpression<T>(ordering, param);
+        orderByExpressions = OrderByExpression<T>(ordering);
     }
 
-    public static ICollection<(Expression<Func<T, object>>,bool)> OrderByExpression<T>(ICollection<SearchOrder> orders,
-        ParameterExpression parameter) {
+    public static ICollection<(Expression<Func<T, object>>,bool)> OrderByExpression<T>(ICollection<SearchOrder> orders) {
         var ret = new List<(Expression<Func<T, object>>,bool)>();
+        var parameter = Expression.Parameter(typeof(T), "t");
         foreach (var searchOrder in orders){
             var property = typeof(T).GetProperty(searchOrder.PropName);
             if (property == null) continue;
@@ -57,7 +68,7 @@ public static class SearchExpressionUtils
     private class MiddleBranchNode : BranchNode
     {
         public int Level { get; init; }
-        public bool And { get; init; }
+        public bool And { get; set; }
         public ICollection<BranchNode> Children { get; } =[];
         public BranchNode? this[int i, PropertyInfo p] => Children.FirstOrDefault(c => c.GroupIndex == i && c.Prop == p);
         public override Expression? Accept(Expression left) {
@@ -68,9 +79,7 @@ public static class SearchExpressionUtils
                 typeof(ICollection<>).IsAssignableFrom(this.Prop.PropertyType.GetGenericTypeDefinition())) 
                 ret = GetAsCollectionPredicate(propAccess);
             else ret = GetAsPropertyPredicate(propAccess);
-            if (ret == null) return null;
-            return Expression.Condition(Expression.NotEqual(propAccess, Expression.Constant(null)),
-                ret, Expression.Constant(false));
+            return ret;
         }
         private Expression? GetAsCollectionPredicate(Expression propertyAccess) { //this calls empty any if no children matches
             var t = this.Prop.PropertyType.GetGenericArguments()[0];
@@ -102,8 +111,9 @@ public static class SearchExpressionUtils
             left = Expression.Property(left, Prop);
             var error = GetComparison(  left, out var check);
             if (error) return null;
-            return !Prop.PropertyType.IsPrimitive ?Expression.Condition(Expression.NotEqual(left, Expression.Constant(null)),
-                check, Expression.Constant(false)): check;
+            return check;
+            // return !Prop.PropertyType.IsPrimitive ?Expression.Condition(Expression.NotEqual(left, Expression.Constant(null)),
+            //     check, Expression.Constant(false)): check;
         }
         private bool GetComparison(Expression left, out Expression check) {
             Type constantType;
@@ -516,27 +526,38 @@ public static class SearchExpressionUtils
                typeCode == TypeCode.Decimal;
     }
     public static void Main() {
-        var preds = new []{
-            new SearchPredicate(){
-                PropName =
-                    string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value)),
-                Operator = SearchPredicate.OperatorType.Like,
-                Value = "opt1"
-            },
-            new SearchPredicate(){
-                PropName = string.Join('_', nameof(Product.CategoryProperties),
-                    nameof(ProductCategoryProperties.CategoryPropertyId)),
-                Operator = SearchPredicate.OperatorType.Equals,
-                Value = "2",
-            },
-            new SearchPredicate(){
-                PropName = string.Join('_', nameof(Product.Category), nameof(Category.Id)),
-                Operator = SearchPredicate.OperatorType.Equals, Value = "1"
-            },
-            new SearchPredicate()
-                { PropName = nameof(Product.Name), Operator = SearchPredicate.OperatorType.Like, Value = "Like" },
-        };
-        Build<Product>(preds, [], out var predicateExpr, out var orderByExpr);
+        // var preds = new []{
+        //     new SearchPredicate(){
+        //         PropName =
+        //             string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value)),
+        //         Operator = SearchPredicate.OperatorType.Like,
+        //         Value = "opt1"
+        //     },
+        //     new SearchPredicate(){
+        //         PropName = string.Join('_', nameof(Product.CategoryProperties),
+        //             nameof(ProductCategoryProperties.CategoryPropertyId)),
+        //         Operator = SearchPredicate.OperatorType.Equals,
+        //         Value = "2",
+        //     },
+        //     new SearchPredicate(){
+        //         PropName = string.Join('_', nameof(Product.Category), nameof(Category.Id)),
+        //         Operator = SearchPredicate.OperatorType.Equals, Value = "1"
+        //     },
+        //     new SearchPredicate()
+        //         { PropName = nameof(Product.Name), Operator = SearchPredicate.OperatorType.Like, Value = "Like" },
+        // };
+        // Build<Product>(preds, [], out var predicateExpr, out var orderByExpr);
+        var list = new[]{ (1,2), (1,2), (2,3), (1,5) };
+        
+        BuildPredicate<Product>(
+            $"""
+             |(
+                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value))}=first,
+                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.CategoryPropertyId))}=4),
+                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value))}%opt1,
+                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.CategoryPropertyId))}=2)
+                )"
+             """,out var predicateExpr);
         Console.WriteLine(predicateExpr.ToString());
     }
     private static ConstantExpression? GetConstant(Type? property, SearchPredicate predicate) {
@@ -609,32 +630,31 @@ public static class SearchExpressionUtils
         // --- Attempt Parsing if source is string ---
         if (underlyingSourceType == typeof(string))
         {
-            MethodInfo? parseMethod = null;
-
-            // Try to find a static Parse(string) method on the underlying target type
-            parseMethod = underlyingTargetType.GetMethod(
-                "Parse",
+            var convertMethod =
+                // Try to find a static Parse(string) method on the underlying target type
+                typeof(Convert).GetMethod(
+                "To" + underlyingTargetType.Name,
                 BindingFlags.Public | BindingFlags.Static,
                 null,
-                new Type[] { typeof(string) },
+                [typeof(string)],
                 null
             );
 
             // Special handling for Enum.Parse
-            if (parseMethod == null && underlyingTargetType.IsEnum)
+            if (convertMethod == null && underlyingTargetType.IsEnum)
             {
-                parseMethod = typeof(Enum).GetMethod(
+                convertMethod = typeof(Enum).GetMethod(
                     "Parse",
                     BindingFlags.Public | BindingFlags.Static,
                     null,
                     new Type[] { typeof(Type), typeof(string), typeof(bool) }, // Enum.Parse(Type, string, bool)
                     null
                 );
-                if (parseMethod != null)
+                if (convertMethod != null)
                 {
                     // Call Enum.Parse(targetType, inputExpression, true)
                     Expression enumParseCall = Expression.Call(
-                        parseMethod,
+                        convertMethod,
                         Expression.Constant(underlyingTargetType),
                         inputExpression,
                         Expression.Constant(true) // ignoreCase
@@ -652,7 +672,7 @@ public static class SearchExpressionUtils
                 }
             }
 
-            if (parseMethod != null)
+            if (convertMethod != null)
             {
                 // If target is nullable (e.g., int?), handle null input string gracefully
                 if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
@@ -660,11 +680,11 @@ public static class SearchExpressionUtils
                     return Expression.Condition(
                         Expression.Equal(inputExpression, Expression.Constant(null, typeof(string))),
                         Expression.Constant(null, targetType), // If input is null, result is null of nullable type
-                        Expression.Convert(Expression.Call(parseMethod, inputExpression), targetType) // Parse and convert to nullable
+                        Expression.Convert(Expression.Call(convertMethod, inputExpression), targetType) // Parse and convert to nullable
                     );
                 }
                 // Direct parse for non-nullable target
-                return Expression.Call(parseMethod, inputExpression);
+                return Expression.Call(convertMethod, inputExpression);
             }
         }
         try

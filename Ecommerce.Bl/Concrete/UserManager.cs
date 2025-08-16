@@ -128,7 +128,6 @@ public class UserManager :IUserManager
     }
 
     public void CreateAnonymous(AnonymousUser anonymousUser) {
-        _anonymousUserRepository.Save(anonymousUser);
-        _anonymousUserRepository.Flush();
+        _anonymousUserRepository.TryAdd(anonymousUser);
     }
 }

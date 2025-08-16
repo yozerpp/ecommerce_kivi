@@ -1,7 +1,10 @@
 ﻿@page
 @model Ecommerce.WebImpl.Pages.Product
+@using System.Globalization
+@using System.Reflection
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Common
+@using Ecommerce.Entity.Views
 @using Ecommerce.WebImpl.Pages.Shared
 @using Ecommerce.WebImpl.Pages.Shared.Product
 
@@ -10,6 +13,7 @@
     var editable = Model.CurrentStaff!=null && Model.CurrentStaff.HasPermission(Permission.EditProduct) || Model.CurrentSeller!=null && 
                    Model.Offers.Any(o=>o.SellerId == Model.CurrentSeller?.Id);
     ViewBag.User = Model.CurrentUser;
+    var sellersOffer = Model.Offers.FirstOrDefault(o=>o.SellerId == Model.CurrentSeller?.Id);
 }
 <div class="container-fluid">
     <ul class="list-unstyled">
@@ -22,33 +26,33 @@
                             <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.ViewedProduct.Id"/>
                             <button class="btn btn-danger"
                                     hx-trigger="click">Sil</button>
-                        </form>    
+                        </form>
                     }
                 </div>
             </li>
         }
         <li class="row section my-3">
-            <div class="col-6">
+            <div class="col-6 h-100">
                 <div class="my-1">
                     @{ var imageMargin = editable ? "my-1" : ""; }
                     @if (editable){
-                        <div class="d-flex row edit-control justify-content-center">
-                            <a href="javascript:edited=true;promptFile('image/jpeg').then(i=>editImage(i))" class="col-auto row text-decoration-none">
-                                <p class="col-auto">Değiştir</p>
-                                <i class="col-auto bi bi-pencil-fill bg-white text-secondary"></i>
-                            </a>
-                            <a href="javascript:edited=true;deleteImage()" class="col-auto  row text-decoration-none">
-                                <p class="col-auto">Sil</p>
-                                <i class="col-auto bi bi-pencil-fill bg-white text-danger"></i>
-                            </a>
-                            <a class="col-auto row text-decoration-none" href="javascript:edited=true;promoteToImage()">
-                                <p class="col-auto">Ana Resim Yap</p>
-                                <i class="col-auto bi bi-pencil-fill bg-white text-success"></i>
-                            </a>
+                        <div class="d-flex row edit-control gap-3 justify-content-center">
+                            <button title="Değiştir" onclick="edited=true;promptFile('image/jpeg').then(i=>editImage(i))" class="col-auto hover-grow btn p-0 bg-light-subtle border-secondary-subtle border-2 shadow-sm rounded-2">
+                                <i class="col-auto bi m-0 bi-pencil-fill bg-white text-secondary"></i>
+                            </button>
+                            <button title="Sil" onclick="edited=true;deleteImage()" class="col-auto btn p-0 bg-light-subtle border-secondary-subtle hover-grow border-2 shadow-sm rounded-2">
+                                <i class="col-auto m-0 bi bi-trash-fill bg-white text-danger"></i>
+                            </button>
+                            <button title="Ana Resim Yap" onclick="edited=true;promoteToImage()" class="col-auto btn p-0 bg-light-subtle hover-grow border-secondary-subtle border-2  shadow-sm rounded-2">
+                                <i class="col-auto bi m-0 bi-arrow-up bg-white text-success"></i>
+                            </button>
                         </div>
                     }
                     <div class="@imageMargin">
-                        <partial name="Shared/Product/_CarouselPartial" model="new _CarouselPartial(){ Images = Model.ViewedProduct.Images, Editable = editable }"/>
+                        @await Html.PartialAsync("Shared/Product/_CarouselPartial", new _CarouselPartial(){
+                            Images = Model.ViewedProduct.Images.OrderBy(i => i.IsPrimary?-1:0).Select(i=>i.Image).ToArray(),
+                            Editable = editable
+                        })
                     </div>
                     @if (editable){
                         <div class="container-fluid edit-control justify-content-center">
@@ -56,11 +60,16 @@
                                 <p class="col-auto">Resim Ekle</p>
                                 <i class="col-auto bi bi-plus-circle-fill text-success bg-white"></i>
                             </a>
+                            <div class="d-inline-flex justify-content-between">
+                                <input onchange="offerEdited =true;" class="edit-control form-control rounded-2 small" placeholder="Stok" min="0" id="stockValue@(Model.CurrentSeller?.Id)" type="number" name="@(nameof(Product.EditedOffer.Stock))" value="@(sellersOffer?.Stock)"/>
+                                <input onchange="offerEdited=true;" class="edit-control form-control rounded-2 small" placeholder="Fiyat" min="0.01" step="0.01" id="priceValue@(Model.CurrentSeller?.Id)" type="number" name="@(nameof(Product.EditedOffer.Price))" value="@decimal.Round(sellersOffer?.Price??0,2).ToString("F", CultureInfo.InvariantCulture)"/>
+                                <input onchange="offerEdited = true;" class="edit-control form-control rounded-2 small" placeholder="İndirim" step="0.1" min="0" id="discountValue@(Model.CurrentSeller?.Id)" type="number" name="@(nameof(Product.EditedOffer.Discount))" value="@decimal.Round(((1m - sellersOffer?.Discount)*100m)??0m,2).ToString("F", CultureInfo.InvariantCulture)"/>
+                            </div>
                         </div>
                     }
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-6 h-100 overflow-auto">
                 <ul class="list-unstyled g-1 py-1">
                     <li class="d-flex align-items-center align-content-center justify-content-center">
                         <partial name="Shared/Product/_CategoryHierarchyPartial" model="(Model.ViewedProduct.CategoryId, Model.Categories)"/>
@@ -74,93 +83,80 @@
                         </div>
                     </li>
                     <li id="aggregates" class="d-flex row justify-content-between">
-                        <p class="mx-3 flex-column col-auto align-self-start">@Model.ViewedProduct.Stats.SaleCount Kere satıldı</p>
+                        <div class="col-auto d-inline-flex flex-column align-items-center justify-content-center align-content-center">
+                            <p class="mx-3 col-auto align-self-start">@Model.ViewedProduct.Stats.SaleCount Kez satıldı</p>
+                            <div>
+                                @await Html.PartialAsync("Shared/Product/_FavoritePartial", (Model.CurrentCustomer != null, ProductWithAggregatesCustomerView.Promote(Model.ViewedProduct, Model.Favorites)))
+                            </div>
+                        </div>
                         <div class="mx-3 col-auto">
-                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage??0, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ?? 0u) }"/>
+                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage ?? 0, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ?? 0u) }"/>
                         </div>
                     </li>
                     <li id="offers" class="my-3">
-                        <ul class="list-group row flex-grow-0 overflow-auto">
-                            @{ var iii = 0; }
-                            @foreach (var offer in Model.Offers){
-                                @* if(iii!=0){<div class="separator"></div>} *@
-                                <li id="offer@(iii)" onclick="event.currentTarget.parentElement.querySelector('.bg-light')?.classList?.remove('bg-light'); 
-                                    event.currentTarget.classList.add('bg-light');document.getElementById('sellerIdInput').value = @(offer.SellerId);"
-                                    class="hover-darken list-group-item d-flex">
-                                    <ul class="list-unstyled row g-1 d-flex">
-                                        <li class="col-2 justify-content-start align-content-center">
-                                            <button asp-page="/Seller/Seller" asp-route-Id="@(offer.SellerId)" class="container-fluid col-auto btn btn-secondary">
-                                                @(offer.Seller.ShopName)
-                                            </button>
-                                        </li>
-                                        <li class="col-2  align-content-center">
-                                            <div class="row px-2 container-fluid">
-                                                <p id="stockValue" class="col-auto" style="font-size: small">@(offer.Stock)</p>
-                                                <p class="col-auto text-wrap" style="font-size: small; word-wrap: break-word">Ürün Stokta</p>
-                                                @if (editable){
-                                                    @await Html.PartialAsync(nameof(_EditablePartial),new _EditablePartial(){Target = "stockValue"})
-                                                }
-                                            </div>
-                                        </li>
-                                        <li class="col-3 align-content-center">
-                                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = offer.Stats.ReviewAverage, RatingCount = offer.Stats.ReviewCount }"/>
-                                        </li>
-                                        <li class="col-3 align-content-center">
-                                            <p class="mx-2" style="font-size: small">@(offer.Stats.RefundCount) Kere İade Edildi</p>
-                                        </li>
-                                        <li class="col-2 align-content-center align-self-end">
-                                            <div class="d-flex g-1 container-fluid">
-                                                <div class="d-flex">
-                                                    <del id="priceValue">@(decimal.Round(offer.Price, 2).ToString("F"))</del>
-                                                    @if (editable){
-                                                        @await Html.PartialAsync(nameof(_EditablePartial),new _EditablePartial(){OnClick = "offerEdited=true;"})
-                                                    }    
-                                                </div>
-                                                <div class="d-flex mx-1">
-                                                    <p id="discountValue" class="small">%@(decimal.Round(((1m - offer.Discount)*100m),0).ToString("F1"))</p>
-                                                    @if (editable){
-                                                        @await Html.PartialAsync(nameof(_EditablePartial),new _EditablePartial(){OnClick = "offerEdited=true;"})
-                                                    }
-                                                </div>
-                                            </div>
-                                            <div class="row container-fluid">
-                                                <p class="col-auto">@(decimal.Round(offer.Discount * offer.Price, 2).ToString("C"))</p>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </li>
-                                {
-                                    iii++;
-                                }
+                        <script>
+                            function fetchOffers(){
+                                const o = document.getElementById('offerList');
+                                o.setAttribute('hx-vals', JSON.stringify({sortColumn: o.dataset.sortcolumn, sortDesc: o.dataset.sortdesc == '1'}));
+                                htmx.trigger(o,'fire');
                             }
-                        </ul>
+                        </script>
+                        <div id="offersParams" class="container-fluid d-flex justify-content-between mx-3">
+                            <div class="fs-6">Sırala:</div>
+                            <div>
+                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(OfferStats.ReviewAverage))';
+                                event.currentTarget.nextElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
+                                   class="p-0 text-decoration-none">
+                                    <i class="bi bi-star-fill fs-5 hover-darken-2 text-warning bg-light border-secondary-subtle border-1 rounded-2"></i>
+                                </a>
+                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(ProductOffer.Price))';
+                                event.currentTarget.previousElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
+                                   class="p-0 text-decoration-none">
+                                    <i class="bi bi-currency-dollar fs-5 hover-darken-2 text-secondary-emphasis text-success bg-light border-secondary-subtle border-1 rounded-2"></i>
+                                </a>
+                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortdesc=(parseInt(document.getElementById('offerList').dataset.sortdesc) + 1)%2;event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-down');event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-up');fetchOffers();" class="p-0 text-decoration-none">
+                                    <i class="bi bi-sort-numeric-down fs-5 hover-darken-2 text-primary bg-light border-secondary-subtle border-1 rounded-2"></i>
+                                </a>    
+                            </div>
+                            
+                        </div>
+                        <div data-sortColumn="@(nameof(OfferStats.ReviewAverage))" data-sortDesc="1" hx-get="/@(nameof(Product))?handler=offers&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)" hx-trigger="fire,load" hx-target="this" hx-swap="innerHTML" id="offerList">
+                        </div>
                     </li>
                     <li class="row container-fluid g-3 mx-4 justify-content-between">
-                        <div class="edit-control col-6">
-                            <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
-                                <input type="hidden" name="@(nameof(Product.EditedOffer)).ProductId"/>
-                                <input id="editedInput" type="hidden" name="@(nameof(Product.IsProductEdited))" value="false"/>
-                                <input id="offerEditedInput" type="hidden" name="@nameof(Product.IsOfferEdited)" value="false"/>
-                                <input id="nameInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Name" value="@(Model.ViewedProduct.Name)"/>
-                                @{var oldOffer = Model.Offers.FirstOrDefault(o => o.SellerId == Model.CurrentSeller?.Id);}
-                                <input id="descInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Description" value="@(Model.ViewedProduct.Description)"/>
-                                <input id="priceInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Price))" value="@(oldOffer?.Price)"/>
-                                <input id="discountInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Discount))" value="@(oldOffer?.Discount)"/>
-                                <input id="widthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Width))" value="@(Model.ViewedProduct.Dimensions.Width)"/>
-                                <input id="heightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Height))" value="@(Model.ViewedProduct.Dimensions.Height)"/>
-                                <input id="depthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Depth))" value="@(Model.ViewedProduct.Dimensions.Depth)"/>
-                                <input id="weightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Weight))" value="@(Model.ViewedProduct.Dimensions.Weight)"/>
-                                @foreach (var prop in Model.ViewedProduct.CategoryProperties){
-                                    <input id="@(prop.Key)Input" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryProperties))[@(prop.Key)]" value="@(prop.Value)"/>
-                                }
-                                @for (var i = 0; i < Model.ViewedProduct.Images.Count; i++){
-                                    <input id="image@(i)Data" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.Images))[@(i)].@(nameof(Image.Data))"/>
-                                    <input id="image@(i)IsMainInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.Images))[@(i)].@(nameof(Image.IsMain))" value="@(Model.ViewedProduct.Images[i].IsMain)"/>
-                                }
-                                <input id="sentImagesInput" type="hidden" name="@nameof(Product.SentImages)"/>
-                                <button type="submit" onclick="assignInputs(); event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary">Düzenlemeyi Kaydet</button>
-                            </form>
-                        </div>
+                        @if (editable){
+                            <div class="edit-control col-6">
+                                <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
+                                    @Html.AntiForgeryToken()
+                                    @{ var oldOffer = Model.Offers.FirstOrDefault(o => o.SellerId == Model.CurrentSeller?.Id); }
+                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryId))" value="@Model.ViewedProduct.CategoryId"/>
+                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).ProductId" value="@Model.ViewedProduct.Id"/>
+                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).@nameof(ProductOffer.SellerId)" value="@(oldOffer.SellerId)"/>
+                                    <input id="editedInput" type="hidden" name="@(nameof(Product.IsProductEdited))" value="false"/>
+                                    <input id="offerEditedInput" type="hidden" name="@nameof(Product.IsOfferEdited)" value="false"/>
+                                    <input id="nameInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Name" value="@(Model.ViewedProduct.Name)"/>
+                                    <input id="descInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Description" value="@(Model.ViewedProduct.Description)"/>
+                                    <input id="priceInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Price))" value="@(oldOffer?.Price)"/>
+                                    <input id="stockInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Stock))" value="@(oldOffer?.Stock)"/>
+                                    <input id="discountInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Discount))" value="@(oldOffer?.Discount)"/>
+                                    <input id="dimensionInput" type="hidden" name="@nameof(Product.DimensionString)" value="@(Model.ViewedProduct.Dimensions.ToString())"/>
+                                    <input id="weightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Weight))" value="@(Model.ViewedProduct.Dimensions.Weight)"/>
+                                    @if (Model.ViewedProduct.CategoryProperties != null){
+                                        var i = 0;
+                                        foreach (var prop in Model.ViewedProduct.CategoryProperties){
+                                            <input id="Prop@(i)Input" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryProperties))[@(i)].@(nameof(ProductCategoryProperties.Value))" value="@(prop.Value)"/>
+                                        }
+                                    }
+                                    @for (var i = 0; i < Model.ViewedProduct.Images.Count; i++){
+                                        <input id="image@(i)Id" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.Images))[@(i)].@(nameof(ImageProduct.ImageId))" value="@(Model.ViewedProduct.Images[i].ImageId)"/>
+                                        <input id="image@(i)Data" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.Images))[@(i)].@(nameof(ImageProduct.Image)).@(nameof(Image.Data))"/>
+                                        <input id="image@(i)IsMainInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.Images))[@(i)].@(nameof(ImageProduct.IsPrimary))" value="@(Model.ViewedProduct.Images[i].IsPrimary)"/>
+                                    }
+                                    <input id="sentImagesInput" type="hidden" name="@nameof(Product.SentImages)"/>
+                                    <button type="submit" onclick="assignInputs(); event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary">Düzenlemeyi Kaydet</button>
+                                </form>
+                            </div>
+                        }
                         <div class="col-6 ms-auto">
                             <form hx-post="/@(nameof(Cart))" hx-target="#addToCartResult" hx-swap="innerHTML" class="form-check-inline">
                                 @Html.AntiForgeryToken()
@@ -172,9 +168,7 @@
                                 </div>
                             </form>
                         </div>
-                        <div id="addToCartResult">
-                            
-                        </div>
+                        <div id="addToCartResult"></div>
 
                     </li>
                 </ul>
@@ -193,47 +187,33 @@
                 </div>
             </nav>
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane card border-bottom-0 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
-                    <p id="descriptionValue" class="mx-5 my-1">
+                <div class="tab-pane card border-bottom-0 pb-5 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+                    <p id="descriptionValue" class="mx-5 my-5">
                         @(Model.ViewedProduct.Description)
                     </p>
                 </div>
                 <div class="tab-pane card border-bottom-0 fade" id="nav-properties" role="tabpanel" aria-labelledby="#nav-properties-tab">
-                    <div class="container-fluid">
+                    <div class="container-fluid my-2">
                         <ul id="properties" class="mx-3 container-fluid list-group">
-                            @await Html.PartialAsync("Shared/Product/_ProductProperty", (false, new KeyValuePair<string, string>("Kategori", Model.ViewedProduct.Category.Name )))
+                            
+                            @await Html.PartialAsync("Shared/Product/_ProductProperty", (false, new KeyValuePair<string, string>("Kategori", Model.Categories[Model.ViewedProduct.CategoryId].Name)))
                             <li class="col-4 row container gap-3">
-                                <div class="col-auto d-flex justify-content-start align-self-start">
-                                    <b class="col-auto">"Boyut: "</b>
-                                    @{
-                                        var q = 0;
-                                        var dimensionProps = typeof(Dimensions).GetProperties().Where(p => !p.Name.Equals(nameof(Dimensions.Weight))).ToArray();
-                                    }
-                                    <div class="d-inline-flex col-auto ms-auto align-self-end">
-                                        @foreach (var prop in dimensionProps){
-                                            if (q++>0){
-                                                <p>x</p>
-                                            }
-                                            <div class="d-flex col-auto">
-                                                <p id="-dimension-@(prop.Name)Value">@(prop.GetValue(Model.ViewedProduct.Dimensions))</p>
-                                            </div>
-                                        }
-                                        @if(editable){
-                                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                                Target = string.Join(',', dimensionProps.Select(p=>p.Name))
-                                            })
-                                        }
-                                    </div>
-                                </div>
+                                @await Html.PartialAsync("Shared/Product/_ProductProperty", (editable, new KeyValuePair<string, string>("Boyut", Model.ViewedProduct.Dimensions.ToString(true))))
                                 @await Html.PartialAsync("Shared/Product/_ProductProperty", (editable, new KeyValuePair<string, string>("Ağırlık", Model.ViewedProduct.Dimensions.Weight.ToString())))
                             </li>
-                            @foreach (var prop in Model.ViewedProduct.CategoryProperties){
-                                @await Html.PartialAsync("Shared/Product/_ProductProperty", (editable, prop))
+                            @if (Model.ViewedProduct.CategoryProperties != null){
+                                foreach (var prop in Model.ViewedProduct.CategoryProperties){
+                                    @await Html.PartialAsync("Shared/Product/_ProductProperty", (editable, new KeyValuePair<string, string>(prop.CategoryProperty.PropertyName, prop.Value)))
+                                }
                             }
+                            <li id="dummyProp" class="d-none">
+                                @await Html.PartialAsync("Shared/Product/_PropertyPromptPartial")    
+                            </li>
+                            <li id="extraProps"></li>
                         </ul>
                         <div class="justify-content-center d-flex container-fluid">
                             @if (editable){
-                                <a href="javascript:createProperties()" style="height: 2em;" class="edit-control text-decoration-none bg-white text-success">
+                                <a href="javascript:void(0);" onclick="createProperties(parseInt(event.currentTarget.dataset.propertycounter)); event.currentTarget.dataset.propertycounter = (parseInt(event.currentTarget.dataset.propertycounter) + 1).toString()" data-propertycounter="0" style="height: 2em;" class="edit-control text-decoration-none bg-white text-success">
                                     <i class="bi bi-plus-circle-fill"></i>
                                 </a>
                             }
@@ -241,8 +221,9 @@
                     </div>
 
                 </div>
+                
                 <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="#nav-reviews-tab">
-                    <div hx-trigger="load" hx-target="this" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)">
+                    <div class="my-3" hx-trigger="load" hx-target="this" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)">
                     </div>
                 </div>
             </div>
@@ -250,95 +231,5 @@
     </ul>
 </div>
 @section Scripts{
-<script>
-        let slidesParent;
-        let editControls;
-        document.addEventListener('DOMContentLoaded', () => {
-            editControls = document.querySelectorAll('.edit-control');
-            slidesParent = document.getElementById('images');
-        });
-        let editedImages = [];
-        let addedImages = [];
-        let edited = false;
-        let offerEdited = false;
 
-        function promoteToImage(){
-            document.getElementById('image' + slidesParent.querySelector('.carousel-item.active').id.replace('image','') + 'IsMainInput').value='true';
-            slidesParent.querySelectorAll('.carousel-item').forEach(e=>{
-                document.getElementById('image'+ e.id.replace('image','')+ 'IsMainInput').value='false';
-            })
-        }
-        function editImage(data) {
-            let i = slidesParent.querySelector('div.carousel-item.active');
-            i.querySelector('img').src = data;
-            editedImages.push({idx: i.id.replace('image',''), image: data});
-        }
-        function deleteImage(){
-            let i = slidesParent.querySelector('div.carousel-item.active');
-            slidesParent.querySelector("div.carousel-item:not([id=" + i.id.toString() + "])")?.classList?.add('active');
-            editedImages.push({idx: i.id.replace('image',''), image: null});
-            i.remove();
-        }
-        function addImage(data){
-            let s = document.getElementById('images');
-            let i = s.querySelector('div.carousel-item').cloneNode(true);
-            i.querySelector('img').src = data;
-            i.classList.remove('active');
-            i.id = 'image' + s.children.length;
-            s.appendChild(i);
-            addedImages.push(data);
-        }
-        function createProperties(){
-            let propList = document.getElementById('properties');
-            let el = propList.firstElementChild.cloneNode(true);
-            let key = el.querySelector('b');
-            key.style.min_width='3em';
-            key.style.min_height='1em';
-            let val = el.querySelector('p');
-            val.style.min_width='3em';
-            val.style.min_height='1em';
-            let inp = document.createElement('input');
-            inp.type='hidden';
-            key.onchange = ()=>{
-                inp.name=key.value;
-            }
-            val.onchange = ()=>{
-                inp.value=val.value;
-            }
-            let form = document.getElementById('editForm');
-            form.insertBefore(inp, form.firstElementChild);
-            el.id='';
-            propList.appendChild(el);
-        }
-        function assignInputs() {
-            document.getElementById('nameInput').value = document.getElementById('nameValue').innerHTML;
-            document.getElementById('descInput').value = document.getElementById('descriptionValue').innerHTML;
-            @foreach (var k in Model.ViewedProduct.CategoryProperties.Keys){
-                @:document.getElementById('@(k)Input').value = document.getElementById('@(k)Value').innerHTML;
-            }
-            editedImages.forEach(i=>{
-                if(i.data===null){
-                    document.getElementById('image' + i.idx + 'Data').value = '-';
-                    return;
-                }
-                document.getElementById('image' + i.idx + 'Data').value = i.data;
-            })
-            document.getElementById('sentImagesInput').value = addedImages.length > 0 ? addedImages.join(';;') : null;
-            document.getElementById('editedInput').value = edited.toString();
-            document.getElementById('offerEditedInput').value = offerEdited.toString();
-            document.getElementById('priceInput').value = document.getElementById('priceValue').value;
-            document.getElementById('discountInput').value = document.getElementById('discountValue').value;
-            document.getElementById('heightInput').value = document.getElementById('-dimension-@(nameof(Dimensions.Height))Value')
-            document.getElementById('widthInput').value = document.getElementById('-dimension-@(nameof(Dimensions.Width))Value')
-            document.getElementById('depthInput').value = document.getElementById('-dimension-@(nameof(Dimensions.Depth))Value')
-            document.getElementById('weightInput').value = document.getElementById('-dimension-@(nameof(Dimensions.Weight))Value')
-        }
-        function createSlide(data){
-            let silde = document.getElementById('images').children[0].cloneNode(true);
-            silde.querySelector('img').src = data;
-            silde.classList.remove('active');
-            silde.id = 'image' + document.getElementById('images').children.length;
-            document.getElementById('images').appendChild(silde);   
-        }
-</script>
 }

@@ -1,10 +1,12 @@
 ﻿using Ecommerce.Bl.Interface;
+using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Mail;
 using Ecommerce.WebImpl.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
 
@@ -13,10 +15,12 @@ public class Orders : BaseModel
     private readonly IMailService _mailService;
     private readonly IJwtManager _jwtManager;
     private readonly IOrderManager _orderManager;
-    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager) {
+    private readonly IRepository<Order> _orderRepository;
+    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager, IRepository<Order> orderRepository) {
         _mailService = mailService;
         _jwtManager = jwtManager;
         _orderManager = orderManager;
+        _orderRepository = orderRepository;
     }
     public enum PageType
     {
@@ -62,7 +66,8 @@ public class Orders : BaseModel
     }
 
     private void DoAuth() {
-        if (CurrentCustomer == null && _jwtManager.ReadAuthToken(Token) == null){
+        var e = _orderRepository.FirstP(o => o.Email, o => o.Id == OrderId, nonTracking:true);
+        if (CurrentCustomer == null && _jwtManager.ReadAuthToken(Token)!=e){
             throw new UnauthorizedAccessException("Kayıtlı olmanız ve Siparişlerim sayfasından sipariş görüntülüyor olmanız lazım.(Zaten böyle yapıyorsanız oturum süresi dolmuş olabilir.)");
         }
     }
@@ -70,7 +75,7 @@ public class Orders : BaseModel
         DoAuth();
         _orderManager.CancelOrder(OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, TimeOut = 5000, Title = "Siparişiniz Başarıyla İptal Edildi."
+            Success = true, TimeOut = 2000, Title = "Siparişiniz Başarıyla İptal Edildi.", Redirect = "refresh",
         });
     }
 
@@ -78,7 +83,8 @@ public class Orders : BaseModel
         DoAuth();
         _orderManager.UpdateAddress(NewAddress, OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, TimeOut = 5000, Title = "Adresiniz Değiştirildi."
+            Success = true, TimeOut = 2000, Title = "Adresiniz Değiştirildi.",
+            Redirect = "refresh"
         });
     }
 
@@ -86,7 +92,8 @@ public class Orders : BaseModel
         DoAuth();
         _orderManager.Complete(OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, TimeOut = 5000, Title = "Sipariş Onaylandı"
+            Success = true, TimeOut = 2000, Title = "Sipariş Onaylandı",
+            Redirect = "refresh"
         });
     }
 
@@ -94,7 +101,7 @@ public class Orders : BaseModel
         DoAuth();
         _orderManager.Refund(OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, TimeOut = 5000, Title = "Sipariş İade Edildi."
+            Success = true, TimeOut = 2000, Title = "Sipariş İade Edildi."
         });
     }
 }

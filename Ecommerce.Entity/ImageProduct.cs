@@ -4,6 +4,7 @@ public class ImageProduct
 {
     public uint ImageId { get; set; }
     public uint ProductId { get; set; }
+    public bool IsPrimary { get; set; }
     public Product Product { get; set; }
     public Image Image { get; set; }
     public override bool Equals(object? obj) {

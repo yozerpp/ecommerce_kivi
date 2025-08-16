@@ -66,7 +66,10 @@ public class Customer : BaseModel
         var orders = _customerManager.GetOrders(CustomerId, PageNumber,PageSize);
         if (orders.Count == 0) return new NoContentResult();
         return Partial("Shared/Order/_OrderListPartial", new _OrderListPartial(){
-            Page = PageNumber, Orders = orders
+            Page = PageNumber, Orders = orders, PageSize = PageSize, 
+            Collapsable = true,
+            Editable = true,
+            Url = Url.Page('/' +nameof(Customer), "orders", new {CustomerId}, Request.Scheme),
         });
     }
     [BindProperty] public PhoneNumber PhoneNumber { get; set; }

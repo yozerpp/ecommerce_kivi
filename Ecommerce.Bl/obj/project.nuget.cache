@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "TaxUaD0Pqrc=",
+  "dgSpecHash": "xbe3Gu/eG3w=",
   "success": true,
   "projectFilePath": "C:\\Users\\tipil\\RiderProjects\\Ecommerce\\Ecommerce.Bl\\Ecommerce.Bl.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tipil\\.nuget\\packages\\bogus\\35.6.3\\bogus.35.6.3.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\fluentvalidation\\12.0.0\\fluentvalidation.12.0.0.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\linqkit.core\\1.2.8\\linqkit.core.1.2.8.nupkg.sha512",
+    "C:\\Users\\tipil\\.nuget\\packages\\linqkit.microsoft.entityframeworkcore\\8.1.8\\linqkit.microsoft.entityframeworkcore.8.1.8.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.18\\microsoft.aspnetcore.authentication.jwtbearer.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.entityframeworkcore\\8.0.18\\microsoft.entityframeworkcore.8.0.18.nupkg.sha512",
     "C:\\Users\\tipil\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\8.0.18\\microsoft.entityframeworkcore.abstractions.8.0.18.nupkg.sha512",

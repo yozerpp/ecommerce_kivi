@@ -128,7 +128,7 @@ public partial class UserPage : UserControl, IPage
     }
 
     private List<OrderWithAggregates> GetAllOrders() {
-        return _orderManager.GetAllOrders(true,page: _ordersPage);
+        return _orderManager.GetAllOrdersFromAnonymousUser(true,page: _ordersPage);
     }
 
     public void Go() {
@@ -175,7 +175,7 @@ public partial class UserPage : UserControl, IPage
         foreach (int idx in orderItemsView.SelectedIndices){
             var order = (Order)orderItemsView.Groups[idx].Tag ;
             order.ShippingAddress = newaddress;
-            _orderManager.UpdateOrder(order);
+            _orderManager.UpdateAddress(order, TODO);
         }
         var o=Task.Run(GetAllOrders);
         o.ContinueWith(o=>Invoke(()=>LoadOrders(o.Result)));

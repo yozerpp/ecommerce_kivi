@@ -2,9 +2,7 @@
 
 namespace Ecommerce.WebImpl.Pages.Shared.Product;
 
-public class _CategoryHierarchyPartial : PageModel
+public class _ListView 
 {
-    public void OnGet() {
-        
-    }
+
 }

@@ -80,7 +80,8 @@ public class CartManager : ICartManager
         _cartItemRepository.Update(new CartItem(){
             CartId = cart.Id, CouponId = couponId, ProductId = offer.ProductId,
             SellerId = offer.SellerId
-        }, true, nameof(CartItem.Quantity));
+        },false, nameof(CartItem.CouponId));
+        _cartItemRepository.Flush();
         // var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
         // var c = _cartItemRepository.UpdateExpr([
             // ( ci=>ci.CouponId, coupon.Id)
@@ -90,15 +91,11 @@ public class CartManager : ICartManager
         // }
     }
 
-    public void RemoveCoupon(Cart cart, ProductOffer offer)
-    {
-        _cartItemRepository.Update(new CartItem()
-        {
-            CartId = cart.Id,
-            CouponId = null, // Set CouponId to null to remove the coupon
-            ProductId = offer.ProductId,
-            SellerId = offer.SellerId
-        }, true, nameof(CartItem.Quantity));
+    public void RemoveCoupon(Cart cart, ProductOffer offer) {
+        var i =_cartItemRepository.First(c=>c.CartId == cart.Id && c.ProductId == offer.ProductId && c.SellerId == offer.SellerId);
+        i.CouponId = null;
+        
+        _cartItemRepository.Flush();
     }
 
     public ICollection<Coupon> GetAvailableCoupons(Session session) {
@@ -183,8 +180,8 @@ public class CartManager : ICartManager
         Id = p.Id,
         Active = p.Active,
         CategoryId = p.CategoryId,
-        Dimensions = p.Dimensions,
-        MainImage = p.Images.FirstOrDefault(),
+        Dimensions = p.Dimensions, 
+        MainImage = ProductManager.MainImageProjection.Invoke(p.Images),
         Name = p.Name,
     };
 

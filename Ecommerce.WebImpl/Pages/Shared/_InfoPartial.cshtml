@@ -6,7 +6,11 @@
     hx-swap="outerHTML"
     hx-target="this"
     hx-include="this"
-    hx-on::load="setTimeout(()=>{@(Model.Redirect!=null?$"window.location.href='{Model.Redirect}';":"this.remove();")},@(Model.TimeOut))"
+    hx-on::load="setTimeout(()=>{
+        @(Model.Redirect!=null
+        ? (Model.Redirect == "refresh" ? "window.location.reload()" : $"window.location.href='{Model.Redirect}'")
+        :"this.remove();")
+    },@(Model.TimeOut))"
     >
     <div class="card-body">
         @if (Model.Title != null){

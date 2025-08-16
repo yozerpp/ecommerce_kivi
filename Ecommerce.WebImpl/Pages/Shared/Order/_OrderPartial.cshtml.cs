@@ -1,7 +1,11 @@
-﻿namespace Ecommerce.WebImpl.Pages.Shared.Order;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 
-public class _OrderPartial
+namespace Ecommerce.WebImpl.Pages.Shared.Order;
+
+public class _OrderPartial 
 {
-    public Entity.Order Order { get; set; }
-    public bool IsCollapsable { get; set; }
-}  
+    public required Entity.Order Order { get; init; }
+    public bool Collapsable { get; init; }
+    public string? Token { get; init; }
+    public bool ViewedBySeller { get; init; }
+}

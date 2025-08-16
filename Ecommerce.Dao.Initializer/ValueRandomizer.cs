@@ -42,7 +42,10 @@ internal class ValueRandomizer
             var val = RandomizeComplex(complexProperty.ComplexType);
             PropertyCache.SetProperty(entity, complexProperty.PropertyInfo, val);
         }
-
+        foreach (var navigation in entityType.GetNavigations().Where(n=>n.TargetEntityType.IsOwned()&&!n.IsCollection && n.TargetEntityType.IsMappedToJson())){
+            var val = RandomizeComplex(navigation.TargetEntityType);
+            PropertyCache.SetProperty(entity, navigation.PropertyInfo, val);
+        }
         foreach (var listProp in entityType.GetProperties().Where(p=> p.ClrType.GetInterfaces().Any(t=>t.IsGenericType&&t.GetGenericTypeDefinition() == typeof(ICollection<>) &&
                      (!t.GetGenericArguments()[0].IsGenericType || t.GetGenericArguments()[0].GetGenericTypeDefinition() != typeof(KeyValuePair<,>))))){
             var type = listProp.ClrType.GenericTypeArguments[0];
@@ -58,7 +61,7 @@ internal class ValueRandomizer
 
     }
 
-    private object RandomizeComplex(IComplexType type) {
+    private object RandomizeComplex(ITypeBase type) {
         var propType = type.ClrType;
         object value;
         if ( typeof(PhoneNumber).IsAssignableFrom(propType)) {
@@ -93,6 +96,9 @@ internal class ValueRandomizer
             else if (property.GetCustomAttribute<ProductNameAttribute>() != null)
             {
                 value = new Faker().Commerce.ProductName();
+            }
+            else if (property.GetCustomAttribute<CategoryAttribute>() != null){
+                value = new Faker().Commerce.Categories(1).First();
             }
             else if (property.GetCustomAttribute<ProductDescriptionAttribute>() != null)
             {

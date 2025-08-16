@@ -2,8 +2,8 @@
 
 public class ReviewCommentStats
 {
-    public ulong CommentId { get; set; }
-    public int ReplyCount { get; set; }
-    public int Votes { get; set; }
-    public int VoteCount { get; set; }
+    public ulong? CommentId { get; set; }
+    public uint? ReplyCount { get; set; }
+    public int? Votes { get; set; }
+    public uint? VoteCount { get; set; }
 }

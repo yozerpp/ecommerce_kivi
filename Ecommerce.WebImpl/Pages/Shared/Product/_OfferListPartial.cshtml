@@ -1,0 +1,50 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Product._OfferListPartial
+<ul class="list-group row flex-grow-0 overflow-auto">
+    @{ var iii = 0; }
+    @foreach (var offer in Model.Offers){
+        var editable = Model.ViewingSellerId == offer.SellerId;
+        @* if(iii!=0){<div class="separator"></div>} *@
+        <li id="offer@(iii)" onclick="event.currentTarget.parentElement.querySelector('.bg-light')?.classList?.remove('bg-light'); 
+            event.currentTarget.classList.add('bg-light');document.getElementById('sellerIdInput').value = @(offer.SellerId);"
+            class="hover-darken list-group-item d-flex">
+            <ul class="list-unstyled row g-1 d-flex">
+                <li class="col-2 justify-content-start align-content-center">
+                    <button asp-page="/Seller/Seller" asp-route-Id="@(offer.SellerId)" class="container-fluid col-auto btn btn-secondary">
+                        @(offer.Seller.ShopName)
+                    </button>
+                </li>
+                <li class="col-2  align-content-center">
+                    <div class="row px-2 container-fluid">
+                        <p id="stockValue@(offer.SellerId)" class="col-auto" style="font-size: small">@(offer.Stock)</p>
+                        <p class="col-auto text-wrap" style="font-size: small; word-wrap: break-word">Ürün Stokta</p>
+
+                    </div>
+                </li>
+                <li class="col-3 align-content-center">
+                    <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = offer.Stats.ReviewAverage.Value, RatingCount = (int?)offer.Stats.ReviewCount }"/>
+                </li>
+                <li class="col-3 align-content-center">
+                    <p class="mx-2" style="font-size: small">@(offer.Stats.RefundCount) Kere İade Edildi</p>
+                </li>
+                <li class="col-2 align-content-center align-self-end">
+                    <div class="d-flex g-1 container-fluid">
+                        <div class="d-flex">
+                            <del id="priceValue@(offer.SellerId)">@(decimal.Round(offer.Price, 2).ToString("F"))</del>
+       
+                        </div>
+                        <div class="d-flex mx-1">
+                            <p id="discountValue@(offer.SellerId)" class="small">%@(decimal.Round(((1m - offer.Discount) * 100m), 0).ToString("F1"))</p>
+
+                        </div>
+                    </div>
+                    <div class="row container-fluid">
+                        <p class="col-auto">@(decimal.Round(offer.Discount * offer.Price, 2).ToString("C"))</p>
+                    </div>
+                </li>
+            </ul>
+        </li>
+        {
+            iii++;
+        }
+    }
+</ul>

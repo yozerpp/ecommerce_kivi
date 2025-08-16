@@ -67,20 +67,26 @@ public class OrderManager : IOrderManager
         return (r.Aggregates, r.Items);
     }
     public void CancelOrder(uint orderId) {
-        _orderRepository.Update(new Order(){ Id = orderId, Status = OrderStatus.Cancelled}, true);
+        var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
+        _orderRepository.Update(new Order(){ Id = orderId, Status = OrderStatus.Cancelled, ShippingAddress = addr}, false, nameof(Order.Status));
+        _orderRepository.Flush();
     }
     public void Complete(uint orderId) {
+        var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
         _orderRepository.Update(new Order(){
-            Id = orderId, Status = OrderStatus.Complete
-        },ignoreNulls:true);
+            Id = orderId, Status = OrderStatus.Complete, ShippingAddress = addr
+        },false, nameof(Order.Status));
     }
 
     public void Refund(uint orderId)
     {
+        var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
         _orderRepository.Update(new Order()
         {
-            Id = orderId, Status = OrderStatus.Returned
-        }, ignoreNulls: true);
+            Id = orderId, Status = OrderStatus.Returned,
+            ShippingAddress = addr
+        }, false ,nameof(Order.Status));
+        _orderRepository.Flush();
     }
 
     public void UpdateAddress(Address address, uint orderId) {
@@ -89,10 +95,25 @@ public class OrderManager : IOrderManager
         (o=>o.ShippingAddress.District, address.District),
         (o=>o.ShippingAddress.Country, address.Country),
         (o=>o.ShippingAddress.Line1, address.Line1),
+        (o=>o.ShippingAddress.Line2, address.Line2),
         (o=>o.ShippingAddress.ZipCode, address.ZipCode),
         ],o=>o.Id == orderId);
         if(c==0) throw new UnauthorizedAccessException("Sipariş Yok.");
     }
+
+    public void AssociateWithAnonymousUser( string email,Order? order=null,uint?orderId=null) {
+        if (orderId == null && order == null){
+            throw new ArgumentException(nameof(orderId));
+        }
+        if (order == null){
+            _orderRepository.Update(new Order(){Id = orderId!.Value, Email = email}, true);
+        }
+        else{
+            order.Email = email;
+            _orderRepository.Update(order);
+        }
+    }
+
     private void VerifyOrThrow(Customer user, Order order)
     {
         var oldOrder = _orderRepository.First(o1 => o1.Id == order.Id);

@@ -78,7 +78,7 @@ public class DefaultDbContext : DbContext
         customerBuilder.HasMany<VoteNotification>(c => c.VoteNotifications).WithOne(v => v.Customer)
             .HasForeignKey(v => v.UserId).HasPrincipalKey(c => c.Id)
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
-        customerBuilder.HasMany<RefundRequest>(c => c.RefundRequests).WithOne(n => n.Customer)
+        customerBuilder.HasMany<RefundRequest>(c => c.RefundRequests).WithOne()
             .HasForeignKey(n => n.RequesterId).HasPrincipalKey(c => c.Id);
         customerBuilder.HasMany<CancellationRequest>(c => c.CancellationRequests).WithOne(c => c.Customer)
             .HasForeignKey(c => c.RequesterId).HasPrincipalKey(c => c.Id)
@@ -139,7 +139,7 @@ public class DefaultDbContext : DbContext
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
         sellerBuilder.HasMany<ReviewNotification>(s => s.ReviewNotifications).WithOne(r => r.Seller)
             .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
-        sellerBuilder.HasMany<RefundRequest>(s => s.RefundRequests).WithOne(r => r.Seller).HasForeignKey(r => r.UserId)
+        sellerBuilder.HasMany<RefundRequest>(s => s.RefundRequests).WithOne().HasForeignKey(r => r.UserId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         sellerBuilder.OwnsOne<SellerStats>(s => s.Stats, ss => {
             ss.HasKey(s => s.SellerId);
@@ -377,7 +377,6 @@ public class DefaultDbContext : DbContext
                 e.WithOwner().HasForeignKey(p => p.ProductId)
                     .HasPrincipalKey(p => p.Id).Metadata.IsUnique=true;
                 e.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-                e.Ignore(p => p.RatingAverage);
                 e.ToView($"{nameof(ProductStats)}_{nameof(ProductOffer)}",DefaultSchema, b => {
                     b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(p => p.MinPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
@@ -471,7 +470,7 @@ public class DefaultDbContext : DbContext
                 .IncludeProperties(c=>new {c.DiscountRate, c.ExpirationDate});
             entity.HasOne<Seller>(c => c.Seller).WithMany(s => s.Coupons).HasForeignKey(c => c.SellerId)
                 .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
-            entity.Property<string>(c => c.Id).HasMaxLength(ShopNameMaxLength + 3).ValueGeneratedNever(); //extra space for discount amount
+            entity.Property<string>(c => c.Id).HasMaxLength(28).ValueGeneratedNever(); //extra space for discount amount
             entity.Property(c => c.DiscountRate).HasPrecision(2, 2).HasAnnotation(nameof(Annotations.Validation_Positive),true).IsRequired().ValueGeneratedNever();
         });
         //borderitem
@@ -679,6 +678,6 @@ public class DefaultDbContext : DbContext
             c.Property(p => p.Number).HasMaxLength(20).IsRequired();
         });
     }
-    private const int ShopNameMaxLength = 25;
+    private const int ShopNameMaxLength = 50;
 }
 }

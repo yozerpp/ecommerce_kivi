@@ -13,6 +13,7 @@ public interface IProductManager
     public ICollection<Category> GetCategoriesByName(string name, bool includeChildren = false,
         bool includeProperties = true);
 
+    public List<Product> Search(string predicateQuery, ICollection<SearchOrder> orders, bool includeImage = false, bool fetchReviews=false, bool fetchOffers=false, int page = 1, int pageSize = 20);
     public List<Product> Search(ICollection<SearchPredicate> predicates,
         ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false,
         bool fetchOffers = false, int page = 1, int pageSize = 20);
@@ -110,20 +111,30 @@ public interface IProductManager
         return predicates;
     }
 }
+
+public static class OperatorTypeExtensions
+{
+    public static bool IsNumericOperator(this SearchPredicate.OperatorType op) {
+        return (op & (SearchPredicate.OperatorType.LessThan | SearchPredicate.OperatorType.LessThanOrEqual |
+                      SearchPredicate.OperatorType.GreaterThan | SearchPredicate.OperatorType.GreaterThanOrEqual)) != 0;
+    }
+}
 public class SearchPredicate
 {
+    [Flags]
     public enum OperatorType
     {
-        Equals,
-        GreaterThan,
-        GreaterThanOrEqual,
-        LessThan,
-        LessThanOrEqual,
-        Like
+        Equals = 1,
+        GreaterThan = 2,
+        GreaterThanOrEqual = 4,
+        LessThan = 8,
+        LessThanOrEqual = 16,
+        Like = 32
     }
     public string PropName { get; set; }
     public string Value { get; set; }
-    public OperatorType Operator { get; set; }
+    public OperatorType Operator { get; set;}
+    public TypeCode CastType { get; set; } = default(TypeCode);
 }
 
 public class SearchOrder

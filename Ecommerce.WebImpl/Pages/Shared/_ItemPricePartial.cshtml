@@ -1,24 +1,23 @@
 ﻿@model Ecommerce.Entity.Iface.IPrice
 
 @{
-    var discountRate = (Model.BasePrice - Model.DiscountedPrice) / Model.BasePrice;
-    var couponDiscountRate = (Model.DiscountedPrice - Model.CouponDiscountedPrice) / Model.DiscountedPrice;
+    var discountRate = Model.BasePrice!=0?(Model.BasePrice - Model.DiscountedPrice) / Model.BasePrice:0;
+    var couponDiscountRate = Model.DiscountedPrice!=0?(Model.DiscountedPrice - Model.CouponDiscountedPrice) / Model.DiscountedPrice:0;
 }
 @if (Model.DiscountedPrice != Model.BasePrice){
     <div class="d-flex container-fluid justify-content-center align-Models-center align-self-center">
-        <del class="small fw-bold">@(decimal.Round(Model.BasePrice, 2).ToString("C"))</del>
-        <p style="font-size: x-small" class="float ms-1 fw-bold text-success">%@(decimal.Round((1m - discountRate) * 100m, 1).ToString("F1"))</p>
+        <del class="small fw-bold">@(decimal.Round(Model.BasePrice.Value, 2).ToString("C"))</del>
+        <p style="font-size: x-small" class="float ms-1 fw-bold text-success">%@(decimal.Round((discountRate.Value) * 100m, 1).ToString("F1"))</p>
     </div>
 }
 @if (Model.CouponDiscountedPrice!= Model.DiscountedPrice){
-    <div class="row">
-        <del class="d-flex container-fluid justify-content-center align-Models-center align-content-center">@(decimal.Round(Model.DiscountedPrice, 2).ToString("C"))</del>
-        <p class="float ms-1 fw-bold text-success" style="color: darkorange">%@(((1m - couponDiscountRate) * 100m).ToString("F1"))</p>
-        <p class="mx-1">Kupon İndirimi</p>
+    <div class="d-flex container-fluid justify-content-center align-Models-center align-self-center">
+        <del class="small fw-bold">@(decimal.Round(Model.DiscountedPrice.Value, 2).ToString("C"))</del>
+        <p style="font-size: x-small" class="float ms-1 fw-bold text-success" style="color: darkorange">%@((couponDiscountRate * 100m).Value.ToString("F1")) Kupon</p>
     </div>
 }
-<div class="row">
+<div class="text-center">
     <p style="font-size: large">
-        @(decimal.Round(Model.CouponDiscountedPrice, 2).ToString("C"))
+        @(decimal.Round(Model.CouponDiscountedPrice.Value, 2).ToString("C"))
     </p>
 </div>

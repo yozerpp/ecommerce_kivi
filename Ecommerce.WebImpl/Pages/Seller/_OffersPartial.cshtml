@@ -29,7 +29,7 @@
             <p>İndirim</p></div>
     </div>
     @foreach (var offer in Model.ProductOffers){
-        var src = offer.Product.Images.FirstOrDefault(i => i.IsMain)?.Data ?? offer.Product.Images.FirstOrDefault()?.Data ?? "/default.jpg";
+        var src = offer.Product.MainImage?.Data ?? "/default.jpg";
         src = !src.Equals("/default.jpg") ? "data:image/jpeg;base64, " + src : src;
         <a asp-page="/Product" asp-route-ProductId="@(offer.Product.Id)" class="text-decoration-none text-dark">
             <div class="row g-2">

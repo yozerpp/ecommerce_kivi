@@ -13,7 +13,7 @@ public class Order
     public uint? UserId { get; set; }
     public uint? PaymentId { get; set; }
     public string? Email { get; set; }
-    public DateTime Date { get; set; } = DateTime.Now;
+    public DateTime Date { get; set; }
     public OrderStatus Status { get; set; }
     public Address ShippingAddress { get; set; }
     public AnonymousUser? AnonymousUser { get; set; }

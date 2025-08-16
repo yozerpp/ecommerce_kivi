@@ -27,6 +27,7 @@ public class SMTPService : IMailService
         };
         message.Body = builder.ToMessageBody();
         using var client = new SmtpClient();
+        client.AuthenticationMechanisms.Add("login");
         await client.ConnectAsync(_server, _port);
         await client.AuthenticateAsync(_mailAddress, _password);
         await client.SendAsync(message);

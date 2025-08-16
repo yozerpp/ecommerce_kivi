@@ -1,37 +1,51 @@
 ﻿@model _SliderPartial
 <div class="container-fluid d-flex gap-3 input-group my-1">
     <script>
-        const sliderElement@(Model.GetHashCode()) = document.currentScript.parentElement.parentElement
-        function slide(slider, left=true){
-            let minSlider, maxSlider, other;
-            if(left){
-                maxSlider = slider;
-                other = minSlider = slider.nextElementSibling;
-            }else {
-                maxSlider = slider.previousElementSibling;
-                other = minSlider = slider;
+        ((s)=>{
+            const parent = s.parentElement;
+            function f(){
+                console.log(parent);
+                const min = s.nextElementSibling.lastElementChild;
+                const max = s.nextElementSibling.nextElementSibling.lastElementChild;
+                max._other = min;
+                min._other = max;
+                min.addEventListener('change',()=>{
+                    if(!min.reportValidity()){
+                        return;
+                    }
+                    max.setAttribute('min', min.value);
+                    parent._isEntered = true;
+                    parent._min=min.value;
+                    console.log(min.value);
+                    parent.dispatchEvent(new Event('change', {bubbles:true}));
+                });
+                max.addEventListener('change',()=>{
+                    if(!max.reportValidity()) {
+                        return;
+                    }
+                    min.setAttribute('max', max.value);
+                    parent._isEntered = true;
+                    parent._max = max.value;
+                    console.log(max.value);
+                    parent.dispatchEvent(new Event('change', {bubbles:true}));
+                });
+                parent._max = @Model.MaxValue;
+                parent._min = @Model.MinValue;
+                parent._isEntered = false;
+                parent._name = '@Model.InputName';
             }
-            if(other.value > @(Model.MaxValue / 2) && other.value < slider.value){
-                other.value -= other.value - other.max/2;
-            }
-            let max = maxSlider.value;
-            let min = @(Model.MaxValue) - minSlider.value;//sliders need to have the same max
-            sliderElement@(Model.GetHashCode())._sliderValues = {min: min, max: max};
-        }
-        document.addEventListener('DOMContentLoaded', ()=>{
-            sliderElement@(Model.GetHashCode())._sliderValues = {min: @Model.MinValue, max: @Model.MaxValue};
-        });
+            document.addEventListener('DOMContentLoaded', f)
+            parent.addEventListener('init', f)
+        })(document.currentScript)
     </script>
-    <input type="hidden" name="@(Model.InputNamePrefix).@nameof(HomepageModel.RangeInput.IsEntered)" value="false"/>
     <div class="d-flex justify-content-center gap-1">
         <label class="fw-bold fs-6">Min</label>
-        <input data-slider-type="min" type="number" step="@Model.Step" class="rounded-1 border-light-subtle" onchange="event.currentTarget.parentElement.previousElementSibling.value='true';event.currentTarget.nextElementSibling.setAttribute('min', event.currentTarget.value.toString())" min="@(Model.MinValue)" max="@(Model.MaxValue)"
-               aria-placeholder="@Model.MinValue" placeholder="Min" name="@(Model.InputNamePrefix).@nameof(HomepageModel.RangeInput.Min)"/>
+        <input data-slider-type="min" type="number" step="@Model.Step" class="rounded-1 border-light-subtle"min="@(Model.MinValue)" max="@(Model.MaxValue)"
+               aria-placeholder="@Model.MinValue" placeholder="Min" name="@Model.InputName"/>
     </div>
     <div class="d-flex justify-content-center gap-1">
         <label class="fw-bold fs-6">Max</label>
-        <input data-slider-type="max" step="@Model.Step" type="number" class="rounded-1 border-light-subtle" onchange="event.currentTarget.parentElement.previousElementSibling.previousElementSibling.value='true';event.currentTarget.previousElementSibling.setAttribute('max', event.currentTarget.value.toString())" min="@(Model.MinValue)" max="@(Model.MaxValue)"
-               aria-placeholder="@Model.MaxValue" placeholder="Maks" name="@(Model.InputNamePrefix).@nameof(HomepageModel.RangeInput.Max)"/>
+        <input data-slider-type="max" step="@Model.Step" type="number" class="rounded-1 border-light-subtle"  min="@(Model.MinValue)" max="@(Model.MaxValue)"
+               aria-placeholder="@Model.MaxValue" placeholder="Maks" name="@(Model.InputName)"/>
     </div>
-        
 </div>

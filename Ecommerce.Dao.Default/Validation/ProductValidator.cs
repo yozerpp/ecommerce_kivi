@@ -18,7 +18,7 @@ public class ProductValidator : IValidator<Product>
         if(entity.CategoryProperties==null && category.CategoryProperties.Any(p=>p.IsRequired)) return new ValidationResult("Category Properties cannot be null.");
         foreach (var catProp in category.CategoryProperties){
             object? val;
-            if ((val = entity.CategoryProperties.GetValueOrDefault(catProp.PropertyName)) == null&&catProp.IsRequired)
+            if ((val = entity.CategoryProperties.FirstOrDefault(p=>p.CategoryPropertyId == catProp.Id)) == null&&catProp.IsRequired)
                 return new ValidationResult("Product is missing required category property: " + catProp.PropertyName);
             if(catProp.EnumValues!=null && !catProp.EnumValues.Contains(val.ToString()))
                 return new ValidationResult("Product has invalid value for category property: " + catProp.PropertyName + ". Valid values are: " + string.Join(", ", catProp.EnumValues));

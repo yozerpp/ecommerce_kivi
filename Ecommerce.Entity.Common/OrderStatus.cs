@@ -3,15 +3,15 @@
 [Flags]
 public enum OrderStatus
 {
-    WaitingPayment = 0,
-    WaitingConfirmation=1,
-    WaitingShipment = 2,
-    Shipped=4,
-    Delivered=8,
-    Cancelled=16,
-    Complete=32,
-    ReturnRequested =64,
-    Returned=128,
+    WaitingPayment = 1,
+    WaitingConfirmation=2,
+    WaitingShipment = 4,
+    Shipped=8,
+    Delivered=16,
+    Cancelled=32,
+    Complete=64,
+    ReturnRequested =128,
+    Returned=256,
 }
 
 public static class OrderStatusExtensions
@@ -27,12 +27,14 @@ public static class OrderStatusExtensions
         {
             OrderStatus.WaitingPayment => "Ödeme Bekleniyor",
             OrderStatus.WaitingConfirmation => "Satıcı Onayı Bekleniyor",
+            OrderStatus.WaitingShipment => "Kargo Bekleniyor",
             OrderStatus.Shipped => "Kargolandı",
             OrderStatus.Delivered => "Teslim Edildi",
             OrderStatus.Cancelled => "İptal Edildi",
             OrderStatus.Complete => "Tamamlandı",
             OrderStatus.ReturnRequested => "İade Talebinde",
             OrderStatus.Returned => "İade Edildi",
+            
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }

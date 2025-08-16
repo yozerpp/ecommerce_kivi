@@ -2,6 +2,7 @@
 using Ecommerce.Dao.Default.Migrations;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
+using Ecommerce.Entity.Events;
 using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -14,10 +15,11 @@ internal static class Initializer
 {
     [STAThread]
     static void Main(string[] args) {
+
         Setup();
         CreateDb();
         using (var ctx = new DefaultDbContext(_dbContextOptions)) {
-            SeedCustom(ctx);
+            // SeedCustom(ctx);
         }
         InitDb();
         CreateViews();
@@ -72,7 +74,9 @@ internal static class Initializer
     private const int PermissionClaimCount = PermissionCount * StaffCount / 2;
     private const int ProductFavorCount = ProductCount * CustomerCount / 100;
     private const int SellerFavorCount = SellerCount * CustomerCount / 100;
-
+    private const int CategoryPropertyCount = CategoryCount * 4;
+    private const int ProductCategoryPropertyCount = CategoryPropertyCount * ProductCount / 10;
+    private const int RefundRequestCount = ProductOfferCount * 6;
     private static void InitDb() {
         if (Skip){
             return;
@@ -93,6 +97,9 @@ internal static class Initializer
                 {typeof(ReviewComment), ReviewCommentCount},
                 {typeof(ReviewVote), ReviewVoteCount},
                 {typeof(Cart), CartCount},
+                {typeof(Category.CategoryProperty),CategoryPropertyCount},
+                {typeof(ProductCategoryProperties),ProductCategoryPropertyCount},
+                {typeof(RefundRequest), RefundRequestCount},
                 // { typeof(CartItem), CartItemCount},
                 { typeof(Session), SessionCount},
                 {typeof(OrderItem), OrderItemCount},
@@ -104,14 +111,12 @@ internal static class Initializer
                 {typeof(AnonymousUser), AnonymousUserCount},
                 {typeof(ProductFavor), ProductFavorCount},
                 {typeof(SellerFavor), SellerFavorCount},
-                // {typeof(RefundRequest),  ProductOfferCount * 12},
                 {typeof(Image), 100}
             }, defaultCount:0
         );
         initializer.initialize();
     }
-    public static void SeedCustom(DefaultDbContext context)
-    {
+    public static void SeedCustom(DefaultDbContext context) {
         // Ensure database is created
         // Seed Category
         using (var transaction = context.Database.BeginTransaction())
@@ -141,7 +146,7 @@ internal static class Initializer
             transaction.Commit();
         }
 
-        // Seed Category Properties
+        // Seed Category CategoryProperties
         using (var transaction = context.Database.BeginTransaction())
         {
             if (!context.Set<Category.CategoryProperty>().Any())
@@ -238,7 +243,7 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                         },
-                        Properties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperties>()
                         {
                             new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "51" },
                             new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt2" },
@@ -256,7 +261,7 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                         },
-                        Properties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperties>()
                         {
                             new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "49" },
                             new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt3" },
@@ -274,7 +279,7 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                         },
-                        Properties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperties>()
                         {
                             new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "120" },
                             new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt1" },
@@ -292,7 +297,7 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                         },
-                        Properties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperties>()
                         {
                             new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "124" },
                             new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "some string" }
@@ -308,7 +313,7 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                         },
-                        Properties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperties>()
                         {
                             new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "89" },
                             new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "wireless tech" },

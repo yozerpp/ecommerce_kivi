@@ -9,17 +9,14 @@ public class ShippingService :IShippingService
 {
     private readonly IRepository<Shipment> _shipmentRepository;
     private readonly IRepository<ShippingOffer> _offerRepository;
-    private readonly List<Provider> _providers = new  List<Provider>([
-        new Provider { Id = 1, Name = "Yurtiçi Kargo" },
-        new Provider { Id = 2, Name = "Mng Kargo" },
-        new Provider { Id = 3, Name = "Ptt kargo" }
-    ]);
-    public ShippingService(IRepository<Shipment> shipmentRepository, IRepository<ShippingOffer> offerRepository) {
+    private readonly IRepository<Provider> _providerRepository;
+    public ShippingService(IRepository<Shipment> shipmentRepository, IRepository<ShippingOffer> offerRepository, IRepository<Provider> providerRepository) {
         _shipmentRepository = shipmentRepository;
         _offerRepository = offerRepository;
+        _providerRepository = providerRepository;
     }
     public List<ShippingOffer> GetOffers(IEnumerable<Dimensions> dimensions, Address shipmentAddress, Address recipientAddress) {
-        return _providers.Select(p => {
+        var ret =  _providerRepository.All().Select(p => {
             var a = dimensions.Sum(dimension=> decimal.Round(Random.Shared.NextInt64(1,10001)*0.001m,2) *
                                                (decimal)(dimension.Depth * dimension.Height * dimension.Width));
             var o = new ShippingOffer(){
@@ -29,11 +26,12 @@ public class ShippingService :IShippingService
                 ShippingAddress = recipientAddress,
                 Currency = "TR",
                 ProviderId = p.Id,
-                Provider = p,
             };
             return _offerRepository.Add(o);
             }
         ).ToList();
+        _offerRepository.Flush();
+        return ret;
     }
 
     public Shipment? GetShipment(ulong id) {
@@ -44,11 +42,14 @@ public class ShippingService :IShippingService
     }
     public List<Shipment> AcceptOffer(ICollection<IShippingService.ShipmentCreateOptions> args) {
         var offerIds = args.Select(a => a.OfferId).ToList();
-        return _offerRepository.Where(o => offerIds.Contains(o.Id)).Select((o, i) =>
-            _shipmentRepository.Add(new Shipment(){
+        var name = args.First().RecepientNane;
+        var ret = _offerRepository.Where(o => offerIds.Contains(o.Id)).Select((o, i) =>
+            _shipmentRepository.Save(new Shipment(){
                 DeliveryAddress = o.DeliveryAddress,
                 ShippingAddress = o.ShippingAddress,
+                CurrentAddress = o.ShippingAddress,
                 OfferId = o.Id,
+                RecepientName = name,
                 RecepientPhoneNumber = args.ElementAt(i).RecepientPhoneNumber,
                 SenderPhoneNumber = args.ElementAt(i).SenderPhoneNumber,
                 RecepientEmail = args.ElementAt(i).RecepientEmail,
@@ -57,6 +58,8 @@ public class ShippingService :IShippingService
                 ProviderId = o.ProviderId,
             })
         ).ToList();
+        _shipmentRepository.Flush();
+        return ret;
     }
     public void UpdateAddress(ulong shipmentId, Address address) {
         _shipmentRepository.UpdateExpr([

@@ -1,21 +1,60 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Order._OrderListPartial
+@using System.Globalization
+@using Ecommerce.Entity.Common
+@using Microsoft.AspNetCore.Html
+@using JsonSerializer = System.Text.Json.JsonSerializer
+@{
+    IHtmlContent OrderHeadingItem((string, string, int) v) => Html.Raw($""""
+                                                                            <li class="list-group-item rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-between">
+                                                                                <p class="fs-6 h-50 fw-bold border-1 border-black {(v.Item1.Length == 0 ? "" : "border-bottom")}">{v.Item1}</p>
+                                                                                <p class="fs-5 h-50">{v.Item2}</p>
+                                                                            </li>
+                                                                        """");
 
+}
 @if (Model.Orders.Count > 0){
-    <ul class="container-fluid list-group d-flex flex-column flex-grow-1 rounded-2">
+    <ul id="orderList" class="container-fluid list-unstyled gap-4">
+        <div>
+            @if (Model.Orders.Count > 9 && Model.Url != null){
+                <form method="get" asp-page="@(Model.Url.Split('?').FirstOrDefault() ?? Model.Url)" asp-page-handler="@(Model.Url.Split("handler").LastOrDefault()?.Split('=').FirstOrDefault()??"")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="page" value="1"/>
+                    <input type="hidden" name="pageSize" value="10"/>
+                    <select class="dropdown-toggle dropdown" style="cursor: pointer;" onchange="event.currentTarget.previousElementSibling.value = event.currentTarget.value;
+                        event.currentTarget.parentElement.submit();">
+                        <option class="dropdown-item" selected value="10">10</option>
+                        <option class="dropdown-item" value="20">20</option>
+                        <option class="dropdown-item" value="50">50</option>
+                        <option class="dropdown-item" value="100">100</option>
+                    </select>
+    </form>
+            }
+            <ul class="list-group-horizontal row">
+                @OrderHeadingItem(("Sipariş No", "", 1))
+                @OrderHeadingItem(("Sipariş Tarihi", "", 3))
+                @OrderHeadingItem(("Sipariş Durumu", "", 2))
+                @OrderHeadingItem(("Teslimat Adresi", "", 3))
+                @OrderHeadingItem(("Ürün Sayısı", "", 1))
+                <div class="col-2"></div>
+            </ul>
+        </div>
         @foreach (var order in Model.Orders){
-            <li class="list-group-item">
+            <li class="mt-3">
                 @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
-                    IsCollapsable = true, Order = order
+                    Collapsable = Model.Collapsable, Order = order, Token = Model.Token
                 })
             </li>
         }
-        <div data-page="@Model.Page" hx-get="/@(nameof(Customer))?handler=orders" hx-trigger="revealed" hx-select="ul>li" hx-target="this" hx-swap="beforebegin"
-             hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({@(nameof(Customer.PageNumber)): p}));"
-             hx-on::after-request="if(event.detail.xhr.status==204)event.detail.elt.removeAttribute('hx-get');"></div>
+        @if (Model.Url != null){
+            <div id="orderFetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ Model.Page, Model.PageSize }))" hx-trigger="revealed" hx-select="#orderList>li" hx-target="this" hx-swap="beforebegin"
+                 hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"
+                 hx-on::after-request="if(event.detail.xhr.status!=204 && event.detail.successful) event.detail.elt.removeAttribute('data-hx-revealed');"></div>    
+        }
+        
     </ul>
 }
 else{
-    <div class="d-flex px-3 justify-content-center align-content-center">
-        <p class="fs-3 text-dark">Henüz Sipariş Yok.</p>
+    <div class="d-flex px-3 justify-content-center flex-grow-1 h-75 align-content-center">
+        <p class="fs-3 fw-bold">Henüz Siparişiniz Yok.</p>
     </div>
 }

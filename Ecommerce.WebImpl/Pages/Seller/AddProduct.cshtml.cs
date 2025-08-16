@@ -51,8 +51,11 @@ public class AddProduct : BaseModel
         NewOffer.Product.Images = productImages.Select(i => {
             var ms = new MemoryStream();
             i.CopyTo(ms);
-            return new Image(){
-                Data = $"data:image/{i.FileName.Split('.').Last()};base64,{Convert.ToBase64String(ms.ToArray())}"
+            return new ImageProduct(){
+                Product = NewOffer.Product,
+                Image = new Image(){
+                    Data = $"data:image/{i.FileName.Split('.').Last()};base64,{Convert.ToBase64String(ms.ToArray())}"
+                },
             };
         }).ToArray();
         var craeted = _sellerManager.ListOffer(CurrentSeller, NewOffer);

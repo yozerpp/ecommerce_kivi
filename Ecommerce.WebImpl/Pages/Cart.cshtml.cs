@@ -52,7 +52,7 @@ public class Cart : BaseModel
         });
     }
 
-    public IActionResult OnDeleteCoupon() {
+    public IActionResult OnPostDeleteCoupon() {
         if (SellerId == null) throw new ArgumentNullException(nameof(SellerId));
         var s = (Session) HttpContext.Items[nameof(Session)];
         _cartManager.RemoveCoupon(s.Cart, new ProductOffer(){ProductId = ProductId, SellerId = (uint)SellerId!});

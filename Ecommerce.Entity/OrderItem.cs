@@ -9,10 +9,8 @@ public class OrderItem : IItem
     public OrderItem(CartItem cartItem) {
         ProductId = cartItem.ProductId;
         SellerId = cartItem.SellerId;
-        ProductOffer = cartItem.ProductOffer;
         Quantity = cartItem.Quantity;
         CouponId = cartItem.CouponId;
-        Coupon = cartItem.Coupon;
     }
     public ulong ShipmentId { get; set; }
     public ulong? RefundShipmentId { get; set; }

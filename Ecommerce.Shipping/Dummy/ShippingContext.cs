@@ -5,20 +5,27 @@ namespace Ecommerce.Shipping.Dummy;
 
 public class ShippingContext : DbContext
 {
+    public static readonly List<Provider> DummyProviders =[
+        new Provider{ Id = 1, Name = "Yurtiçi Kargo" },
+        new Provider{ Id = 2, Name = "Mng Kargo" },
+        new Provider{ Id = 3, Name = "Ptt kargo" }
+    ];
     public static readonly string DefaultConntectionString = "Server=localhost;Database=Shipping;User Id=sa;Password=12345;TrustServerCertificate=True";
     public ShippingContext(DbContextOptions<ShippingContext> options) :base(options){ }
     public ShippingContext() : base(new DbContextOptionsBuilder<ShippingContext>().UseSqlServer(DefaultConntectionString).Options){}
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
+        
         modelBuilder.Entity<ShippingOffer>(o => {
             o.HasKey(o => o.Id);
             o.HasOne<Provider>(o => o.Provider).WithMany()
                 .HasForeignKey(o => o.ProviderId).HasPrincipalKey(o => o.Id);
             o.Property(o => o.Amount).HasPrecision(10, 2);
-            o.Property(o => o.AmountTax).HasPrecision(2, 2);
+            o.Property(o => o.AmountTax).HasPrecision(10, 2);
         });
         modelBuilder.Entity<Provider>(p => {
             p.HasKey(p => p.Id);
             p.Property<string>(p => p.Name).IsRequired();
+            p.HasData(DummyProviders);
         });
         modelBuilder.Entity<Shipment>(s => {
             s.HasKey(s => s.Id);

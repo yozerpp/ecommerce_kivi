@@ -4,11 +4,14 @@
     @foreach (var target in Model.Target?.Split(',') ??[]){
         <text>
             {
-            const _t= @(target!="null"?$"document.getElementById('{Model.Target}')":"event.currentTarget.previousElementSibling");
-            let _editable=(_t.getAttribute('contenteditable')==null||_t.getAttribute('contenteditable')==false);
-            _t.setAttribute('contenteditable',_editable);if(_editable)_t.focus();@(Model.OnClick??"");
-            _t.onkeydown=(e)=>{if(e.keyCode == '13')e.currentTarget.blur();}
-            };
+                const _t= @(target!="null"?$"document.getElementById('{Model.Target}')":"event.currentTarget.previousElementSibling");
+                _t.setAttribute('contenteditable',true);
+                _t.onkeydown=(e)=>{if(e.keyCode == '13')e.currentTarget.blur();}
+                if(document.activeElement === _t)
+                    return;
+                _t.focus();
+                @(Model.OnClick??"");
+            }
         </text>
     }
     ">

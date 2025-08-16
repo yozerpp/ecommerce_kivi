@@ -2,7 +2,7 @@
 
 @{ var i = 0;}
 @foreach (var item in Model.Products){
-    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-group">
         <partial name="Shared/Product/_ProductMainCardPartial" model="(item, Model.Categories)"/>
     </div>
     if (i ==7){

@@ -1,0 +1,38 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared._PromptablePartial
+    <form class="gap-2 d-flex text-center align-middle flex-column " hx-post="@Model.Url" hx-trigger="submit" hx-target="@Model.Target" hx-swap="innerHTML">
+        @Html.AntiForgeryToken()
+        <div class="d-none">
+            @foreach (var input in Model.Inputs){
+                <input @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @(input.DefaultValue!=null?"value=" + input.DefaultValue :"") placeholder="@(input.PlaceHolder??"")"/>
+            }
+        </div>
+        <script>
+            (()=>{
+                const currentScript = document.currentScript;
+                document.addEventListener("DOMContentLoaded", function(){
+                    const inpts = currentScript.previousElementSibling;
+                    inpts._inputs = Array.from(inpts.querySelectorAll('input:not([type="hidden"])'))
+                    const btn = currentScript.nextElementSibling;
+                    btn._clicked=false;
+                    btn._textIdx = 0;
+                    btn._displayTexts = [ '@(Model.SwitchText ?? "Onayla")', '@Model.DisplayText']
+                    btn._toggle= ()=>{
+                        btn.previousElementSibling.previousElementSibling.classList.toggle('d-none');
+                        btn.parentElement.parentElement.classList.toggle('z-3') //needs to have position-relative
+                        btn.parentElement.parentElement.classList.toggle('overflow-x-hidden')
+                        btn._clicked = !btn._clicked
+                        btn.innerHTML =btn._displayTexts[btn._textIdx++%2];
+                    }
+                })
+            })()           
+        </script>
+        <button type="button" class="@Model.Classes" style="background-color: @Model.Color"
+                onclick="
+                        if(event.currentTarget._clicked)
+                            event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))
+                        event.currentTarget._toggle();
+                        event.currentTarget.parentElement.querySelector('input:not([type=hidden])').focus();
+                        ">
+            @(Model.DisplayText)
+        </button>
+    </form>

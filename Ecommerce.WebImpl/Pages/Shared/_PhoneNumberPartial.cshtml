@@ -1,20 +1,21 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared._PhoneNumberPartial
+﻿@using Ecommerce.Entity.Common
+@model Ecommerce.WebImpl.Pages.Shared._PhoneNumberPartial
 
 <div>
     @if (Model.IsInput){
-        <div class="input-group g-0 rounded-2 d-flex justify-content-center align-content-center">
-            <span class="bg-secondary">+</span>
-            <input placeholder="Ülke Kodu" id="countrycode@(Model.Id??"")" type="number"/>
-            <input placeholder="Numara" id="phonenumber" type="number"/>
+        <div class="g-0 p-0 d-inline-flex justify-content-center align-content-center">
+            <span class="rounded-start-2 border-1 border-light bg-secondary-subtle">+</span>
+            <input class="w-25 border-1 shadow border-light" placeholder="Ülke Kodu" id="@(nameof(PhoneNumber.CountryCode))@(Model.Id??"")" type="tel"/>
+            <input class="rounded-end-2 border-1 shadow border-light" placeholder="Numara" id="@(nameof(PhoneNumber.Number))@(Model.Id??"")" type="tel"/>
         </div>
     }
     else{
-        <div class="input-group d-flex">
-            <span id="countrycode@(Model.Id??"")" class="bg-secondary">+@Model.PhoneNumber!.CountryCode</span>
+        <div onload="event.currentTarget.querySelector('.edit-control').classList.toggle('edit-control')" class="input-group d-flex">
+            <span id="@(nameof(PhoneNumber.CountryCode))@(Model.Id??"")" class="bg-secondary">+@Model.PhoneNumber!.CountryCode</span>
             @if (Model.Editable){
                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
             }
-            <p id="phonenumber@(Model.Id??"")">@Model.PhoneNumber.Number</p>
+            <p id="@(nameof(PhoneNumber.Number))@(Model.Id??"")">@Model.PhoneNumber.Number</p>
             @if (Model.Editable){
                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
             }

@@ -1,6 +1,7 @@
 ﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
+using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -23,11 +24,13 @@ public class ReviewManager : IReviewManager
         _reviewVoteRepository = reviewVoteRepository;
     }
 
-    public List<ProductReview> GetReviewsWithAggregates(bool includeComments, Customer? customer=null, Session? session = null,bool includeSeller = false, uint? productId=null, uint? sellerId = null, int page=1, int pageSize= 20) {
+    public List<ProductReview> GetReviewsWithAggregates(bool includeComments, 
+        Customer? customer=null, Session? session = null,bool includeSeller = false, 
+        uint? productId=null, uint? sellerId = null, int page=1,int pageSize=20) {
         var includes = GetReviewIncludes(includeComments, includeSeller);
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id;
         var rid = customer?.Id;
-        var ret =  _reviewRepository.Where(r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
+        var ret =  _reviewRepository.WhereP(WithAggregates,r => (productId == null || r.ProductId == productId) && (sellerId == null || r.SellerId == sellerId), includes: includes, 
             offset:(page - 1) * pageSize, limit:pageSize * page);
         foreach (var r in ret){
             if (r.Reviewer==null || !r.CensorName ) continue;
@@ -38,18 +41,17 @@ public class ReviewManager : IReviewManager
     }
 
     public List<ReviewComment> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null,
-        Customer? customer = null,
-        Session? session = null, int page = 1, int pageSize = 20) {
+        Customer? customer = null, Session? session = null, int page = 1, int pageSize = 20) {
         return _reviewCommentRepository.Where(rc =>
-            (commentId == null || rc.ParentId == commentId) && rc.ReviewId == reviewId, offset: (page - 1)*pageSize, limit:
+            rc.ParentId == commentId && rc.ReviewId == reviewId, offset: (page - 1)*pageSize, limit:
             page*pageSize);
     }
-    public ProductReview? GetProductReview(uint productId, uint sellerId,Customer? customer=null, Session? session = null,
+    public ProductReview? GetProductReview(uint productId, uint sellerId, Customer? customer=null, Session? session = null,
         bool includeComments=false, bool includeSeller =true) {
         var sessionId = customer?.Session?.Id ?? customer?.SessionId ?? session?.Id ?? throw new ArgumentException("Either commenterId or reviewerId must be provided.");
         var reviewerId = customer?.Id;
         var includes = GetReviewIncludes(includeComments,includeSeller );
-        var r= _reviewRepository.First(
+        var r= _reviewRepository.FirstP(WithAggregates,
             r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == reviewerId&& r.SessionId==sessionId, includes: includes);
         if (!(r?.CensorName ?? false)) return r;
         r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
@@ -68,7 +70,6 @@ public class ReviewManager : IReviewManager
 
         return includes.ToArray();
     }
-
     public ProductReview LeaveReview(Session session, ProductReview review) {
         review.SessionId = session.Id;
         var uid = session.User?.Id ?? session.UserId;
@@ -99,6 +100,9 @@ public class ReviewManager : IReviewManager
 
     public ReviewComment CommentReview(Session session, ReviewComment comment) {
         comment.CommenterId = session.Id;
+        if (session.User != null){
+            comment.UserId = session.User.Id;
+        }
         try{
             var ret = _reviewCommentRepository.Add(comment);
             _reviewCommentRepository.Flush();
@@ -143,4 +147,94 @@ public class ReviewManager : IReviewManager
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
     }
+
+    private static readonly Expression<Func<ReviewComment, ReviewComment>> CommentWithoutAggregates = c =>
+        new ReviewComment(){
+            Id = c.Id,
+            ParentId = c.ParentId,
+            CommenterId = c.CommenterId,
+            ReviewId = c.ReviewId,
+            UserId = c.UserId,
+            Created = c.Created,
+            Name = c.Name,
+            Comment = c.Comment,
+            Stats = null,
+        };
+
+    private static readonly Expression<Func<ReviewComment, ReviewComment>> CommentWithAggregates = c =>
+        new ReviewComment(){
+            Id = c.Id,
+            ParentId = c.ParentId,
+            CommenterId = c.CommenterId,
+            ReviewId = c.ReviewId,
+            UserId = c.UserId,
+            Created = c.Created,
+            Name = c.Name,
+            Comment = c.Comment,
+            Stats = new ReviewCommentStats(){
+                CommentId = null,
+                Votes = c.Stats.Votes ?? 0,
+                ReplyCount = c.Stats.ReplyCount ?? 0,
+                VoteCount = c.Stats.VoteCount ?? 0,
+            }
+        };
+    private static readonly Expression<Func<ProductReview, ProductReview>> WithoutAggregates = r => new ProductReview(){
+        Id = r.Id,
+        SessionId = r.SessionId,
+        SellerId = r.SellerId,
+        ProductId = r.ProductId,
+        ReviewerId = r.ReviewerId,
+        CensorName = r.CensorName,
+        Comment = r.Comment,
+        Created = r.Created,
+        HasBought = r.HasBought,
+        Name = r.Name,
+        Rating = r.Rating,
+        Stats = null,
+        Comments = r.Comments.Select(c=>new ReviewComment(){
+            Id = c.Id,
+            ParentId = c.ParentId,
+            CommenterId = c.CommenterId,
+            ReviewId = c.ReviewId,
+            UserId = c.UserId,
+            Created = c.Created,
+            Name = c.Name,
+            Comment = c.Comment,
+            Stats = null,
+        }).ToArray(),
+    };
+    private static readonly Expression<Func<ProductReview, ProductReview>> WithAggregates = r => new ProductReview(){
+        Id = r.Id,
+        SessionId = r.SessionId,
+        SellerId = r.SellerId,
+        ProductId = r.ProductId,
+        ReviewerId = r.ReviewerId,
+        CensorName = r.CensorName,
+        Comment = r.Comment,
+        Created = r.Created,
+        HasBought = r.HasBought,
+        Name = r.Name,
+        Rating = r.Rating,
+        Stats = new ReviewStats(){
+            CommentCount = r.Stats.CommentCount ?? 0,
+            Votes = r.Stats.Votes ?? 0,
+            VoteCount = r.Stats.VoteCount??0,
+        },
+        // Comments = r.Comments.Select(c=>new ReviewComment(){
+        //     Id = c.Id,
+        //     ParentId = c.ParentId,
+        //     CommenterId = c.CommenterId,
+        //     ReviewId = ((ulong?)c.ReviewId)??0,
+        //     UserId = c.UserId,
+        //     Created = c.Created,
+        //     Name = c.Name,
+        //     Comment = c.Comment,
+        //     Stats = new ReviewCommentStats(){
+        //         Votes = c.Stats.Votes??0,
+        //         CommentId = c.Stats.CommentId??0,
+        //         ReplyCount = c.Stats.ReplyCount??0,
+        //         VoteCount = c.Stats.VoteCount??0,
+        //     }
+        // }).ToArray(),
+    };
 }

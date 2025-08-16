@@ -5,8 +5,8 @@ namespace Ecommerce.Shipping.Entity;
 public class Shipment
 {
     public ulong Id { get; set; } //is tracking number
-    public string ApiId { get; set; }
-    public string TrackingNumber { get; set; }
+    public string? ApiId { get; set; }
+    public string? TrackingNumber { get; set; }
     public uint ProviderId { get; set; }
     public Provider Provider { get; set; }
     public ulong OfferId { get; set; }

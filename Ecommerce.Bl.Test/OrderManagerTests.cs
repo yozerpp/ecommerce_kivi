@@ -200,7 +200,7 @@ public class OrderManagerTests
             District = "NewNeighborhood",
             Country = "NewState"
         };
-        TestContext._orderManager.UpdateOrder(orderToUpdate); // Call the manager method
+        TestContext._orderManager.UpdateAddress(orderToUpdate, TODO); // Call the manager method
         TestContext._orderRepository.Flush();
         TestContext._orderRepository.Detach(orderToUpdate);
         _customer.Orders.Remove(orderToUpdate);

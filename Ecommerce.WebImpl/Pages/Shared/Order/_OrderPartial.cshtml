@@ -1,67 +1,124 @@
 ﻿@using System.Globalization
-@using Microsoft.AspNetCore.Components
+@using System.Text.Encodings.Web
+@using System.Text.Json
 @using Ecommerce.Entity.Common
-@model _OrderPartial
+@using Microsoft.AspNetCore.Html
+@using Stripe.Terminal
+@model Ecommerce.WebImpl.Pages.Shared.Order._OrderPartial
 @{
-    RenderFragment OrderHeadingItem((string, string, int) v) => @<li class="list-group-item rounded-bottom-0 col-@v.Item3 d-inline-flex flex-column justify-content-between">
-                                                                    <p class="fs-6 h-25 fw-bold border-1 border-black border-bottom">@v.Item1</p>
-                                                                    <p class="fs-5 h-75">@v.Item2</p>
-                                                                </li>;
-}
-<div id="order@(Model.Order.Id)" class="container-fluid">
-    <a class="hover-darken text-decoration-none" data-bs-toggle="@(Model.IsCollapsable?"collapse":"")" data-bs-target="#order@(Model.Order.Id)-body" aria-controls="order@(Model.Order.Id)-body" aria-expanded="false">
-        <ul class="list-group-horizontal">
-            @OrderHeadingItem(("Sipariş No", Model.Order.Id.ToString(),1))
-            @OrderHeadingItem(("Sipariş Tarihi", Model.Order.Date.ToString("D", CultureInfo.CurrentCulture),4))
-            @OrderHeadingItem(("Sipariş Durumu", Model.Order.Status.ToLocalizedString(),2 ))
-            @OrderHeadingItem(("Teslimat Adresi",Model.Order.ShippingAddress.ToString(),4))
-            @OrderHeadingItem(("Ürün Sayısı",Model.Order.Aggregates.ItemCount.ToString(), 1))
-        </ul>
-    </a>
-    <ul id="order@(Model.Order.Id)-body" class="list-group container-fluid border-top-0 @(Model.IsCollapsable?"collapse":"")">
-        <li class="list-group-item row g-3 rounded-bottom-0 rounded-top-2" style="max-height: 30px; overflow-y: auto">
-            <div class="col-3">
-                <p class="fs-5">Resim</p>
-            </div>
-            <div class="col-1">
-                <p class="fs-5">Ürün Adı</p>
-            </div>
-            <div class="col-2">
-                <p class="fs-5">Satıcı</p>
-            </div>
-            <div class="col-3">
-                <p class="fs-5">Gönderi Adresi</p>
-            </div>
-            <div class="col-2">
-                <p class="fs-5">Fiyat</p>
-            </div>
-            <div class="col-1">
-                <p class="fs-5">Kupon</p>
-            </div>
-        </li>
-        @foreach (var item in Model.Order.Items){
-            var p = item.ProductOffer!.Product!;
-            <li class="list-group-item row g-3">
-                <div class="col-3">
-                    <img src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))"/>
-                </div>
-                <div class="col-1">
-                    <p class="fs-5">@(p.Name)</p>
-                </div>
-                <div class="col-2">@item.ProductOffer.Seller.ShopName</div>
-                <div class="col-3">
-                    <p class="overflow-y-scroll">@(item.SentShipment.SenderAddress.ToString())</p>
-                </div>
-                <div class="col-2">
-                    <partial name="Shared/_ItemPricePartial" model="item"/>
-                </div>
-                <div class="col-1">
-                    @if (item.CouponId != null){
-                        <p class="overflow-y-scroll">@(item.CouponId)</p>
-                    }
-                </div>
-            </li>
-        }
-    </ul>
+    IHtmlContent OrderHeadingItem((string, string, int) v) => Html.Raw($""""
+                                                                            <li class="list-group-item rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-between overflow-hidden">
+                                                                                <p class="fs-6 h-50 fw-bold border-1 border-black {(v.Item1.Length == 0 ? "" : "border-bottom")}">{v.Item1}</p>
+                                                                                <p class="fs-5 h-50">{v.Item2}</p>
+                                                                            </li>
+                                                                        """");
 
-</div>
+    string GetHxVals() {
+        var d = new Dictionary<string, string>();
+        d[nameof(Orders.OrderId)] = Model.Order.Id.ToString();
+        if (Model.Token != null){
+            d[nameof(Orders.Token)] = Model.Token;
+        }
+        return JsonSerializer.Serialize(d);
+    }
+
+    HtmlString GetQueryString(string handler) {
+        var query = new Dictionary<string, string>
+        {
+            ["handler"] = handler,
+            [nameof(Orders.OrderId)] = Model.Order.Id.ToString()
+        };
+        if (Model.Token != null){
+            query["token"] = Model.Token;
+        }
+        return new HtmlString($"/{nameof(Orders)}"+QueryString.Create(query).ToUriComponent());
+    }
+}
+                <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable?"pointer":"default")" data-bs-toggle="@(Model.Collapsable?"collapse":"")" data-bs-target="#Model.Order@(Model.Order.Id)-body" aria-controls="Model.Order@(Model.Order.Id)-body" aria-expanded="false">
+                    <ul class="list-group-horizontal row">
+                        @OrderHeadingItem(("", Model.Order.Id.ToString(),1))
+                        @OrderHeadingItem(("", Model.Order.Date.ToString("g", CultureInfo.CurrentCulture),3))
+                        @OrderHeadingItem(("", Model.Order.Status.ToLocalizedString(),2))
+                        @OrderHeadingItem(("",Model.Order.ShippingAddress.ToString(),3))
+                        @OrderHeadingItem(("",Model.Order.Aggregates.ItemCount?.ToString()??"0",1))
+                        @{
+                            var addressInputs =new List<InputModel>([
+                            new(nameof(Orders.OrderId), "hidden", Model.Order.Id.ToString()),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.Line1)), defaultValue: Model.Order.ShippingAddress.Line1, placeHolder: "Birinci Satır"),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.Line2)), defaultValue: Model.Order.ShippingAddress.Line2, placeHolder: "İkinci Satır"),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.District)), defaultValue: Model.Order.ShippingAddress.District, placeHolder: "İlçe"),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.City)), defaultValue: Model.Order.ShippingAddress.City, placeHolder: "Şehir"),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.Country)), defaultValue: Model.Order.ShippingAddress.Country, placeHolder: "Ülke"),
+                            new(string.Join('.', nameof(Orders.NewAddress), nameof(Address.ZipCode)), defaultValue: Model.Order.ShippingAddress.ZipCode, placeHolder: "Posta Kodu")
+                            ]);
+                            if(Model.Token!=null)addressInputs.Add(new InputModel("token", "hidden", Model.Token));                                        
+                        }
+                        <div class="list-group-item d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
+                                @if (Model.ViewedBySeller){
+                                    if (Model.Order.Status == OrderStatus.WaitingConfirmation){
+                                        
+                                    <form hx-trigger="submit" hx-post="/Seller?handler=confirmOrder" hx-swap="innerHTML" hx-target="#popupResult">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))">
+                                            Siparişi Onayla
+                                        </button>                                        
+                                    </form>
+                                    }else if (Model.Order.Status == OrderStatus.WaitingShipment){
+                                        <form hx-trigger="submit" hx-post="/Seller?handler=confirm" hx-swap="innerHTML" hx-target="#popupResult">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))">
+                                                Siparişi Onayla
+                                            </button>                                        
+                                        </form>
+                                    }
+                                }
+                                else{
+                                if ((Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment))!=0){
+                                    <form hx-trigger="submit" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult" >
+                                        @if (Model.Token != null){
+                                            <input type="hidden" name="token" value="@Model.Token"/>
+                                        }
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn container-fluid shadow border-dark btn-danger align-self-center m-0">
+                                            İptal Et
+                                        </button>
+                                    </form>
+                                    @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){
+                                        DisplayText = "Teslimat Adresini Değiştir", Target = "#popupResult", Inputs = addressInputs.ToArray(),Url = Url.Page(nameof(Orders), "changeAddress"),Classes = "btn btn-primary shadow border-dark container-fluid text-light-emphasis px-0", FormClasses = "container-fluid",
+                                    })
+                                }
+                                if (Model.Order.Status == OrderStatus.Delivered){
+                                    <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=complete" hx-swap="innerHTML" hx-target="#popupResult">
+                                        @Html.AntiForgeryToken()
+                                        @if (Model.Token != null){
+                                            <input type="hidden" name="token" value="@Model.Token"/>
+                                         }
+                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-danger container-fluid shadow border-dark text-success-emphasis">
+                                            Teslimatı Onayla
+                                        </button>
+                                    </form>
+                                }
+                                if ((Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete))!=0){
+                                    <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=refund" hx-swap="innerHTML" hx-target="#popupResult">
+                                        @Html.AntiForgeryToken()
+                                        @if (Model.Token != null){
+                                            <input type="hidden" name="token" value="@Model.Token"/>
+                                        }
+                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-danger container-fluid shadow border-dark text-success-emphasis">
+                                            İade Et
+                                        </button>
+                                    </form>
+                                }    
+                                }
+                                
+                        </div>
+                    </ul>
+                </a>
+                @await Html.PartialAsync("Shared/Order/_OrderItemsPartial", new _OrderItemsPartial(){
+                    IsCollapsable = Model.Collapsable, Order = Model.Order
+                })

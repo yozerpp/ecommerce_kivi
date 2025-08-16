@@ -36,8 +36,9 @@ public class BaseModel: PageModel
         CurrentSeller = context.HttpContext.Items[nameof(Entity.User)] as Ecommerce.Entity.Seller;
         CurrentStaff = context.HttpContext.Items[nameof(Entity.User)] as Staff;
         CurrentSession = GetItem<Session>(nameof(Session))!;
-        ViewData[nameof(Entity.Cart)] = CurrentSession.Cart;
         CurrentUser = (CurrentStaff as User ?? CurrentSeller) ?? CurrentCustomer;
+        ViewData[nameof(Entity.Cart)] = CurrentSession.Cart;
+        ViewData[nameof(Entity.User)] = CurrentUser;
         base.OnPageHandlerExecuting(context);
     }
 

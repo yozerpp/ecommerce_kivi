@@ -6,23 +6,7 @@ namespace Ecommerce.WebImpl.Pages.Shared;
 
 public static class Utils
 {
-    public static bool IsNumeric(Type type)
-    {
-        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-        TypeCode typeCode = Type.GetTypeCode(underlyingType);
-        
-        return typeCode == TypeCode.Byte ||
-               typeCode == TypeCode.SByte ||
-               typeCode == TypeCode.Int16 ||
-               typeCode == TypeCode.Int32 ||
-               typeCode == TypeCode.Int64 ||
-               typeCode == TypeCode.UInt16 ||
-               typeCode == TypeCode.UInt32 ||
-               typeCode == TypeCode.UInt64 ||
-               typeCode == TypeCode.Single ||
-               typeCode == TypeCode.Double ||
-               typeCode == TypeCode.Decimal;
-    }
+
     
     public static string GetImageUrlOrDefault(string? imageUrl, bool isProductImage=true, string mimeType = "image/jpeg") {
         return !string.IsNullOrEmpty(imageUrl)

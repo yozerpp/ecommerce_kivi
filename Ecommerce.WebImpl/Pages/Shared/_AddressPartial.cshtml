@@ -2,12 +2,12 @@
 @model Ecommerce.WebImpl.Pages.Shared._AddressPartial
 
 
-<div class="container">
-    <div class="d-flex justify-content-between">
+<div class="container d-flex flex-column gap-2">
+    <div class="d-flex @(!Model.AsInput?"underline-labels":"") justify-content-between">
         <div class="d-flex gap-2">
-            <label>1. Satır: </label>
+            <label >1. Satır: </label>
             @if (Model.AsInput){
-                <input id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
+                <input id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" type="text" class="shadow-sm rounded-1 border-light-subtle border-1" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
             }
             else{
                 <p id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" class="">@Model.Address.Line1</p>
@@ -19,7 +19,7 @@
         <div class="d-flex gap-2">
             <label>2. Satır: </label>
             @if (Model.AsInput){
-                <input id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
+                <input id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" type="text" class="shadow-sm rounded-1 border-light-subtle border-1" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))"/>
             }
             else{
                 <p id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" class="">@Model.Address.Line2</p>
@@ -33,7 +33,7 @@
         <div class="d-flex gap-2">
             <label>İlçe: </label>
             @if (Model.AsInput){
-                <input id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" type="text" class="rounded-1 " name="@(Model.InputPrefix ?? "").@nameof(Address.District)"/>
+                <input id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" type="text" class=" shadow-sm rounded-1 border-light-subtle border-1" name="@(Model.InputPrefix ?? "").@nameof(Address.District)"/>
             }
             else{
                 <p id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" class="">@Model.Address.District</p>
@@ -45,7 +45,7 @@
         <div class="d-flex gap-2">
             <label>Şehir: </label>
             @if (Model.AsInput){
-                <input id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))" class="rounded-1 " type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.Country)"/>
+                <input id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))" class=" shadow-sm rounded-1 border-light-subtle border-1" type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.Country)"/>
             }
             else{
                 <p id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))">@Model.Address.Country</p>
@@ -56,9 +56,9 @@
             }
         </div>
         <div class="d-flex gap-2">
-            <label class="">Ülke: </label>
+            <label>Ülke: </label>
             @if (Model.AsInput){
-                <input id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="rounded-1 " type="text" name="@(Model.InputPrefix ?? "").@(nameof(Address.City))"/>
+                <input id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="shadow-sm rounded-1 border-light-subtle border-1" type="text" name="@(Model.InputPrefix ?? "").@(nameof(Address.City))"/>
             }
             else{
                 <p id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="">@Model.Address.City</p>
@@ -71,7 +71,7 @@
      <div class="d-inline-flex gap-2">
          <label>Posta Kodu:</label>
          @if (Model.AsInput){
-             <input id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="rounded-1 " type="text" name="@(Model.InputPrefix??"").@(nameof(Address.ZipCode))"/>
+             <input id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class=" shadow-sm rounded-1 border-light-subtle border-1" type="text" name="@(Model.InputPrefix??"").@(nameof(Address.ZipCode))"/>
          }
          else{
              <p id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="">@Model.Address.ZipCode</p>

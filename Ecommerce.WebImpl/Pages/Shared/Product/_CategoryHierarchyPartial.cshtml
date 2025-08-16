@@ -12,15 +12,16 @@
 <div class="d-flex flex-wrap justify-content-center gap-1">
     @if (hierarchy.Count > 3){
         hierarchy = hierarchy.Take(3).Reverse().ToList();
-        <div>
-            <p onmouseenter="event.currentTarget.nextElementSibling.classList.add('s')" class="text-light-emphasis fs-6 small" style="font-size: smaller">...</p>
+        <div class="d-flex">
+            <p class="text-light-emphasis fs-6 small" style="font-size: smaller">...</p>
+            <i class="mx-2">&gt;</i>
         </div>
     }
     @for (var i = 0; i < hierarchy.Count; i++){
         if (i > 0){
             <i class="mx-2">&gt;</i>
         }
-        <a href="@(Url.Page("/Index", new{ Category_Id = Model.Item1 }))" onclick="event.stopPropagation()" class="text-decoration-none hover-underline">
+        <a href="@(Url.Page("/Index", new{ QueryString = UrlEncoder.Default.Encode($"Category_Id={Model.Item1}") }))" onclick="event.stopPropagation()" class="text-decoration-none hover-underline">
             <p class="text-light-emphasis fs-6 small" style="font-size: smaller">@hierarchy[i].Name</p>
         </a>
     }

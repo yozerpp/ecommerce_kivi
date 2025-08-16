@@ -7,7 +7,7 @@ public class Image
     public uint Id { get; set; }
     [Image]
     public string Data { get; set; }
-    public bool IsMain { get; set; }
+
     protected bool Equals(Image other) {
         return Id == other.Id;
     }

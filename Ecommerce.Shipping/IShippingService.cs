@@ -18,6 +18,7 @@ public interface IShippingService
     public class ShipmentCreateOptions
     {
         public ulong OfferId { get; set; }
+        public string RecepientNane { get; set; }
         public string SenderEmail { get; set; }
         public string RecepientEmail { get; set; }
         public PhoneNumber SenderPhoneNumber { get; set; }

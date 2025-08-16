@@ -10,6 +10,7 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Events;
 using Ecommerce.Entity.Views;
+using Ecommerce.Mail;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
@@ -25,18 +26,22 @@ using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using Customer = Ecommerce.Entity.Customer;
+using Product = Ecommerce.Entity.Product;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = DefaultDbContext.DefaultConnectionString;
 builder.Services.AddDbContext<DefaultDbContext>(options =>
     options.UseSqlServer(connectionString,
             c=> {
-                c.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+                c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
-            })
+            }).EnableDetailedErrors()
         .EnableServiceProviderCaching(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
 builder.Services.AddDbContext<ShippingContext>(options =>
-        options.UseSqlServer(ShippingContext.DefaultConntectionString).EnableServiceProviderCaching(),
+        options.UseSqlServer(ShippingContext.DefaultConntectionString,
+            c => {
+                c.MigrationsAssembly(typeof(ShippingContext).Assembly.FullName); 
+            }).EnableServiceProviderCaching(),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var razorPageOptions = builder.Services.AddRazorPages();
@@ -54,8 +59,8 @@ builder.Services.AddSingleton<EntityMapper.Factory>(sp=>new EntityMapper.Factory
 builder.Services.AddSingleton<EntityMapper>(sp => sp.GetRequiredService<EntityMapper.Factory>().Create());
 var blEntities = GetEntityTypes(Assembly.GetAssembly(typeof(Cart)), "Ecommerce.Entity").ToList();
 var shippingEntities = GetEntityTypes(Assembly.GetAssembly(typeof(IShippingService)), "Ecommerce.Shipping.Entity").ToList();
-var blValidators = Assembly.GetAssembly(typeof(CartItemValidator)).ExportedTypes
-    .Where(t => t.Namespace.Split('.').Last().Equals("Validation")).ToList();
+var blValidators = Assembly.GetAssembly(typeof(CartItemValidator)).GetTypes()
+    .Where(t => t.Namespace?.Split('.').Last().Equals("Validation") ?? false).ToList();
 var blImpls = GetServices(true,Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Concrete").ToDictionary(t=>t.Name, t=>t);
 var shippingImpls = GetServices(true,Assembly.GetAssembly(typeof(IShippingService)), "Ecommerce.Shipping.Dummy").ToDictionary(t=>t.Name, t=>t);
 var blInterfaces = GetServices(false, Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Interface")
@@ -113,17 +118,21 @@ builder.Services.AddAuthentication(options =>
         };
         options.TokenValidationParameters = tokenValidationParameters;
     });
-builder.Services.AddSingleton<Dictionary<uint,Category>>(sp =>
-    sp.GetKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Category>().AsNoTracking().Include(c=>c.Parent).Include(c=>c.Children)
-        .Select(c=>new Category{
-        Id = c.Id,
-        ParentId = c.ParentId,
-        Parent = c.Parent,
-        Name = c.Name,
-        Description = c.Description,
-        Children = c.Children,
-        CategoryProperties = null!,
-    }).Where(_=> true).ToDictionary(c=>c.Id,c=>c));
+builder.Services.AddSingleton<Dictionary<uint,Category>>(sp => {
+    var d = sp.GetKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Category>().AsNoTracking()
+        .ToDictionary(c => c.Id, c => c);
+    foreach (var category in d.Values){
+        if (category.ParentId != null){
+            var p = d[category.ParentId.Value];
+            p.Children.Add(category);
+            category.Parent = p;
+        }
+    }
+    return d;
+});
+var mailConfig = builder.Configuration.GetSection("Mail");
+builder.Services.AddSingleton<IMailService, SMTPService>(_ => new SMTPService(mailConfig["Server"] ?? throw new ArgumentNullException(),
+    int.Parse(mailConfig["Port"] ?? throw new ArgumentNullException()), mailConfig["Username"] ?? throw new ArgumentNullException(), mailConfig["Password"] ?? throw new ArgumentNullException()));
 builder.Services.AddAuthorization(options => {
     options.AddPolicy(nameof(Seller), policy => policy.RequireRole(nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer),nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));

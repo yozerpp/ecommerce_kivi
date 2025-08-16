@@ -1,89 +1,57 @@
-﻿@using Product = Ecommerce.WebImpl.Pages.Product
+﻿@using Ecommerce.WebImpl.Pages.Shared.SearchBar
+@using Product = Ecommerce.WebImpl.Pages.Product
 @model Ecommerce.WebImpl.Pages.Shared.Product._CategoryPropertiesPartial
 
-<div class="container @(Model.InputNamePrefix!=null?"h-50":"")">
-    <script>
-        ((s)=>{
-            const parent = s.parentElement;
-            parent._isEntered = false; // Flag to indicate if any property has been set
-
-            @if (Model.InputNamePrefix != null)
-            {
-                if (Model.Properties.Count > 0)
-                {
-                    <text>
-                    parent._hasProperties = true;
-                    </text>
+<div class="container @(Model.InputNamePrefix != null ? "h-50" : "container-fluid")">
+    <h4 class="fw-bold fs-5">Ürün Özellikleri</h4>
+    @if (Model.InputNamePrefix != null){ // if input
+        <script>
+            ((s)=>{
+                const parent = s.parentElement;
+                function  f(){
+                    parent._hasProps = @(Model.Properties.Count > 0 ? "true" : "false");
+                    parent._props =new Map();    
                 }
-                foreach (var prop in Model.Properties)
-                {
-                    <text>
-                    // Store property name and type on the parent for later use
-                    parent._property_@(prop.PropertyName) = {
-                        name: "@(Model.InputNamePrefix)[@(prop.PropertyName)]",
-                        isNumber: @(prop.IsNumber.ToString().ToLowerInvariant()),
-                        isRequired: @(prop.IsRequired.ToString().ToLowerInvariant()),
-                        enumValues: @(prop.EnumValues != null ? System.Text.Json.JsonSerializer.Serialize(prop.EnumValues) : "null")
-                    };
-                    </text>
-                    if (prop.EnumValues != null)
-                    {
-                        <text>
-                        // For dropdowns, update parent._isEntered when a value is selected
-                        document.getElementById('@(Model.InputNamePrefix)-@(prop.PropertyName)').addEventListener('change', function() {
-                            if (this.value) {
-                                parent._isEntered = true;
-                                parent._property_@(prop.PropertyName).value = this.value;
-                            } else {
-                                delete parent._property_@(prop.PropertyName).value;
-                                // Re-evaluate _isEntered if this was the only property set
-                                parent._isEntered = Array.from(parent.querySelectorAll('select, input')).some(input => input.value);
-                            }
-                        });
-                        </text>
-                    }
-                    else
-                    {
-                        <text>
-                        // For text/number inputs, update parent._isEntered when a value is entered
-                        document.getElementById('@(Model.InputNamePrefix)-@(prop.PropertyName)').addEventListener('input', function() {
-                            if (this.value) {
-                                parent._isEntered = true;
-                                parent._property_@(prop.PropertyName).value = this.value;
-                            } else {
-                                delete parent._property_@(prop.PropertyName).value;
-                                // Re-evaluate _isEntered if this was the only property set
-                                parent._isEntered = Array.from(parent.querySelectorAll('select, input')).some(input => input.value);
-                            }
-                        });
-                        </text>
-                    }
-                }
-            }
-        })(document.currentScript)
-    </script>
-    @if (Model.InputNamePrefix!=null){
-        if (Model.Properties.Count > 0){
-            <input type="hidden" name="@(Model.InputNamePrefix)[@(HomepageModel.HasPropertiesKey)]" value="true"/>
-        }
+                document.addEventListener("DOMContentLoaded", f);
+                parent.addEventListener("init", f);
+            })(document.currentScript)
+        </script>
         foreach (var prop in Model.Properties){
-            <div class="row">
-                <label class="col-1">@prop.PropertyName</label>
-                @if (prop.EnumValues != null){
-                    <select class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)">
-                        @if (!prop.IsRequired){
-                            <option value="">Seçiniz</option>
-                        }
-                        @foreach (var val in prop.EnumValues){
+            <div class="gap-5 g-5">
+                <label class="fs-5">@prop.PropertyName</label>
+                @if (prop.IsNumber){
+                    <script>
+                        ((s)=>{
+                            const parent=  s.parentElement.parentElement;
+                            function  f(){
+                                s.nextElementSibling.addEventListener('change',(e)=>{
+                                    console.log(this);
+                                    parent._props.set(@(prop.Id),{min: s.nextElementSibling._min, max: s.nextElementSibling._max});
+                                });
+                                s.nextElementSibling.dispatchEvent(new Event('init', {bubbles:false}));
+                            }
+                            document.addEventListener('DOMContentLoaded',f);
+                            parent.addEventListener('init',f);
+                        })(document.currentScript)
+                    </script>
+                    @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                        MaxValue = prop.MaxValue ?? 100000000m, MinValue = prop.MinValue ?? 0m
+                    })
+                }
+                else if (prop.EnumValues != null){
+                    <select onchange="const p = event.currentTarget.parentElement.parentElement;p._props.set(@(prop.Id),{enumValue:event.currentTarget.value})" class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)Value" name="@(Model.InputNamePrefix)[@(prop.PropertyName)]">
+                        <option selected>Seçiniz</option>
+                        @{ var vals = prop.EnumValues.Split(';');}
+                        @foreach (var val in vals.Skip(1).Take(vals.Length -1)){
                             <option value="@val">@val</option>
                         }
-                    </select>    
+                    </select>
                 }
                 else{
-                    <input class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)" type="@(prop.IsNumber?$"number":$"text")" @(prop.IsRequired?"required":"")/>
+                    <input onchange="event.currentTarget.parentElement.parentElement._props.set(@(prop.PropertyName),event.currentTarget.value);" class="col-auto" id="@(Model.InputNamePrefix)-@(prop.PropertyName)" name="@(Model.InputNamePrefix)[@prop.PropertyName]" type="@(prop.IsNumber ? $"number" : $"text")"/>
                 }
             </div>
-        }    
+        }
     }
     else{
         foreach (var property in Model.Properties){

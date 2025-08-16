@@ -161,7 +161,7 @@ public class SellerManager : ISellerManager
             SellerId = s.Stats.SellerId,
             OfferCount = s.Stats.OfferCount ?? 0,
             RefundCount = s.Stats.RefundCount ?? 0,
-            ReviewAverage = (s.Stats.RatingTotal / s.Stats.ReviewCount) ?? 0f,
+            ReviewAverage = s.Stats.ReviewAverage??0m,
             ReviewCount = s.Stats.ReviewCount ?? 0,
             SaleCount = s.Stats.SaleCount ?? 0,
             TotalSold = s.Stats.TotalSold ?? 0,

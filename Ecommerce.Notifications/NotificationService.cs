@@ -15,14 +15,14 @@ public class NotificationService : INotificationService
     }
 
     public async Task SendSingleAsync<T>(T notification) where T : Notification {
-        var n=  await _notificationRepository.AddAsync(notification);
+        var n=  await _notificationRepository.TryAddAsync(notification);
         _notificationRepository.Flush();
         await _notificationHub.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", n);
     }
 
-    public async Task SendBatchAsync<T>(IEnumerable<T> notifications) where T : Notification {
+    public async Task SendBatchAsync<T>(ICollection<T> notifications) where T : Notification {
         foreach (var notification in notifications){
-            await _notificationRepository.AddAsync(notification);
+            await _notificationRepository.TryAddAsync(notification);
         }
         _notificationRepository.Flush();
         foreach (var notification in notifications){
