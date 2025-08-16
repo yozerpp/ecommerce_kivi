@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -20,6 +20,18 @@ public static class SearchExpressionUtils
         predicateExpr = (Expression<Func<T, bool>>)Expression.Lambda(expr, param);
         orderByExpressions = OrderByExpression<T>(ordering, param);
     }
+    
+    public static void Build<T>(string queryString, ICollection<SearchOrder> ordering,
+        out Expression<Func<T, bool>> predicateExpr, out ICollection<(Expression<Func<T, object>>,bool)> orderByExpressions)
+    {
+        var param = Expression.Parameter(typeof(T), "t");
+        var parser = new Parser(typeof(T), queryString);
+        var rootNode = parser.Parse();
+        var expr = Visit(param, rootNode);
+        predicateExpr = (Expression<Func<T, bool>>)Expression.Lambda(expr, param);
+        orderByExpressions = OrderByExpression<T>(ordering, param);
+    }
+
     public static ICollection<(Expression<Func<T, object>>,bool)> OrderByExpression<T>(ICollection<SearchOrder> orders,
         ParameterExpression parameter) {
         var ret = new List<(Expression<Func<T, object>>,bool)>();
@@ -143,51 +155,209 @@ public static class SearchExpressionUtils
             return false;
         }
     }
-    //
-    // private class Parser
-    // {
-    //     private readonly Regex text = new Regex(@"(\w\d_)+", RegexOptions.Compiled);
-    //     private readonly Regex branchStart = new Regex(@"([&|])\(")
-    //     private readonly Regex branchEnd = new Regex(@"\s*(\))", RegexOptions.Compiled);
-    //     private readonly Regex op = new Regex("(<|>|<=|>=|=|%)");
-    //     private readonly Regex node = new Regex(@"(\w\d_)+(<|>|<=|>=|=|%)(\w\d_)+");
-    //     private readonly MiddleBranchNode _root;
-    //     private  int _pos = 0;
-    //     private readonly string _query;
-    //     public Parser(MiddleBranchNode root, string query) {
-    //         _root = root;
-    //         _query = query;
-    //     }
-    //     private bool Parse() {
-    //         while (_pos < _query.Length) {
-    //             var m = branchStart.Match(_query,_pos);
-    //             if (!m.Success) return false;
-    //             var and = m.Groups[1].Value =="&";
-    //             _pos = m.Index + m.Length;
-    //             ParseBranch(and);
-    //         }
-    //     }
-    //     private BranchNode? ParseBranch(bool and) {
-    //         ICollection<BranchNode> children;
-    //         while (_pos < _query.Length){
-    //             var m = node.Match(_query, _pos);
-    //             if (m.Success){
-    //             }
-    //             m = branchStart.Match()
-    //             if()    
-    //         }
-    //         
-    //     }
-    //
-    //     private LeafBranchNode ParseLeaf() {
-    //         
-    //     }
-    // }
-    private static void ParseNodes(in MiddleBranchNode root, Type rootType, string query) {
-        var oPars = new Regex(@"\(");
-        var re = new Regex(@"(\()|(\w\d_)+(<|>|<=|>=|%)|(\w\d_)+|(\))");
-        
+    
+    private class Parser
+    {
+        private readonly string _query;
+        private int _pos;
+        private readonly Type _rootType;
+
+        public Parser(Type rootType, string query)
+        {
+            _rootType = rootType;
+            _query = query;
+            _pos = 0;
+        }
+
+        public MiddleBranchNode Parse()
+        {
+            var rootNode = new MiddleBranchNode() { Level = -1, Prop = null! };
+            _pos = 0; // Reset position for parsing
+            ParseBranch(rootNode, _rootType, 0);
+            return rootNode;
+        }
+
+        private void ParseBranch(MiddleBranchNode parentNode, Type currentType, int level)
+        {
+            SkipWhitespace();
+            if (_pos >= _query.Length) return;
+
+            char operatorChar = _query[_pos];
+            if (operatorChar != '&' && operatorChar != '|')
+            {
+                throw new FormatException($"Expected '&' or '|' at position {_pos}");
+            }
+            parentNode.And = (operatorChar == '&');
+            _pos++; // Consume operator
+
+            SkipWhitespace();
+            if (_query[_pos] != '(')
+            {
+                throw new FormatException($"Expected '(' at position {_pos}");
+            }
+            _pos++; // Consume '('
+
+            while (_pos < _query.Length)
+            {
+                SkipWhitespace();
+                if (_query[_pos] == ')')
+                {
+                    _pos++; // Consume ')'
+                    return;
+                }
+
+                if (_query[_pos] == '&' || _query[_pos] == '|')
+                {
+                    // Nested branch
+                    var newBranchNode = new MiddleBranchNode() { Level = level, Prop = null! }; // Prop will be set later if it's a property
+                    parentNode.Children.Add(newBranchNode);
+                    ParseBranch(newBranchNode, currentType, level + 1);
+                }
+                else
+                {
+                    // Leaf node (predicate)
+                    ParseLeaf(parentNode, currentType, level);
+                }
+
+                SkipWhitespace();
+                if (_query[_pos] == ',')
+                {
+                    _pos++; // Consume ','
+                }
+                else if (_query[_pos] != ')')
+                {
+                    throw new FormatException($"Expected ',' or ')' at position {_pos}");
+                }
+            }
+            throw new FormatException("Unclosed branch in query string.");
+        }
+
+        private void ParseLeaf(MiddleBranchNode parentNode, Type currentType, int level)
+        {
+            var propName = ReadIdentifier();
+            SkipWhitespace();
+
+            var operatorType = ReadOperator();
+            SkipWhitespace();
+
+            var value = ReadValue();
+            
+            var searchPredicate = new SearchPredicate
+            {
+                PropName = propName,
+                Operator = operatorType,
+                Value = value
+            };
+
+            var (pred, labeled) = GetGroups(searchPredicate);
+            var currentNode = parentNode;
+            var currentPropType = currentType;
+
+            for (int i = 0; i < labeled.Count; i++)
+            {
+                var (groupIndex, name) = labeled.ElementAt(i);
+                var prop = currentPropType.GetProperty(name);
+                if (prop == null)
+                {
+                    // This property path is invalid for the current type, skip this predicate
+                    // or throw an error depending on desired behavior.
+                    // For now, we'll just break and not add this leaf.
+                    return; 
+                }
+
+                if (i == labeled.Count - 1)
+                {
+                    // This is the last part of the path, so it's a LeafBranchNode
+                    var leafNode = new LeafBranchNode
+                    {
+                        GroupIndex = groupIndex,
+                        Comparison = pred,
+                        Prop = prop
+                    };
+                    currentNode.Children.Add(leafNode);
+                }
+                else
+                {
+                    // This is an intermediate part of the path, so it's a MiddleBranchNode
+                    var existingNode = currentNode.Children.FirstOrDefault(c => c.GroupIndex == groupIndex && c.Prop == prop) as MiddleBranchNode;
+                    if (existingNode == null)
+                    {
+                        existingNode = new MiddleBranchNode
+                        {
+                            Level = level + i,
+                            GroupIndex = groupIndex,
+                            Prop = prop,
+                            And = parentNode.And // Inherit parent's AND/OR logic for nested properties
+                        };
+                        currentNode.Children.Add(existingNode);
+                    }
+                    currentNode = existingNode;
+                    currentPropType = prop.PropertyType;
+                    if (currentPropType.IsGenericType && typeof(ICollection<>).IsAssignableFrom(currentPropType.GetGenericTypeDefinition()))
+                    {
+                        currentPropType = currentPropType.GetGenericArguments()[0];
+                    }
+                }
+            }
+        }
+
+        private string ReadIdentifier()
+        {
+            SkipWhitespace();
+            int start = _pos;
+            while (_pos < _query.Length && (char.IsLetterOrDigit(_query[_pos]) || _query[_pos] == '_' || _query[_pos] == '\''))
+            {
+                _pos++;
+            }
+            if (_pos == start) throw new FormatException($"Expected identifier at position {start}");
+            return _query.Substring(start, _pos - start);
+        }
+
+        private SearchPredicate.OperatorType ReadOperator()
+        {
+            SkipWhitespace();
+            int start = _pos;
+            while (_pos < _query.Length && (
+                _query[_pos] == '=' || _query[_pos] == '<' || _query[_pos] == '>' || _query[_pos] == '%'
+            ))
+            {
+                _pos++;
+            }
+            var opStr = _query.Substring(start, _pos - start);
+            return opStr switch
+            {
+                "=" => SearchPredicate.OperatorType.Equals,
+                "%" => SearchPredicate.OperatorType.Like,
+                "<" => SearchPredicate.OperatorType.LessThan,
+                ">" => SearchPredicate.OperatorType.GreaterThan,
+                "<=" => SearchPredicate.OperatorType.LessThanOrEqual,
+                ">=" => SearchPredicate.OperatorType.GreaterThanOrEqual,
+                _ => throw new FormatException($"Unsupported operator '{opStr}' at position {start}")
+            };
+        }
+
+        private string ReadValue()
+        {
+            SkipWhitespace();
+            int start = _pos;
+            // Read until a comma, closing parenthesis, or end of string
+            while (_pos < _query.Length && _query[_pos] != ',' && _query[_pos] != ')')
+            {
+                _pos++;
+            }
+            if (_pos == start) throw new FormatException($"Expected value at position {start}");
+            return _query.Substring(start, _pos - start);
+        }
+
+        private void SkipWhitespace()
+        {
+            while (_pos < _query.Length && char.IsWhiteSpace(_query[_pos]))
+            {
+                _pos++;
+            }
+        }
     }
+
     private static void ParseNodes(in MiddleBranchNode root,Type rootType ,ICollection<SearchPredicate> searchPredicates) {
         foreach (var (pred, labeled) in searchPredicates.Select(GetGroups)){
             var parent = root;
