@@ -419,12 +419,17 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Category>(p => p.Category).WithMany(c=>c.Products).HasForeignKey(p => p.CategoryId)
                 .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
             entity.HasMany<Customer>(p => p.FavoredCustomers).WithMany(c => c.FavoriteProducts);
-            // Configure ProductCategoryProperties as a collection of EAV entities
-            entity.HasMany(p => p.CategoryProperties)
-                .WithOne(pcp => pcp.Product)
-                .HasForeignKey(pcp => pcp.ProductId)
-                .HasPrincipalKey(p => p.Id)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.OwnsMany<ProductCategoryProperties>(p => p.CategoryProperties, b => {
+                b.HasKey(c => new{ c.CategoryPropertyId, c.ProductId }).IsClustered(false);
+                b.WithOwner(p => p.Product).HasForeignKey(p => p.ProductId).HasPrincipalKey(p => p.Id)
+                    .Metadata.GetNavigation(false).SetIsEagerLoaded(false);
+                b.HasIndex(c => c.ProductId).IsClustered(true);
+                b.HasOne<Category.CategoryProperty>(p => p.CategoryProperty).WithMany()
+                    .HasForeignKey(p => p.CategoryPropertyId).HasPrincipalKey(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict)
+                    .Metadata.GetNavigation(true).SetIsEagerLoaded(true);
+                DumpProductProps(b);
+            });
+            DumpProduct(entity);
             entity.Property(p => p.Active).HasDefaultValue(true);
             entity.HasMany<ImageProduct>(e => e.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId)
                 .HasPrincipalKey(i => i.Id).OnDelete(DeleteBehavior.Cascade).IsRequired();
@@ -442,51 +447,29 @@ public class DefaultDbContext : DbContext
         var imageBuilder = modelBuilder.Entity<Image>();
         imageBuilder.HasKey(i => i.Id);
         imageBuilder.Property(i => i.Id).ValueGeneratedOnAdd();
-        var categoryBuilder = modelBuilder.Entity<Category>();
-        categoryBuilder.HasKey(c => c.Id);
-        categoryBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
-        categoryBuilder.HasOne<Category>(c => c.Parent).WithMany(c => c.Children).HasForeignKey(c => c.ParentId)
-            .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull).Metadata.IsUnique=false;
-        categoryBuilder.HasMany<Product>(c => c.Products).WithOne(p=>p.Category).HasForeignKey(p=>p.CategoryId).HasPrincipalKey(c=>c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
-        categoryBuilder.OwnsMany<Category.CategoryProperty>(c => c.CategoryProperties,
-            p => {
-                p.Property<string[]?>(c => c.EnumValues)
-                    .HasConversion(e => e != null ? string.Join(',', e) : null,
-                        s => s != null ? s.Split(',', StringSplitOptions.TrimEntries) : null);
-                p.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-            });
-        // Configure Category.CategoryProperty as a regular entity
-        modelBuilder.Entity<Category.CategoryProperty>(entity =>
-        {
-            entity.HasKey(cp => cp.Id);
-            entity.Property(cp => cp.Id).ValueGeneratedOnAdd();
-            entity.HasOne(cp => cp.Category)
-                .WithMany(c => c.CategoryProperties)
-                .HasForeignKey(cp => cp.CategoryId)
-                .HasPrincipalKey(c => c.Id)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.Property(cp => cp.PropertyName).IsRequired().HasMaxLength(100);
-            entity.Property(cp => cp.IsRequired).IsRequired();
-            entity.Property(cp => cp.IsNumber).IsRequired();
+        var categoryPropertyBuilder = modelBuilder.Entity<Category.CategoryProperty>(p => {
+            p.HasKey(c => c.Id).IsClustered(true);
+            p.Property(c => c.Id).ValueGeneratedOnAdd();
+            DumpCategoryProps(p);
+            var prop = p.HasOne<Category>(c => c.Category).WithMany(c => c.CategoryProperties)
+                .HasForeignKey(c => c.CategoryId).HasPrincipalKey(c => c.Id)
+                .IsRequired(false).OnDelete(DeleteBehavior.SetNull)
+                .Metadata;
+            prop.GetNavigation(true).SetIsEagerLoaded(false);
+            prop.GetNavigation(false).SetIsEagerLoaded(false);
+            p.HasIndex(p => p.CategoryId).IsClustered(false);
+            p.Property<string[]?>(c => c.EnumValues)
+                .HasConversion(e => e != null ? string.Join(',', e) : null,
+                    s => s != null ? s.Split(',', StringSplitOptions.TrimEntries) : null);
         });
-
-        // Configure ProductCategoryProperties entity
-        modelBuilder.Entity<ProductCategoryProperties>(entity =>
-        {
-            entity.HasKey(pcp => new { pcp.ProductId, pcp.CategoryPropertyId }); // Composite primary key
-            entity.Property(pcp => pcp.Value).IsRequired().HasMaxLength(500); // Max length for the value
-
-            entity.HasOne(pcp => pcp.Product)
-                .WithMany(p => p.CategoryProperties)
-                .HasForeignKey(pcp => pcp.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(pcp => pcp.CategoryProperty)
-                .WithMany() // ProductCategoryProperties doesn't have a navigation back to CategoryProperty
-                .HasForeignKey(pcp => pcp.CategoryPropertyId)
-                .OnDelete(DeleteBehavior.Restrict); // Restrict deletion if properties are still in use
+        var categoryBuilder = modelBuilder.Entity<Category>(categoryBuilder => {
+            categoryBuilder.HasKey(c => c.Id);
+            DumpCategory(categoryBuilder);
+            categoryBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
+            categoryBuilder.HasOne<Category>(c => c.Parent).WithMany(c => c.Children).HasForeignKey(c => c.ParentId)
+                .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull).Metadata.IsUnique=false;
+            categoryBuilder.HasMany<Product>(c => c.Products).WithOne(p=>p.Category).HasForeignKey(p=>p.CategoryId).HasPrincipalKey(c=>c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         });
-
         var couponBuilder = modelBuilder.Entity<Coupon>(entity => {
             entity.HasKey(c => c.Id);
             entity.HasIndex(e => e.SellerId)
@@ -693,7 +676,119 @@ public class DefaultDbContext : DbContext
             .OnDelete(DeleteBehavior.ClientCascade);
     }
 
-  
+    private static void DumpProduct(EntityTypeBuilder<Product> entity) {
+        entity.HasData([
+            new(){
+                Id = 1,
+                CategoryId = 1,
+                Name = "Car",
+                Description = "Whoof",
+            },
+            new(){
+                Id = 2,
+                CategoryId = 1,
+                Name = "Toy",
+                Description = "..."
+            },
+            new(){
+                Id = 3,
+                Name = "toy car",
+                Description = ":)",
+            }
+        ]);
+    }
+
+    private static void DumpProductProps(OwnedNavigationBuilder<Product, ProductCategoryProperties> b) {
+        b.HasData([
+            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 1, Value = "51" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 2, Value = "49" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 2, Value = "15" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 3, Value = "120" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 3, Value = "80" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
+            new ProductCategoryProperties(){ CategoryPropertyId = 5, ProductId = 4, Value = "124"},
+            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 4, Value = "some string"}
+        ]);
+    }
+
+    private static void DumpCategory(EntityTypeBuilder<Category> categoryBuilder) {
+        categoryBuilder.HasData([
+            new Category(){
+                Id = 1,
+                Name = "some category",
+                Description = "desc",
+            },
+            new Category(){
+                Id = 2,
+                Name = "other one",
+                Description = "d"
+            }
+        ]);
+    }
+    private static void DumpCategoryProps(EntityTypeBuilder<Category.CategoryProperty> p) {
+        p.HasData([
+            new Category.CategoryProperty(){
+                Id = 1,
+                PropertyName = "numberProperty",
+                CategoryId = 1,
+                IsNumber = true,
+                IsRequired = true,
+                MaxValue = 100,
+                MinValue = 0,
+            },
+            new(){
+                Id = 2,
+                PropertyName = "enumProperty",
+                CategoryId = 1,
+                EnumValues =["opt1", "opt2", "opt3"],
+                IsRequired = true,
+            },
+            new Category.CategoryProperty(){
+                Id = 3,
+                PropertyName = "optionalNumberProperty",
+                CategoryId = 1,
+                IsNumber = true,
+                IsRequired = false,
+                MaxValue = 1000000,
+                MinValue = -100000,
+            },
+            new(){
+                Id = 4,
+                PropertyName = "stringProperty",
+                CategoryId = 1,
+                IsNumber = false,
+                IsRequired = false,
+            },            new Category.CategoryProperty(){
+                Id = 5,
+                PropertyName = "yetAnotherNumberProperty",
+                CategoryId = 2,
+                IsNumber = true,
+                IsRequired = false,
+                MaxValue = 1000000,
+                MinValue = -100000,
+            },
+            new (){
+                Id = 6,
+                CategoryId = 2,
+                IsNumber = false,IsRequired = false,
+            },
+            new(){
+                Id = 7,
+                PropertyName = "yetAnotherEnum",
+                CategoryId = 2,
+                IsNumber = false,
+                IsRequired = false,
+                EnumValues = ["good", "very good", "meh"]
+            }
+        ]);
+    }
+
 
     private void AddPhoneNumber<T>(EntityTypeBuilder<T> builder) where T : User {
         builder.ComplexProperty<PhoneNumber>(u => u.PhoneNumber, c=> {
