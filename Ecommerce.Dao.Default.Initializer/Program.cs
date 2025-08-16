@@ -253,6 +253,7 @@ internal static class Initializer
                     new Product()
                     {
                         Id = 3,
+                        CategoryId = 1,
                         Name = "toy car",
                         Description = ":)",
                         Dimensions = new Dimensions()
