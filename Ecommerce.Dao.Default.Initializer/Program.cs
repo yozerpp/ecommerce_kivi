@@ -115,7 +115,7 @@ internal static class Initializer
         // Seed Categories
         if (!context.Set<Category>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.Categories ON");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Categories] ON");
             var categories = new[]
             {
                 new Category()
@@ -133,13 +133,13 @@ internal static class Initializer
             };
             context.Set<Category>().AddRange(categories);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.Categories OFF");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Categories] OFF");
         }
 
         // Seed Category Properties
         if (!context.Set<Category.CategoryProperty>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.CategoryProperty ON");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[CategoryProperty] ON");
             var categoryProperties = new[]
             {
                 new Category.CategoryProperty()
@@ -208,13 +208,13 @@ internal static class Initializer
             };
             context.Set<Category.CategoryProperty>().AddRange(categoryProperties);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.CategoryProperty OFF");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[CategoryProperty] OFF");
         }
 
         // Seed Products
         if (!context.Set<Product>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.Products ON");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Products] ON");
             var products = new[]
             {
                 new Product()
@@ -274,7 +274,7 @@ internal static class Initializer
             };
             context.Set<Product>().AddRange(products);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT {DefaultDbContext.DefaultSchema}.Products OFF");
+            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Products] OFF");
         }
 
         // Seed Product Category Properties
