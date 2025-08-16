@@ -1,4 +1,5 @@
-﻿using Ecommerce.Entity.Common;
+﻿using System.Drawing;
+using Ecommerce.Entity.Common;
 using Microsoft.AspNetCore.Html;
 
 namespace Ecommerce.WebImpl.Pages.Shared;
@@ -10,7 +11,6 @@ public static class Utils
             ? (!imageUrl.StartsWith("data:") ? "data:" + mimeType + ";base64," + imageUrl : imageUrl)
             : (isProductImage?"default.jpg":"user-icon.svg");
     }
-
     public static string? GetRelativeTime(DateTime dateTime) {
         var now = DateTime.UtcNow + TimeSpan.FromHours(3);
         var dif =now>dateTime?(now - dateTime):(dateTime - now);
