@@ -16,7 +16,6 @@ public class Seed
     {
         // Ensure database is created
         context.Database.EnsureCreated();
-
         // Seed Categories
         if (!context.Set<Category>().Any())
         {
