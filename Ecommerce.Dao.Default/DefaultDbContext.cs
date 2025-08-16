@@ -694,6 +694,18 @@ public class DefaultDbContext : DbContext
                 Id = 3,
                 Name = "toy car",
                 Description = ":)",
+            },
+            new(){
+                Id = 4,
+                CategoryId = 2,
+                Name = "Gaming Laptop",
+                Description = "High performance laptop for gaming",
+            },
+            new(){
+                Id = 5,
+                CategoryId = 2,
+                Name = "Wireless Mouse",
+                Description = "Ergonomic wireless mouse",
             }
         ]);
     }
@@ -713,7 +725,10 @@ public class DefaultDbContext : DbContext
             new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 3, Value = "80" },
             new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
             new ProductCategoryProperties(){ CategoryPropertyId = 5, ProductId = 4, Value = "124"},
-            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 4, Value = "some string"}
+            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 4, Value = "some string"},
+            new ProductCategoryProperties(){ CategoryPropertyId = 5, ProductId = 5, Value = "89"},
+            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech"},
+            new ProductCategoryProperties(){CategoryPropertyId = 7, ProductId = 5, Value = "very good"}
         ]);
     }
 
