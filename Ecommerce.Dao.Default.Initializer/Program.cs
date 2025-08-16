@@ -1,4 +1,5 @@
-﻿using Ecommerce.Dao.Default.Migrations;
+﻿using System.Transactions;
+using Ecommerce.Dao.Default.Migrations;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Views;
@@ -112,39 +113,36 @@ internal static class Initializer
     public static void SeedCustom(DefaultDbContext context)
     {
         // Ensure database is created
-        // Seed Categories
+        // Seed Category
         if (!context.Set<Category>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Categories] ON");
-            var categories = new[]
+            context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT [data].[Category] ON");
+            var Category = new[]
             {
                 new Category()
                 {
-                    Id = 1,
                     Name = "some category",
                     Description = "desc",
                 },
                 new Category()
                 {
-                    Id = 2,
                     Name = "other one",
                     Description = "d"
                 }
             };
-            context.Set<Category>().AddRange(categories);
+            context.Set<Category>().AddRange(Category);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Categories] OFF");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Category] OFF");
         }
 
         // Seed Category Properties
         if (!context.Set<Category.CategoryProperty>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[CategoryProperty] ON");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] ON");
             var categoryProperties = new[]
             {
                 new Category.CategoryProperty()
                 {
-                    Id = 1,
                     PropertyName = "numberProperty",
                     CategoryId = 1,
                     IsNumber = true,
@@ -154,7 +152,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 2,
                     PropertyName = "enumProperty",
                     CategoryId = 1,
                     EnumValues = string.Join('|', ["", "opt1", "opt2", "opt3", ""]),
@@ -162,7 +159,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 3,
                     PropertyName = "optionalNumberProperty",
                     CategoryId = 1,
                     IsNumber = true,
@@ -172,7 +168,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 4,
                     PropertyName = "stringProperty",
                     CategoryId = 1,
                     IsNumber = false,
@@ -180,7 +175,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 5,
                     PropertyName = "yetAnotherNumberProperty",
                     CategoryId = 2,
                     IsNumber = true,
@@ -190,7 +184,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 6,
                     PropertyName = "yetAnotherStringProperty",
                     CategoryId = 2,
                     IsNumber = false,
@@ -198,7 +191,6 @@ internal static class Initializer
                 },
                 new Category.CategoryProperty()
                 {
-                    Id = 7,
                     PropertyName = "yetAnotherEnum",
                     CategoryId = 2,
                     IsNumber = false,
@@ -208,18 +200,17 @@ internal static class Initializer
             };
             context.Set<Category.CategoryProperty>().AddRange(categoryProperties);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[CategoryProperty] OFF");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] OFF");
         }
 
         // Seed Products
         if (!context.Set<Product>().Any())
         {
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Products] ON");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] ON");
             var products = new[]
             {
                 new Product()
                 {
-                    Id = 1,
                     CategoryId = 1,
                     Name = "Car",
                     Description = "Whoof",
@@ -230,7 +221,6 @@ internal static class Initializer
                 },
                 new Product()
                 {
-                    Id = 2,
                     CategoryId = 1,
                     Name = "Toy",
                     Description = "...",
@@ -241,7 +231,6 @@ internal static class Initializer
                 },
                 new Product()
                 {
-                    Id = 3,
                     Name = "toy car",
                     Description = ":)",
                     Dimensions = new Dimensions()
@@ -251,7 +240,6 @@ internal static class Initializer
                 },
                 new Product()
                 {
-                    Id = 4,
                     CategoryId = 2,
                     Name = "Gaming Laptop",
                     Description = "High performance laptop for gaming",
@@ -262,7 +250,6 @@ internal static class Initializer
                 },
                 new Product()
                 {
-                    Id = 5,
                     CategoryId = 2,
                     Name = "Wireless Mouse",
                     Description = "Ergonomic wireless mouse",
@@ -274,7 +261,7 @@ internal static class Initializer
             };
             context.Set<Product>().AddRange(products);
             context.SaveChanges();
-            context.Database.ExecuteSql($"SET IDENTITY_INSERT [{DefaultDbContext.DefaultSchema}].[Products] OFF");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] OFF");
         }
 
         // Seed Product Category Properties
