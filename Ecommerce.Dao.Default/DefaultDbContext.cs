@@ -458,9 +458,7 @@ public class DefaultDbContext : DbContext
             prop.GetNavigation(true).SetIsEagerLoaded(false);
             prop.GetNavigation(false).SetIsEagerLoaded(false);
             p.HasIndex(p => p.CategoryId).IsClustered(false);
-            p.Property<string[]?>(c => c.EnumValues)
-                .HasConversion(e => e != null ? string.Join(',', e) : null,
-                    s => s != null ? s.Split(',', StringSplitOptions.TrimEntries) : null);
+            p.Property<string?>(c => c.EnumValues);
         });
         var categoryBuilder = modelBuilder.Entity<Category>(categoryBuilder => {
             categoryBuilder.HasKey(c => c.Id);
@@ -683,29 +681,41 @@ public class DefaultDbContext : DbContext
                 CategoryId = 1,
                 Name = "Car",
                 Description = "Whoof",
+                Dimensions = new (){
+                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
+                }
             },
             new(){
                 Id = 2,
                 CategoryId = 1,
                 Name = "Toy",
-                Description = "..."
+                Description = "...",                Dimensions = new (){
+                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
+                }
+                
             },
             new(){
                 Id = 3,
                 Name = "toy car",
-                Description = ":)",
+                Description = ":)",                Dimensions = new (){
+                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
+                }
             },
             new(){
                 Id = 4,
                 CategoryId = 2,
                 Name = "Gaming Laptop",
-                Description = "High performance laptop for gaming",
+                Description = "High performance laptop for gaming",                Dimensions = new (){
+                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
+                }
             },
             new(){
                 Id = 5,
                 CategoryId = 2,
                 Name = "Wireless Mouse",
-                Description = "Ergonomic wireless mouse",
+                Description = "Ergonomic wireless mouse",                Dimensions = new (){
+                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
+                }
             }
         ]);
     }
@@ -761,7 +771,7 @@ public class DefaultDbContext : DbContext
                 Id = 2,
                 PropertyName = "enumProperty",
                 CategoryId = 1,
-                EnumValues =["opt1", "opt2", "opt3"],
+                EnumValues =string.Join(',',["","opt1", "opt2", "opt3",""]),
                 IsRequired = true,
             },
             new Category.CategoryProperty(){
@@ -790,8 +800,9 @@ public class DefaultDbContext : DbContext
             },
             new (){
                 Id = 6,
+                PropertyName = "yetAnotherStringProperty",
                 CategoryId = 2,
-                IsNumber = false,IsRequired = false,
+                IsNumber = false,IsRequired = true,
             },
             new(){
                 Id = 7,
@@ -799,7 +810,7 @@ public class DefaultDbContext : DbContext
                 CategoryId = 2,
                 IsNumber = false,
                 IsRequired = false,
-                EnumValues = ["good", "very good", "meh"]
+                EnumValues = string.Join(',',["","good", "very good", "meh",""])
             }
         ]);
     }
