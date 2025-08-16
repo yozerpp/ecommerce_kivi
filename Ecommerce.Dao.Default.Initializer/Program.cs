@@ -114,197 +114,183 @@ internal static class Initializer
     {
         // Ensure database is created
         // Seed Category
-        using (var transaction = context.Database.BeginTransaction())
+        if (!context.Set<Category>().Any())
         {
-            if (!context.Set<Category>().Any())
+            context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT [data].[Category] ON");
+            var Category = new[]
             {
-                context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT [data].[Category] ON");
-                var Category = new[]
+                new Category()
                 {
-                    new Category()
-                    {
-                        Name = "some category",
-                        Description = "desc",
-                    },
-                    new Category()
-                    {
-                        Name = "other one",
-                        Description = "d"
-                    }
-                };
-                context.Set<Category>().AddRange(Category);
-                context.SaveChanges();
-                context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Category] OFF");
-            }
-            transaction.Commit();
+                    Id = 1,
+                    Name = "some category",
+                    Description = "desc",
+                },
+                new Category()
+                {
+                    Id = 2,
+                    Name = "other one",
+                    Description = "d"
+                }
+            };
+            context.Set<Category>().AddRange(Category);
+            context.SaveChanges();
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Category] OFF");
         }
 
         // Seed Category Properties
-        using (var transaction = context.Database.BeginTransaction())
+        if (!context.Set<Category.CategoryProperty>().Any())
         {
-            if (!context.Set<Category.CategoryProperty>().Any())
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] ON");
+            var categoryProperties = new[]
             {
-                context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] ON");
-                var categoryProperties = new[]
+                new Category.CategoryProperty()
                 {
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "numberProperty",
-                        CategoryId = 1,
-                        IsNumber = true,
-                        IsRequired = true,
-                        MaxValue = 100,
-                        MinValue = 0,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "enumProperty",
-                        CategoryId = 1,
-                        EnumValues = string.Join('|', ["", "opt1", "opt2", "opt3", ""]),
-                        IsRequired = true,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "optionalNumberProperty",
-                        CategoryId = 1,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 1000000,
-                        MinValue = -100000,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "stringProperty",
-                        CategoryId = 1,
-                        IsNumber = false,
-                        IsRequired = false,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "yetAnotherNumberProperty",
-                        CategoryId = 2,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 1000000,
-                        MinValue = -100000,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "yetAnotherStringProperty",
-                        CategoryId = 2,
-                        IsNumber = false,
-                        IsRequired = true,
-                    },
-                    new Category.CategoryProperty()
-                    {
-                        PropertyName = "yetAnotherEnum",
-                        CategoryId = 2,
-                        IsNumber = false,
-                        IsRequired = false,
-                        EnumValues = string.Join('|', ["", "good", "very good", "meh", ""])
-                    }
-                };
-                context.Set<Category.CategoryProperty>().AddRange(categoryProperties);
-                context.SaveChanges();
-                context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] OFF");
-            }
-            transaction.Commit();
+                    PropertyName = "numberProperty",
+                    CategoryId = 1,
+                    IsNumber = true,
+                    IsRequired = true,
+                    MaxValue = 100,
+                    MinValue = 0,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "enumProperty",
+                    CategoryId = 1,
+                    EnumValues = string.Join('|', ["", "opt1", "opt2", "opt3", ""]),
+                    IsRequired = true,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "optionalNumberProperty",
+                    CategoryId = 1,
+                    IsNumber = true,
+                    IsRequired = false,
+                    MaxValue = 1000000,
+                    MinValue = -100000,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "stringProperty",
+                    CategoryId = 1,
+                    IsNumber = false,
+                    IsRequired = false,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "yetAnotherNumberProperty",
+                    CategoryId = 2,
+                    IsNumber = true,
+                    IsRequired = false,
+                    MaxValue = 1000000,
+                    MinValue = -100000,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "yetAnotherStringProperty",
+                    CategoryId = 2,
+                    IsNumber = false,
+                    IsRequired = true,
+                },
+                new Category.CategoryProperty()
+                {
+                    PropertyName = "yetAnotherEnum",
+                    CategoryId = 2,
+                    IsNumber = false,
+                    IsRequired = false,
+                    EnumValues = string.Join('|', ["", "good", "very good", "meh", ""])
+                }
+            };
+            context.Set<Category.CategoryProperty>().AddRange(categoryProperties);
+            context.SaveChanges();
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] OFF");
         }
 
         // Seed Products
-        using (var transaction = context.Database.BeginTransaction())
+        if (!context.Set<Product>().Any())
         {
-            if (!context.Set<Product>().Any())
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] ON");
+            var products = new[]
             {
-                context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] ON");
-                var products = new[]
+                new Product()
                 {
-                    new Product()
+                    CategoryId = 1,
+                    Name = "Car",
+                    Description = "Whoof",
+                    Dimensions = new Dimensions()
                     {
-                        CategoryId = 1,
-                        Name = "Car",
-                        Description = "Whoof",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = 1,
-                        Name = "Toy",
-                        Description = "...",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
-                        }
-                    },
-                    new Product()
-                    {
-                        Name = "toy car",
-                        Description = ":)",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = 2,
-                        Name = "Gaming Laptop",
-                        Description = "High performance laptop for gaming",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = 2,
-                        Name = "Wireless Mouse",
-                        Description = "Ergonomic wireless mouse",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
-                        }
+                        Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
                     }
-                };
-                context.Set<Product>().AddRange(products);
-                context.SaveChanges();
-                context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] OFF");
-            }
-            transaction.Commit();
+                },
+                new Product()
+                {
+                    CategoryId = 1,
+                    Name = "Toy",
+                    Description = "...",
+                    Dimensions = new Dimensions()
+                    {
+                        Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                    }
+                },
+                new Product()
+                {
+                    Name = "toy car",
+                    Description = ":)",
+                    Dimensions = new Dimensions()
+                    {
+                        Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                    }
+                },
+                new Product()
+                {
+                    CategoryId = 2,
+                    Name = "Gaming Laptop",
+                    Description = "High performance laptop for gaming",
+                    Dimensions = new Dimensions()
+                    {
+                        Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                    }
+                },
+                new Product()
+                {
+                    CategoryId = 2,
+                    Name = "Wireless Mouse",
+                    Description = "Ergonomic wireless mouse",
+                    Dimensions = new Dimensions()
+                    {
+                        Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                    }
+                }
+            };
+            context.Set<Product>().AddRange(products);
+            context.SaveChanges();
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] OFF");
         }
 
         // Seed Product Category Properties
-        using (var transaction = context.Database.BeginTransaction())
+        if (!context.Set<ProductCategoryProperties>().Any())
         {
-            if (!context.Set<ProductCategoryProperties>().Any())
+            var productCategoryProperties = new[]
             {
-                var productCategoryProperties = new[]
-                {
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 1, Value = "51" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 2, Value = "49" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 2, Value = "15" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 3, Value = "120" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 3, Value = "80" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 4, Value = "124" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 4, Value = "some string" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 5, Value = "89" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech" },
-                    new ProductCategoryProperties() { CategoryPropertyId = 7, ProductId = 5, Value = "very good" }
-                };
-                context.Set<ProductCategoryProperties>().AddRange(productCategoryProperties);
-                context.SaveChanges();
-            }
-            transaction.Commit();
+                new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 1, Value = "51" },
+                new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
+                new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
+                new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
+                new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 2, Value = "49" },
+                new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
+                new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 2, Value = "15" },
+                new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
+                new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 3, Value = "120" },
+                new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
+                new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 3, Value = "80" },
+                new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
+                new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 4, Value = "124" },
+                new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 4, Value = "some string" },
+                new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 5, Value = "89" },
+                new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech" },
+                new ProductCategoryProperties() { CategoryPropertyId = 7, ProductId = 5, Value = "very good" }
+            };
+            context.Set<ProductCategoryProperties>().AddRange(productCategoryProperties);
+            context.SaveChanges();
         }
     }
 
