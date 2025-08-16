@@ -427,9 +427,7 @@ public class DefaultDbContext : DbContext
                 b.HasOne<Category.CategoryProperty>(p => p.CategoryProperty).WithMany()
                     .HasForeignKey(p => p.CategoryPropertyId).HasPrincipalKey(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict)
                     .Metadata.GetNavigation(true).SetIsEagerLoaded(true);
-                DumpProductProps(b);
             });
-            DumpProduct(entity);
             entity.Property(p => p.Active).HasDefaultValue(true);
             entity.HasMany<ImageProduct>(e => e.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId)
                 .HasPrincipalKey(i => i.Id).OnDelete(DeleteBehavior.Cascade).IsRequired();
@@ -450,7 +448,6 @@ public class DefaultDbContext : DbContext
         var categoryPropertyBuilder = modelBuilder.Entity<Category.CategoryProperty>(p => {
             p.HasKey(c => c.Id).IsClustered(true);
             p.Property(c => c.Id).ValueGeneratedOnAdd();
-            DumpCategoryProps(p);
             var prop = p.HasOne<Category>(c => c.Category).WithMany(c => c.CategoryProperties)
                 .HasForeignKey(c => c.CategoryId).HasPrincipalKey(c => c.Id)
                 .IsRequired(false).OnDelete(DeleteBehavior.SetNull)
@@ -462,7 +459,6 @@ public class DefaultDbContext : DbContext
         });
         var categoryBuilder = modelBuilder.Entity<Category>(categoryBuilder => {
             categoryBuilder.HasKey(c => c.Id);
-            DumpCategory(categoryBuilder);
             categoryBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
             categoryBuilder.HasOne<Category>(c => c.Parent).WithMany(c => c.Children).HasForeignKey(c => c.ParentId)
                 .HasPrincipalKey(c => c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull).Metadata.IsUnique=false;
@@ -674,146 +670,6 @@ public class DefaultDbContext : DbContext
             .OnDelete(DeleteBehavior.ClientCascade);
     }
 
-    private static void DumpProduct(EntityTypeBuilder<Product> entity) {
-        entity.HasData([
-            new(){
-                Id = 1,
-                CategoryId = 1,
-                Name = "Car",
-                Description = "Whoof",
-                Dimensions = new (){
-                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
-                }
-            },
-            new(){
-                Id = 2,
-                CategoryId = 1,
-                Name = "Toy",
-                Description = "...",                Dimensions = new (){
-                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
-                }
-                
-            },
-            new(){
-                Id = 3,
-                Name = "toy car",
-                Description = ":)",                Dimensions = new (){
-                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
-                }
-            },
-            new(){
-                Id = 4,
-                CategoryId = 2,
-                Name = "Gaming Laptop",
-                Description = "High performance laptop for gaming",                Dimensions = new (){
-                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
-                }
-            },
-            new(){
-                Id = 5,
-                CategoryId = 2,
-                Name = "Wireless Mouse",
-                Description = "Ergonomic wireless mouse",                Dimensions = new (){
-                    Depth = 1m,Height = 2m,Weight = 5m,Width = 1m
-                }
-            }
-        ]);
-    }
-
-    private static void DumpProductProps(OwnedNavigationBuilder<Product, ProductCategoryProperties> b) {
-        b.HasData([
-            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 1, Value = "51" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 2, Value = "49" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 2, Value = "15" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 1, ProductId = 3, Value = "120" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 3, ProductId = 3, Value = "80" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
-            new ProductCategoryProperties(){ CategoryPropertyId = 5, ProductId = 4, Value = "124"},
-            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 4, Value = "some string"},
-            new ProductCategoryProperties(){ CategoryPropertyId = 5, ProductId = 5, Value = "89"},
-            new ProductCategoryProperties(){CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech"},
-            new ProductCategoryProperties(){CategoryPropertyId = 7, ProductId = 5, Value = "very good"}
-        ]);
-    }
-
-    private static void DumpCategory(EntityTypeBuilder<Category> categoryBuilder) {
-        categoryBuilder.HasData([
-            new Category(){
-                Id = 1,
-                Name = "some category",
-                Description = "desc",
-            },
-            new Category(){
-                Id = 2,
-                Name = "other one",
-                Description = "d"
-            }
-        ]);
-    }
-    private static void DumpCategoryProps(EntityTypeBuilder<Category.CategoryProperty> p) {
-        p.HasData([
-            new Category.CategoryProperty(){
-                Id = 1,
-                PropertyName = "numberProperty",
-                CategoryId = 1,
-                IsNumber = true,
-                IsRequired = true,
-                MaxValue = 100,
-                MinValue = 0,
-            },
-            new(){
-                Id = 2,
-                PropertyName = "enumProperty",
-                CategoryId = 1,
-                EnumValues =string.Join(',',["","opt1", "opt2", "opt3",""]),
-                IsRequired = true,
-            },
-            new Category.CategoryProperty(){
-                Id = 3,
-                PropertyName = "optionalNumberProperty",
-                CategoryId = 1,
-                IsNumber = true,
-                IsRequired = false,
-                MaxValue = 1000000,
-                MinValue = -100000,
-            },
-            new(){
-                Id = 4,
-                PropertyName = "stringProperty",
-                CategoryId = 1,
-                IsNumber = false,
-                IsRequired = false,
-            },            new Category.CategoryProperty(){
-                Id = 5,
-                PropertyName = "yetAnotherNumberProperty",
-                CategoryId = 2,
-                IsNumber = true,
-                IsRequired = false,
-                MaxValue = 1000000,
-                MinValue = -100000,
-            },
-            new (){
-                Id = 6,
-                PropertyName = "yetAnotherStringProperty",
-                CategoryId = 2,
-                IsNumber = false,IsRequired = true,
-            },
-            new(){
-                Id = 7,
-                PropertyName = "yetAnotherEnum",
-                CategoryId = 2,
-                IsNumber = false,
-                IsRequired = false,
-                EnumValues = string.Join(',',["","good", "very good", "meh",""])
-            }
-        ]);
-    }
 
 
     private void AddPhoneNumber<T>(EntityTypeBuilder<T> builder) where T : User {
