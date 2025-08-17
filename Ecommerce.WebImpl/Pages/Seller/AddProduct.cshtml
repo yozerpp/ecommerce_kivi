@@ -14,45 +14,71 @@
 }
 <h3 class="fw-bold fs-3 text-center align-middle">Ürün İlanı Ver</h3>
 <div class="container card bg-light">
-    <div class="row">
-        <label class="col-auto">Varolan Bir Ürünü Ekle</label><input class="col-auto" id="addExistingBtn" onclick="document.getElementById('addNewProductBtn').checked=false;document.getElementById('addNewProduct').classList.remove('show');document.getElementById('addExistingProduct').classList.add('show');" type="radio"/>
-    </div>
-    <div id="addExistingProduct" class="collapse">
-        @await Html.PartialAsync("Shared/SearchBar/_SearchBarPartial", new _SearchBarPartial(){
-            Categories = Model.Categories,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
-        })
-        <form class="input-group" onsubmit="document.getElementById('offerpid').value = event.currentTarget.nextElementSibling.firstElementChild._selected.dataset.id"  hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
-            @Html.AntiForgeryToken()
-            <input id="offerpid" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))"/>
-            <label class="fs-5 fw-bold input-group-text">Fiyat</label>
-            <input class="form-control" type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
-            <label class="fs-5 input-group-text fw-bold">İndirim</label>
-            <input class="form-control" type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))"/>
-            <button type="submit" style="background-color: darkred" class="btn btn-light">Teklif Oluştur</button>
-        </form>
-        <div id="productList" style="max-height: 500px;" class="overflow-y-scroll container-fluid">
+    <script>
+        ((s) => {
+            document.addEventListener('DOMContentLoaded', () => {
+                const tabContainer = s.nextElementSibling;
+                const collapses = tabContainer.nextElementSibling.querySelectorAll('.collapse');
+
+                function setTabsPosition() {
+                    const anyOpen = Array.from(collapses).some(c => c.classList.contains('show'));
+                    if (anyOpen) {
+                        tabContainer.classList.remove('justify-content-center', 'align-items-center');
+                        tabContainer.style.minHeight = '';
+                    } else {
+                        tabContainer.classList.add('justify-content-center', 'align-items-center');
+                        tabContainer.style.minHeight = '30vh';
+                    }
+                }
+
+                collapses.forEach(c => {
+                    c.addEventListener('shown.bs.collapse', setTabsPosition);
+                    c.addEventListener('hidden.bs.collapse', setTabsPosition);
+                });
+            })
+        })(document.currentScript)
+    </script>
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 30vh;">
+        <div class="nav nav-tabs" role="tablist" style="border-bottom: 0">
+            <button class="nav-link" type="button" data-bs-toggle="collapse" data-bs-target="#addExistingProduct" aria-expanded="false" aria-controls="addExistingProduct">Varolan Bir Ürünü Ekle</button>
+            <button class="nav-link" type="button" data-bs-toggle="collapse" data-bs-target="#addNewProduct" aria-expanded="false" aria-controls="addNewProduct">Yeni Bir ürün Oluştur</button>
         </div>
-        <div id="addExistingResult"></div>
     </div>
-    <div class="row">
-        <label class="col-auto">Yeni Bir ürün Oluştur</label><input class="col-auto" id="addNewProductBtn" type="radio" onclick="document.getElementById('addExistingBtn').checked=false; document.getElementById('addExistingProduct').classList.remove('show');document.getElementById('addNewProduct').classList.add('show');"/>
-    </div>
-    <div class="collapse container-fluid px-3" id="addNewProduct">
-        <script>
-            ((s)=>{
-                document.addEventListener('DOMContentLoaded', ()=>{
-                    const picker = s.nextElementSibling.firstElementChild;
-                    picker.addEventListener('change', ()=>{
-                        picker.nextElementSibling.setAttribute('hx-vals', `{"categoryId":${picker.dataset.id}}`);
-                        htmx.trigger(picker.nextElementSibling, 'change', {cancelable:true, bubbles:false})
+    <div id="collapse-parent">
+        <div id="addExistingProduct" class="collapse" data-bs-parent="#collapse-parent">
+            @await Html.PartialAsync("Shared/SearchBar/_SearchBarPartial", new _SearchBarPartial(){
+                Categories = Model.Categories,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
+            })
+            <form class="input-group" onsubmit="document.getElementById('offerpid').value = event.currentTarget.nextElementSibling.firstElementChild._selected.dataset.id"  hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
+                @Html.AntiForgeryToken()
+                <input id="offerpid" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))"/>
+                <label class="fs-5 fw-bold input-group-text">Fiyat</label>
+                <input class="form-control" type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
+                <label class="fs-5 input-group-text fw-bold">İndirim</label>
+                <input class="form-control" type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))"/>
+                <button type="submit" style="background-color: darkred" class="btn btn-light">Teklif Oluştur</button>
+            </form>
+            <div id="productList" style="max-height: 500px;" class="overflow-y-scroll container-fluid">
+            </div>
+            <div id="addExistingResult"></div>
+        </div>
+        <div class="collapse container-fluid px-3" id="addNewProduct" data-bs-parent="#collapse-parent">
+            <script>
+                ((s)=>{
+                    document.addEventListener('DOMContentLoaded', ()=>{
+                        const picker = s.nextElementSibling.firstElementChild;
+                        picker.addEventListener('change', ()=>{
+                            picker.nextElementSibling.setAttribute('hx-vals', `{"categoryId":${picker.dataset.id}}`);
+                            htmx.trigger(picker.nextElementSibling, 'change', {cancelable:true, bubbles:false})
+                        })
                     })
-                })
-            })(document.currentScript)
-        </script>
-        <div class="d-flex justify-content-start">
-        @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "category-picker-seller"){AllowNonSelection = false})
-        </div>
-            <div hx-get="/@(nameof(AddProduct))?handler=template" hx-trigger="change" hx-target="this" hx-swap="innerHTML">
+                })(document.currentScript)
+            </script>
+            <div class="d-flex justify-content-start">
+            @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "category-picker-seller"){AllowNonSelection = false})
+            </div>
+                <div hx-get="/@(nameof(AddProduct))?handler=template" hx-trigger="change" hx-target="this" hx-swap="innerHTML">
+            </div>
         </div>
     </div>
 </div>
