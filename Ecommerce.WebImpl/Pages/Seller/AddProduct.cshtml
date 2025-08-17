@@ -3,102 +3,56 @@
 @using Ecommerce.WebImpl.Pages.Shared
 @using Ecommerce.WebImpl.Pages.Shared.Product
 @using Ecommerce.WebImpl.Pages.Shared.SearchBar
-@inject EntityMapper EntityMapper;
+@using Microsoft.AspNetCore.Html
+@using Stripe
+@using Product = Ecommerce.WebImpl.Pages.Product
 @inject Dictionary<uint, Category> Categories;
 @model AddProduct
 @{
     ViewBag.User = Model.CurrentUser;
     ViewBag.Title = "Yeni Ürün Ekle";
 }
-@section Scripts{
-    <script>
-        function HandleProducts(event){
-            const req = event.detail.xhr;
-            try {
-                const json = JSON.parse(req.responseText);
-                const select=document.getElementById('productSelect');
-                select.innerHTML = '';
-                if(json.length > 5){
-                    select.setAttribute('size', '5');
-                } else select.removeAttribute('size')
-                json.forEach(p=>{
-                    let o = document.createElement('option');
-                    o.id = 'option-' +(o.value= p.id);
-                    o.value = p.id;
-                    o.innerHTML = (p.category!=null? p.category.name +' - ' : '') + p.name;
-                    document.getElementById('productSelect').appendChild(o);
-                });
-            } catch (e) {
-                console.error("Error parsing response:", e);
-            }
-        }
-        function HandleCategoryClick(evt){
-            document.getElementById('productCategory').value = evt.currentTarget.getAttribute('data-id');
-            document.getElementById('categoryProperties').setAttribute('hx-vals', JSON.stringify({CategoryId: evt.currentTarget.getAttribute('data-id')}));
-            htmx.trigger('#categoryProperties', 'fire');
-        }
-    </script>
-}
-<div class="container">
+<h3 class="fw-bold fs-3 text-center align-middle">Ürün İlanı Ver</h3>
+<div class="container card bg-light">
     <div class="row">
         <label class="col-auto">Varolan Bir Ürünü Ekle</label><input class="col-auto" id="addExistingBtn" onclick="document.getElementById('addNewProductBtn').checked=false;document.getElementById('addNewProduct').classList.remove('show');document.getElementById('addExistingProduct').classList.add('show');" type="radio"/>
     </div>
     <div id="addExistingProduct" class="collapse">
-        @{ var handler = "HandleProducts";}
-        <partial name="Shared/SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){Categories=Categories.Values, EntityMapper = EntityMapper, IsJson = true, Target = handler }"/>
-        <form method="post" hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
-            <select id="productSelect" name="@(nameof(Model.NewOffer)).ProductId"></select>
-            <label>Fiyat</label><input type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
-            <label>İndirim</label><input type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))"/>
-            <button type="submit" class="btn btn-light">Teklif Oluştur</button>
+        @await Html.PartialAsync("Shared/SearchBar/_SearchBarPartial", new _SearchBarPartial(){
+            Categories = Model.Categories,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
+        })
+        <form class="input-group" onsubmit="document.getElementById('offerpid').value = event.currentTarget.nextElementSibling.firstElementChild._selected.dataset.id"  hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
+            @Html.AntiForgeryToken()
+            <input id="offerpid" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))"/>
+            <label class="fs-5 fw-bold input-group-text">Fiyat</label>
+            <input class="form-control" type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))"/>
+            <label class="fs-5 input-group-text fw-bold">İndirim</label>
+            <input class="form-control" type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))"/>
+            <button type="submit" style="background-color: darkred" class="btn btn-light">Teklif Oluştur</button>
         </form>
+        <div id="productList" style="max-height: 500px;" class="overflow-y-scroll container-fluid">
+        </div>
         <div id="addExistingResult"></div>
     </div>
     <div class="row">
         <label class="col-auto">Yeni Bir ürün Oluştur</label><input class="col-auto" id="addNewProductBtn" type="radio" onclick="document.getElementById('addExistingBtn').checked=false; document.getElementById('addExistingProduct').classList.remove('show');document.getElementById('addNewProduct').classList.add('show');"/>
     </div>
-    <div class="collapse" id="addNewProduct">
-        <form  id="addNewForm" method="post" hx-post="/Seller/AddProduct?handler=addNew" hx-target="#addNewResult" hx-swap="innerHTML" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="productCategory">Kategori Seçin: </label>
-                <br/>
-                @{
-                    const string onClickHandler = "HandleCategoryClick(event)";
-                }
-                <div id="categoryPicker">
-                    @* <partial name="Shared/SearchBar/_CategoryPicker" model="new _CategoryPicker(Model.Categories, onClickHandler, false)"/> *@
-                </div>
-                <input type="hidden" class="form-control" id="productCategory" name="@(nameof(Model.NewOffer)).Product.CategoryId">
-            </div>
-            <div id="categoryProperties" hx-trigger="fire" hx-get="/Seller/AddProduct?handler=categoryProperties" hx-target="this" hx-swap="innerHTML">
-                
-            </div>
-            <div class="form-group">
-                <label for="productName">Ürün Adı</label>
-                <input type="text" class="form-control" id="productName" name="@(nameof(Model.NewOffer)).Product.Name" required>
-            </div>
-            <div class="form-group">
-                <label for="productDescription">Açıklama</label>
-                <textarea class="form-control" id="productDescription" name="@(nameof(Model.NewOffer)).Product.Description"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="productPrice">Fiyat</label>
-                <input type="number" step="0.01" class="form-control" id="productPrice" name="@(nameof(Model.NewOffer)).Price" required>
-            </div>
-            <div class="form-group">
-                <label for="productStock">Stok</label>
-                <input type="number" class="form-control" id="productStock" name="@(nameof(Model.NewOffer)).Stock" required>
-            </div>
-            <div class="form-group">
-                <label for="productDiscount">İndirim</label>
-                <input type="number" class="form-control" id="productDiscount" name="@(nameof(Model.NewOffer)).Discount" required>
-            </div>
-            <div class="form-group">
-                <label for="productImages">Ürün Resimleri</label>
-                <input type="file" class="form-control-file" id="productImages" name="@(nameof(Model.productImages))" multiple>
-            </div>
-            <button type="submit" class="btn btn-light mt-3">Yeni Ürün Oluştur</button>
-        </form>
-        <div id="addNewResult"></div>
+    <div class="collapse container-fluid px-3" id="addNewProduct">
+        <script>
+            ((s)=>{
+                document.addEventListener('DOMContentLoaded', ()=>{
+                    const picker = s.nextElementSibling.firstElementChild;
+                    picker.addEventListener('change', ()=>{
+                        picker.nextElementSibling.setAttribute('hx-vals', `{"categoryId":${picker.dataset.id}}`);
+                        htmx.trigger(picker.nextElementSibling, 'change', {cancelable:true, bubbles:false})
+                    })
+                })
+            })(document.currentScript)
+        </script>
+        <div class="d-flex justify-content-start">
+        @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "category-picker-seller"){AllowNonSelection = false})
+        </div>
+            <div hx-get="/@(nameof(AddProduct))?handler=template" hx-trigger="change" hx-target="this" hx-swap="innerHTML">
+        </div>
     </div>
 </div>
