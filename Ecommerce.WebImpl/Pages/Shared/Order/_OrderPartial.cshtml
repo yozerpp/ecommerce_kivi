@@ -12,27 +12,6 @@
                                                                                 <p class="fs-5 h-50">{v.Item2}</p>
                                                                             </li>
                                                                         """");
-
-    string GetHxVals() {
-        var d = new Dictionary<string, string>();
-        d[nameof(Orders.OrderId)] = Model.Order.Id.ToString();
-        if (Model.Token != null){
-            d[nameof(Orders.Token)] = Model.Token;
-        }
-        return JsonSerializer.Serialize(d);
-    }
-
-    HtmlString GetQueryString(string handler) {
-        var query = new Dictionary<string, string>
-        {
-            ["handler"] = handler,
-            [nameof(Orders.OrderId)] = Model.Order.Id.ToString()
-        };
-        if (Model.Token != null){
-            query["token"] = Model.Token;
-        }
-        return new HtmlString($"/{nameof(Orders)}"+QueryString.Create(query).ToUriComponent());
-    }
 }
                 <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable?"pointer":"default")" data-bs-toggle="@(Model.Collapsable?"collapse":"")" data-bs-target="#Model.Order@(Model.Order.Id)-body" aria-controls="Model.Order@(Model.Order.Id)-body" aria-expanded="false">
                     <ul class="list-group-horizontal row">
@@ -56,7 +35,6 @@
                         <div class="list-group-item d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
                                 @if (Model.ViewedBySeller){
                                     if (Model.Order.Status == OrderStatus.WaitingConfirmation){
-                                        
                                     <form hx-trigger="submit" hx-post="/Seller?handler=confirmOrder" hx-swap="innerHTML" hx-target="#popupResult">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
@@ -76,7 +54,7 @@
                                 }
                                 else{
                                 if ((Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment))!=0){
-                                    <form hx-trigger="submit" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult" >
+                                    <form hx-trigger="submit" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult">
                                         @if (Model.Token != null){
                                             <input type="hidden" name="token" value="@Model.Token"/>
                                         }
