@@ -38,7 +38,7 @@
                                     <form hx-trigger="submit" hx-post="/Seller?handler=confirmOrder" hx-swap="innerHTML" hx-target="#popupResult">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
-                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))">
+                                        <button type="submit" class="btn btn-success">
                                             Siparişi Onayla
                                         </button>                                        
                                     </form>
@@ -46,54 +46,73 @@
                                         <form hx-trigger="submit" hx-post="/Seller?handler=confirm" hx-swap="innerHTML" hx-target="#popupResult">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
-                                            <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))">
+                                            <button type="submit" class="btn btn-success">
                                                 Siparişi Onayla
                                             </button>                                        
                                         </form>
                                     }
                                 }
                                 else{
-                                if ((Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment))!=0){
-                                    <form hx-trigger="submit" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult">
-                                        @if (Model.Token != null){
-                                            <input type="hidden" name="token" value="@Model.Token"/>
-                                        }
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
-                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn container-fluid shadow border-dark btn-danger align-self-center m-0">
-                                            İptal Et
-                                        </button>
-                                    </form>
-                                    @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){
-                                        DisplayText = "Teslimat Adresini Değiştir", Target = "#popupResult", Inputs = addressInputs.ToArray(),Url = Url.Page(nameof(Orders), "changeAddress"),Classes = "btn btn-primary shadow border-dark container-fluid text-light-emphasis px-0", FormClasses = "container-fluid",
-                                    })
+                                    var hasActions = (Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment)) != 0 ||
+                                                     (Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0;
+                                    if (hasActions)
+                                    {
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                İşlemler
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @if ((Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment))!=0){
+                                                    <li>
+                                                        <form hx-trigger="submit" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                                            @if (Model.Token != null){
+                                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                                            }
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                İptal Et
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){
+                                                            DisplayText = "Teslimat Adresini Değiştir", Target = "#popupResult", Inputs = addressInputs.ToArray(),Url = Url.Page(nameof(Orders), "changeAddress"),Classes = "dropdown-item", FormClasses = "m-0",
+                                                        })
+                                                    </li>
+                                                }
+                                                @if (Model.Order.Status == OrderStatus.Delivered){
+                                                    <li>
+                                                        <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=complete" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                                            @Html.AntiForgeryToken()
+                                                            @if (Model.Token != null){
+                                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                                             }
+                                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                                            <button type="submit" class="dropdown-item text-success">
+                                                                Teslimatı Onayla
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                                @if ((Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete))!=0){
+                                                    <li>
+                                                        <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=refund" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                                            @Html.AntiForgeryToken()
+                                                            @if (Model.Token != null){
+                                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                                            }
+                                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                                            <button type="submit" class="dropdown-item text-warning">
+                                                                İade Et
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
                                 }
-                                if (Model.Order.Status == OrderStatus.Delivered){
-                                    <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=complete" hx-swap="innerHTML" hx-target="#popupResult">
-                                        @Html.AntiForgeryToken()
-                                        @if (Model.Token != null){
-                                            <input type="hidden" name="token" value="@Model.Token"/>
-                                         }
-                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
-                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-danger container-fluid shadow border-dark text-success-emphasis">
-                                            Teslimatı Onayla
-                                        </button>
-                                    </form>
-                                }
-                                if ((Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete))!=0){
-                                    <form hx-trigger="submit" hx-post="/@nameof(Orders)?handler=refund" hx-swap="innerHTML" hx-target="#popupResult">
-                                        @Html.AntiForgeryToken()
-                                        @if (Model.Token != null){
-                                            <input type="hidden" name="token" value="@Model.Token"/>
-                                        }
-                                        <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
-                                        <button onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-danger container-fluid shadow border-dark text-success-emphasis">
-                                            İade Et
-                                        </button>
-                                    </form>
-                                }    
-                                }
-                                
                         </div>
                     </ul>
                 </a>
