@@ -126,7 +126,6 @@ public class SellerManager : ISellerManager
         if(coupons) ret.Add([nameof(Seller.Coupons)]);
         return ret.ToArray();
     }
-
     private static readonly Expression<Func<Seller, Seller>> WithoutAggregates = s => new Seller(){
         Id = s.Id,
         ShopName = s.ShopName,
@@ -158,13 +157,12 @@ public class SellerManager : ISellerManager
         ProfilePicture = s.ProfilePicture,
         ProfilePictureId = s.ProfilePictureId,
         Stats = new SellerStats(){
-            SellerId = s.Stats.SellerId,
             OfferCount = s.Stats.OfferCount ?? 0,
             RefundCount = s.Stats.RefundCount ?? 0,
             ReviewAverage = s.Stats.ReviewAverage??0m,
             ReviewCount = s.Stats.ReviewCount ?? 0,
             SaleCount = s.Stats.SaleCount ?? 0,
-            TotalSold = s.Stats.TotalSold ?? 0,
+            TotalSold = s.Stats.TotalSold ?? 0m,
         }
     };
 }
