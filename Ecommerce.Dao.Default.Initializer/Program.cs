@@ -147,14 +147,32 @@ internal static class Initializer
                     new Category()
                     {
                         Id = 1,
-                        Name = "some category",
-                        Description = "desc",
+                        Name = "Toys & Games",
+                        Description = "Children's toys and gaming products",
                     },
                     new Category()
                     {
                         Id = 2,
-                        Name = "other one",
-                        Description = "d"
+                        Name = "Electronics",
+                        Description = "Electronic devices and accessories"
+                    },
+                    new Category()
+                    {
+                        Id = 3,
+                        Name = "Clothing",
+                        Description = "Apparel and fashion items"
+                    },
+                    new Category()
+                    {
+                        Id = 4,
+                        Name = "Books",
+                        Description = "Books and educational materials"
+                    },
+                    new Category()
+                    {
+                        Id = 5,
+                        Name = "Home & Garden",
+                        Description = "Home improvement and garden supplies"
                     }
                 };
                 context.Set<Category>().AddRange(Category);
@@ -251,74 +269,79 @@ internal static class Initializer
                 context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[Product] ON");
                 var products = new[]
                 {
+                    // Toys & Games products
                     new Product()
                     {
                         Id = 1,
                         CategoryId = 1,
-                        Name = "Car",
-                        Description = "Whoof",
+                        Name = "Remote Control Car",
+                        Description = "High-speed remote control racing car with LED lights",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                            Depth = 25m, Height = 12m, Weight = 0.8m, Width = 15m
                         },
                         CategoryProperties = new List<ProductCategoryProperties>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "51" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt2" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "-57" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "strVal" }
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "6-8 years" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "Plastic" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "Yes" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "SpeedRacer" }
                         }
                     },
                     new Product()
                     {
                         Id = 2,
                         CategoryId = 1,
-                        Name = "Toy",
-                        Description = "...",
+                        Name = "Wooden Building Blocks",
+                        Description = "Educational wooden blocks for creative building",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                            Depth = 30m, Height = 20m, Weight = 1.2m, Width = 30m
                         },
                         CategoryProperties = new List<ProductCategoryProperties>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "49" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt3" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "15" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "strstr" }
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "3-5 years" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "Wood" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "No" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "EduToys" }
                         }
                     },
                     new Product()
                     {
                         Id = 3,
                         CategoryId = 1,
-                        Name = "toy car",
-                        Description = ":)",
+                        Name = "Plush Teddy Bear",
+                        Description = "Soft and cuddly teddy bear for children",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                            Depth = 20m, Height = 35m, Weight = 0.5m, Width = 25m
                         },
                         CategoryProperties = new List<ProductCategoryProperties>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "120" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "opt1" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "80" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "asdasd" }
+                            new ProductCategoryProperties() { CategoryPropertyId = 1, Value = "0-2 years" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 2, Value = "Fabric" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 3, Value = "No" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 4, Value = "CuddleBear" }
                         }
                     },
+                    
+                    // Electronics products
                     new Product()
                     {
                         Id = 4,
                         CategoryId = 2,
                         Name = "Gaming Laptop",
-                        Description = "High performance laptop for gaming",
+                        Description = "High performance laptop for gaming and professional work",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                            Depth = 25m, Height = 2.5m, Weight = 2.3m, Width = 35m
                         },
                         CategoryProperties = new List<ProductCategoryProperties>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "124" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "some string" }
+                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "15.6" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "Windows" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 7, Value = "WiFi" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 8, Value = "24" }
                         }
                     },
                     new Product()
@@ -326,16 +349,148 @@ internal static class Initializer
                         Id = 5,
                         CategoryId = 2,
                         Name = "Wireless Mouse",
-                        Description = "Ergonomic wireless mouse",
+                        Description = "Ergonomic wireless mouse with precision tracking",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 1m, Height = 2m, Weight = 5m, Width = 1m
+                            Depth = 12m, Height = 4m, Weight = 0.1m, Width = 7m
                         },
                         CategoryProperties = new List<ProductCategoryProperties>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "89" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "wireless tech" },
-                            new ProductCategoryProperties() { CategoryPropertyId = 7, Value = "very good" }
+                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "Other" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 7, Value = "Wireless" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 8, Value = "12" }
+                        }
+                    },
+                    new Product()
+                    {
+                        Id = 6,
+                        CategoryId = 2,
+                        Name = "Smartphone",
+                        Description = "Latest generation smartphone with advanced camera",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 0.8m, Height = 15m, Weight = 0.18m, Width = 7m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 5, Value = "6.1" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 6, Value = "Android" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 7, Value = "WiFi" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 8, Value = "24" }
+                        }
+                    },
+                    
+                    // Clothing products
+                    new Product()
+                    {
+                        Id = 7,
+                        CategoryId = 3,
+                        Name = "Cotton T-Shirt",
+                        Description = "Comfortable cotton t-shirt for everyday wear",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 1m, Height = 70m, Weight = 0.2m, Width = 50m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 9, Value = "M" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 10, Value = "Blue" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 11, Value = "Cotton" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 12, Value = "Unisex" }
+                        }
+                    },
+                    new Product()
+                    {
+                        Id = 8,
+                        CategoryId = 3,
+                        Name = "Denim Jeans",
+                        Description = "Classic blue denim jeans with modern fit",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 2m, Height = 100m, Weight = 0.6m, Width = 40m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 9, Value = "L" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 10, Value = "Dark Blue" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 11, Value = "Denim" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 12, Value = "Men" }
+                        }
+                    },
+                    
+                    // Books products
+                    new Product()
+                    {
+                        Id = 9,
+                        CategoryId = 4,
+                        Name = "Programming Guide",
+                        Description = "Comprehensive guide to modern programming languages",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 3m, Height = 24m, Weight = 0.8m, Width = 17m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 13, Value = "Science" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 14, Value = "450" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 15, Value = "English" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 16, Value = "2023" }
+                        }
+                    },
+                    new Product()
+                    {
+                        Id = 10,
+                        CategoryId = 4,
+                        Name = "Children's Story Book",
+                        Description = "Colorful illustrated story book for young readers",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 1m, Height = 21m, Weight = 0.3m, Width = 15m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 13, Value = "Children" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 14, Value = "32" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 15, Value = "Turkish" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 16, Value = "2022" }
+                        }
+                    },
+                    
+                    // Home & Garden products
+                    new Product()
+                    {
+                        Id = 11,
+                        CategoryId = 5,
+                        Name = "Garden Hose",
+                        Description = "Flexible garden hose for watering plants",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 30m, Height = 30m, Weight = 2.5m, Width = 30m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 17, Value = "Garden" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 18, Value = "No" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 19, Value = "Manual" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 20, Value = "Outdoor" }
+                        }
+                    },
+                    new Product()
+                    {
+                        Id = 12,
+                        CategoryId = 5,
+                        Name = "LED Desk Lamp",
+                        Description = "Adjustable LED desk lamp with touch controls",
+                        Dimensions = new Dimensions()
+                        {
+                            Depth = 20m, Height = 45m, Weight = 1.2m, Width = 15m
+                        },
+                        CategoryProperties = new List<ProductCategoryProperties>()
+                        {
+                            new ProductCategoryProperties() { CategoryPropertyId = 17, Value = "Office" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 18, Value = "Yes" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 19, Value = "Electric" },
+                            new ProductCategoryProperties() { CategoryPropertyId = 20, Value = "Indoor" }
                         }
                     }
                 };
