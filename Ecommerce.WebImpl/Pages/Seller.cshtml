@@ -228,16 +228,19 @@
                 document.getElementById('EmailInput').value = document.getElementById('emailField').innerHTML;
 
                 // Update Address fields - Corrected IDs and access to .value
-                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').innerHTML;
-                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').innerHTML;
-                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').innerHTML;
-                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').innerHTML;
-                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').innerHTML; // Added Line2
-                document.getElementById('AddressLine1Input').value = document.getElementById('@(nameof(Address.Line1))_').innerHTML; // Added Line2
+                // The _AddressPartial uses IDs like Address.Line1_ when Editable is true
+                document.getElementById('AddressLine1Input').value = document.getElementById('@(nameof(Address.Line1))_').value;
+                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').value;
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').value;
+                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').value;
+                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').value;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').value;
+                
 
                 // Update Phone Number fields
-                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML;
-                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML;
+                // The _PhoneNumberPartial uses IDs like PhoneNumber.CountryCode_ when Editable is true
+                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))_').value;
+                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))_').value;
 
                 // Trigger HTMX submit
                 htmx.trigger(editForm, 'go');
