@@ -165,4 +165,15 @@ public class SellerManager : ISellerManager
             TotalSold = s.Stats.TotalSold ?? 0m,
         }
     };
+
+    public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithStatlessProduct = o => new ProductOffer(){
+        ProductId = o.ProductId,
+        SellerId = o.SellerId,
+        Discount = o.Discount,
+        Price = o.Price,
+        Seller = o.Seller,
+        Product = ProductManager.CardStatlessProjection.Invoke(o.Product),
+        Stats = o.Stats,
+        Stock = o.Stock,
+    };
 }
