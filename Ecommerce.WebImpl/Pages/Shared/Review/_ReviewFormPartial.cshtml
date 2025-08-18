@@ -1,11 +1,12 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
-<div class="card mb-4">
-    <div class="card-header">
-            <h5 class="mb-0">
-                <i class="bi bi-star me-2"></i>Değerlendirme Yaz
-            </h5>
-        </div>
-        <div class="card-body">
+<div class="mb-4">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormCollapse" aria-expanded="false" aria-controls="reviewFormCollapse">
+        <i class="bi bi-star me-2"></i>Değerlendirme Yaz
+    </button>
+    
+    <div class="collapse mt-3" id="reviewFormCollapse">
+        <div class="card">
+            <div class="card-body">
             <form hx-post="/@nameof(Reviews)?handler=create" hx-target="#popupResult" hx-swap="innerHTML">
                 <input type="hidden" name="ProductId" value="@Model.ProductId" />
                 <input type="hidden" name="SellerId" value="" />
