@@ -1,2 +1,90 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared.Dashboard._ReviewStatistics
+﻿@using System.Drawing
+@using System.Text.Json
+@model Ecommerce.WebImpl.Pages.Shared.Dashboard._ReviewStatistics
+@functions{
+    string ToHex(Color c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
+}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+    function loadReviewChart() {
+        const reviewChartDiv = document.getElementById('reviewChart');
+        if (!reviewChartDiv) {
+            console.error("Review chart div not found!");
+            return;
+        }
+        const reviewChart = echarts.init(reviewChartDiv);
 
+        @{
+            // Group reviews by creation date (e.g., month)
+            var orderedReviews = Model.Reviews.OrderBy(r => r.CreatedAt).ToArray();
+            var format = orderedReviews.GroupBy(r => r.CreatedAt.Month).Count() > 3 ? "yyyy-MM" : "yyyy-MM-dd"; // Adjust format based on data density
+            var groupedReviews = orderedReviews.GroupBy(r => r.CreatedAt.ToString(format))
+                                               .OrderBy(g => g.Key) // Ensure chronological order
+                                               .Select(g => new {
+                                                   Date = g.Key,
+                                                   Count = g.Count(),
+                                                   AverageRating = g.Average(r => r.Rating)
+                                               })
+                                               .ToArray();
+        }
+
+        const dates = @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.Date)));
+        const reviewCounts = @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.Count)));
+        const averageRatings = @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.AverageRating)));
+
+        reviewChart.setOption({
+            title: { text: 'İnceleme Verileri' },
+            tooltip: { trigger: 'axis' },
+            legend: {
+                data: ['İnceleme Sayısı', 'Ortalama Derecelendirme']
+            },
+            xAxis: {
+                type: 'category',
+                data: dates
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: 'İnceleme Sayısı',
+                    position: 'left',
+                    axisLabel: { formatter: '{value}' }
+                },
+                {
+                    type: 'value',
+                    name: 'Ortalama Derecelendirme',
+                    position: 'right',
+                    min: 0,
+                    max: 5, // Assuming ratings are 1-5
+                    interval: 1,
+                    axisLabel: { formatter: '{value} Yıldız' }
+                }
+            ],
+            series: [
+                {
+                    name: 'İnceleme Sayısı',
+                    type: 'line',
+                    smooth: true,
+                    color: '#@ToHex(Color.DodgerBlue)',
+                    data: reviewCounts
+                },
+                {
+                    name: 'Ortalama Derecelendirme',
+                    type: 'line',
+                    yAxisIndex: 1, // Use the second y-axis
+                    smooth: true,
+                    color: '#@ToHex(Color.DarkOrange)',
+                    data: averageRatings
+                }
+            ]
+        });
+    }
+    document.addEventListener("DOMContentLoaded", loadReviewChart);
+</script>
+<div>
+    <h3 class="card-title">İncelemeler</h3>
+    <div class="mt-3 card-body">
+        <div id="reviewChart" style="width: 100%; height: 400px;">
+            
+        </div>
+    </div>
+</div>
