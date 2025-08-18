@@ -1,0 +1,44 @@
+﻿@using Ecommerce.Entity
+@using Ecommerce.Entity.Views
+@model Ecommerce.WebImpl.Pages.Shared.SearchBar._OrderingPartial
+
+<ul id="order" class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
+    <script>
+        ((s)=>{
+           document.addEventListener("DOMContentLoaded", ()=>{
+               const orderList = s.nextElementSibling;
+               orderList._orders = new Map();
+               orderList.querySelectorAll('li').forEach(e=>{
+                   const s = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Selected)]');
+                   const a = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=true]');
+                   const d = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=false]');
+                   s.addEventListener('change', ev=>{
+                       if(ev.currentTarget.checked =='yes'){
+                           
+                       }
+                   })
+               })
+           });
+        })(document.currentScript)
+    </script>
+    <ul>
+    @foreach (var prop in typeof(ProductStats).GetProperties().Where(p => !p.Name.Equals(nameof(ProductStats.ProductId)))){
+        <li class="dropdown-item row g-0 rounded-0">
+            <div class="input-group col-auto row m-0 p-0 g-2 container-fluid">
+                <label class="col-11 btn-outline-secondary bg-secondary-subtle input-group-text" for="@(prop.Name)Order">@(prop.Name)</label>
+                <input id="@(prop.Name)Order" oninput="event.currentTarget.parentElement.nextElementSibling.classList.toggle('d-none')" class="col-1" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
+            </div>
+            <div class="col-auto d-none">
+                <div class="input-group container-fluid row m-0 p-0 g-2">
+                    <label class="col-11 input-group-text" for="@(prop.Name)Asc">Artan</label>
+                    <input id="@(prop.Name)Asc" class="col-1" type="radio" name="@nameof(HomepageModel.OrderInput.Ascending)" value="true"/>
+                </div>
+                <div class="container-fluid input-group m-0 p-0 g-2 row">
+                    <label class="col-11  input-group-text" for="@(prop.Name)Desc">Azalan</label>
+                    <input id="@(prop.Name)Desc" class="col-1" type="radio" name="@nameof(HomepageModel.OrderInput.Ascending)" value="false"/>
+                </div>
+            </div>
+        </li>
+    }
+    </ul>
+</ul>
