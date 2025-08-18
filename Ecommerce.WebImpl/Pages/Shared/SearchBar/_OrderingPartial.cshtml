@@ -5,20 +5,59 @@
 <ul id="order" class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
     <script>
         ((s)=>{
-           document.addEventListener("DOMContentLoaded", ()=>{
-               const orderList = s.nextElementSibling;
-               orderList._orders = new Map();
-               orderList.querySelectorAll('li').forEach(e=>{
-                   const s = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Selected)]');
-                   const a = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=true]');
-                   const d = e.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=false]');
-                   s.addEventListener('change', ev=>{
-                       if(ev.currentTarget.checked =='yes'){
-                           
+           function f(){
+               const orderList = s.parentElement; // The ul#order element
+               orderList._orders = new Map(); // Map to store selected orders: {propertyName: {selected: bool, ascending: bool}}
+
+               orderList.querySelectorAll('li.dropdown-item').forEach(liElement => {
+                   const selectedInput = liElement.querySelector('input[name=@nameof(HomepageModel.OrderInput.Selected)]');
+                   const ascInput = liElement.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=true]');
+                   const descInput = liElement.querySelector('input[name=@nameof(HomepageModel.OrderInput.Ascending)][value=false]');
+                   const orderOptionsDiv = liElement.querySelector('.col-auto.d-none'); // The div containing asc/desc radios
+
+                   const propertyName = selectedInput.id.replace('Order', ''); // Extract property name from ID
+
+                   // Initialize state for each property
+                   orderList._orders.set(propertyName, {
+                       selected: selectedInput.checked,
+                       ascending: ascInput.checked // Default to ascending if selected, or false if neither is checked
+                   });
+
+                   // Event listener for the checkbox
+                   selectedInput.addEventListener('change', (ev) => {
+                       const isChecked = ev.currentTarget.checked;
+                       if (isChecked) {
+                           orderOptionsDiv.classList.remove('d-none');
+                           // If selected, ensure one radio is checked, default to ascending
+                           if (!ascInput.checked && !descInput.checked) {
+                               ascInput.checked = true;
+                           }
+                       } else {
+                           orderOptionsDiv.classList.add('d-none');
+                           ascInput.checked = false;
+                           descInput.checked = false;
                        }
-                   })
-               })
-           });
+                       orderList._orders.set(propertyName, {
+                           selected: isChecked,
+                           ascending: ascInput.checked
+                       });
+                       orderList.dispatchEvent(new Event('change', {bubbles:true}));
+                   });
+
+                   // Event listeners for radio buttons
+                   const radioChangeHandler = () => {
+                       orderList._orders.set(propertyName, {
+                           selected: selectedInput.checked,
+                           ascending: ascInput.checked
+                       });
+                       orderList.dispatchEvent(new Event('change', {bubbles:true}));
+                   };
+                   ascInput.addEventListener('change', radioChangeHandler);
+                   descInput.addEventListener('change', radioChangeHandler);
+               });
+           }
+           document.addEventListener('DOMContentLoaded', f);
+           orderList.addEventListener('init', f); // Allow re-initialization
         })(document.currentScript)
     </script>
     <ul>
@@ -26,16 +65,16 @@
         <li class="dropdown-item row g-0 rounded-0">
             <div class="input-group col-auto row m-0 p-0 g-2 container-fluid">
                 <label class="col-11 btn-outline-secondary bg-secondary-subtle input-group-text" for="@(prop.Name)Order">@(prop.Name)</label>
-                <input id="@(prop.Name)Order" oninput="event.currentTarget.parentElement.nextElementSibling.classList.toggle('d-none')" class="col-1" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
+                <input id="@(prop.Name)Order" class="col-1" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
             </div>
-            <div class="col-auto d-none">
+            <div class="col-auto d-none"> @* This div's visibility is controlled by JS *@
                 <div class="input-group container-fluid row m-0 p-0 g-2">
                     <label class="col-11 input-group-text" for="@(prop.Name)Asc">Artan</label>
-                    <input id="@(prop.Name)Asc" class="col-1" type="radio" name="@nameof(HomepageModel.OrderInput.Ascending)" value="true"/>
+                    <input id="@(prop.Name)Asc" class="col-1" type="radio" name="@(prop.Name)Ascending" value="true"/> @* Name changed to be unique per property *@
                 </div>
                 <div class="container-fluid input-group m-0 p-0 g-2 row">
                     <label class="col-11  input-group-text" for="@(prop.Name)Desc">Azalan</label>
-                    <input id="@(prop.Name)Desc" class="col-1" type="radio" name="@nameof(HomepageModel.OrderInput.Ascending)" value="false"/>
+                    <input id="@(prop.Name)Desc" class="col-1" type="radio" name="@(prop.Name)Ascending" value="false"/> @* Name changed to be unique per property *@
                 </div>
             </div>
         </li>
