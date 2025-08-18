@@ -121,6 +121,11 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#ordersSection" type="button" role="tab">
+                    <i class="bi bi-bag me-2"></i>Siparişler
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reviews-tab" data-bs-toggle="pill" data-bs-target="#reviewsSection" type="button" role="tab">
                     <i class="bi bi-star me-2"></i>Değerlendirmeler
                 </button>
@@ -184,6 +189,20 @@
                     </div>
                     <div class="card-body">
                         <div id="offers" hx-get="/Seller?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div class="tab-pane fade" id="ordersSection" role="tabpanel">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-bag me-2"></i>Siparişler
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="orders" hx-get="/Seller?handler=orders" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
                     </div>
                 </div>
             </div>
