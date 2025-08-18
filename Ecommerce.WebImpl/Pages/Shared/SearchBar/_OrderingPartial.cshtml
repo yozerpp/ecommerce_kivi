@@ -2,7 +2,7 @@
 @using Ecommerce.Entity.Views
 @model Ecommerce.WebImpl.Pages.Shared.SearchBar._OrderingPartial
 
-<ul class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
+<ul class="overflow-y-scroll rounded-end-2" style="max-height: 300px;">
     <script>
         ((s) => {
             function initializeOrdering() {
@@ -17,14 +17,13 @@
                     const orderOptionsDiv = liElement.querySelector('.order-options'); // Use a specific class for clarity
 
                     // Extract property name from the checkbox's ID
-                    const propertyName = selectedInput.id.replace('Order', '');
+                    const propertyName = selectedInput.dataset.propname;
 
                     // Initialize the state for each property based on current checkbox/radio states
                     orderList._orders.set(propertyName, {
                         selected: selectedInput.checked,
                         ascending: ascInput.checked
                     });
-
                     // Set initial visibility of radio buttons
                     if (selectedInput.checked) {
                         orderOptionsDiv.classList.remove('d-none');
@@ -83,7 +82,7 @@
                 <div class="input-group">
                     <label class="form-control btn-outline-secondary bg-secondary-subtle" for="@(prop.Name)Order">@(prop.Name)</label>
                     <div class="input-group-text">
-                        <input id="@(prop.Name)Order" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
+                        <input data-propname="@prop.Name" id="@(prop.Name)Order" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
                     </div>
                 </div>
             </div>

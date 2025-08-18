@@ -11,9 +11,9 @@
 }
 <div id="@(formId)">
     <script>
-        let filterDropdown;
+        let filterDropdown@(formId);
         document.addEventListener("DOMContentLoaded", ()=> {
-            filterDropdown= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
+            filterDropdown@(formId)= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
                 autoClose: false,reference: document.getElementById('filters')
             });
             (()=>{
@@ -27,7 +27,7 @@
 
                    // Add Category
                    const categoryIdInput = document.getElementById('categoryIdInput');
-                   if (categoryIdInput && categoryIdInput.value) {
+                   if (categoryIdInput && categoryIdInput?.value!==undefined && categoryIdInput.value !== '0' && categoryIdInput.value !== '') {
                        params.push(`@(nameof(Entity.Product.Category))_@(nameof(Category.Id))=${(categoryIdInput.value)}`);
                    }
 
@@ -56,14 +56,40 @@
                             params.push('|('+qs.join(',') + ')');
                         else params.push(qs[0]);
                    }
+                   let orderings = [];
+                   const orderList = document.getElementById('order').firstElementChild;
+                   orderList._orders.forEach((k,v)=>{
+                       if(v.selected){
+                           orderings.push({property:k, value: v.ascending?'ASC': 'DESC'})
+                       }
+                   });
+                   
                    // Remove leading '&' if present
-                   let query = encodeURIComponent(params.length >1? '&(' + params.join(',') + ')':params[0]);
-                   @if (Model.IsJson){
-                    <text>
-                        query+= '&JsonResult=true';
+                    let querystringparam='';
+                    let orderstringparam='';
+                    if(params.length > 0){
+                        querystringparam ='@(nameof(HomepageModel.QueryString))=' + encodeURIComponent('&(' + params.join(',') + ')');
+                    } 
+                    if(orderings.length > 0){
+                        orderstringparam = '@(nameof(HomepageModel.OrderString))=' + encodeURIComponent(params.map(p=>`${p.property},${p.value}`).join('&&'))
+                    }
+                    let url;
+                    if(orderings.length ===0 && params.length === 0){
+                        url = '/Index';
+                    }else url = '/Index?' + querystringparam + '&' + orderstringparam;
+                   @if (Model.ViewType == HomepageModel.ViewType_.Page){
+                   <text>
+                        window.location.replace( url);
                    </text>
                    }
-                   window.location.replace( '/Index?@(nameof(HomepageModel.QueryString))=' + query);
+                   else{
+                    <text>
+                        htmx.ajax('GET', url, {
+                            target: '@(Model.Target)',
+                            swap: 'innerHTML',
+                        });
+                    </text>
+                   }
                });
             })()
         });
@@ -72,44 +98,39 @@
     <input type="hidden" id="categoryIdInput" name="@(nameof(HomepageModel.SearchCategory))"/>
     <div class="d-flex gap-1">
         <div class="input-group rounded-start-2">
-            <button id="@(formId)Submit" class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="button">
-                <i class="bi bi-search m-0" style="font-size: large"></i> 
+            <button hx-get="" hx-trigger="go" id="@(formId)Submit" class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="button">
+                <i class="bi bi-search m-0" style="font-size: large"></i>
             </button>
             <div class="dropdown my-0">
                 <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tümü</button>
                 <div id="categoryPicker" class="dropdown-menu rounded-bottom-2 border-1">
-                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories,displayElementId:"pickerBtn", inputElementId:"categoryIdInput", targetElementId:"categoryProperties"))
+                    <script>
+                        ((s)=>{
+                            document.addEventListener("DOMContentLoaded", ()=>{
+                                const picker = s.nextElementSibling;
+                                picker.addEventListener('change', e=>{
+                                    s.parentElement.previousElementSibling.innerHTML = picker.dataset.name;
+                                    document.getElementById('categoryProperties').setAttribute('hx-vals', JSON.stringify({"categoryId": picker.dataset.id}));
+                                    htmx.trigger(document.getElementById('categoryProperties'), 'fire')
+                                    document.getElementById('categoryIdInput').value = picker.dataset.id == '0'?null:picker.dataset.id;
+                            })});
+                        })(document.currentScript)
+                    </script>
+                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories, rootElementId:"categoryPicker1"))
                 </div>
             </div>
             <input id="@(formId)Search" class="rounded-1 rounded-start-0 form-control" type="text" @Html.Raw(Model.Target!=null?$"onchange=\"document.getElementById('{formId}Submit').dispatchEvent(new Event('click', {{cancelable: true, bubbles: true}}))\"":"") value="@null" name="@(nameof(HomepageModel.SearchName))" />
         </div>
         <div class="btn-group justify-content-center mx-1 align-items-center gap-2">
-            <button type="button" class="dropdown-toggle btn btn-outline-info" onclick="filterDropdown.toggle();event.stopImmediatePropagation();">
+            <button type="button" class="dropdown-toggle btn btn-outline-info" onclick="filterDropdown@(formId).toggle();event.stopImmediatePropagation();">
                 Filtreler
             </button>
             <div class="dropdown">
                 <button  type="button" id="ordersButton" class="btn btn-outline-light text-dark dropdown-toggle"  
                         data-bs-toggle="dropdown" data-bs-target="#order" aria-expanded="false">Sıralama</button>
-                <ul id="order" class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
-                    @foreach (var prop in typeof(ProductStats).GetProperties().Where(p=>!p.Name.Equals(nameof(ProductStats.ProductId)))){
-                        <li class="dropdown-item row g-0 rounded-0">
-                            <div class="input-group col-auto row m-0 p-0 g-2 container-fluid">
-                                <label class="col-11 btn-outline-secondary bg-secondary-subtle input-group-text" for="@(prop.Name)Order">@(prop.Name)</label>
-                                <input id="@(prop.Name)Order" oninput="event.currentTarget.parentElement.nextElementSibling.classList.toggle('d-none')" class="col-1" type="checkbox" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Selected)"/>
-                            </div>
-                            <div class="col-auto d-none">
-                                <div class="input-group container-fluid row m-0 p-0 g-2">
-                                    <label class="col-11 input-group-text" for="@(prop.Name)Asc">Artan</label>
-                                    <input id="@(prop.Name)Asc" class="col-1" type="radio" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Ascending)" value="true"/>
-                                </div>
-                                <div class="container-fluid input-group m-0 p-0 g-2 row">
-                                    <label class="col-11  input-group-text" for="@(prop.Name)Desc">Azalan</label>
-                                    <input id="@(prop.Name)Desc" class="col-1" type="radio" name="Orders[@(prop.Name)].@nameof(HomepageModel.OrderInput.Ascending)" value="false"/>
-                                </div>
-                            </div>
-                        </li>
-                    }
-                </ul>
+                <div id="order" class="dropdown-menu">
+                    @await Html.PartialAsync("Shared/SearchBar/_OrderingPartial", new _OrderingPartial())
+                </div>
             </div>
         </div>
     </div>
@@ -146,7 +167,7 @@
                     </div>
                     <div class="col-6 gap-1">
                         <div>
-                            Favorilere Eklenme Sayııs
+                            Favorilere Eklenme Sayısı
                         </div>
                         <div id="favoriteRange">
                             <input type="hidden" name=""/>
