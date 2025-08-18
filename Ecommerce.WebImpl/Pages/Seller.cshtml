@@ -219,12 +219,13 @@
                 document.getElementById('ShopNameInput').value = document.getElementById('shopNameField').innerText;
                 document.getElementById('EmailInput').value = document.getElementById('emailField').innerText;
 
-                // Update Address fields
-                document.getElementById('AddressStreetInput').value = document.getElementById('street').value;
-                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('neighbourhood').value;
-                document.getElementById('AddressStateInput').value = document.getElementById('State').value;
-                document.getElementById('AddressCityInput').value = document.getElementById('City').value;
-                document.getElementById('AddressZipCodeInput').value = document.getElementById('Zipcode').value;
+                // Update Address fields - Corrected IDs and access to .value
+                document.getElementById('AddressStreetInput').value = document.getElementById('@(nameof(Address.Line1))_').value;
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').value;
+                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').value;
+                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').value;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').value;
+                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').value; // Added Line2
 
                 // Update Phone Number fields
                 document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('countrycode').value;
@@ -256,4 +257,3 @@
     });
 </script>
 }
- 
