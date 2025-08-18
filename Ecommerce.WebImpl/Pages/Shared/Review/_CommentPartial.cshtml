@@ -23,26 +23,27 @@
                 })    
             })()
         </script>
-        <div class="me-auto d-flex gap-2">
+        <div class="ms-auto d-inline-flex gap-2">
             @if (Model.CommentUserView.ReviewComment.Stats?.ReplyCount > 0)
             {
                 <span class="d-inline-flex align-items-center">
-                    <i class="bi bi-chat-dots me-1"></i> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
+                    <a data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-decoration-none text-dark" href="javascript:void(0);" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel+1)">
+                        <i class="bi bi-chat-dots"></i>
+                    </a> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
                 </span>
             }
-            @if (Model.CommentUserView.ReviewComment.Stats?.Votes != null)
-            {
-                <span class="d-inline-flex align-items-center">
-                    <i class="bi bi-hand-thumbs-up me-1"></i> @Model.CommentUserView.ReviewComment.Stats.Votes
-                </span>
-            }
+
+            <a data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
+                <i class="bg-light text-dark bi bi-reply hover-grow"></i>
+            </a>
+            @await Html.PartialAsync("Shared/Review/_VotePartial",new _VotePartial(){
+                ReviewId = Model.CommentUserView.ReviewComment.ReviewId,
+                CommentId = Model.CommentUserView.ReviewComment.Id,
+                Karma = Model.CommentUserView.ReviewComment.Stats?.Votes??0,
+                CurrentUserVote = Model.CommentUserView.CurrentUserVote
+            } )
+            
         </div>
-        <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel+1)">
-            <i class="bi bg-light text-dark bi-chat-dots"></i>
-        </a>x"
-        <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="right" title="Cevapla" class="d-flex col-2 gap-1 p-0 text-decoration-none" href="" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
-            <i class="bg-light text-dark bi bi-reply"></i>
-        </a>
     </div>
     <div class="collapse mt-3" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
         <form class="card card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
