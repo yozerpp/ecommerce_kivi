@@ -6,31 +6,78 @@
 @{
     var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
 }
-<div class="container">
-    <div class="container-fluid">
-        <div class="d-flex row justify-content-center">
-            <b id="shopNameField" style="font-size: xx-large" class="col-auto">@Model.ViewedSeller.ShopName</b>
-            @if (editable){
-                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                })
-            }
-        </div>
-        <div class="row align-items-start">
-            <p class="col-auto">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage??0m,2).ToString("F") <i class="bi bi-star-fill text-warning"></i></p>
-            <p class="col-auto">@Model.ViewedSeller.Stats.ReviewCount Toplam Değerlendirme</p>
-        </div>
-        <div class="row justify-content-start">
-            <label class="col-auto">Email: </label><p id="emailField" class="col-auto">@Model.ViewedSeller.Email</p>
-            @if (editable){
-            <a class="col-auto text-decoration-none" onclick="this.previousElementSibling.setAttribute('contenteditable','true');" href="javascript:void(0);"><i class="bi bi-pencil text-secondary bg-light"></i></a>
-            }
-        </div>
-        <div class="d-flex row">
-            <div class="col justify-content-start">
-                <partial name="Shared/_AddressPartial" model="new _AddressPartial(){Address=@Model.ViewedSeller.Address!,Editable=editable}"/>
-            </div>
-            <div class="col justify-content-end">
-                <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){PhoneNumber=Model.ViewedSeller.PhoneNumber, Editable=editable}"/>
+
+<div class="container-fluid bg-light py-4">
+    <div class="container">
+        <!-- Seller Header Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-3">
+                            <h1 id="shopNameField" class="display-6 fw-bold text-primary mb-0 me-3">@Model.ViewedSeller.ShopName</h1>
+                            @if (editable){
+                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                })
+                            }
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-auto">
+                                <div class="d-flex align-items-center">
+                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage??0m,2).ToString("F")</span>
+                                    <i class="bi bi-star-fill text-warning fs-5"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <span class="text-muted">(@Model.ViewedSeller.Stats.ReviewCount değerlendirme)</span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <strong class="me-2">E-posta:</strong>
+                                    <span id="emailField" class="me-2">@Model.ViewedSeller.Email</span>
+                                    @if (editable){
+                                        <a class="text-decoration-none" onclick="this.previousElementSibling.setAttribute('contenteditable','true');" href="javascript:void(0);">
+                                            <i class="bi bi-pencil text-secondary"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+                                    <div class="h4 text-primary mb-1">@Model.ViewedSeller.Stats.OfferCount</div>
+                                    <small class="text-muted">Ürün</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                    <div class="h4 text-success mb-1">@Model.ViewedSeller.Stats.SaleCount</div>
+                                    <small class="text-muted">Satış</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Adres Bilgileri</h6>
+                        <partial name="Shared/_AddressPartial" model="new _AddressPartial(){Address=@Model.ViewedSeller.Address!,Editable=editable}"/>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">İletişim</h6>
+                        <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){PhoneNumber=Model.ViewedSeller.PhoneNumber, Editable=editable}"/>
+                    </div>
+                </div>
             </div>
         </div>
         <form id="editForm" method="post" hx-post="/Seller/SellerPage?handler=edit">
@@ -45,62 +92,94 @@
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.CountryCode)}")" id="PhoneNumberCountryCodeInput" value="@(Model.ViewedSeller.PhoneNumber.CountryCode)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.Number)}")" id="PhoneNumberNumberInput" value="@(Model.ViewedSeller.PhoneNumber.Number)"/>
         </form>
-    </div> 
-    <div class="container-fluid justify-content-center my-2">
-        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#coupons" role="button" aria-expanded="false" aria-controls="coupons">
-            Satıcıya ait kuponları Gör.
-        </a>
-    </div>
-    <div class="collapse mx-2" id="coupons">
-        @if (Model.ViewedSeller.Coupons.Count == 0){
-            <p>Satıcının listelenmiş kuponu yok.</p>
-        }else{
-            @await Html.PartialAsync("Shared/_CouponsPartial", new _CouponsPartial(){
-                Coupons = Model.ViewedSeller.Coupons,ShowSeller = false
-            })
-        }
-    </div>
-    <div class="container-fluid justify-content-center my-2">
-        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#offersSection" role="button" aria-expanded="false" aria-controls="offersSection">
-            İlanları Gör
-        </a>
-    </div>
-    <div class="collapse" id="offersSection">
-        <div class="d-flex justify-content-between px-5 mx-5">
-            <p>@Model.ViewedSeller.Stats.OfferCount Listelenen Ürün Saysı</p>
-            <div class="m-3"></div>
-            <p>@Model.ViewedSeller.Stats.SaleCount Toplam Satış Sayısı</p>
-        </div>
-        @if (editable){
-            <a asp-page="AddProduct" class="text-decoration-none text-dark">
-                <i class="bi bi-plus-circle"></i>
-                <span>Yeni Bir Ürün İlanı Ver</span>
-            </a>
-        }
-        <div id="offers" hx-get="/Seller/SellerPage?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
-    </div>
-    <div class="container-fluid justify-content-center my-2">
-        <a class="btn btn-light mx-2 col-7" data-bs-toggle="collapse" href="#reviewsSection" role="button" aria-expanded="false" aria-controls="reviewsSection">
-            Değerlendirmeleri Gör
-        </a>
-    </div>
-    <div class="collapse" id="reviewsSection">
-    <div class="d-flex justify-content-start align-items-center">
-        <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="form-check-inline">
-            <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
-            <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
-            <div class="row">
-                <label class="col">Sayfa boyutu</label>
-                <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="col" name="@(nameof(Reviews.PageSize))">
-                    @{ var ar = new int[]{ 20, 10, 50, 100 }; }
-                    @for (int i = 0; i < ar.Length; i++){
-                        <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
-                    }
-                </select>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills nav-fill mb-4" id="sellerTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="coupons-tab" data-bs-toggle="pill" data-bs-target="#coupons" type="button" role="tab">
+                    <i class="bi bi-ticket-perforated me-2"></i>Kuponlar
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="offers-tab" data-bs-toggle="pill" data-bs-target="#offersSection" type="button" role="tab">
+                    <i class="bi bi-box-seam me-2"></i>Ürünler
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reviews-tab" data-bs-toggle="pill" data-bs-target="#reviewsSection" type="button" role="tab">
+                    <i class="bi bi-star me-2"></i>Değerlendirmeler
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="sellerTabsContent">
+            <!-- Coupons Tab -->
+            <div class="tab-pane fade show active" id="coupons" role="tabpanel">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-ticket-perforated me-2"></i>Satıcı Kuponları
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.ViewedSeller.Coupons.Count == 0){
+                            <div class="text-center py-5">
+                                <i class="bi bi-ticket-perforated display-1 text-muted"></i>
+                                <p class="text-muted mt-3">Satıcının listelenmiş kuponu bulunmuyor.</p>
+                            </div>
+                        }else{
+                            @await Html.PartialAsync("Shared/_CouponsPartial", new _CouponsPartial(){
+                                Coupons = Model.ViewedSeller.Coupons,ShowSeller = false
+                            })
+                        }
+                    </div>
+                </div>
             </div>
-        </form>
-    </div>
-    <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
+
+            <!-- Products Tab -->
+            <div class="tab-pane fade" id="offersSection" role="tabpanel">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-box-seam me-2"></i>Ürün İlanları
+                        </h5>
+                        @if (editable){
+                            <a asp-page="AddProduct" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle me-1"></i>Yeni Ürün Ekle
+                            </a>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <div id="offers" hx-get="/Seller/SellerPage?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Tab -->
+            <div class="tab-pane fade" id="reviewsSection" role="tabpanel">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-star me-2"></i>Müşteri Değerlendirmeleri
+                        </h5>
+                        <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="d-flex align-items-center">
+                            <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
+                            <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
+                            <label class="form-label me-2 mb-0">Sayfa boyutu:</label>
+                            <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="form-select form-select-sm" name="@(nameof(Reviews.PageSize))" style="width: auto;">
+                                @{ var ar = new int[]{ 20, 10, 50, 100 }; }
+                                @for (int i = 0; i < ar.Length; i++){
+                                    <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
+                                }
+                            </select>
+                        </form>
+                    </div>
+                    <div class="card-body">
+                        <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @section Scripts{
