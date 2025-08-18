@@ -77,7 +77,7 @@
     </script>
     @foreach (var prop in typeof(ProductStats).GetProperties().Where(p => !p.Name.Equals(nameof(ProductStats.ProductId))))
     {
-        <li class="dropdown-item row g-0 rounded-0 align-items-center">
+        <li class="dropdown-item row g-0 rounded-0 align-items-center" onclick="event.stopPropagation();">
             <div class="col-8"> @* Adjusted column width for label and checkbox *@
                 <div class="input-group">
                     <label class="form-control btn-outline-secondary bg-secondary-subtle" for="@(prop.Name)Order">@(prop.Name)</label>

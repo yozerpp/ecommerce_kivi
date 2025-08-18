@@ -12,9 +12,13 @@
 <div id="@(formId)">
     <script>
         let filterDropdown@(formId);
+        let orderDropdown@(formId);
         document.addEventListener("DOMContentLoaded", ()=> {
             filterDropdown@(formId)= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
                 autoClose: false,reference: document.getElementById('filters')
+            });
+            orderDropdown@(formId) = new bootstrap.Dropdown(document.getElementById('ordersButton'), {
+                autoClose: false,reference: document.getElementById('order')
             });
             (()=>{
                document.getElementById('@(formId)Submit').addEventListener('click', e=>{
