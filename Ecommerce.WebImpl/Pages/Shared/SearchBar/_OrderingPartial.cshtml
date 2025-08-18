@@ -2,7 +2,7 @@
 @using Ecommerce.Entity.Views
 @model Ecommerce.WebImpl.Pages.Shared.SearchBar._OrderingPartial
 
-<ul id="order" class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
+<ul  class="dropdown-menu overflow-y-scroll rounded-end-2" style="max-height: 300px;">
     <script>
         ((s)=>{
            function f(){
@@ -17,13 +17,10 @@
 
                    const propertyName = selectedInput.id.replace('Order', ''); // Extract property name from ID
 
-                   // Initialize state for each property
                    orderList._orders.set(propertyName, {
                        selected: selectedInput.checked,
                        ascending: ascInput.checked // Default to ascending if selected, or false if neither is checked
                    });
-
-                   // Event listener for the checkbox
                    selectedInput.addEventListener('change', (ev) => {
                        const isChecked = ev.currentTarget.checked;
                        if (isChecked) {
@@ -43,8 +40,6 @@
                        });
                        orderList.dispatchEvent(new Event('change', {bubbles:true}));
                    });
-
-                   // Event listeners for radio buttons
                    const radioChangeHandler = () => {
                        orderList._orders.set(propertyName, {
                            selected: selectedInput.checked,
