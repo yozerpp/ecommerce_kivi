@@ -64,12 +64,18 @@
                 @foreach(var userType in new[]{typeof(Customer), typeof(Entity.Seller), typeof(Staff)}){
                     <div class="tab-pane fade show @(first? "active" : "")" id="@userType.Name" role="tabpanel">
                         <form hx-post="/Account/Login?handler=@userType.Name" hx-swap="innerHTML" hx-target="#loginResult" method="post" class="mt-4">
+                            <div class="mb-3">
+                                <label class="form-label">E-Posta</label>
+                                <input type="email" class="form-control" name="LoginCredentials.Email" placeholder="E-posta adresinizi girin" required />
+                            </div>
+                            
                             <div class="mb-4">
-                                @(EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential)))
+                                <label class="form-label">Şifre</label>
+                                <input type="password" class="form-control" name="LoginCredentials.Password" placeholder="Şifrenizi girin" required />
                             </div>
                             
                             <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="@false" id="rememberMe@(userType.Name)"/>
+                                <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="true" id="rememberMe@(userType.Name)"/>
                                 <label class="form-check-label" for="rememberMe@(userType.Name)">
                                     Beni Hatırla
                                 </label>
