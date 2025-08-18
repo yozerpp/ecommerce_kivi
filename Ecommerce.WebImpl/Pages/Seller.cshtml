@@ -1,5 +1,6 @@
 @page
 @using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.Seller
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.SellerModel
 @{
@@ -10,9 +11,8 @@
         <div class="d-flex row justify-content-center">
             <b id="shopNameField" style="font-size: xx-large" class="col-auto">@Model.ViewedSeller.ShopName</b>
             @if (editable){
-                <a href="javascript:void(0);" onclick="this.previousElementSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none col-auto">
-                    <i class="bi bi-pencil text-secondary bg-white" style="height: 1em;"></i>
-                </a>
+                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                })
             }
         </div>
         <div class="row align-items-start">
@@ -54,50 +54,10 @@
     <div class="collapse mx-2" id="coupons">
         @if (Model.ViewedSeller.Coupons.Count == 0){
             <p>Satıcının listelenmiş kuponu yok.</p>
-        }
-        else{
-            <div class="container px-5">
-            @foreach (var coupon in Model.ViewedSeller.Coupons){
-                <div class="row">
-                    <label class="col">Kod</label>
-                    <p id="couponIdField_@(coupon.Id)" class="col">@coupon.Id</p>
-                    @if (editable)
-                    {
-                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
-                        </a>
-                    }
-                </div>
-                <div class="row">
-                    <label class="col">İndirim Miktarı</label>
-                    <p id="couponDiscountRateField_@coupon.Id" class="col">@(((1 - coupon.DiscountRate) * 100m).ToString("F"))</p>
-                    @if (editable)
-                    {
-                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
-                        </a>
-                    }
-                    <div class="col m-5"></div>
-                    <label class="col">Son Kullanma Tarihi</label>
-                    <p id="couponExpirationDateField_@coupon.Id" class="col">@coupon.ExpirationDate</p>
-                    @if (editable)
-                    {
-                        <a href="javascript:void(0);" onclick="this.previousSibling.setAttribute('contenteditable', 'true')" class="text-decoration-none bg-dark text-white col">
-                            <i class="bi bi-pencil-fill" style="height: 1em;"></i>
-                        </a>
-                    }
-                    @if (editable){
-                        <form id="couponEditForm_@coupon.Id" method="post" hx-post="/Seller/SellerPage?handler=editCoupon">
-                            <input type="hidden" name="Coupon.Id" value="@coupon.Id" id="couponIdInput_@coupon.Id"/>
-                            <input type="hidden" name="Coupon.DiscountRate" value="@coupon.DiscountRate" id="couponDiscountRateInput_@coupon.Id"/>
-                            <input type="hidden" name="Coupon.ExpirationDate" value="@coupon.ExpirationDate" id="couponExpirationDateInput_@coupon.Id"/>
-                            <button type="submit" class="btn btn-primary btn-sm">Update Coupon</button>
-                        </form>    
-                    }
-                    
-                </div>
-            }
-            </div>
+        }else{
+            @await Html.PartialAsync("Shared/_CouponsPartial", new _CouponsPartial(){
+                Coupons = Model.ViewedSeller.Coupons,ShowSeller = false
+            })
         }
     </div>
     <div class="container-fluid justify-content-center my-2">
@@ -143,8 +103,8 @@
     <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
     </div>
 </div>
-
-<script>
+@section Scripts{
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         const editForm = document.getElementById('editForm');
         if (editForm) {
@@ -191,3 +151,5 @@
         });
     });
 </script>
+}
+ 
