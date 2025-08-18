@@ -190,68 +190,196 @@ internal static class Initializer
                 context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] ON");
                 var categoryProperties = new[]
                 {
+                    // Toys & Games properties
                     new CategoryProperty()
                     {
                         Id = 1,
-                        PropertyName = "numberProperty",
+                        PropertyName = "Age Range",
                         CategoryId = 1,
-                        IsNumber = true,
+                        IsNumber = false,
                         IsRequired = true,
-                        MaxValue = 100,
-                        MinValue = 0,
+                        EnumValues = string.Join('|', ["", "0-2 years", "3-5 years", "6-8 years", "9-12 years", "13+ years", ""]),
                     },
                     new CategoryProperty()
                     {
                         Id = 2,
-                        PropertyName = "enumProperty",
+                        PropertyName = "Material",
                         CategoryId = 1,
-                        EnumValues = string.Join('|', ["", "opt1", "opt2", "opt3", ""]),
+                        IsNumber = false,
                         IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Plastic", "Wood", "Metal", "Fabric", "Mixed", ""]),
                     },
                     new CategoryProperty()
                     {
                         Id = 3,
-                        PropertyName = "optionalNumberProperty",
+                        PropertyName = "Battery Required",
                         CategoryId = 1,
-                        IsNumber = true,
+                        IsNumber = false,
                         IsRequired = false,
-                        MaxValue = 1000000,
-                        MinValue = -100000,
+                        EnumValues = string.Join('|', ["", "Yes", "No", ""]),
                     },
                     new CategoryProperty()
                     {
                         Id = 4,
-                        PropertyName = "stringProperty",
+                        PropertyName = "Brand",
                         CategoryId = 1,
                         IsNumber = false,
                         IsRequired = false,
                     },
+                    
+                    // Electronics properties
                     new CategoryProperty()
                     {
                         Id = 5,
-                        PropertyName = "yetAnotherNumberProperty",
+                        PropertyName = "Screen Size",
                         CategoryId = 2,
                         IsNumber = true,
                         IsRequired = false,
-                        MaxValue = 1000000,
-                        MinValue = -100000,
+                        MaxValue = 100,
+                        MinValue = 1,
                     },
                     new CategoryProperty()
                     {
                         Id = 6,
-                        PropertyName = "yetAnotherStringProperty",
+                        PropertyName = "Operating System",
                         CategoryId = 2,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Windows", "macOS", "Linux", "Android", "iOS", "Other", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 7,
+                        PropertyName = "Connectivity",
+                        CategoryId = 2,
+                        IsNumber = false,
+                        IsRequired = false,
+                        EnumValues = string.Join('|', ["", "WiFi", "Bluetooth", "USB", "Ethernet", "Wireless", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 8,
+                        PropertyName = "Warranty Period",
+                        CategoryId = 2,
+                        IsNumber = true,
+                        IsRequired = false,
+                        MaxValue = 60,
+                        MinValue = 0,
+                    },
+                    
+                    // Clothing properties
+                    new CategoryProperty()
+                    {
+                        Id = 9,
+                        PropertyName = "Size",
+                        CategoryId = 3,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "XS", "S", "M", "L", "XL", "XXL", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 10,
+                        PropertyName = "Color",
+                        CategoryId = 3,
                         IsNumber = false,
                         IsRequired = true,
                     },
                     new CategoryProperty()
                     {
-                        Id = 7,
-                        PropertyName = "yetAnotherEnum",
-                        CategoryId = 2,
+                        Id = 11,
+                        PropertyName = "Fabric Type",
+                        CategoryId = 3,
                         IsNumber = false,
                         IsRequired = false,
-                        EnumValues = string.Join('|', ["", "good", "very good", "meh", ""])
+                        EnumValues = string.Join('|', ["", "Cotton", "Polyester", "Wool", "Silk", "Denim", "Leather", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 12,
+                        PropertyName = "Gender",
+                        CategoryId = 3,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Men", "Women", "Unisex", "Kids", ""]),
+                    },
+                    
+                    // Books properties
+                    new CategoryProperty()
+                    {
+                        Id = 13,
+                        PropertyName = "Genre",
+                        CategoryId = 4,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Fiction", "Non-Fiction", "Science", "History", "Biography", "Children", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 14,
+                        PropertyName = "Page Count",
+                        CategoryId = 4,
+                        IsNumber = true,
+                        IsRequired = false,
+                        MaxValue = 2000,
+                        MinValue = 1,
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 15,
+                        PropertyName = "Language",
+                        CategoryId = 4,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Turkish", "English", "German", "French", "Spanish", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 16,
+                        PropertyName = "Publication Year",
+                        CategoryId = 4,
+                        IsNumber = true,
+                        IsRequired = false,
+                        MaxValue = 2024,
+                        MinValue = 1900,
+                    },
+                    
+                    // Home & Garden properties
+                    new CategoryProperty()
+                    {
+                        Id = 17,
+                        PropertyName = "Room Type",
+                        CategoryId = 5,
+                        IsNumber = false,
+                        IsRequired = false,
+                        EnumValues = string.Join('|', ["", "Living Room", "Bedroom", "Kitchen", "Bathroom", "Garden", "Office", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 18,
+                        PropertyName = "Assembly Required",
+                        CategoryId = 5,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Yes", "No", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 19,
+                        PropertyName = "Power Source",
+                        CategoryId = 5,
+                        IsNumber = false,
+                        IsRequired = false,
+                        EnumValues = string.Join('|', ["", "Electric", "Battery", "Manual", "Solar", ""]),
+                    },
+                    new CategoryProperty()
+                    {
+                        Id = 20,
+                        PropertyName = "Indoor/Outdoor",
+                        CategoryId = 5,
+                        IsNumber = false,
+                        IsRequired = true,
+                        EnumValues = string.Join('|', ["", "Indoor", "Outdoor", "Both", ""]),
                     }
                 };
                 context.Set<CategoryProperty>().AddRange(categoryProperties);
