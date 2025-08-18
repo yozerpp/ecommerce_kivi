@@ -9,88 +9,34 @@
 
 <style>
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-color: #f8f9fa;
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2rem;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding-top: 5vh;
     }
     .login-container {
         width: 100%;
-        max-width: 450px;
+        max-width: 800px;
     }
     .login-card {
         background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        padding: 2.5rem;
-        backdrop-filter: blur(10px);
-    }
-    .nav-tabs {
-        border: none;
-        margin-bottom: 2rem;
-    }
-    .nav-tabs .nav-link {
-        border: none;
-        border-radius: 25px;
-        margin: 0 0.25rem;
-        padding: 0.75rem 1.5rem;
-        background: #f8f9fa;
-        color: #6c757d;
-        transition: all 0.3s ease;
-    }
-    .nav-tabs .nav-link.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-    }
-    .form-control {
-        border-radius: 12px;
-        border: 2px solid #e9ecef;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-    }
-    .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 12px;
-        padding: 0.75rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    }
-    .form-check-input:checked {
-        background-color: #667eea;
-        border-color: #667eea;
+        border-radius: 15px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        padding: 3rem 4rem 2.5rem 4rem;
     }
 </style>
 
 <div class="login-container">
     <div class="login-card">
         <div class="text-center">
-            <h2 class="mb-4 fw-bold" style="color: #333;">Hoş Geldiniz</h2>
-            <p class="text-muted mb-4">Hesabınıza giriş yapın</p>
-            <ul class="nav nav-tabs justify-content-center" id="forms" role="tablist">
-            @{ 
-                var first = true;
-                var roleNames = new Dictionary<string, string> {
-                    { "Customer", "Müşteri" },
-                    { "Seller", "Satıcı" },
-                    { "Staff", "Çalışan" }
-                };
-            }
+            <h2 class="mb-4">Giriş Yap</h2>
+            <ul class="nav nav-tabs mb-4" id="forms" role="tablist">
+            @{ var first = true;}
             @foreach (var userType in new[]{ typeof(Customer), typeof(Entity.Seller), typeof(Staff) }){
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@roleNames[userType.Name]</button>
+                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@userType.Name Girişi</button>
                 </li>
                 first = false;
             }
@@ -101,27 +47,19 @@
                 @foreach(var userType in new[]{typeof(Customer), typeof(Entity.Seller), typeof(Staff)}){
                     <div class="tab-pane fade show @(first? "active" : "")" id="@userType.Name" role="tabpanel">
                         <form hx-post="/Account/Login?handler=@userType.Name" hx-swap="innerHTML" hx-target="#loginResult" method="post" class="mt-4">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">E-Posta</label>
-                                <input type="email" class="form-control" name="LoginCredentials.Email" placeholder="E-posta adresinizi girin" required />
-                            </div>
-                            
                             <div class="mb-4">
-                                <label class="form-label fw-semibold">Şifre</label>
-                                <input type="password" class="form-control" name="LoginCredentials.Password" placeholder="Şifrenizi girin" required />
+                                @(EntityMapper.GetFormInputs(nameof(Login.LoginCredentials), typeof(Login.LoginCredential)))
                             </div>
                             
                             <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="true" id="rememberMe@(userType.Name)"/>
+                                <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="@false" id="rememberMe@(userType.Name)"/>
                                 <label class="form-check-label" for="rememberMe@(userType.Name)">
                                     Beni Hatırla
                                 </label>
                             </div>
                             
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-box-arrow-in-right me-2"></i>Giriş Yap
-                                </button>
+                                <button type="submit" class="btn btn-primary btn-lg">Giriş Yap</button>
                             </div>
                         </form>
                     </div>
