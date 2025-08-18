@@ -7,10 +7,21 @@
     var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
 }
 
+<script>
+    let editables;
+    document.addEventListener('DOMContentLoaded', function() {
+        editables = document.querySelectorAll('.edit-control');
+    });
+</script>
 <div class="container-fluid bg-light py-4">
     <div class="container">
         <!-- Seller Header Card -->
         <div class="card shadow-sm mb-4">
+            @if (editable){
+                <div class="container-fluid d-flex justify-content-end pt-3 pe-5">
+                    <button onclick="editables.forEach(e=>e.classList.toggle('edit-control'))" class="btn-primary btn">Bilgilerini Düzenle</button>
+                </div>
+            }
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -21,11 +32,11 @@
                                 })
                             }
                         </div>
-                        
+
                         <div class="row mb-3">
                             <div class="col-auto">
                                 <div class="d-flex align-items-center">
-                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage??0m,2).ToString("F")</span>
+                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage ?? 0m, 2).ToString("F")</span>
                                     <i class="bi bi-star-fill text-warning fs-5"></i>
                                 </div>
                             </div>
@@ -40,15 +51,13 @@
                                     <strong class="me-2">E-posta:</strong>
                                     <span id="emailField" class="me-2">@Model.ViewedSeller.Email</span>
                                     @if (editable){
-                                        <a class="text-decoration-none" onclick="this.previousElementSibling.setAttribute('contenteditable','true');" href="javascript:void(0);">
-                                            <i class="bi bi-pencil text-secondary"></i>
-                                        </a>
+                                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
                                     }
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <div class="row g-3">
                             <div class="col-6">
@@ -66,21 +75,21 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Contact Information -->
                 <div class="row mt-4">
                     <div class="col-md-6">
                         <h6 class="text-muted mb-2">Adres Bilgileri</h6>
-                        <partial name="Shared/_AddressPartial" model="new _AddressPartial(){Address=@Model.ViewedSeller.Address!,Editable=editable}"/>
+                        <partial name="Shared/_AddressPartial" model="new _AddressPartial(){ Address = @Model.ViewedSeller.Address!, Editable = editable }"/>
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-muted mb-2">İletişim</h6>
-                        <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){PhoneNumber=Model.ViewedSeller.PhoneNumber, Editable=editable}"/>
+                        <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){ PhoneNumber = Model.ViewedSeller.PhoneNumber, Editable = editable }"/>
                     </div>
                 </div>
             </div>
         </div>
-        <form id="editForm" method="post" hx-post="/Seller/SellerPage?handler=edit">
+        <form id="editForm"  hx-post="/Seller?handler=edit">
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).Id" value="@(Model.ViewedSeller.Id)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" id="ShopNameInput" value="@(Model.ViewedSeller.ShopName)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" id="EmailInput" value="@(Model.ViewedSeller.Email)"/>
@@ -128,6 +137,22 @@
                                 <p class="text-muted mt-3">Satıcının listelenmiş kuponu bulunmuyor.</p>
                             </div>
                         }else{
+                            if (editable){
+                                @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial{
+                                    Inputs =[
+                                        new("İndirim Oranı",
+                                            inputType: "text",
+                                            defaultValue: "0"),
+                                        new("Son Kullanma Tarihi",
+                                            inputType: "date",
+                                            placeHolder: "GG/AA/YYYY",
+                                            defaultValue: DateTime.Now.AddDays(7)
+                                                .ToString("d"))
+                                    ],
+                                    DisplayText = "Kupon Ekle",
+                                    Url = "/Seller?handler=addCoupon",
+                                })
+                            }
                             @await Html.PartialAsync("Shared/_CouponsPartial", new _CouponsPartial(){
                                 Coupons = Model.ViewedSeller.Coupons,ShowSeller = false
                             })
@@ -144,13 +169,13 @@
                             <i class="bi bi-box-seam me-2"></i>Ürün İlanları
                         </h5>
                         @if (editable){
-                            <a asp-page="AddProduct" class="btn btn-primary btn-sm">
+                            <a asp-page="Seller/AddProduct" class="btn btn-primary btn-sm">
                                 <i class="bi bi-plus-circle me-1"></i>Yeni Ürün Ekle
                             </a>
                         }
                     </div>
                     <div class="card-body">
-                        <div id="offers" hx-get="/Seller/SellerPage?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+                        <div id="offers" hx-get="/Seller?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
                     </div>
                 </div>
             </div>
