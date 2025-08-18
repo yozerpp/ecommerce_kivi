@@ -2,16 +2,22 @@
 @model (bool, ProductWithAggregatesCustomerView)
 
 @if (Model.Item1){
-    <form hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" hx-on::after-request="if(!event.detail.successful)return;event.detail.elt.getElementById('favor@(Model.Item2.Product.Id)').classList.toggle('text-danger')">
-        <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.Item2.Product.Id"/>
-        <button type="submit" class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0" onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));">
-            <i id="favor@(Model.Item2.Product.Id)" class="hover-grow text-danger-emphasis bi bi-heart bi-border-all @(Model.Item2.CurrentFavored.Value ? "text-danger" : "") small me-1"></i>
+    <div class="d-flex align-items-center">
+        <button class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0 hover-grow" 
+                hx-post="/@(nameof(Product))?handler=favor" 
+                hx-target="#favoriteSection@(Model.Item2.Product.Id)" 
+                hx-swap="outerHTML"
+                hx-vals='{"ProductId": "@Model.Item2.Product.Id"}'>
+            <i id="favor@(Model.Item2.Product.Id)" class="text-danger-emphasis bi bi-heart bi-border-all @(Model.Item2.CurrentFavored.Value ? "text-danger" : "") small me-1"></i>
         </button>
-    </form>
+        <p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item2.Product.Stats.FavorCount??0)</p>
+    </div>
 }
 else{
-    <button disabled class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0">
-        <i class="bi bi-heart text-danger small me-1"></i>
-    </button>
+    <div class="d-flex align-items-center">
+        <button disabled class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0">
+            <i class="bi bi-heart text-danger small me-1"></i>
+        </button>
+        <p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item2.Product.Stats.FavorCount??0)</p>
+    </div>
 }
-<p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item2.Product.Stats.FavorCount??0)</p>
