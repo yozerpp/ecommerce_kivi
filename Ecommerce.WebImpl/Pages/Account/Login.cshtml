@@ -9,7 +9,7 @@
 
 <style>
     body {
-        background-color: #f8f9fa;
+        background-color: #6c757d;
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -22,9 +22,25 @@
     }
     .login-card {
         background: white;
-        border-radius: 15px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border: 2px solid #343a40;
+        border-radius: 8px;
         padding: 3rem 4rem 2.5rem 4rem;
+    }
+    .nav-tabs .nav-link {
+        color: #6c757d;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #fd7e14;
+        border-color: #fd7e14;
+        color: white;
+    }
+    .btn-primary {
+        background-color: #fd7e14;
+        border-color: #fd7e14;
+    }
+    .btn-primary:hover {
+        background-color: #e8690b;
+        border-color: #e8690b;
     }
 </style>
 
@@ -35,8 +51,9 @@
             <ul class="nav nav-tabs mb-4" id="forms" role="tablist">
             @{ var first = true;}
             @foreach (var userType in new[]{ typeof(Customer), typeof(Entity.Seller), typeof(Staff) }){
+                var displayName = userType.Name == "Customer" ? "Müşteri" : userType.Name == "Seller" ? "Satıcı" : "Çalışan";
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@userType.Name Girişi</button>
+                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@displayName Girişi</button>
                 </li>
                 first = false;
             }
