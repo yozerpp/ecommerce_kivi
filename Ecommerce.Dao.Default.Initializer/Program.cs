@@ -1,16 +1,16 @@
-﻿using System.Transactions;
-using Ecommerce.Dao.Default.Migrations;
+﻿#define DEV
+using System.Reflection;
+using Ecommerce.Dao.Initializer;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
-using Ecommerce.Entity.Views;
+using log4net.Config;
+using log4net.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-
 namespace Ecommerce.Dao.Default.Initializer;
-
 internal static class Initializer
 {
     [STAThread]
@@ -19,7 +19,7 @@ internal static class Initializer
         Setup();
         CreateDb();
         using (var ctx = new DefaultDbContext(_dbContextOptions)) {
-            // SeedCustom(ctx);
+            SeedCustom(ctx);
         }
         InitDb();
         CreateViews();
@@ -32,12 +32,8 @@ internal static class Initializer
             .UseSqlServer("Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;",
                 c=>c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName))
             .EnableSensitiveDataLogging(false).EnableServiceProviderCaching().ConfigureWarnings(w=>w.Ignore(CoreEventId.DetachedLazyLoadingWarning)).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking).Options;
-        
     }
     private static void CreateDb() {
-        if (Skip){
-            return;
-        }
         using var context = new DefaultDbContext(_dbContextOptions);
         context.Database.EnsureDeleted();
         var migrator = context.Database.GetService<IMigrator>();
@@ -46,7 +42,6 @@ internal static class Initializer
         }
         context.SaveChanges();
     }
-
     private static void CreateViews() {
         using var context = new DefaultDbContext(_dbContextOptions);
         var migrator = context.Database.GetService<IMigrator>();
@@ -55,6 +50,30 @@ internal static class Initializer
         }
         context.SaveChanges();
     }
+    #if DEV
+    private const int CustomerCount = 1000;
+    private const int SellerCount = 200;
+    private const int ProductCount = SellerCount*5;
+    private const int ProductOfferCount = SellerCount * ProductCount / 10;
+    private const int CouponCount = SellerCount*10;
+    private const int ProductReviewCount = ProductCount * CustomerCount / 10;
+    private const int ReviewCommentCount = ProductReviewCount*2;
+    private const int ReviewVoteCount = ReviewCommentCount + ProductReviewCount;
+    private const int SessionCount = 5*(CustomerCount + SellerCount + StaffCount + AnonymousUserCount);
+    private const int CartCount = SessionCount;
+    private const int OrderItemCount = OrderCount * ProductOfferCount / 3000;
+    private const int OrderCount = (CustomerCount + AnonymousUserCount)* 3;
+    private const int AnonymousUserCount = CustomerCount * 2;
+    private const int CategoryCount = 30;
+    private const int StaffCount = 20;
+    private const int PermissionCount = 5;
+    private const int PermissionClaimCount = PermissionCount * StaffCount / 2;
+    private const int ProductFavorCount = ProductCount * CustomerCount / 100;
+    private const int SellerFavorCount = SellerCount * CustomerCount / 100;
+    private const int CategoryPropertyCount = CategoryCount * 4;
+    private const int ProductCategoryPropertyCount = CategoryPropertyCount * ProductCount / 10;
+    private const int RefundRequestCount = ProductOfferCount * 6;
+#else
     private const int CustomerCount = 1000;
     private const int SellerCount = 200;
     private const int ProductCount = SellerCount*5;
@@ -77,10 +96,9 @@ internal static class Initializer
     private const int CategoryPropertyCount = CategoryCount * 4;
     private const int ProductCategoryPropertyCount = CategoryPropertyCount * ProductCount / 10;
     private const int RefundRequestCount = ProductOfferCount * 6;
+#endif
+
     private static void InitDb() {
-        if (Skip){
-            return;
-        }
         using var initializer = new DatabaseInitializer(
             typeof(DefaultDbContext),
            _dbContextOptions,
@@ -97,9 +115,9 @@ internal static class Initializer
                 {typeof(ReviewComment), ReviewCommentCount},
                 {typeof(ReviewVote), ReviewVoteCount},
                 {typeof(Cart), CartCount},
-                {typeof(Category.CategoryProperty),CategoryPropertyCount},
+                {typeof(CategoryProperty),CategoryPropertyCount},
                 {typeof(ProductCategoryProperties),ProductCategoryPropertyCount},
-                {typeof(RefundRequest), RefundRequestCount},
+                // {typeof(RefundRequest), RefundRequestCount},
                 // { typeof(CartItem), CartItemCount},
                 { typeof(Session), SessionCount},
                 {typeof(OrderItem), OrderItemCount},
@@ -149,12 +167,12 @@ internal static class Initializer
         // Seed Category CategoryProperties
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (!context.Set<Category.CategoryProperty>().Any())
+            if (!context.Set<CategoryProperty>().Any())
             {
                 context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] ON");
                 var categoryProperties = new[]
                 {
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 1,
                         PropertyName = "numberProperty",
@@ -164,7 +182,7 @@ internal static class Initializer
                         MaxValue = 100,
                         MinValue = 0,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 2,
                         PropertyName = "enumProperty",
@@ -172,7 +190,7 @@ internal static class Initializer
                         EnumValues = string.Join('|', ["", "opt1", "opt2", "opt3", ""]),
                         IsRequired = true,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 3,
                         PropertyName = "optionalNumberProperty",
@@ -182,7 +200,7 @@ internal static class Initializer
                         MaxValue = 1000000,
                         MinValue = -100000,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 4,
                         PropertyName = "stringProperty",
@@ -190,7 +208,7 @@ internal static class Initializer
                         IsNumber = false,
                         IsRequired = false,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 5,
                         PropertyName = "yetAnotherNumberProperty",
@@ -200,7 +218,7 @@ internal static class Initializer
                         MaxValue = 1000000,
                         MinValue = -100000,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 6,
                         PropertyName = "yetAnotherStringProperty",
@@ -208,7 +226,7 @@ internal static class Initializer
                         IsNumber = false,
                         IsRequired = true,
                     },
-                    new Category.CategoryProperty()
+                    new CategoryProperty()
                     {
                         Id = 7,
                         PropertyName = "yetAnotherEnum",
@@ -218,7 +236,7 @@ internal static class Initializer
                         EnumValues = string.Join('|', ["", "good", "very good", "meh", ""])
                     }
                 };
-                context.Set<Category.CategoryProperty>().AddRange(categoryProperties);
+                context.Set<CategoryProperty>().AddRange(categoryProperties);
                 context.SaveChanges();
                 context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [data].[CategoryProperty] OFF");
             }
