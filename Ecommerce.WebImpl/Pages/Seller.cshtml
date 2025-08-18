@@ -2,6 +2,7 @@
 @using Ecommerce.Entity.Common
 @using Ecommerce.WebImpl.Pages.Seller
 @using Ecommerce.WebImpl.Pages.Shared
+@using Org.BouncyCastle.Crypto.Engines
 @model Ecommerce.WebImpl.Pages.SellerModel
 @{
     var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
@@ -16,9 +17,11 @@
 <div class="container-fluid bg-light py-4">
     <div class="container">
         <!-- Seller Header Card -->
-        <div class="card shadow-sm mb-4">
+        <div class="card shadow-sm mb-4 ">
             @if (editable){
-                <div class="container-fluid d-flex justify-content-end pt-3 pe-5">
+                <div class="container-fluid d-flex gap-3 justify-content-end pt-3 pe-5">
+                    <button onclick="document.getElementById('editForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-success" >Değişiklikleri Kaydet</button>
+                    
                     <button onclick="editables.forEach(e=>e.classList.toggle('edit-control'))" class="btn-primary btn">Bilgilerini Düzenle</button>
                 </div>
             }
@@ -89,11 +92,15 @@
                 </div>
             </div>
         </div>
-        <form id="editForm"  hx-post="/Seller?handler=edit">
+        <form id="editForm" hx-trigger="go" hx-post="/Seller?handler=edit">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).Id" value="@(Model.ViewedSeller.Id)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Entity.Seller.FirstName))" value="@(Model.ViewedSeller.FirstName)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Entity.Seller.LastName))" value="@(Model.ViewedSeller.LastName)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@nameof(Model.ViewedSeller.ShopName)" id="ShopNameInput" value="@(Model.ViewedSeller.ShopName)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@(nameof(Model.ViewedSeller.Email))" id="EmailInput" value="@(Model.ViewedSeller.Email)"/>
-            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Line1)}")" id="AddressStreetInput" value="@(Model.ViewedSeller.Address.Line1)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Line1)}")" id="AddressLine1Input" value="@(Model.ViewedSeller.Address.Line1)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Line2)}")" id="AddressLine2Input" value="@(Model.ViewedSeller.Address.Line1)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.District)}")" id="AddressNeighborhoodInput" value="@(Model.ViewedSeller.Address.District)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.Country)}")" id="AddressStateInput" value="@(Model.ViewedSeller.Address.Country)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.City)}")" id="AddressCityInput" value="@(Model.ViewedSeller.Address.City)"/>
@@ -153,8 +160,9 @@
                                     Url = "/Seller?handler=addCoupon",
                                 })
                             }
+
                             @await Html.PartialAsync("Shared/_CouponsPartial", new _CouponsPartial(){
-                                Coupons = Model.ViewedSeller.Coupons,ShowSeller = false
+                                Coupons = Model.ViewedSeller.Coupons,ShowSeller = false, Editable = editable
                             })
                         }
                     </div>
@@ -216,44 +224,26 @@
                 event.preventDefault(); // Prevent default form submission
 
                 // Update hidden input values from displayed elements
-                document.getElementById('ShopNameInput').value = document.getElementById('shopNameField').innerText;
-                document.getElementById('EmailInput').value = document.getElementById('emailField').innerText;
+                document.getElementById('ShopNameInput').value = document.getElementById('shopNameField').innerHTML;
+                document.getElementById('EmailInput').value = document.getElementById('emailField').innerHTML;
 
                 // Update Address fields - Corrected IDs and access to .value
-                document.getElementById('AddressStreetInput').value = document.getElementById('@(nameof(Address.Line1))_').value;
-                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').value;
-                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').value;
-                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').value;
-                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').value;
-                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').value; // Added Line2
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').innerHTML;
+                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').innerHTML;
+                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').innerHTML;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').innerHTML;
+                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').innerHTML; // Added Line2
+                document.getElementById('AddressLine1Input').value = document.getElementById('@(nameof(Address.Line1))_').innerHTML; // Added Line2
 
                 // Update Phone Number fields
-                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('countrycode').value;
-                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('number').value;
+                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML;
+                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML;
 
                 // Trigger HTMX submit
-                htmx.trigger(editForm, 'submit');
+                htmx.trigger(editForm, 'go');
             });
         }
-
-        // Handle coupon forms
-        document.querySelectorAll('[id^="couponEditForm_"]').forEach(form => {
-            form.addEventListener('submit', function(event) {
-                event.preventDefault(); // Prevent default form submission
-
-                const couponId = this.id.replace('couponEditForm_', '');
-
-                // Update hidden input values from displayed elements
-                document.getElementById(`couponIdInput_${couponId}`).value = document.getElementById(`couponIdField_${couponId}`).innerText;
-                // For DiscountRate, you might need to convert the displayed percentage back to a decimal
-                const discountRateText = document.getElementById(`couponDiscountRateField_${couponId}`).innerText;
-                document.getElementById(`couponDiscountRateInput_${couponId}`).value = (1 - parseFloat(discountRateText) / 100).toFixed(2);
-                document.getElementById(`couponExpirationDateInput_${couponId}`).value = document.getElementById(`couponExpirationDateField_${couponId}`).innerText;
-
-                // Trigger HTMX submit
-                htmx.trigger(form, 'submit');
-            });
-        });
+        
     });
 </script>
 }
