@@ -26,104 +26,112 @@
         document.addEventListener("DOMContentLoaded", ()=>{
             editableProfileElements = document.querySelectorAll('#profil@(Model.CustomerId) .edit-control');  
         });
-        let scrollSpy;
-        document.addEventListener("DOMContentLoaded", ()=>{
-            scrollSpy = new bootstrap.ScrollSpy(document.body, {
-                target: '#accountPageNav',
-            });
-        });
     </script>
 }
 @{
      var fieldIdPrefix = "customer-";
 }
-<div class="container-fluid gap-2">
-    <div class="card bg-white">
-        <div class="align-content-center bg-white gap-4 align-items-center justify-content-end card-header container-fluid d-flex">
-        <div class="d-inline-flex gap-2 fs-1 card-title fw-bolder">
-            <p class="my-0">@Model.ViewedCustomer.FirstName</p>
-            <p class="my-0">@(Model.ViewedCustomer.LastName)</p>
-        </div>
-        <div class="d-flex p-0 align-content-start align-items-start">
-            @if (Model.ViewedCustomer.ProfilePicture?.Data != null){
-                <img class="card-img rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.ViewedCustomer.ProfilePicture?.Data, false))" alt="Profile Resmi" style="height: 100px; width: 100px;">
-            }
-            else{
-                <img src="user-icon.svg" style="height: 10rem; width: 10rem;" alt="Profil Resmi"/>
-            }
-        </div>
-        </div>
-    </div>
-    <div class="border-bottom border-2 border-black my-5 mx-2"></div>
-    <div class="container-fluid position-relative row g-5 py-2 ms-3">
-        <nav id="accountPageNav" class="col-2 list-group h-100 position-sticky top-50 sticky-top card card-header p-0 rounded-2" style="margin-top: 7em;">
-            <a id="statistics-nav" href="#statistics-tab" class="list-group-item nav-link hover-bold text-decoration-none fs-4 p-2">
-                İstatistikler
-            </a>
-            <a id="profile-nav" href="#profile-tab" class="list-group-item hover-bold nav-link text-decoration-none fs-4 p-2">
-                Profil
-            </a>
-            @if (editable){
-                <a id="security-nav" href="#security-tab" class="list-group-item hover-bold nav-link text-decoration-none fs-4 p-2"
-                   data-bs-toggle="tab">
-                    Güvenlik
-                </a>
-                <a id="orders-nav" href="#orders-tab" class="list-group-item hover-bold text-decoration-none fs-4 p-2"
-                   data-bs-toggle="tab">
-                    @(Model.CurrentCustomer != null ? "Siparişlerim" : "Siparişler")
-                </a>
-            }
-        </nav>
-        <div class="col-1"></div>
-        <div class="col-9 gap-5 d-flex flex-grow-1 flex-column">
-            <div id="statistics-tab" data-nav="#statistics-nav">
-                <h3 class="text-center container-fluid fw-bold">İstatistik</h3>
-                <div class="card-body">
+<div class="container-fluid p-4">
+    <div class="card shadow-lg bg-white">
+        <!-- Header Section -->
+        <div class="card-header bg-white border-bottom">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    @if (Model.ViewedCustomer.ProfilePicture?.Data != null){
+                        <img class="rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.ViewedCustomer.ProfilePicture?.Data, false))" alt="Profile Resmi" style="height: 80px; width: 80px;">
+                    }
+                    else{
+                        <img src="user-icon.svg" style="height: 80px; width: 80px;" alt="Profil Resmi" class="rounded-circle"/>
+                    }
+                    <div>
+                        <h2 class="mb-0 fw-bold">@Model.ViewedCustomer.FirstName @Model.ViewedCustomer.LastName</h2>
+                        <p class="text-muted mb-0">Müşteri Hesabı</p>
+                    </div>
                 </div>
             </div>
-            <div id="profile-tab" data-nav="#profile-nav"  data-editing="0">
-                <div class="card-title row mx-4 justify-content-center">
-                    <div class="col-5"></div>
-                    <h3 class="col-2 mb-4 container-fluid text-center fw-bold">Profil</h3>
-                    <div class="col-4"></div>
-                    <div class="col-1">
+        </div>
+        
+        <!-- Main Content -->
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <!-- Sidebar Navigation -->
+                <div class="col-3 border-end bg-light">
+                    <div class="nav flex-column nav-pills p-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link active text-start mb-2" id="v-pills-statistics-tab" data-bs-toggle="pill" data-bs-target="#v-pills-statistics" type="button" role="tab">
+                            <i class="bi bi-graph-up me-2"></i>İstatistikler
+                        </button>
+                        <button class="nav-link text-start mb-2" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab">
+                            <i class="bi bi-person me-2"></i>Profil
+                        </button>
                         @if (editable){
-                            <button id="profileEditBtn" class="btn btn-info text-white rounded-1 shadow-sm"
-                                    onclick="if(document.getElementById('profile-tab').dataset.editing=='0'){
-                                        event.currentTarget.innerHTML='İptal';
-                                        document.getElementById('profile-tab').dataset.editing='1';
-                                    } else {
-                                        event.currentTarget.innerHTML = 'Düzenle';
-                                        document.getElementById('profile-tab').dataset.editing='0';
-                                    }
-                                    editableProfileElements.forEach(e=>e.classList.toggle('edit-control'));
-                                    event.currentTarget.classList.toggle('btn-info');
-                                    event.currentTarget.classList.toggle('btn-danger');
-                                    document.getElementById('profileSaveButton').classList.remove('d-none');">Düzenle</button>
+                            <button class="nav-link text-start mb-2" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab">
+                                <i class="bi bi-shield-lock me-2"></i>Güvenlik
+                            </button>
+                            <button class="nav-link text-start mb-2" id="v-pills-orders-tab" data-bs-toggle="pill" data-bs-target="#v-pills-orders" type="button" role="tab">
+                                <i class="bi bi-bag me-2"></i>@(Model.CurrentCustomer != null ? "Siparişlerim" : "Siparişler")
+                            </button>
                         }
                     </div>
                 </div>
-                @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
-                    Editable = editable, User = Model.ViewedCustomer, IsOwner = isOwner
-                })
-                <div class="g-1 mt-3 text-center justify-content-center align-content-center row">
-                    <button id="profileSaveButton" onclick="document.getElementById('profile-tab').dataset.editing='0'; 
-                        event.currentTarget.classList.add('d-none');
-                        document.getElementById('profil@(Model.CustomerId)Form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" 
-                            class="btn btn-outline-success d-none w-25">Kaydet</button>
+                
+                <!-- Content Area -->
+                <div class="col-9">
+                    <div class="tab-content p-4" id="v-pills-tabContent">
+                        <!-- Statistics Tab -->
+                        <div class="tab-pane fade show active" id="v-pills-statistics" role="tabpanel">
+                            <h3 class="fw-bold mb-4">İstatistikler</h3>
+                            <div class="card-body">
+                                <!-- Statistics content will go here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Tab -->
+                        <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" data-editing="0">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h3 class="fw-bold mb-0">Profil Bilgileri</h3>
+                                @if (editable){
+                                    <button id="profileEditBtn" class="btn text-white" style="background-color: #fd7e14; border-color: #fd7e14;"
+                                            onclick="if(document.getElementById('v-pills-profile').dataset.editing=='0'){
+                                                event.currentTarget.innerHTML='İptal';
+                                                document.getElementById('v-pills-profile').dataset.editing='1';
+                                            } else {
+                                                event.currentTarget.innerHTML = 'Düzenle';
+                                                document.getElementById('v-pills-profile').dataset.editing='0';
+                                            }
+                                            editableProfileElements.forEach(e=>e.classList.toggle('edit-control'));
+                                            event.currentTarget.style.backgroundColor = event.currentTarget.style.backgroundColor === 'rgb(253, 126, 20)' ? '#dc3545' : '#fd7e14';
+                                            event.currentTarget.style.borderColor = event.currentTarget.style.borderColor === 'rgb(253, 126, 20)' ? '#dc3545' : '#fd7e14';
+                                            document.getElementById('profileSaveButton').classList.remove('d-none');">Düzenle</button>
+                                }
+                            </div>
+                            @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
+                                Editable = editable, User = Model.ViewedCustomer, IsOwner = isOwner
+                            })
+                            <div class="text-center mt-4">
+                                <button id="profileSaveButton" onclick="document.getElementById('v-pills-profile').dataset.editing='0'; 
+                                    event.currentTarget.classList.add('d-none');
+                                    document.getElementById('profil@(Model.CustomerId)Form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" 
+                                        class="btn btn-success d-none px-4">Kaydet</button>
+                            </div>
+                        </div>
+                        
+                        @if (editable){
+                            <!-- Security Tab -->
+                            <div class="tab-pane fade" id="v-pills-security" role="tabpanel">
+                                <h3 class="fw-bold mb-4">Güvenlik Ayarları</h3>
+                                @await Html.PartialAsync("Account/_SecurityPartial", new _SecurityPartial(){
+                                    ViewedUser = Model.CurrentUser
+                                })
+                            </div>
+                            
+                            <!-- Orders Tab -->
+                            <div class="tab-pane fade" id="v-pills-orders" role="tabpanel">
+                                <h3 hx-get="/@(nameof(Customer))?handler=orders&CustomerId=@(Model.ViewedCustomer.Id)" hx-trigger="revealed" hx-swap="afterend" hx-target="this" class="fw-bold mb-4">Siparişler@(Model.CurrentCustomer != null ? "im" : "")</h3>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
-            @if (editable){
-                <div id="security-tab">
-                    <h3 class="text-center mb-4 container-fluid">Güvenlik</h3>
-                    @await Html.PartialAsync("Account/_SecurityPartial", new _SecurityPartial(){
-                        ViewedUser = Model.CurrentUser
-                    })
-                </div>
-                <div id="orders-tab">
-                    <h3 hx-get="/@(nameof(Customer))?handler=orders&CustomerId=@(Model.ViewedCustomer.Id)" hx-trigger="revealed" hx-swap="afterend" hx-target="this" class="text-center container-fluid">Siparişler@(Model.CurrentCustomer != null ? "im" : "")</h3>
-                </div>
-            }
         </div>
     </div>
 </div>
