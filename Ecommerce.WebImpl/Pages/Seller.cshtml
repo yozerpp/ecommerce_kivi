@@ -10,8 +10,11 @@
 
 <script>
     let editables;
+    let profilePic;
+    let imageDeleted = false;
     document.addEventListener('DOMContentLoaded', function() {
         editables = document.querySelectorAll('.edit-control');
+        profilePic = document.getElementById('profilePic');
     });
 </script>
 <div class="container-fluid bg-light py-4">
@@ -27,7 +30,24 @@
             }
             <div class="card-body">
                 <div class="row align-items-center">
-                    <div class="col-md-8">
+                    <div class="col-md-2">
+                        <div class="position-relative">
+                            @if (Model.ViewedSeller.ProfilePicture?.Data != null){
+                                <img id="profilePic" class="rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.ViewedSeller.ProfilePicture?.Data, false))" alt="Profile Resmi" style="height: 100px; width: 100px; object-fit: cover;">
+                            }
+                            else{
+                                <img id="profilePic" src="user-icon.svg" style="height: 100px; width: 100px; object-fit: cover;" alt="Profil Resmi" class="rounded-circle"/>
+                            }
+                            @if (editable){
+                                <div class="position-absolute bottom-0 end-0">
+                                    <button type="button" class="btn btn-sm btn-primary rounded-circle p-1" data-bs-toggle="modal" data-bs-target="#profilePictureModal">
+                                        <i class="bi bi-camera"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6">
                         <div class="d-flex align-items-center mb-3">
                             <h1 id="shopNameField" class="display-6 fw-bold text-primary mb-0 me-3">@Model.ViewedSeller.ShopName</h1>
                             @if (editable){
@@ -107,7 +127,41 @@
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.Address)}.{nameof(Address.ZipCode)}")" id="AddressZipCodeInput" value="@(Model.ViewedSeller.Address.ZipCode)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.CountryCode)}")" id="PhoneNumberCountryCodeInput" value="@(Model.ViewedSeller.PhoneNumber.CountryCode)"/>
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.Number)}")" id="PhoneNumberNumberInput" value="@(Model.ViewedSeller.PhoneNumber.Number)"/>
+            <input type="hidden" name="@(nameof(Model.ViewedSeller)).ProfilePictureId" id="ProfilePictureIdInput" value="@(Model.ViewedSeller.ProfilePictureId)"/>
+            <input type="hidden" name="imageDeleted" id="ImageDeletedInput" value="false"/>
         </form>
+
+        @if (editable){
+            <!-- Profile Picture Modal -->
+            <div class="modal fade" id="profilePictureModal" tabindex="-1" aria-labelledby="profilePictureModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="profilePictureModalLabel">Profil Fotoğrafını Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <div class="mb-3">
+                                <img id="previewImage" src="@(Utils.GetImageUrlOrDefault(Model.ViewedSeller.ProfilePicture?.Data, false))" 
+                                     alt="Preview" class="rounded-circle" style="height: 150px; width: 150px; object-fit: cover;">
+                            </div>
+                            <div class="mb-3">
+                                <input type="file" class="form-control" id="profilePictureInput" accept="image/*">
+                            </div>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button type="button" class="btn btn-danger" onclick="removeProfilePicture()">
+                                    <i class="bi bi-trash"></i> Fotoğrafı Kaldır
+                                </button>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-primary" onclick="saveProfilePicture()">Kaydet</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
         <!-- Navigation Tabs -->
         <ul class="nav nav-pills nav-fill mb-4" id="sellerTabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -242,10 +296,67 @@
                 document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))_').value;
                 document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))_').value;
 
+                // Update profile picture related fields
+                document.getElementById('ImageDeletedInput').value = imageDeleted.toString();
+
                 // Trigger HTMX submit
                 htmx.trigger(editForm, 'go');
             });
         }
+
+        // Profile picture handling functions
+        function removeProfilePicture() {
+            imageDeleted = true;
+            const defaultImage = 'user-icon.svg';
+            document.getElementById('profilePic').src = defaultImage;
+            document.getElementById('previewImage').src = defaultImage;
+            document.getElementById('ProfilePictureIdInput').value = '';
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('profilePictureModal'));
+            modal.hide();
+        }
+
+        function saveProfilePicture() {
+            const fileInput = document.getElementById('profilePictureInput');
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    document.getElementById('profilePic').src = imageData;
+                    document.getElementById('previewImage').src = imageData;
+                    imageDeleted = false;
+                    
+                    // You might want to upload the image here or handle it differently
+                    // For now, we'll just update the preview
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('profilePictureModal'));
+            modal.hide();
+        }
+
+        // Handle file input change for preview
+        document.addEventListener('DOMContentLoaded', function() {
+            const profilePictureInput = document.getElementById('profilePictureInput');
+            if (profilePictureInput) {
+                profilePictureInput.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById('previewImage').src = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
         
     });
 </script>
