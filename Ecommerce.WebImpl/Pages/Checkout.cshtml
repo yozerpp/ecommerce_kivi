@@ -240,21 +240,50 @@
                     <div class="col-4 section p-0">
                         <div id="offers">
                             @foreach (var (sellerId, offers) in Model.ShippingOffersGrouped){
-                                <ul class="list-group p-0 d-none  rounded-2" style="cursor: pointer;" id="offers-@(sellerId)">
+                                <ul class="list-group p-0 d-none rounded-3 shadow-sm" style="cursor: pointer;" id="offers-@(sellerId)">
                                     @foreach (var offer in offers){
-                                        <li onclick="selectOffer(event, @(sellerId))" id="offer-@(offer.Id)" class="hover-darken ps-3 pt-2 list-group-item g-2">
-                                            <p class="fw-bold text-center fs-4">@offer.Provider.Name</p>
-                                            <div class="row">
-                                                <div class="col-2"></div>
-                                                <div class="fs-5 col-3 d-inline-flex gap-2">
-                                                    <p>@offer.Amount.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})</p>
+                                        <li onclick="selectOffer(event, @(sellerId))" id="offer-@(offer.Id)" class="hover-darken list-group-item border-0 mb-3 rounded-3 shadow-sm transition-all">
+                                            <div class="card h-100">
+                                                <div class="card-header bg-primary text-white text-center py-3">
+                                                    <h5 class="mb-0 fw-bold">@offer.Provider.Name</h5>
                                                 </div>
-                                                <div class="col-1"></div>
-                                                <div class="fs-5 col-3 d-inline-flex gap-2">
-                                                    <p>@offer.AmountTax.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})</p>
-                                                    <p>Vergi</p>
+                                                <div class="card-body p-4">
+                                                    <div class="row g-3">
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <span class="text-muted">Kargo Ücreti:</span>
+                                                                <span class="fw-bold fs-5 text-success">
+                                                                    @offer.Amount.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <span class="text-muted">Vergi:</span>
+                                                                <span class="fw-semibold">
+                                                                    @offer.AmountTax.ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")})
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <span class="text-muted">Teslimat Süresi:</span>
+                                                                <span class="fw-semibold text-info">
+                                                                    <i class="bi bi-clock me-1"></i>@offer.DeliveryTime gün
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12 mt-3">
+                                                            <hr class="my-2">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <span class="fw-bold">Toplam:</span>
+                                                                <span class="fw-bold fs-4 text-primary">
+                                                                    @((offer.Amount + offer.AmountTax).ToString("C", offer.Currency switch{"TR"=>CultureInfo.GetCultureInfo("tr-TR"),"USD"=>CultureInfo.GetCultureInfo("en-US")}))
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div class="col-3"></div>
                                             </div>
                                         </li>
                                     }
