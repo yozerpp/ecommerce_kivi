@@ -25,9 +25,25 @@ public class Login : PageModel
     public LoginCredential LoginCredentials { get; set; }
     [BindProperty]
     public bool RememberMe { get; set; }
-    public IActionResult OnPostCustomer() {
-        _userManager.LoginCustomer(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out var jwt);
-        return HandleToken(jwt ,RememberMe);
+    [BindProperty]
+    public string UserType { get; set; } = "Customer";
+
+    public IActionResult OnPost() {
+        string? jwt = null;
+        
+        switch (UserType) {
+            case "Customer":
+                _userManager.LoginCustomer(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out jwt);
+                break;
+            case "Seller":
+                _userManager.LoginSeller(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out jwt);
+                break;
+            case "Staff":
+                _userManager.LoginStaff(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out jwt);
+                break;
+        }
+        
+        return HandleToken(jwt, RememberMe);
     }
 
     public IActionResult OnPostLogout() {
@@ -39,6 +55,7 @@ public class Login : PageModel
             Redirect = "/Index"
         });
     }
+    
     private IActionResult HandleToken(string? jwt, bool rememberMe ) {
         if (jwt == null)
             return Partial(nameof(_InfoPartial), new _InfoPartial(){
@@ -55,14 +72,5 @@ public class Login : PageModel
             Message = "Anasayfaya yönlendiriliyorsunuz.",
             Redirect = "/Index"
         });
-    }
-    public IActionResult OnPostSeller() {
-        _userManager.LoginSeller(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out var jwt);
-        return HandleToken(jwt, RememberMe);
-    }
-
-    public IActionResult OnPostStaff() {
-        _userManager.LoginStaff(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out var jwt);
-        return HandleToken(jwt, RememberMe);
     }
 }

@@ -9,7 +9,7 @@
 
 <style>
     body {
-        background-color: #6c757d;
+        background-color: var(--bs-secondary);
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -49,48 +49,60 @@
         <div class="text-center">
             <h2 class="mb-4">Giriş Yap</h2>
             <ul class="nav nav-tabs mb-4" id="forms" role="tablist">
-            @{ var first = true;}
-            @foreach (var userType in new[]{ typeof(Customer), typeof(Entity.Seller), typeof(Staff) }){
-                var displayName = userType.Name == "Customer" ? "Müşteri" : userType.Name == "Seller" ? "Satıcı" : "Çalışan";
+            @{ 
+                var userTypes = new[] { 
+                    new { Name = "Customer", Display = "Müşteri" },
+                    new { Name = "Seller", Display = "Satıcı" },
+                    new { Name = "Staff", Display = "Çalışan" }
+                };
+                var first = true;
+            }
+            @foreach (var userType in userTypes){
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name)" type="button" role="tab">@displayName Girişi</button>
+                    <button class="nav-link @(first?"active":"")" id="@(userType.Name)-tab" type="button" onclick="setUserType('@userType.Name')">@userType.Display Girişi</button>
                 </li>
                 first = false;
             }
             </ul>
             
             <div class="tab-content" id="formsContent">
-                @{ first = true;}
-                @foreach(var userType in new[]{typeof(Customer), typeof(Entity.Seller), typeof(Staff)}){
-                    <div class="tab-pane fade show @(first? "active" : "")" id="@userType.Name" role="tabpanel">
-                        <form hx-post="/Account/Login?handler=@userType.Name" hx-swap="innerHTML" hx-target="#loginResult" method="post" class="mt-4">
-                            <div class="mb-3">
-                                <label class="form-label">E-Posta</label>
-                                <input type="email" class="form-control" name="LoginCredentials.Email" placeholder="E-posta adresinizi girin" required />
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="form-label">Şifre</label>
-                                <input type="password" class="form-control" name="LoginCredentials.Password" placeholder="Şifrenizi girin" required />
-                            </div>
-                            
-                            <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="true" id="rememberMe@(userType.Name)"/>
-                                <label class="form-check-label" for="rememberMe@(userType.Name)">
-                                    Beni Hatırla
-                                </label>
-                            </div>
-                            
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">Giriş Yap</button>
-                            </div>
-                        </form>
+                <form hx-post="/Account/Login" hx-swap="innerHTML" hx-target="#loginResult" method="post" class="mt-4">
+                    <input type="hidden" name="UserType" id="userTypeInput" value="Customer" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">E-Posta</label>
+                        <input type="email" class="form-control" name="LoginCredentials.Email" placeholder="E-posta adresinizi girin" required />
                     </div>
-                    first = false;
-                }
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Şifre</label>
+                        <input type="password" class="form-control" name="LoginCredentials.Password" placeholder="Şifrenizi girin" required />
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="@nameof(Login.RememberMe)" value="true" id="rememberMe"/>
+                        <label class="form-check-label" for="rememberMe">
+                            Beni Hatırla
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Giriş Yap</button>
+                    </div>
+                </form>
             </div>
             
             <div id="loginResult" class="mt-4"></div>
         </div>
     </div>
 </div>
+
+<script>
+function setUserType(userType) {
+    document.getElementById('userTypeInput').value = userType;
+    
+    // Update active tab
+    document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(userType + '-tab').classList.add('active');
+}
+</script>
