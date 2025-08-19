@@ -20,24 +20,24 @@
             }
 
             document.addEventListener("DOMContentLoaded", () => {
-                childrenElement@(category.Id) = new bootstrap.Collapse(document.getElementById('Children@(category.Id)'), { toggle: false, parent: parent });
+                childrenElement@(rootId)@(category.Id) = new bootstrap.Collapse(document.getElementById('Children@(rootId)@(category.Id)'), { toggle: false, parent: parent });
             });
             </text>
         }
         </script>
     <ul class="p-0 list-unstyled position-relative"
-        onmouseenter="@(category.Children.Count > 0?$"childrenElement{category.Id}.show();":";")event.currentTarget.classList.add('bg-light');"
-        onmouseleave="@(category.Children.Count > 0?$"childrenElement{category.Id}.hide();":";")event.currentTarget.classList.remove('bg-light');"
+        onmouseenter="@(category.Children.Count > 0?$"childrenElement{rootId}{category.Id}.show();":";")event.currentTarget.classList.add('bg-light');"
+        onmouseleave="@(category.Children.Count > 0?$"childrenElement{rootId}{category.Id}.hide();":";")event.currentTarget.classList.remove('bg-light');"
         class="rounded-end-1 p-3" style="cursor: pointer">
         <li data-id="@(category.Id)" data-name="@(category.Name)" onclick="@Html.Raw(onClickHandler??"")" class="rounded-end-1 p-5" style="cursor: pointer">
             <p class="m-0 fs-5 small fw-bold">@category.Name</p>
         </li>
         @if (category.Children.Count > 0){
-            <li id="Children@(category.Id)" class="collapse bg-white rounded-0 position-absolute top-0 start-100">
+            <li id="Children@(rootId)@(category.Id)" class="collapse bg-white rounded-0 position-absolute top-0 start-100">
                 <ul class="list-unstyled">
                     @foreach (var cat in category.Children){
                         if (visited.Add(cat)){
-                            @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", (onClickHandler, cat, visited))
+                            @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", (onClickHandler, rootId, cat, visited))
                         }
                     }
                 </ul>
