@@ -1,21 +1,21 @@
-﻿@model (string,Ecommerce.Entity.Category, HashSet<Ecommerce.Entity.Category>)
+﻿@model (string,string,Ecommerce.Entity.Category, HashSet<Ecommerce.Entity.Category>)
 @{
-    var (onClickHandler,category, visited)= Model;
+    var (onClickHandler, rootId,category, visited)= Model;
 }
 
 <li class="list-unstyled rounded-end-1 shadow-sm">
     <script>
         @if (category.Children.Count > 0){
             <text>
-            let childrenElement@(category.Id);
+            let childrenElement@(rootId)@(category.Id);
             @if (category.ParentId != null){
                 <text>
-                   const parent@(category.Id) = document.getElementById('Children@(category.ParentId)');
+                   const parent@(rootId)@(category.Id) = document.getElementById('Children@(rootId)@(category.ParentId)');
                 </text>
             }
             else{
                 <text>
-                    const parent@(category.Id) = document.currentScript.parentElement.parentElement;
+                    const parent@(rootId)@(category.Id) = document.currentScript.parentElement.parentElement;
                 </text>
             }
 
@@ -29,7 +29,7 @@
         onmouseenter="@(category.Children.Count > 0?$"childrenElement{category.Id}.show();":";")event.currentTarget.classList.add('bg-light');"
         onmouseleave="@(category.Children.Count > 0?$"childrenElement{category.Id}.hide();":";")event.currentTarget.classList.remove('bg-light');"
         class="rounded-end-1 p-3" style="cursor: pointer">
-        <li data-id="@(category.Id)" data-name="@(category.Name)" onclick="@Html.Raw(onClickHandler??"")" class="rounded-end-1 p-3" style="cursor: pointer">
+        <li data-id="@(category.Id)" data-name="@(category.Name)" onclick="@Html.Raw(onClickHandler??"")" class="rounded-end-1 p-5" style="cursor: pointer">
             <p class="m-0 fs-5 small fw-bold">@category.Name</p>
         </li>
         @if (category.Children.Count > 0){
