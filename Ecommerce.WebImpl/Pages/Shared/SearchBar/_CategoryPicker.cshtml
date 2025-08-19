@@ -2,15 +2,17 @@
 @using Ecommerce.Entity
 @model _CategoryPicker
 
-<ul class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
+<ul id="@Model.RootElementId" class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
     @{
-        var onClickHandler = $@"document.getElementById('{Model.DisplayElementId}').innerHTML=event.currentTarget.getAttribute('data-name');
-                                const cid = event.currentTarget.getAttribute('data-id');const categoryProps = document.getElementById('{Model.TargetElementId}');
-                                categoryProps.setAttribute('hx-vals', JSON.stringify({{categoryId: cid}}));
-                                categoryProps.dispatchEvent(new Event('fire', {{cancelable:true, bubbles:true}}));document.getElementById('{Model.InputElementId}').value=cid;
+        var onClickHandler = $@"const parent = document.getElementById('{Model.RootElementId}');
+                                parent.dataset.name=event.currentTarget.getAttribute('data-name');
+                                parent.dataset.id=event.currentTarget.getAttribute('data-id');
+                                parent.dispatchEvent(new Event('change', {{cancelable:true, bubbles:true}}));
                               ";
     }
-    @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", ($"document.getElementById('{Model.DisplayElementId}').innerHTML='Tümü';document.getElementById('{Model.TargetElementId}').innerHTML='';document.getElementById('{Model.InputElementId}').value=null;", new Category(){Name = "Tümü", Id = 0}, new HashSet<Category>()))
+    @if (Model.AllowNonSelection){
+        @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", (onClickHandler, new Category(){Name = "Tümü", Id = 0}, new HashSet<Category>()))
+    }
     @foreach (var category in Model.Categories){
         <partial name="Shared/SearchBar/_CategoryItemPartial" model="(onClickHandler, category, new HashSet<Category>())"/>
     }
