@@ -2,9 +2,9 @@
 @using Ecommerce.Entity
 @model _CategoryPicker
 
-<ul id="@Model.RootElementId" class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
+<ul id="@Model.RootElementId@(rootId)" class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
     @{
-        var onClickHandler = $@"const parent = document.getElementById('{Model.RootElementId}');
+        var onClickHandler = $@"const parent = document.getElementById('{Model.RootElementId}@(rootId)');
                                 parent.dataset.name=event.currentTarget.getAttribute('data-name');
                                 parent.dataset.id=event.currentTarget.getAttribute('data-id');
                                 parent.dispatchEvent(new Event('change', {{cancelable:true, bubbles:true}}));
