@@ -11,6 +11,8 @@
                 parent._editedImages = new Map();
                 parent._addedImages = [];
                 parent._edited = false;
+                parent._loading = false;
+                parent._hasMorePages = true;
 
                 parent._editImage= function (data) {
                     let i = this.querySelector('div.carousel-item.active');
@@ -42,6 +44,70 @@
                     });
                     this._editedImages.get(parseInt(this.querySelector('.carousel-item.active').dataset.index)).primary='true';
                 }
+                
+                parent._loadNextPage = async function() {
+                    if (this._loading || !this._hasMorePages) return;
+                    
+                    this._loading = true;
+                    const currentPage = parseInt(this.dataset.page);
+                    const nextPage = currentPage + 1;
+                    
+                    try {
+                        const response = await fetch(`@Model.FetchUrl?page=${nextPage}`);
+                        
+                        if (response.status === 404) {
+                            this._hasMorePages = false;
+                            return;
+                        }
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        const carousel = this.querySelector('#imagesSlide .carousel-inner');
+                        
+                        if (data && data.length > 0) {
+                            data.forEach((imageData, index) => {
+                                const currentIndex = carousel.children.length;
+                                const carouselItem = document.createElement('div');
+                                carouselItem.className = 'carousel-item';
+                                carouselItem.dataset.primary = imageData.IsPrimary || 'false';
+                                carouselItem.dataset.index = currentIndex.toString();
+                                
+                                const img = document.createElement('img');
+                                img.src = imageData.Image?.Data ? 
+                                    (imageData.Image.Data.startsWith('data:') ? imageData.Image.Data : `data:image/jpeg;base64,${imageData.Image.Data}`) : 
+                                    '/default.jpg';
+                                img.className = 'd-block w-100';
+                                img.alt = `${currentIndex}'th image of product`;
+                                
+                                carouselItem.appendChild(img);
+                                carousel.appendChild(carouselItem);
+                            });
+                            
+                            this.dataset.page = nextPage.toString();
+                        } else {
+                            this._hasMorePages = false;
+                        }
+                    } catch (error) {
+                        console.error('Error loading next page:', error);
+                        this._hasMorePages = false;
+                    } finally {
+                        this._loading = false;
+                    }
+                }
+                
+                parent._checkAndLoadMore = function() {
+                    const activeItem = this.querySelector('.carousel-item.active');
+                    const allItems = this.querySelectorAll('.carousel-item');
+                    const activeIndex = Array.from(allItems).indexOf(activeItem);
+                    
+                    // Load more when we're near the end (within 2 items)
+                    if (activeIndex >= allItems.length - 2) {
+                        this._loadNextPage();
+                    }
+                }
                 s.nextElementSibling.addEventListener('click',()=>{
                     parent._edited=true;
                 });
@@ -52,6 +118,15 @@
                 parent.lastElementChild.onclick=()=>{
                     parent._edited=true;promptFile('image/jpeg').then(i=>parent._addImage(i));
                 }
+                
+                // Add event listeners for carousel navigation to trigger pagination
+                const carousel = parent.querySelector('#imagesSlide');
+                carousel.addEventListener('slid.bs.carousel', () => {
+                    parent._checkAndLoadMore();
+                });
+                
+                // Initial check in case we start near the end
+                setTimeout(() => parent._checkAndLoadMore(), 100);
             }
         })(document.currentScript)
     </script>
@@ -89,11 +164,11 @@
                     }
                 }
             </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#imageSlide" data-bs-slide="prev">
+            <button class="carousel-control-prev" type="button" data-bs-target="#imagesSlide" data-bs-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Previous</span>
             </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#imageSlide" data-bs-slide="next">
+            <button class="carousel-control-next" type="button" data-bs-target="#imagesSlide" data-bs-slide="next">
                 <span class="carousel-control-next-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Next</span>
             </button>
