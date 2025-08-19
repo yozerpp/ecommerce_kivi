@@ -1,29 +1,107 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Product._CarouselPartial
 
-<div id="imageSlide" class="carousel slide">
-    <div id="images" class="carousel-inner rounded-4">
-        @if (Model.Images.Count == 0){
-            var defaultImage = "/default.jpg";
-            <div id="image0" class="carousel-item active">
-                <img  src="default.jpg" class="d-block w-100" alt="Varsayılan Resim">
-            </div>        
-        }
-        else{
-            var i = 0;
-            foreach (var image in Model.Images){
-                <div id="image@(i)" class="carousel-item @(i == 0 ? "active" : "")">
-                    <img src="@(!image.Data.StartsWith("data:") ? "data:image/jpeg;base64, " + image.Data :image.Data)" class="d-block w-100" alt="@(i)'th image of product">
-                </div>                
-                i++;
-            }    
-        }
+<div>
+    <script>
+        ((s)=>{
+            document.addEventListener('DOMContentLoaded', init);
+            s.parentElement.addEventListener('init', init);
+            function init(){
+                const parent = s.parentElement ;
+                parent.dataset.page = '1';
+                parent._editedImages = new Map();
+                parent._addedImages = [];
+                parent._edited = false;
+
+                parent._editImage= function (data) {
+                    let i = this.querySelector('div.carousel-item.active');
+                    i.querySelector('img').src = data;
+                    this._editedImages.set(parseInt(i.dataset.index),  {data:data,primary:i.dataset.primary});
+                    this._edited = true;
+                }
+                parent._deleteImage= function (){
+                    const s = this.querySelector('div.carousel-item.active');
+                    this.querySelector("div.carousel-item:not(.active)")?.classList?.add('active');
+                    this._editedImages.set(parseInt(s.dataset.index), null);
+                    s.remove();
+                    this._edited = true;
+                }
+                parent._addImage= function (data){
+                    const s = document.getElementById('imagesSlide').firstElementChild;
+                    let i = this.querySelector('div.carousel-item').cloneNode(true);
+                    i.querySelector('img').src = data;
+                    i.classList.remove('active');
+                    i.dataset.index = s.children.length.toString();
+                    s.appendChild(i);
+                    this._addedImages.push(data);
+                    this._edited=true;
+                }
+                parent._promoteToImage= function (){
+                    this.querySelectorAll('.carousel-item').forEach(e=>{
+                        e.dataset.primary='0';
+                        this._editedImages.get(parseInt(e.dataset.index)).primary = 'false';
+                    });
+                    this._editedImages.get(parseInt(this.querySelector('.carousel-item.active').dataset.index)).primary='true';
+                }
+                s.nextElementSibling.addEventListener('click',()=>{
+                    parent._edited=true;
+                });
+                const changeBtn = s.nextElementSibling.firstElementChild;
+                changeBtn.onclick=()=>promptFile('image/jpeg').then(i=>parent._editImage(i));
+                changeBtn.nextElementSibling.onclick=()=>parent._deleteImage();
+                changeBtn.nextElementSibling.nextElementSibling.onclick=()=>parent._promoteToImage();
+                parent.lastElementChild.onclick=()=>{
+                    parent._edited=true;promptFile('image/jpeg').then(i=>parent._addImage(i));
+                }
+            }
+        })(document.currentScript)
+    </script>
+    @{ var imageMargin = Model.Editable ? "my-1" : ""; }
+    @if (Model.Editable){
+        <div class="d-flex row edit-control gap-3 justify-content-center">
+            <button title="Değiştir" class="col-auto hover-grow btn p-0 bg-light-subtle border-secondary-subtle border-2 shadow-sm rounded-2">
+                <i class="col-auto bi m-0 bi-pencil-fill bg-white text-secondary"></i>
+            </button>
+            <button title="Sil"  class="col-auto btn p-0 bg-light-subtle border-secondary-subtle hover-grow border-2 shadow-sm rounded-2">
+                <i class="col-auto m-0 bi bi-trash-fill bg-white text-danger"></i>
+            </button>
+            <button title="Ana Resim Yap"  class="col-auto btn p-0 bg-light-subtle hover-grow border-secondary-subtle border-2  shadow-sm rounded-2">
+                <i class="col-auto bi m-0 bi-arrow-up bg-white text-success"></i>
+            </button>
+        </div>
+    }
+    <div class="@imageMargin">
+        <div id="imagesSlide" class="carousel slide">
+            <div class="carousel-inner rounded-4">
+                @if (Model.Images.Count == 0){
+                    var defaultImage = "/default.jpg";
+                    <div id="image0" class="carousel-item active">
+                        <img src="default.jpg" class="d-block w-100" alt="Varsayılan Resim">
+                    </div>
+                }
+                else{
+                    var i = 0;
+                    foreach (var ip in Model.Images){
+                        var image = ip.Image;
+                        <div data-primary="@ip.IsPrimary" data-index="@i" class="carousel-item @(i == 0 ? "active" : "")">
+                            <img src="@(Utils.GetImageUrlOrDefault(image.Data))" class="d-block w-100" alt="@(i)'th image of product">
+                        </div>
+                        i++;
+                    }
+                }
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#imageSlide" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#imageSlide" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
     </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#imageSlide" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Previous</span>
-    </button>
-    <button id="imagesNextBtn" class="carousel-control-next" type="button" data-bs-target="#imageSlide" data-bs-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Next</span>
-    </button>
+    <a class="row text-decoration-none justify-content-center" >
+        <p class="col-auto">Resim Ekle</p>
+        <i class="col-auto bi bi-plus-circle-fill text-success bg-white"></i>
+    </a>
 </div>
+
