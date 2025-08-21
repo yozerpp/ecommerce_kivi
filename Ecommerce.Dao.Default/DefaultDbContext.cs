@@ -362,31 +362,16 @@ public class DefaultDbContext : DbContext
                 e.WithOwner().HasForeignKey(p => p.ProductId)
                     .HasPrincipalKey(p => p.Id).Metadata.IsUnique=true;
                 e.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-                e.ToView($"{nameof(ProductStats)}_{nameof(ProductOffer)}",DefaultSchema, b => {
+                e.ToView($"{nameof(ProductStats)}",DefaultSchema, b => {
                     b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(p => p.MinPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     b.Property(p => p.MaxPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(ProductStats)}_{nameof(ProductReview)}", DefaultSchema, b => {
-                    b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(p => p.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     b.Property(p=>p.RatingTotal).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(ProductStats)}_{nameof(ProductReview)}Average", DefaultSchema, vb => {
-                    vb.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(s => s.RatingAverage).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                });
-                e.SplitToView($"{nameof(ProductStats)}_{nameof(OrderItem)}", DefaultSchema, b => {
-                    b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.RatingAverage).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     b.Property(p =>p.OrderCount ).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     b.Property(p => p.SaleCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(ProductStats)}_{nameof(ProductFavor)}", DefaultSchema, b => {
-                    b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(p => p.FavorCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(ProductStats)}_{nameof(RefundRequest)}", DefaultSchema, b => {
-                    b.Property(p => p.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(p => p.RefundCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
             });

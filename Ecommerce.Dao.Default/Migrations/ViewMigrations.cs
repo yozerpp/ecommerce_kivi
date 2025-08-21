@@ -206,6 +206,28 @@ public static class ViewMigrations
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}] pspr
             WHERE pspr.{nameof(ProductStats.ReviewCount)} > 0
         ");
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}] WITH SCHEMABINDING AS
+            SELECT 
+                p.Id as {nameof(ProductStats.ProductId)},
+                pspo.{nameof(ProductStats.MinPrice)},
+                pspo.{nameof(ProductStats.MaxPrice)},
+                pspr.{nameof(ProductStats.ReviewCount)},
+                pspr.{nameof(ProductStats.RatingTotal)},
+                pspra.{nameof(ProductStats.RatingAverage)},
+                psoi.{nameof(ProductStats.OrderCount)},
+                psoi.{nameof(ProductStats.SaleCount)},
+                pspf.{nameof(ProductStats.FavorCount)},
+                psrr.{nameof(ProductStats.RefundCount)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Product)}] p
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}] pspo ON p.Id = pspo.{nameof(ProductStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}] pspr ON p.Id = pspr.{nameof(ProductStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}Average] pspra ON p.Id = pspra.{nameof(ProductStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(OrderItem)}] psoi ON p.Id = psoi.{nameof(ProductStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductFavor)}] pspf ON p.Id = pspf.{nameof(ProductStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(RefundRequest)}] psrr ON p.Id = psrr.{nameof(ProductStats.ProductId)}
+        ");
         DoProductRatingStats(migrationBuilder,5,nameof(ProductRatingStats.FiveStarCount));
         DoProductRatingStats(migrationBuilder,4,nameof(ProductRatingStats.FourStarCount));
         DoProductRatingStats(migrationBuilder,3,nameof(ProductRatingStats.ThreeStarCount));
@@ -633,6 +655,9 @@ public static class ViewMigrations
         // migrationBuilder.DropIndex($"IX_{nameof(ProductStats)}_{nameof(ProductOffer)}",
         //     $"{nameof(ProductStats)}_{nameof(ProductOffer)}",
         //     DefaultDbContext.DefaultSchema);
+        migrationBuilder.Sql($@"
+            DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}]
+        ");
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}Average]
         ");
