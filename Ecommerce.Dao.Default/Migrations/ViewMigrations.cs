@@ -589,6 +589,27 @@ public static class ViewMigrations
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] spspr
             WHERE spspr.{nameof(SellerStats.ReviewCount)} > 0
         ");
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}] WITH SCHEMABINDING AS
+            SELECT 
+                s.Id as {nameof(SellerStats.SellerId)},
+                spo.{nameof(SellerStats.OfferCount)},
+                spr.{nameof(SellerStats.ReviewCount)},
+                spra.{nameof(SellerStats.ReviewAverage)},
+                spr.{nameof(SellerStats.RatingTotal)},
+                soi.{nameof(SellerStats.SaleCount)},
+                sc.{nameof(SellerStats.TotalSold)},
+                srr.{nameof(SellerStats.RefundCount)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] s
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}] spo ON s.Id = spo.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] spr ON s.Id = spr.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}Average] spra ON s.Id = spra.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}] soi ON s.Id = soi.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(Coupon)}] sc ON s.Id = sc.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(RefundRequest)}] srr ON s.Id = srr.{nameof(SellerStats.SellerId)}
+            WHERE s.Role = {(int)User.UserRole.Seller}
+        ");
     }
 
     public static void Down(MigrationBuilder migrationBuilder)
@@ -680,6 +701,7 @@ public static class ViewMigrations
             name: $"IX_{nameof(SellerStats)}_{nameof(RefundRequest)}",
             schema: DefaultDbContext.DefaultSchema,
             table: $"{nameof(SellerStats)}_{nameof(RefundRequest)}");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}Average]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}]");
