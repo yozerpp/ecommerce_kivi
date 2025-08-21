@@ -3,10 +3,16 @@
 <div>
     <script>
         ((s)=>{
-            document.addEventListener('DOMContentLoaded', init);
-            s.parentElement.addEventListener('init', init);
-            function init(){
-                const parent = s.parentElement ;
+            const parent = s.parentElement;
+            @if (Model.Editable){
+                <text>
+                    document.addEventListener('DOMContentLoaded', initEditing);
+                    parent.addEventListener('htmx:load', initEditing);
+                </text>
+            }
+            document.addEventListener('DOMContentLoaded', initPaging);
+            parent.addEventListener('htmx:load', initPaging);
+            function initEditing(){
                 parent.dataset.page = '1';
                 parent._editedImages = new Map();
                 parent._addedImages = [];
@@ -17,13 +23,13 @@
                 parent._editImage= function (data) {
                     let i = this.querySelector('div.carousel-item.active');
                     i.querySelector('img').src = data;
-                    this._editedImages.set(parseInt(i.dataset.index),  {data:data,primary:i.dataset.primary});
+                    this._editedImages.set(parseInt(i.dataset.id),  {data:data,primary:i.dataset.primary});
                     this._edited = true;
                 }
                 parent._deleteImage= function (){
                     const s = this.querySelector('div.carousel-item.active');
                     this.querySelector("div.carousel-item:not(.active)")?.classList?.add('active');
-                    this._editedImages.set(parseInt(s.dataset.index), null);
+                    this._editedImages.set(parseInt(s.dataset.id), null);
                     s.remove();
                     this._edited = true;
                 }
@@ -31,61 +37,86 @@
                     const s = document.getElementById('imagesSlide').firstElementChild;
                     let i = this.querySelector('div.carousel-item').cloneNode(true);
                     i.querySelector('img').src = data;
-                    i.classList.remove('active');
-                    i.dataset.index = s.children.length.toString();
+                    const a = this.querySelector('.carousel-item.active');
+                    if(a.dataset.default!==undefined)a.remove();
                     s.appendChild(i);
                     this._addedImages.push(data);
                     this._edited=true;
                 }
                 parent._promoteToImage= function (){
                     this.querySelectorAll('.carousel-item').forEach(e=>{
-                        e.dataset.primary='0';
-                        this._editedImages.get(parseInt(e.dataset.index)).primary = 'false';
+                        e.dataset.primary='false';
+                        const i = this._editedImages.get(parseInt(e.dataset.id));
+                        if(i) i.primary = 'false';
                     });
-                    this._editedImages.get(parseInt(this.querySelector('.carousel-item.active').dataset.index)).primary='true';
+                    const active = this.querySelector('.carousel-item.active');
+                    const i = this._editedImages.get(parseInt(active.dataset.id));
+                    if(i) i.primary = 'true';
+                    else this._editedImages.set(
+                        active.dataset.id,
+                        {primary:'true',data:null}
+                    )
+                }
+                s.nextElementSibling.addEventListener('click',()=>{
+                    parent._edited=true;
+                });
+                @if (!Model.Creating && Model.Editable){
+                    <text>
+                    const changeBtn = s.nextElementSibling.firstElementChild;
+                    changeBtn.onclick=()=>promptFile('image/jpeg').then(i=>parent._editImage(i));
+                    changeBtn.nextElementSibling.onclick=()=>parent._deleteImage();
+                    changeBtn.nextElementSibling.nextElementSibling.onclick=()=>parent._promoteToImage();
+                    </text>
                 }
                 
+                parent.lastElementChild.onclick=()=>{
+                    parent._edited=true;promptFile('image/jpeg').then(i=>parent._addImage(i));
+                }
+            }
+
+            function initPaging(){
                 parent._loadNextPage = async function() {
                     if (this._loading || !this._hasMorePages) return;
-                    
+
                     this._loading = true;
                     const currentPage = parseInt(this.dataset.page);
                     const nextPage = currentPage + 1;
-                    
+
                     try {
-                        const response = await fetch(`@Model.FetchUrl?page=${nextPage}`);
-                        
-                        if (response.status === 404) {
+                        const response = await fetch(`@(Html.Raw(Model.FetchUrl))&page=${nextPage}&pageSize=@(Model.PageSize)`, {
+                            method: 'GET'
+                        });
+                        if (response.status === 204) {
                             this._hasMorePages = false;
                             return;
                         }
-                        
+
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
-                        
+
                         const data = await response.json();
                         const carousel = this.querySelector('#imagesSlide .carousel-inner');
-                        
+
                         if (data && data.length > 0) {
                             data.forEach((imageData, index) => {
                                 const currentIndex = carousel.children.length;
                                 const carouselItem = document.createElement('div');
                                 carouselItem.className = 'carousel-item';
-                                carouselItem.dataset.primary = imageData.IsPrimary || 'false';
-                                carouselItem.dataset.index = currentIndex.toString();
-                                
+                                carouselItem.dataset.primary = imageData.isPrimary || 'false';
+                                carouselItem.dataset.id = imageData.imageId;
+
                                 const img = document.createElement('img');
-                                img.src = imageData.Image?.Data ? 
-                                    (imageData.Image.Data.startsWith('data:') ? imageData.Image.Data : `data:image/jpeg;base64,${imageData.Image.Data}`) : 
+                                img.src = imageData.image?.data ?
+                                    (imageData.image.data.startsWith('data:') ? imageData.image.data : `data:image/jpeg;base64,${imageData.image.data}`) :
                                     '/default.jpg';
                                 img.className = 'd-block w-100';
                                 img.alt = `${currentIndex}'th image of product`;
-                                
+
                                 carouselItem.appendChild(img);
                                 carousel.appendChild(carouselItem);
                             });
-                            
+
                             this.dataset.page = nextPage.toString();
                         } else {
                             this._hasMorePages = false;
@@ -97,41 +128,30 @@
                         this._loading = false;
                     }
                 }
-                
+
                 parent._checkAndLoadMore = function() {
                     const activeItem = this.querySelector('.carousel-item.active');
                     const allItems = this.querySelectorAll('.carousel-item');
                     const activeIndex = Array.from(allItems).indexOf(activeItem);
-                    
+
                     // Load more when we're near the end (within 2 items)
                     if (activeIndex >= allItems.length - 2) {
                         this._loadNextPage();
                     }
                 }
-                s.nextElementSibling.addEventListener('click',()=>{
-                    parent._edited=true;
-                });
-                const changeBtn = s.nextElementSibling.firstElementChild;
-                changeBtn.onclick=()=>promptFile('image/jpeg').then(i=>parent._editImage(i));
-                changeBtn.nextElementSibling.onclick=()=>parent._deleteImage();
-                changeBtn.nextElementSibling.nextElementSibling.onclick=()=>parent._promoteToImage();
-                parent.lastElementChild.onclick=()=>{
-                    parent._edited=true;promptFile('image/jpeg').then(i=>parent._addImage(i));
-                }
-                
                 // Add event listeners for carousel navigation to trigger pagination
                 const carousel = parent.querySelector('#imagesSlide');
                 carousel.addEventListener('slid.bs.carousel', () => {
                     parent._checkAndLoadMore();
                 });
-                
+
                 // Initial check in case we start near the end
                 setTimeout(() => parent._checkAndLoadMore(), 100);
             }
         })(document.currentScript)
     </script>
     @{ var imageMargin = Model.Editable ? "my-1" : ""; }
-    @if (Model.Editable){
+    @if (!Model.Creating&&Model.Editable){
         <div class="d-flex row edit-control gap-3 justify-content-center">
             <button title="Değiştir" class="col-auto hover-grow btn p-0 bg-light-subtle border-secondary-subtle border-2 shadow-sm rounded-2">
                 <i class="col-auto bi m-0 bi-pencil-fill bg-white text-secondary"></i>
@@ -148,16 +168,15 @@
         <div id="imagesSlide" class="carousel slide">
             <div class="carousel-inner rounded-4">
                 @if (Model.Images.Count == 0){
-                    var defaultImage = "/default.jpg";
-                    <div id="image0" class="carousel-item active">
-                        <img src="default.jpg" class="d-block w-100" alt="Varsayılan Resim">
+                    <div data-default id="image0" class="carousel-item active">
+                        <img src="/default.jpg" class="d-block w-100" alt="Varsayılan Resim">
                     </div>
                 }
                 else{
                     var i = 0;
                     foreach (var ip in Model.Images){
                         var image = ip.Image;
-                        <div data-primary="@ip.IsPrimary" data-index="@i" class="carousel-item @(i == 0 ? "active" : "")">
+                        <div data-primary="@ip.IsPrimary" data-id="@(ip.ImageId)" data-index="@i" class="carousel-item @(i == 0 ? "active" : "")">
                             <img src="@(Utils.GetImageUrlOrDefault(image.Data))" class="d-block w-100" alt="@(i)'th image of product">
                         </div>
                         i++;
@@ -174,9 +193,10 @@
             </button>
         </div>
     </div>
-    <a class="row text-decoration-none justify-content-center" >
-        <p class="col-auto">Resim Ekle</p>
-        <i class="col-auto bi bi-plus-circle-fill text-success bg-white"></i>
-    </a>
+    @if (Model.Editable || Model.Creating){
+        <a style="cursor:pointer;" class="row edit-control text-decoration-none justify-content-center" >
+            <p class="col-auto">Resim Ekle</p>
+            <i class="hover-grow col-auto bi bi-plus-circle-fill text-success bg-white"></i>
+        </a>    
+    }
 </div>
-
