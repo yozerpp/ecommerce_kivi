@@ -44,10 +44,13 @@
         @* if(iii!=0){<div class="separator"></div>} *@
         <li class="offer-item hover-darken list-group-item d-flex" style="cursor: pointer;" data-sellerid="@(offer.SellerId)">
             <ul class="list-unstyled row g-1 d-flex">
-                <li class="col-4  justify-content-start overflow-x-hidden align-content-center">
-                    <button asp-page="/Seller" asp-route-Id="@(offer.SellerId)" class="btn btn-secondary">
-                        @(offer.Seller.ShopName)
-                    </button>
+                <li class="col-4 justify-content-start overflow-x-hidden align-content-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-truncate fw-medium">@(offer.Seller.ShopName)</span>
+                        <a asp-page="/Seller" asp-route-Id="@(offer.SellerId)" class="text-decoration-none" onclick="event.stopPropagation();">
+                            <i class="bi bi-box-arrow-up-right text-primary" title="Satıcı sayfasına git"></i>
+                        </a>
+                    </div>
                 </li>
                 <li class="col-3  align-content-center">
                     <div class="row px-2 overflow-x-hidden">
