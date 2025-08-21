@@ -24,7 +24,7 @@ public class DefaultDbContext : DbContext
         var userBuilder = modelBuilder.Entity<User>().UseTphMappingStrategy();
         userBuilder.HasDiscriminator<User.UserRole>(nameof(User.Role))
             .HasValue<Customer>(User.UserRole.Customer).HasValue<Seller>(User.UserRole.Seller)
-            .HasValue<Staff>(User.UserRole.Staff);
+            .HasValue<Staff>(User.UserRole.Staff).IsComplete();
         // userBuilder.Property(u => u.UserName).IsRequired();
         // userBuilder.Property(u=>u.UserName)
         // userBuilder.HasAlternateKey(u => u.UserName);
@@ -78,8 +78,7 @@ public class DefaultDbContext : DbContext
         customerBuilder.HasMany<VoteNotification>(c => c.VoteNotifications).WithOne(v => v.Customer)
             .HasForeignKey(v => v.UserId).HasPrincipalKey(c => c.Id)
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
-        customerBuilder.HasMany<RefundRequest>(c => c.RefundRequests).WithOne()
-            .HasForeignKey(n => n.RequesterId).HasPrincipalKey(c => c.Id);
+        customerBuilder.HasMany<RefundRequest>(c => c.RefundRequests).WithOne();
         customerBuilder.HasMany<CancellationRequest>(c => c.CancellationRequests).WithOne(c => c.Customer)
             .HasForeignKey(c => c.RequesterId).HasPrincipalKey(c => c.Id)
             .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
@@ -373,6 +372,7 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey<Payment>(p => p.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
         var productBuilder = modelBuilder.Entity<Product>(entity => {
             entity.HasKey(p => p.Id);
+            entity.Ignore(p => p.MainImage);
             entity.OwnsOne<ProductStats>(p => p.Stats, e => {
                 e.WithOwner().HasForeignKey(p => p.ProductId)
                     .HasPrincipalKey(p => p.Id).Metadata.IsUnique=true;
@@ -405,6 +405,37 @@ public class DefaultDbContext : DbContext
                     b.Property(p => p.RefundCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
             });
+            entity.OwnsOne<ProductRatingStats>(s => s.RatingStats, b => {
+                b.WithOwner().HasForeignKey(s => s.ProductId).HasPrincipalKey(s => s.Id).Metadata.GetNavigation(false).SetIsEagerLoaded(false);
+                b.ToView($"{nameof(ProductStats)}_{nameof(ProductReview)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s=>s.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FiveStarCount)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.FiveStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FourStarCount)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.FourStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ThreeStarCount)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.ThreeStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.TwoStarCount)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.TwoStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.OneStarCount)}", DefaultSchema, b => {
+                    b.Property(s=>s.ProductId).Overrides.Property.ValueGenerated =    ValueGenerated.OnAdd;    
+                    b.Property(s => s.OneStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ZeroStarCount)}", DefaultSchema, b => {
+                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                    b.Property(s => s.ZeroStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                });
+                });
             entity.Property(p=>p.Id).ValueGeneratedOnAdd();
             entity.HasMany(p => p.Offers).WithOne(o => o.Product).HasForeignKey(o => o.ProductId)
                 .HasPrincipalKey(p => p.Id).OnDelete(DeleteBehavior.Cascade);
@@ -423,7 +454,7 @@ public class DefaultDbContext : DbContext
                 b.WithOwner(p => p.Product).HasForeignKey(p => p.ProductId).HasPrincipalKey(p => p.Id)
                     .Metadata.GetNavigation(false).SetIsEagerLoaded(false);
                 b.HasIndex(c => c.ProductId).IsClustered(true);
-                b.HasOne<Category.CategoryProperty>(p => p.CategoryProperty).WithMany()
+                b.HasOne<CategoryProperty>(p => p.CategoryProperty).WithMany()
                     .HasForeignKey(p => p.CategoryPropertyId).HasPrincipalKey(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict)
                     .Metadata.GetNavigation(true).SetIsEagerLoaded(true);
             });
@@ -444,7 +475,7 @@ public class DefaultDbContext : DbContext
         var imageBuilder = modelBuilder.Entity<Image>();
         imageBuilder.HasKey(i => i.Id);
         imageBuilder.Property(i => i.Id).ValueGeneratedOnAdd();
-        var categoryPropertyBuilder = modelBuilder.Entity<Category.CategoryProperty>(p => {
+        var categoryPropertyBuilder = modelBuilder.Entity<CategoryProperty>(p => {
             p.HasKey(c => c.Id).IsClustered(true);
             p.Property(c => c.Id).ValueGeneratedOnAdd();
             var prop = p.HasOne<Category>(c => c.Category).WithMany(c => c.CategoryProperties)
@@ -454,7 +485,6 @@ public class DefaultDbContext : DbContext
             prop.GetNavigation(true).SetIsEagerLoaded(false);
             prop.GetNavigation(false).SetIsEagerLoaded(false);
             p.HasIndex(p => p.CategoryId).IsClustered(false);
-            p.Property<string?>(c => c.EnumValues);
         });
         var categoryBuilder = modelBuilder.Entity<Category>(categoryBuilder => {
             categoryBuilder.HasKey(c => c.Id);
@@ -485,7 +515,7 @@ public class DefaultDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ProductOffer>(o=>o.ProductOffer).WithMany(of=>of.BoughtItems).HasForeignKey(nameof(OrderItem.SellerId),nameof(OrderItem.ProductId))
                 .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
-            entity.Property<int>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).IsRequired().ValueGeneratedNever();
+            entity.Property<int>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).HasAnnotation(nameof(Annotations.Validation_MaxValue), 100).IsRequired().ValueGeneratedNever();
             entity.HasIndex(e => e.ProductId)
                 .IsClustered(false)
                 .IncludeProperties(e => e.Quantity);
@@ -532,7 +562,7 @@ public class DefaultDbContext : DbContext
                 .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
             entity.HasOne<Session>(r => r.Session).WithMany().HasForeignKey(r => r.SessionId)
                 .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
-            entity.Property(r => r.Created).HasDefaultValue(DateTime.UtcNow + TimeSpan.FromHours(3));
+            entity.Property(r => r.Created).HasDefaultValueSql("DATEADD(HOUR, 3, GETUTCDATE())");
             entity.HasIndex(e => e.ProductId)
                 .IsClustered(true);
             entity.HasIndex(e => new { e.ProductId, e.SellerId })
@@ -541,18 +571,17 @@ public class DefaultDbContext : DbContext
             entity.HasIndex(e => e.SellerId)
                 .IsClustered(false)
                 .IncludeProperties(e => e.Rating);
+            entity.HasIndex(e => e.Created).IsClustered(false).IsDescending(true);
+            entity.HasIndex(e => e.Rating).IsClustered(false).IsDescending(true);
             entity.OwnsOne<ReviewStats>(e => e.Stats, c => {
                 c.HasKey(s => s.ReviewId);
                 c.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
                 c.WithOwner().HasForeignKey(s => s.ReviewId).HasPrincipalKey(r => r.Id).Metadata.IsUnique = true;
-                c.ToView($"{nameof(ReviewStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
+                c.ToView($"{nameof(ReviewStats)}", DefaultSchema, vb => {
                     vb.Property(s => s.ReviewId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     vb.Property(s => s.CommentCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                c.SplitToView($"{nameof(ReviewStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
-                    vb.Property(s => s.ReviewId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(s => s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                    vb.Property(s => s.VoteCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    vb.Property(s=>s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    vb.Property(s=>s.VoteCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
             });
         });
@@ -577,13 +606,10 @@ public class DefaultDbContext : DbContext
                 c.HasKey(s => s.CommentId);
                 c.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
                 c.WithOwner().HasForeignKey(s => s.CommentId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
-                c.ToView($"{nameof(ReviewCommentStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
+                c.ToView($"{nameof(ReviewCommentStats)}", DefaultSchema, vb => {
                     vb.Property(s => s.CommentId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     vb.Property(s => s.ReplyCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                c.SplitToView($"{nameof(ReviewCommentStats)}_{nameof(ReviewVote)}", DefaultSchema, vb => {
-                    vb.Property(s => s.CommentId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(s => s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    vb.Property(s=>s.Votes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     vb.Property(s => s.VoteCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
             });
@@ -605,8 +631,7 @@ public class DefaultDbContext : DbContext
             e.HasOne<User>(n => n.User).WithMany(u => u.Notifications).HasForeignKey(n => n.UserId)
                 .HasPrincipalKey(u => u.Id)
                 .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
-            e.Property<DateTime>(n=>n.Time).HasDefaultValue(DateTime.UtcNow + TimeSpan.FromHours(3));
-            e.HasIndex(e => e.UserId).IsClustered();
+            e.Property<DateTime>(n=>n.Time).HasDefaultValueSql("DATEADD(HOUR, 3, GETUTCDATE())");
         });
         var requestBuilder = modelBuilder.Entity<Request>().UseTpcMappingStrategy();
         requestBuilder.HasBaseType<Notification>();
@@ -618,9 +643,9 @@ public class DefaultDbContext : DbContext
             entity.HasOne<OrderItem>(r => r.Item).WithOne()
                 .HasForeignKey<RefundRequest>(r => new{ r.OrderId, r.UserId, r.ProductId }).HasPrincipalKey<OrderItem>(o=>new {o.OrderId, o.SellerId, o.ProductId})
                 .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
-            entity.HasIndex(e => e.ProductId)
-                .IsClustered(false)
-                .IncludeProperties(e => e.IsApproved);
+            entity.HasOne<Customer>(e => e.Customer).WithMany(c => c.RefundRequests).HasForeignKey(r=>r.RequesterId).HasPrincipalKey(r=>r.Id);
+            entity.HasOne<Seller>(r => r.Seller).WithMany(r => r.RefundRequests).HasForeignKey(r => r.UserId)
+                .HasPrincipalKey(r => r.Id);
             entity.HasIndex(e => new { e.ProductId, e.UserId })
                 .IsClustered(false)
                 .IncludeProperties(e => e.IsApproved);

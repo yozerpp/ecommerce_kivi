@@ -206,6 +206,28 @@ public static class ViewMigrations
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductReview)}] pspr
             WHERE pspr.{nameof(ProductStats.ReviewCount)} > 0
         ");
+        DoProductRatingStats(migrationBuilder,5,nameof(ProductRatingStats.FiveStarCount));
+        DoProductRatingStats(migrationBuilder,4,nameof(ProductRatingStats.FourStarCount));
+        DoProductRatingStats(migrationBuilder,3,nameof(ProductRatingStats.ThreeStarCount));
+        DoProductRatingStats(migrationBuilder,2,nameof(ProductRatingStats.TwoStarCount));
+        DoProductRatingStats(migrationBuilder,1,nameof(ProductRatingStats.OneStarCount));
+        DoProductRatingStats(migrationBuilder,0,nameof(ProductRatingStats.ZeroStarCount));
+    }
+
+    private static void DoProductRatingStats(MigrationBuilder migrationBuilder,int cond, string name) {
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{name}] WITH SCHEMABINDING AS
+            SELECT
+                p.{nameof(Product.Id)} as {nameof(ProductRatingStats.ProductId)},
+                COUNT_BIG(*) as {name}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Product)}] p
+            JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] pr ON p.{nameof(Product.Id)} = pr.{nameof(ProductReview.ProductId)}
+            WHERE pr.{nameof(ProductReview.Rating)} >= {cond} AND pr.{nameof(ProductReview.Rating)} < {cond + 1}
+            GROUP BY p.{nameof(Product.Id)}
+        ");
+        migrationBuilder.CreateIndex($"IX_{nameof(ProductRatingStats)}_{name}", $"{nameof(ProductRatingStats)}_{name}",
+                $"{nameof(ProductRatingStats.ProductId)}", DefaultDbContext.DefaultSchema, true)
+            .Annotation(SqlServerAnnotationNames.Clustered, true);
     }
     private static void _Order(MigrationBuilder migrationBuilder) {
         var cancelledStatus = (int)OrderStatus.Cancelled;
@@ -281,7 +303,7 @@ public static class ViewMigrations
                 oi.{nameof(OrderItem.ProductId)},
                 oi.{nameof(OrderItem.SellerId)},
                 (oa.{nameof(OrderItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(OrderItemAggregates.CouponDiscountedPrice)},
-                (oa.{nameof(OrderItemAggregates.BasePrice)} - (oa.{nameof(OrderItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/oa.{nameof(OrderItemAggregates.BasePrice)} AS {nameof(OrderItemAggregates.TotalDiscountPercentage)}
+                COALESCE((oa.{nameof(OrderItemAggregates.BasePrice)} - (oa.{nameof(OrderItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/NULLIF(oa.{nameof(OrderItemAggregates.BasePrice)},0),0) AS {nameof(OrderItemAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItem)}] oi
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oa on oa.{nameof(OrderItemAggregates.OrderId)} = oi.{nameof(OrderItem.OrderId)} AND oa.{nameof(OrderItemAggregates.ProductId)} = oi.{nameof(OrderItem.ProductId)} AND oa.{nameof(OrderItemAggregates.SellerId)} = oi.{nameof(OrderItem.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(OrderItem.CouponId)} = c.{nameof(Coupon.Id)}
@@ -424,6 +446,18 @@ public static class ViewMigrations
                 $"{nameof(ReviewCommentStats)}_{nameof(ReviewVote)}", nameof(ReviewCommentStats.CommentId),
                 DefaultDbContext.DefaultSchema, true)
             .Annotation(SqlServerAnnotationNames.Clustered, true);
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}] WITH SCHEMABINDING AS
+            SELECT
+                r.{nameof(ReviewComment.Id)} AS {nameof(ReviewCommentStats.CommentId)},
+                rc.{nameof(ReviewCommentStats.ReplyCount)} AS  {nameof(ReviewCommentStats.ReplyCount)}
+                rv.{nameof(ReviewCommentStats.VoteCount)} AS  {nameof(ReviewCommentStats.VoteCount)},
+                rv.{nameof(ReviewCommentStats.Votes)} AS {nameof(ReviewCommentStats.Votes)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewComment)}] r
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}_{nameof(ReviewComment)}] rc ON rc.{nameof(ReviewCommentStats.CommentId)} = r.{nameof(ReviewComment.Id)} AND
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}_{nameof(ReviewVote)}] rv ON rv.{nameof(ReviewCommentStats.CommentId)} = r.{nameof(ReviewComment.Id)}
+            GROUP BY r.Id
+        ");
     }
 
     private static void _Review(MigrationBuilder migrationBuilder) {
@@ -434,6 +468,7 @@ public static class ViewMigrations
                 COUNT_BIG(*) as {nameof(ReviewStats.CommentCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] r
             INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewComment)}] rc ON r.{nameof(ProductReview.Id)} = rc.{nameof(ReviewComment.ReviewId)}
+            WHERE rc.{nameof(ReviewComment.ParentId)} IS NULL
             GROUP BY r.Id
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(ReviewStats)}_{nameof(ReviewComment)}",
@@ -454,6 +489,18 @@ public static class ViewMigrations
                 $"{nameof(ReviewStats)}_{nameof(ReviewVote)}", nameof(ReviewStats.ReviewId),
                 DefaultDbContext.DefaultSchema, true)
             .Annotation(SqlServerAnnotationNames.Clustered, true);
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}] WITH SCHEMABINDING AS
+            SELECT
+                r.{nameof(ProductReview.Id)} AS {nameof(ReviewStats.ReviewId)},
+                rc.{nameof(ReviewStats.CommentCount)} AS  {nameof(ReviewStats.CommentCount)}
+                rv.{nameof(ReviewStats.VoteCount)} AS  {nameof(ReviewStats.VoteCount)},
+                rv.{nameof(ReviewStats.Votes)} AS {nameof(ReviewStats.Votes)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductReview)}] r
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}_{nameof(ReviewComment)}] rc ON rc.{nameof(ReviewStats.ReviewId)} = r.{nameof(ProductReview.Id)} AND
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}_{nameof(ReviewVote)}] rv ON rv.{nameof(ReviewStats.ReviewId)} = r.{nameof(ProductReview.Id)}
+            GROUP BY r.Id
+        ");
     }
 
     private static void _SellerStats(MigrationBuilder migrationBuilder) {
@@ -584,7 +631,19 @@ public static class ViewMigrations
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}]
         ");
-
+        dropProductRatingStatsView(nameof(ProductRatingStats.FiveStarCount));
+        dropProductRatingStatsView(nameof(ProductRatingStats.FourStarCount));
+        dropProductRatingStatsView(nameof(ProductRatingStats.ThreeStarCount));
+        dropProductRatingStatsView(nameof(ProductRatingStats.TwoStarCount));
+        dropProductRatingStatsView(nameof(ProductRatingStats.OneStarCount));
+        dropProductRatingStatsView(nameof(ProductRatingStats.ZeroStarCount));
+        void dropProductRatingStatsView(string name) {
+            migrationBuilder.DropIndex($"IX_{nameof(ProductRatingStats)}_{name}",
+                $"{nameof(ProductRatingStats)}_{name}", DefaultDbContext.DefaultSchema);
+            migrationBuilder.Sql($@"
+                DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{name}]
+            ");
+        }
         // Order Aggregates
         migrationBuilder.DropIndex(
             name: $"IX_{nameof(OrderAggregates)}",
@@ -656,19 +715,18 @@ public static class ViewMigrations
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(Coupon)}]");
-
         // Review Stats
-        migrationBuilder.DropIndex(
-            $"IX_{nameof(ReviewStats)}_{nameof(ReviewComment)}",
-            $"{nameof(ReviewStats)}_{nameof(ReviewComment)}",
-            DefaultDbContext.DefaultSchema);
+        // migrationBuilder.DropIndex(
+        //     $"IX_{nameof(ReviewStats)}_{nameof(ReviewComment)}",
+        //     $"{nameof(ReviewStats)}_{nameof(ReviewComment)}",
+        //     DefaultDbContext.DefaultSchema);
         migrationBuilder.DropIndex(
             $"IX_{nameof(ReviewStats)}_{nameof(ReviewVote)}",
             $"{nameof(ReviewStats)}_{nameof(ReviewVote)}",
             DefaultDbContext.DefaultSchema);
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}_{nameof(ReviewComment)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}_{nameof(ReviewVote)}]");
-
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewStats)}]");
         // ReviewComment Stats
         // migrationBuilder.DropIndex(
         //     $"IX_{nameof(ReviewCommentStats)}_{nameof(Entity.ReviewComment)}",
@@ -680,7 +738,7 @@ public static class ViewMigrations
             DefaultDbContext.DefaultSchema);
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}_{nameof(Entity.ReviewComment)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}_{nameof(ReviewVote)}]");
-
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ReviewCommentStats)}]");
         // Offer Stats
         migrationBuilder.DropIndex(
             $"IX_{nameof(OfferStats)}_{nameof(ProductReview)}",
