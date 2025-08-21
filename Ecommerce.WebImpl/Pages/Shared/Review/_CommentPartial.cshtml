@@ -26,11 +26,14 @@
                 <i class="bg-light text-dark bi bi-reply hover-grow"></i>
             </a>
             <script>
-                ((s)=>{
-                    s.closest('.partial-parent').addEventListener('htmx:load', e => {
-                        e.stopPropagation();
-                        s.nextElementSibling.dispatchEvent(new Event('htmx:load', { bubbles: false }));
-                    });
+                ((cs)=>{
+                    const parent = cs.closest('.partial-parent');
+                    function load(e){
+                        if(e.type ==='htmx:load'){
+                            cs.nextElementSibling.dispatchEvent( new Event('htmx:load', {bubbles:false}));
+                        }
+                    }
+                    parent.addEventListener('htmx:load', load);
                 })(document.currentScript)
             </script>
             @await Html.PartialAsync("Shared/Review/_VotePartial", new _VotePartial(){
@@ -67,8 +70,8 @@
                 <div class="col-9 rounded-2 input-group mb-3">
                     <textarea class="small input-group-text form-control" style="font-size: unset" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
                 </div>
-                <div class="col-3">
-                    <button type="submit" class="btn btn-primary">Gönder</button>
+                <div class="col-3 pt-5">
+                    <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-outline-primary">Gönder</button>
                 </div>
             </div>
         </form>
