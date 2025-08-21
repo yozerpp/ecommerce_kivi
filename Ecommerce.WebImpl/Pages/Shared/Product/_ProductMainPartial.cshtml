@@ -285,10 +285,12 @@
                 </div>
             </nav>
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane card border-bottom-0 pb-5 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
-                    <p id="descriptionValue" class="mx-5 my-5">
-                        @(Model.ViewedProduct.Description)
-                    </p>
+                <div class="tab-pane card border-bottom-0 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+                    <div class="card-body p-4">
+                        <p id="descriptionValue" class="lead">
+                            @(Model.ViewedProduct.Description)
+                        </p>
+                    </div>
                 </div>
                 <div class="tab-pane card border-bottom-0 fade" id="nav-properties" role="tabpanel" aria-labelledby="#nav-properties-tab">
                     <div class="container-fluid my-2">
