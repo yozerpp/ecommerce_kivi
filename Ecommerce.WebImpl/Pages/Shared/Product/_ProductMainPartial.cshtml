@@ -1,5 +1,6 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Product._ProductMainPartial
 @using System.Globalization
+@using System.Text.Json
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Common
 @using Ecommerce.Entity.Views
@@ -84,13 +85,6 @@
                 parent._editControls =  document.querySelectorAll('.edit-control');
                 document.getElementById('carousels').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                 
-                // Match column heights
-                const leftColumn = document.getElementById('left-column');
-                const rightColumn = document.getElementById('right-column');
-                if (leftColumn && rightColumn) {
-                    const leftHeight = leftColumn.offsetHeight;
-                    rightColumn.style.height = leftHeight + 'px';
-                }
                 @if (Model.Creating){
                 <text>
                     parent._editControls.forEach(e=>e.classList.remove('edit-control'));
@@ -141,7 +135,7 @@
             </li>
         }
         <li class="row section my-3 align-content-center align-items-stretch">
-            <div class="col-6 d-flex flex-column" style="margin-bottom: 10rem; min-height: 700px;" id="left-column">
+            <div class="col-7 d-flex flex-column pe-1"  >
                 <div id="carousels" class="my-1">
                     @await Html.PartialAsync("Shared/Product/_CarouselPartial", new _CarouselPartial(){
                         Editable = editable,Creating = Model.Creating,
@@ -166,103 +160,117 @@
                     }
                 </div>
             </div>
-            <div class="col-6 h-100 d-flex flex-column" id="right-column">
-                <ul class="list-unstyled g-1 py-1">
-                    <li class="d-flex align-items-center align-content-center justify-content-center">
-                        @await Html.PartialAsync("Shared/Product/_CategoryHierarchyPartial", (Model.ViewedProduct.CategoryId, Model.Categories))
-                    </li>
-                    <li id="title">
-                        <div class="row d-flex justify-content-center container-fluid">
-                            <b id="nameValue" class="col-auto" style="font-size: xx-large">@Model.ViewedProduct.Name</b>
-                            @if (editable){
-                                @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial(){ OnClick = "event.currentTarget.dispatchEvent(new Event('edit', {bubbles:true, cancelable:true}));" })
-                            }
-                        </div>
-                    </li>
-                    @if (!Model.Creating){
-                        <li id="aggregates" class="d-flex row justify-content-between">
-                            <div class="col-auto d-inline-flex flex-column align-items-center justify-content-center align-content-center">
-                                <p class="mx-3 col-auto align-self-start">@Model.ViewedProduct.Stats.SaleCount Kez satıldı</p>
-                                <div>
-                                    @await Html.PartialAsync("Shared/Product/_FavoritePartial", (ViewData[nameof(Entity.User)] is Customer, ProductWithAggregatesCustomerView.Promote(Model.ViewedProduct, Model.Favorites)))
-                                </div>
-                            </div>
-                            <div class="mx-3 col-auto">
-                                <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage ?? 0, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ?? 0u) }"/>
-                            </div>
-                        </li>
-                    }
-                    @if (!Model.Creating){
-                    <li id="offers" class="my-3 flex-grow-1 d-flex flex-column">
-                        <script>
-                            function fetchOffers(){
-                                const o = document.getElementById('offerList');
-                                o.setAttribute('hx-vals', JSON.stringify({sortColumn: o.dataset.sortcolumn, sortDesc: o.dataset.sortdesc == '1'}));
-                                htmx.trigger(o,'fire');
-                            }
-                        </script>
-                        <div id="offersParams" class="container-fluid d-flex justify-content-between mx-3">
-                            <div class="fs-6">Sırala:</div>
-                            <div>
-                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(OfferStats.ReviewAverage))';
-                                event.currentTarget.nextElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
-                                   class="p-0 text-decoration-none">
-                                    <i class="bi bi-star-fill fs-5 hover-darken-2 text-warning bg-light border-secondary-subtle border-1 rounded-2"></i>
-                                </a>
-                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(ProductOffer.Price))';
-                                event.currentTarget.previousElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
-                                   class="p-0 text-decoration-none">
-                                    <i class="bi bi-currency-dollar fs-5 hover-darken-2 text-secondary-emphasis text-success bg-light border-secondary-subtle border-1 rounded-2"></i>
-                                </a>
-                                <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortdesc=(parseInt(document.getElementById('offerList').dataset.sortdesc) + 1)%2;event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-down');event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-up');fetchOffers();" class="p-0 text-decoration-none">
-                                    <i class="bi bi-sort-numeric-down fs-5 hover-darken-2 text-primary bg-light border-secondary-subtle border-1 rounded-2"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div data-sortColumn="@(nameof(OfferStats.ReviewAverage))" data-sortDesc="1" hx-get="/@(nameof(Product))?handler=offers&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)" hx-trigger="fire,load" hx-target="this" hx-swap="innerHTML" id="offerList" class="flex-grow-1 overflow-auto" style="max-height: 400px;">
-                        </div>
-                    </li>    
-                    }
-                    <li class="row container-fluid g-3 mx-4 justify-content-between">
+            <ul class="col-5 h-100 list-unstyled d-flex flex-column gap-2 ps-1 py-1 pe-1">
+                <li class="d-flex align-items-center align-content-center justify-content-center">
+                    @await Html.PartialAsync("Shared/Product/_CategoryHierarchyPartial", (Model.ViewedProduct.CategoryId, Model.Categories))
+                </li>
+                <li id="title">
+                    <div class="row d-flex justify-content-center container-fluid">
+                        <b id="nameValue" class="col-auto" style="font-size: xx-large">@Model.ViewedProduct.Name</b>
                         @if (editable){
-                            <div class="edit-control col-6">
-                                <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryId))" value="@Model.ViewedProduct.CategoryId"/>
-                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).ProductId" value="@Model.ViewedProduct.Id"/>
-                                    <input type="hidden" name="@(nameof(Product.EditedOffer)).@nameof(ProductOffer.SellerId)" value="@Model.ViewingSellerId)"/>
-                                    <input id="editedInput" type="hidden" name="@(nameof(Product.IsProductEdited))" value="false"/>
-                                    <input id="offerEditedInput" type="hidden" name="@nameof(Product.IsOfferEdited)" value="false"/>
-                                    <input id="nameInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Name" value="@(Model.ViewedProduct.Name)"/>
-                                    <input id="descInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Description" value="@(Model.ViewedProduct.Description)"/>
-                                    <input id="priceInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Price))" value="-1"/>
-                                    <input id="stockInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Stock))" value="-1"/>
-                                    <input id="discountInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Discount))" value="-1"/>
-                                    <input id="widthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Width))" value="@(Model.ViewedProduct.Dimensions.Width))"/>
-                                    <input id="heightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Height))" value="@(Model.ViewedProduct.Dimensions.Height))"/>
-                                    <input id="depthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Depth))" value="@(Model.ViewedProduct.Dimensions.Depth))"/>
-                                    <input id="weightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Weight))" value="@(Model.ViewedProduct.Dimensions.Weight)"/>
-                                    <input id="sentImagesInput" type="hidden" name="@nameof(Product.SentImages)"/>
-                                </form>
-                            </div>
+                            @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial(){ OnClick = "event.currentTarget.dispatchEvent(new Event('edit', {bubbles:true, cancelable:true}));" })
                         }
-                        @if (!Model.Creating){
-                            <div class="col-6 ms-auto">
-                                <form hx-post="/@(nameof(Cart))" hx-target="#addToCartResult" hx-swap="innerHTML" class="form-check-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="productId" value="@Model.ViewedProduct.Id"/>
-                                    <input id="sellerIdInput" type="hidden" name="sellerId"/>
-                                    <div class="row justify-content-center gx-4">
-                                        <input class="col-auto rounded-1" type="number" min="1" name="quantity" placeholder="Miktar"/>
-                                        <button type="submit" class="col-auto btn btn-secondary" style="background-color: darkorange">Sepete Ekle</button>
-                                    </div>
-                                </form>
+                    </div>
+                </li>
+                @if (!Model.Creating){
+                    <li id="aggregates" class="d-flex row justify-content-between">
+                        <div class="col-auto d-inline-flex flex-column align-items-center justify-content-center align-content-center">
+                            <p class="mx-3 col-auto align-self-start">@Model.ViewedProduct.Stats.SaleCount Kez satıldı</p>
+                            <div>
+                                @await Html.PartialAsync("Shared/Product/_FavoritePartial", (ViewData[nameof(Entity.User)] is Customer, ProductWithAggregatesCustomerView.Promote(Model.ViewedProduct, Model.Favorites)))
                             </div>
-                            <div id="addToCartResult"></div>
-                        }
+                        </div>
+                        <div class="mx-3 col-auto">
+                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage ?? 0, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ?? 0u) }"/>
+                        </div>
                     </li>
-                </ul>
-            </div>
+                }
+                @if (!Model.Creating){
+                <li id="offers" class="flex-grow-1 d-flex flex-column">
+                    <script>
+                        ((s)=>{
+                            s.closest('.partial-parent').addEventListener('htmx:load', load);
+                            document.addEventListener('DOMContentLoaded', load);
+                            function load(e){
+                                document.getElementById('offerList').addEventListener('htmx:afterSettle', e=>{
+                                    e.detail.elt.firstElementChild.style.maxHeight = (document.getElementById('carousels').offsetHeight - s.parentElement.offsetTop +s.parentElement.parentElement.offsetTop) + "px";
+                                    e.detail.elt.addEventListener('sellerSelected', e=>{
+                                        e.stopPropagation();
+                                        document.getElementById('sellerIdInput').value = e.detail.sellerId;
+                                        document.getElementById('nav-reviews').querySelector('.review-form')._setSellerId(e.detail.sellerId);
+                                    });
+                                })    
+                            }
+                        })(document.currentScript)
+                        function fetchOffers(){
+                            const o = document.getElementById('offerList');
+                            o.setAttribute('hx-vals', JSON.stringify({sortColumn: o.dataset.sortcolumn, sortDesc: o.dataset.sortdesc == '1'}));
+                            htmx.trigger(o,'fire');
+                        }
+                        //# sourceURL=ProductMainOfferList.js
+                    </script>
+                    <div id="offersParams" class="container-fluid d-flex align-items-center gap-2 justify-content-end mx-3">
+                        <div class="fs-6 fw-bold text-center">Sırala:</div>
+                        <div>
+                            <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(OfferStats.ReviewAverage))';
+                            event.currentTarget.nextElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
+                               class="p-0 text-decoration-none">
+                                <i class="bi bi-star-fill fs-5 hover-darken-2 text-warning bg-light border-secondary-subtle border-1 rounded-2"></i>
+                            </a>
+                            <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortcolumn='@(nameof(ProductOffer.Price))';
+                            event.currentTarget.previousElementSibling.firstElementChild.classList.add('text-secondary-emphasis');event.currentTarget.firstElementChild.classList.remove('text-secondary-emphasis');fetchOffers();"
+                               class="p-0 text-decoration-none">
+                                <i class="bi bi-currency-dollar fs-5 hover-darken-2 text-secondary-emphasis text-success bg-light border-secondary-subtle border-1 rounded-2"></i>
+                            </a>
+                            <a href="javascript:void(0);" onclick="document.getElementById('offerList').dataset.sortdesc=(parseInt(document.getElementById('offerList').dataset.sortdesc) + 1)%2;event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-down');event.currentTarget.firstElementChild.classList.toggle('bi-sort-numeric-up');fetchOffers();" class="p-0 text-decoration-none">
+                                <i class="bi bi-sort-numeric-down fs-5 hover-darken-2 text-primary bg-light border-secondary-subtle border-1 rounded-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div data-sortColumn="@(nameof(OfferStats.ReviewAverage))" data-sortDesc="1" hx-get="/@(nameof(Product))?handler=offers&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)"
+                         hx-trigger="fire,load" hx-target="this" hx-swap="innerHTML" id="offerList" class="flex-grow-1 card overflow-y-auto overflow-x-hidden">
+                    </div>
+                </li>    
+                }
+                <li class="row container-fluid g-3 mx-4 justify-content-between">
+                    @if (editable){
+                        <div class="edit-control col-6">
+                            <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryId))" value="@Model.ViewedProduct.CategoryId"/>
+                                <input type="hidden" name="@(nameof(Product.EditedOffer)).ProductId" value="@Model.ViewedProduct.Id"/>
+                                <input type="hidden" name="@(nameof(Product.EditedOffer)).@nameof(ProductOffer.SellerId)" value="@Model.ViewingSellerId)"/>
+                                <input id="editedInput" type="hidden" name="@(nameof(Product.IsProductEdited))" value="false"/>
+                                <input id="offerEditedInput" type="hidden" name="@nameof(Product.IsOfferEdited)" value="false"/>
+                                <input id="nameInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Name" value="@(Model.ViewedProduct.Name)"/>
+                                <input id="descInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Description" value="@(Model.ViewedProduct.Description)"/>
+                                <input id="priceInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Price))" value="-1"/>
+                                <input id="stockInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Stock))" value="-1"/>
+                                <input id="discountInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Discount))" value="-1"/>
+                                <input id="widthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Width))" value="@(Model.ViewedProduct.Dimensions.Width))"/>
+                                <input id="heightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Height))" value="@(Model.ViewedProduct.Dimensions.Height))"/>
+                                <input id="depthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Depth))" value="@(Model.ViewedProduct.Dimensions.Depth))"/>
+                                <input id="weightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Weight))" value="@(Model.ViewedProduct.Dimensions.Weight)"/>
+                                <input id="sentImagesInput" type="hidden" name="@nameof(Product.SentImages)"/>
+                            </form>
+                        </div>
+                    }
+                    @if (!Model.Creating){
+                        <div class="col-6 ms-auto me-4">
+                            <form hx-post="/@(nameof(Cart))" hx-target="#addToCartResult" hx-swap="innerHTML" class="form-check-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@Model.ViewedProduct.Id"/>
+                                <input id="sellerIdInput" type="hidden" name="sellerId"/>
+                                <div class="row justify-content-center gx-4">
+                                    <input class="col-auto rounded-1" type="number" min="1" name="quantity" placeholder="Miktar"/>
+                                    <button type="submit" class="col-auto btn btn-secondary" style="background-color: darkorange">Sepete Ekle</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div id="addToCartResult"></div>
+                    }
+                </li>
+            </ul>
         </li>
         <!--Tabs Section-->
         <li>
@@ -298,16 +306,55 @@
 
                 <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="#nav-reviews-tab">
                     @if (!Model.Creating){
+                    <div class="container-fluid card bg-light">
                         <script>
                             ((s)=>{
-                                s.closest('.partial-parent').addEventListener('htmx:load',_=>{
-                                    s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false}));  
-                                })
+                                document.addEventListener('DOMContentLoaded', load);
+                                s.closest('.partial-parent').addEventListener('htmx:load', load);
+                                let selectedRating, sortBy, sortOrder;
+                                function load(e){
+                                    const rstats = s.nextElementSibling.querySelector('.rating-stats-container');
+                                   if(e.type==='htmx:load') 
+                                       rstats.dispatchEvent(new Event(e.type, {cancelable:true, bubbles:false}));
+                                   rstats.addEventListener('change', e=>{
+                                       e.stopPropagation();
+                                       if(e.detail.selectedRating===selectedRating && e.detail.sortBy === sortBy && e.detail.sortOrder===sortOrder)return;
+                                       ({selectedRating, sortBy, sortOrder} = e.detail);
+                                       const revs = s.parentElement.nextElementSibling.nextElementSibling;
+                                       revs.setAttribute('hx-vals', JSON.stringify(e.detail));
+                                       revs.dispatchEvent(new Event('fire', {bubbles:true}));
+                                   })
+                               }
                             })(document.currentScript)
+                            //# sourceURL=ProductMainReviews.js
+                        </script>
+                        <div class="card-header-pills p-0">
+                            @await Html.PartialAsync("Shared/Product/_ProductRatingStatsPartial", new _ProductRatingStatsPartial(){
+                                ReviewStats = Model.ViewedProduct.RatingStats,
+                            })    
+                        </div>
+                    </div>
+                    <div class="container-fluid my-2 d-flex justify-content-center">
+                        <script>
+                            ((s)=>{
+                                s.closest('.partial-parent').addEventListener('htmx:load', load);
+                                document.addEventListener("DOMContentLoaded", load);
+                                
+                                function load(e){
+                                    if(e.type==='htmx:load')
+                                        s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}))
+                                    s.nextElementSibling.addEventListener('htmx:afterRequest', e=>{
+                                        if(!e.detail.successful) return;
+                                        s.parentElement.nextElementSibling.dispatchEvent(new Event('fire', {bubbles:true, cancelable:true}));
+                                    })    
+                                }
+                            })(document.currentScript)
+                            //# sourceURL=ProductMainReviewForm.js
                         </script>
                         @await Html.PartialAsync("Shared/Review/_ReviewFormPartial", new _ReviewFormPartial(){ ProductId = Model.ViewedProduct.Id })
-                        <div class="my-3" hx-trigger="load" hx-target="this" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)">
-                        </div>
+                    </div>
+                    <div class="my-3" hx-trigger="load,fire" hx-target="this" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)" hx-vals='@Html.Raw(JsonSerializer.Serialize(new {sortBy=nameof(ProductReview.Created), sortOrder="desc"}))'>
+                    </div>
                     }
                 </div>
             </div>
