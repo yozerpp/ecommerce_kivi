@@ -1,7 +1,7 @@
 ﻿@using Ecommerce.Entity
 @model _CommentPartial
 
-<div class="partial-parent">
+<div class="partial-parent comment-partial">
     <div class="d-flex w-100 justify-content-between">
         <div>
             <h5 class="mb-1 text-secondary fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
@@ -32,7 +32,6 @@
                         s.nextElementSibling.dispatchEvent(new Event('htmx:load', { bubbles: false }));
                     });
                 })(document.currentScript)
-                //# sourceURL=CommentPartial.js
             </script>
             @await Html.PartialAsync("Shared/Review/_VotePartial", new _VotePartial(){
                 ReviewId = null,
