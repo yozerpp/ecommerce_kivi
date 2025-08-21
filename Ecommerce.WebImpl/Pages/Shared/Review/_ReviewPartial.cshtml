@@ -1,41 +1,38 @@
 ﻿@model ReviewUserView
 
-<div class="rounded-1 review partial-parent container-fluid flex-column gap-3 ps-3">
-    <div class="list-group flex-column gap-1">
-        <div class="w-100 mt-2 list-group-item">
-            <div class="row w-100 justify-content-between">
-                <div class="col-5"></div>
-                <div class="col-2">
+<div class="card shadow-sm mb-4 review partial-parent">
+    <div class="card-body">
+        <div class="w-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
                     @await Html.PartialAsync(nameof(_ReviewStarPartial), new _ReviewStarPartial(){ Rating = Model.Review.Rating })
                 </div>
-                <div class="col-4"></div>
-                <div class="col-1">
-                    <small>@(Utils.GetRelativeTime(Model.Review.Created) ?? "şimdi")</small>
-                </div>
+                <small class="text-muted">@(Utils.GetRelativeTime(Model.Review.Created) ?? "şimdi")</small>
             </div>
-            <div class="m-1">
-                <p class="ms-1 fs-6 text-secondary-emphasis">@(Model.Review.Reviewer?.FullName?? (Model.Review.Name ?? ""))</p>
+            <div class="mb-2">
+                <h6 class="text-primary fw-semibold mb-0">@(Model.Review.Reviewer?.FullName?? (Model.Review.Name ?? ""))</h6>
             </div>
             @if (Model.Review.Comment != null){
-                <div class="m-2 d-flex">
-                    <p class="mb-1">@Model.Review.Comment</p>
+                <div class="mb-3">
+                    <p class="text-dark mb-0">@Model.Review.Comment</p>
                 </div>
             }
             @if (Model.Review.HasBought){
-                <div class="container-fluid d-flex justify-content-end align-content-center">
-                    <small>Bu kullanıcının bu ürünü satın aldığı doğrulandı.</small>
+                <div class="d-flex justify-content-end mb-2">
+                    <span class="badge bg-success text-white small">✓ Doğrulanmış Alıcı</span>
                 </div>
             }
-            <div class="small container-fluid d-inline-flex mx-0 gap-2 pe-1 justify-content-end align-items-center">
-                <div class="ms-auto d-inline-flex gap-2">
-                    <span class="d-inline-flex align-items-center">
-                        <button  data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Review.Id)" class="p-0 me-1 hover-grow border-0 text-dark" style="background-color: inherit;" hx-trigger="click" hx-target="#comments@(Model.Review.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Review.Id&ParentId=null">
+            <div class="d-flex justify-content-end align-items-center gap-3 border-top pt-2">
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="d-inline-flex align-items-center text-muted">
+                        <button  data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Review.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 hover-grow" style="background-color: transparent;" hx-trigger="click" hx-target="#comments@(Model.Review.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Review.Id&ParentId=null">
                             <i class="bi bi-chat-dots"></i>
-                        </button> @Model.Review.Stats.CommentCount
+                        </button> 
+                        <span class="badge bg-light text-dark">@Model.Review.Stats.CommentCount</span>
                     </span>
 
-                    <a  data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Review.Id)" aria-expanded="false" aria-controls="reply@(Model.Review.Id)">
-                        <i class="bg-light text-dark bi bi-reply hover-grow"></i>
+                    <a  data-bs-placement="right" title="Cevapla" class="btn btn-sm btn-outline-primary p-1 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Review.Id)" aria-expanded="false" aria-controls="reply@(Model.Review.Id)">
+                        <i class="bi bi-reply"></i>
                     </a>
                     <script>
                         ((cs)=>{
@@ -52,11 +49,13 @@
                     
                 </div>
             </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div>
+    <div class="card-footer bg-light">
         <div hx-on::after-swap="const b = document.getElementById('commentsBtn@(Model.Review.Id)');if(b){b.classList.remove('hover-grow');;b.disabled=true;b.removeAttribute('hx-get');}" id="comments@(Model.Review.Id)"></div>
-        <div class="collapse mt-3 card" id="reply@(Model.Review.Id)">
+        <div class="collapse mt-3 card shadow-sm" id="reply@(Model.Review.Id)">
             <script>
                 ((s)=>{
                     document.addEventListener('DOMContentLoaded', load);
@@ -75,12 +74,12 @@
             </script>
             <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Review.Id)" hx-swap="innerHTML">
                 <input type="hidden" name="SentComment.ReviewId" value="@Model.Review.Id"/>
-                <div class="row g-2">
-                    <div class="col-9 rounded-2 input-group mb-3">
-                        <textarea class="input-group-text form-control" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
+                <div class="row g-3 align-items-end">
+                    <div class="col-9">
+                        <textarea class="form-control border-2" rows="3" name="SentComment.Comment" placeholder="Cevaplayın..."></textarea>
                     </div>
-                    <div class="col-3 pt-5">
-                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-outline-primary">Gönder</button>
+                    <div class="col-3">
+                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary w-100">Gönder</button>
                     </div>
                 </div>
             </form>

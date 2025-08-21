@@ -1,27 +1,28 @@
 ﻿@using Ecommerce.Entity
 @model _CommentPartial
 
-<div class="partial-parent comment-partial">
-    <div class="d-flex w-100 justify-content-between">
-        <div>
-            <h5 class="mb-1 text-secondary fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
+<div class="partial-parent comment-partial border-start border-2 border-light ps-3 mb-3">
+    <div class="d-flex w-100 justify-content-between align-items-start">
+        <div class="flex-shrink-0">
+            <h5 class="mb-1 text-primary fw-semibold fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
             @{var t = Utils.GetRelativeTime(Model.CommentUserView.ReviewComment.Created);}
-            <small>@(t!=null?$"{t} Önce":"Şimdi")</small>
+            <small class="text-muted">@(t!=null?$"{t} Önce":"Şimdi")</small>
         </div>
-        <p class="mb-1">@Model.CommentUserView.ReviewComment.Comment</p>
-        <div>
+        <p class="mb-1 flex-grow-1 ms-3 text-dark">@Model.CommentUserView.ReviewComment.Comment</p>
+        <div class="flex-shrink-0">
             
         </div>
     </div>
-    <div class="small d-flex container-fluid align-items-center justify-content-end">
-        <div class="d-inline-flex gap-2">
-            <span class="d-inline-flex align-items-center">
-                <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-dark btn-link border-0" style="background-color: inherit;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
+    <div class="small d-flex container-fluid align-items-center justify-content-end mt-2">
+        <div class="d-inline-flex gap-3 align-items-center">
+            <span class="d-inline-flex align-items-center text-muted">
+                <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 hover-grow" style="background-color: transparent;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
                     <i class="bi bi-chat-dots"></i>
-                </button> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
+                </button> 
+                <span class="badge bg-light text-dark">@Model.CommentUserView.ReviewComment.Stats.ReplyCount</span>
             </span>
-            <a data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
-                <i class="bg-light text-dark bi bi-reply hover-grow"></i>
+            <a data-bs-placement="right" title="Cevapla" class="btn btn-sm btn-outline-primary p-1 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
+                <i class="bi bi-reply"></i>
             </a>
             <script>
                 ((cs)=>{
@@ -43,7 +44,7 @@
 
         </div>
     </div>
-    <div class="collapse mt-3" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
+    <div class="collapse mt-3 border rounded p-2 bg-light" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
         <script>
             ((s)=>{
                 document.addEventListener('DOMContentLoaded', load);
@@ -58,15 +59,17 @@
             })(document.currentScript)
             //# sourceURL=CommentPartialReload.js
         </script>
-        <form class="card card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
+        <form class="card shadow-sm" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
             <input type="hidden" name="SentComment.ReviewId" value="@Model.CommentUserView.ReviewComment.ReviewId"/>
             <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)" value="@Model.CommentUserView.ReviewComment.Id"/>
-            <div class="row g-2">
-                <div class="col-9 rounded-2 input-group mb-3">
-                    <textarea class="small input-group-text form-control" style="font-size: unset" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
-                </div>
-                <div class="col-3 pt-5">
-                    <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-outline-primary">Gönder</button>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-9">
+                        <textarea class="form-control border-2" rows="3" name="SentComment.Comment" placeholder="Cevaplayın..."></textarea>
+                    </div>
+                    <div class="col-3">
+                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary w-100">Gönder</button>
+                    </div>
                 </div>
             </div>
         </form>
