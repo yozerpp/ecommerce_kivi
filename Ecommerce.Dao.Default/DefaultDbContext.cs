@@ -96,31 +96,16 @@ public class DefaultDbContext : DbContext
             cs.HasKey(s => s.CustomerId);
             cs.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
             cs.WithOwner().HasForeignKey(s => s.CustomerId).HasPrincipalKey(c => c.Id).Metadata.IsUnique = true;
-            cs.ToView($"{nameof(CustomerStats)}_{nameof(Order)}", DefaultSchema, v => {
+            cs.ToView($"{nameof(CustomerStats)}", DefaultSchema, v => {
                 v.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(s => s.TotalOrders).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
-                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}", DefaultSchema, vb => {
-                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.ReviewVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
-                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}", DefaultSchema, vb => {
-                vb.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(s => s.CommentVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            //non-materialized
-            cs.SplitToView($"{nameof(CustomerStats)}_{nameof(Coupon)}", DefaultSchema, v => {
-                v.Property(s => s.CustomerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                v.Property(s => s.TotalReviews).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.TotalComments).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.ReviewVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.CommentVotes).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(s => s.TotalSpent).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(s => s.TotalDiscountUsed).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(s => s.TotalKarma).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
             });
         });
         var sellerBuilder = modelBuilder.Entity<Seller>();

@@ -437,6 +437,28 @@ public static class ViewMigrations
         //     $"IX_{nameof(CustomerStats)}_{nameof(Coupon)}",
         //     $"{nameof(CustomerStats)}_{nameof(Coupon)}",
         //     nameof(CustomerStats.CustomerId), DefaultDbContext.DefaultSchema, true);
+
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}] WITH SCHEMABINDING AS
+            SELECT 
+                c.Id as {nameof(CustomerStats.CustomerId)},
+                cso.{nameof(CustomerStats.TotalOrders)},
+                cspr.{nameof(CustomerStats.TotalReviews)},
+                csrc.{nameof(CustomerStats.TotalComments)},
+                csrvpr.{nameof(CustomerStats.ReviewVotes)},
+                csrvrc.{nameof(CustomerStats.CommentVotes)},
+                csc.{nameof(CustomerStats.TotalSpent)},
+                csc.{nameof(CustomerStats.TotalDiscountUsed)},
+                (COALESCE(csrvpr.{nameof(CustomerStats.ReviewVotes)}, 0) + COALESCE(csrvrc.{nameof(CustomerStats.CommentVotes)}, 0)) as {nameof(CustomerStats.TotalKarma)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] c
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(Order)}] cso ON c.Id = cso.{nameof(CustomerStats.CustomerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ProductReview)}] cspr ON c.Id = cspr.{nameof(CustomerStats.CustomerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewComment)}] csrc ON c.Id = csrc.{nameof(CustomerStats.CustomerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}] csrvpr ON c.Id = csrvpr.{nameof(CustomerStats.CustomerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ReviewComment)}] csrvrc ON c.Id = csrvrc.{nameof(CustomerStats.CustomerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(Coupon)}] csc ON c.Id = csc.{nameof(CustomerStats.CustomerId)}
+            WHERE c.Role = {(int)User.UserRole.Customer}
+        ");
     }
 
     private static void _ReviewComment(MigrationBuilder migrationBuilder) {
@@ -755,6 +777,7 @@ public static class ViewMigrations
             $"IX_{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}",
             $"{nameof(CustomerStats)}_{nameof(ReviewVote)}_{nameof(ProductReview)}",
             DefaultDbContext.DefaultSchema);
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(Order)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ProductReview)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CustomerStats)}_{nameof(ReviewComment)}]");
