@@ -15,6 +15,8 @@
                 
                 // Initialize custom properties on the parent element
                 parentElement._selectedRating = null;
+                parentElement._sortBy = 'date';
+                parentElement._sortOrder = 'desc';
                 parentElement._reviewCount = @Model.ReviewCount;
                 parentElement._ratingStats = {
                     fiveStars: @Model.ReviewStats.FiveStarCount,
@@ -45,12 +47,46 @@
                         
                         // Dispatch change event
                         const changeEvent = new CustomEvent('change', {
-                            detail: { selectedRating: parseInt(parentElement._selectedRating) },
+                            detail: { 
+                                selectedRating: parseInt(parentElement._selectedRating),
+                                sortBy: parentElement._sortBy,
+                                sortOrder: parentElement._sortOrder
+                            },
                             bubbles: true
                         });
                         parentElement.dispatchEvent(changeEvent);
                     });
                 });
+                
+                // Add event listeners to sort controls
+                const sortBySelect = parentElement.querySelector('[data-sort-by]');
+                const sortOrderSelect = parentElement.querySelector('[data-sort-order]');
+                
+                if (sortBySelect) {
+                    sortBySelect.addEventListener('change', function() {
+                        parentElement._sortBy = this.value;
+                        dispatchSortChange();
+                    });
+                }
+                
+                if (sortOrderSelect) {
+                    sortOrderSelect.addEventListener('change', function() {
+                        parentElement._sortOrder = this.value;
+                        dispatchSortChange();
+                    });
+                }
+                
+                function dispatchSortChange() {
+                    const changeEvent = new CustomEvent('change', {
+                        detail: { 
+                            selectedRating: parentElement._selectedRating ? parseInt(parentElement._selectedRating) : null,
+                            sortBy: parentElement._sortBy,
+                            sortOrder: parentElement._sortOrder
+                        },
+                        bubbles: true
+                    });
+                    parentElement.dispatchEvent(changeEvent);
+                }
                 
                 console.log('initialized ProductRatingStats from ' + e.type);
             }
@@ -61,6 +97,19 @@
     <!-- Total reviews count -->
     <div class="mb-3">
         <h6 class="fw-bold">@Model.ReviewCount Reviews</h6>
+    </div>
+    
+    <!-- Sort controls -->
+    <div class="mb-3 d-flex gap-2 align-items-center">
+        <small class="text-muted">Sort by:</small>
+        <select class="form-select form-select-sm" data-sort-by style="width: auto;">
+            <option value="date">Date</option>
+            <option value="rating">Rating</option>
+        </select>
+        <select class="form-select form-select-sm" data-sort-order style="width: auto;">
+            <option value="desc">Newest First</option>
+            <option value="asc">Oldest First</option>
+        </select>
     </div>
     
     <!-- Rating breakdown -->
