@@ -11,6 +11,9 @@
                 document.addEventListener("DOMContentLoaded", load);
                 s.parentElement.addEventListener("htmx:load", load);
                 function  load(e) {
+                    if (e.type === 'htmx:load') {
+                        e.stopPropagation();
+                    }
                     const parent = s.parentElement;
                     parent._hasProps = @(Model.Properties.Count > 0 ? "true" : "false");
                     parent._props = new Map();
