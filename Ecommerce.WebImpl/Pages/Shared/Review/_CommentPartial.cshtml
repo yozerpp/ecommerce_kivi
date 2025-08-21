@@ -1,7 +1,7 @@
 ﻿@using Ecommerce.Entity
 @model _CommentPartial
 
-<div class="partial-parent comment-partial border-start border-2 border-light ps-3 mb-3">
+<div class="partial-parent comment-partial border-start border-2 border-light ps-2 mb-2">
     <div class="d-flex w-100 justify-content-between align-items-start">
         <div class="flex-shrink-0">
             <h5 class="mb-1 text-primary fw-semibold fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
@@ -44,7 +44,7 @@
 
         </div>
     </div>
-    <div class="collapse mt-3 border rounded p-2 bg-light" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
+    <div class="collapse mt-2" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
         <script>
             ((s)=>{
                 document.addEventListener('DOMContentLoaded', load);
@@ -52,28 +52,31 @@
                 function load(e){
                     s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
                         if(!e.detail.successful) return;
-                        document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
-                        s.parentElement.previousElementSibling.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                        const btn = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');
+                        if(btn && !btn.disabled) {
+                            btn.dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
+                        }
+                        s.parentElement.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
                     });
                 }
             })(document.currentScript)
             //# sourceURL=CommentPartialReload.js
         </script>
-        <form class="card shadow-sm" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
-            <input type="hidden" name="SentComment.ReviewId" value="@Model.CommentUserView.ReviewComment.ReviewId"/>
-            <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)" value="@Model.CommentUserView.ReviewComment.Id"/>
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    <div class="col-9">
-                        <textarea class="form-control border-2" rows="3" name="SentComment.Comment" placeholder="Cevaplayın..."></textarea>
+        <div class="border rounded p-2 bg-light">
+            <form hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
+                <input type="hidden" name="SentComment.ReviewId" value="@Model.CommentUserView.ReviewComment.ReviewId"/>
+                <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)" value="@Model.CommentUserView.ReviewComment.Id"/>
+                <div class="d-flex gap-2 align-items-end">
+                    <div class="flex-grow-1">
+                        <textarea class="form-control" rows="2" name="SentComment.Comment" placeholder="Cevaplayın..."></textarea>
                     </div>
-                    <div class="col-3">
-                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary w-100">Gönder</button>
+                    <div>
+                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary btn-sm">Gönder</button>
                     </div>
                 </div>
-            </div>
-        </form>
-        <div class="mt-3" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentReplyResult@(Model.CommentUserView.ReviewComment.Id)"></div>
+            </form>
+            <div class="mt-2" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentReplyResult@(Model.CommentUserView.ReviewComment.Id)"></div>
+        </div>
     </div>
-    <div hx-on::after-swap="const b = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');b.disabled=true;b.removeAttribute('hx-get');b.classList.remove('hover-grow');" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
+    <div class="ms-2 mt-1" hx-on::after-swap="const b = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');b.disabled=true;b.removeAttribute('hx-get');b.classList.remove('hover-grow');" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
 </div>
