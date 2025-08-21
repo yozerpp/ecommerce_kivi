@@ -17,11 +17,11 @@
                 parentElement._selectedRating = null;
                 parentElement._reviewCount = @Model.ReviewCount;
                 parentElement._ratingStats = {
-                    fiveStars: @Model.ReviewStats.FiveStars,
-                    fourStars: @Model.ReviewStats.FourStars,
-                    threeStars: @Model.ReviewStats.ThreeStars,
-                    twoStars: @Model.ReviewStats.TwoStars,
-                    oneStar: @Model.ReviewStats.OneStar
+                    fiveStars: @Model.ReviewStats.FiveStarCount,
+                    fourStars: @Model.ReviewStats.FourStarCount,
+                    threeStars: @Model.ReviewStats.ThreeStarCount,
+                    twoStars: @Model.ReviewStats.TwoStarCount,
+                    OneStarCount: @Model.ReviewStats.OneStarCount
                 };
                 
                 // Add click event listeners to rating rows
@@ -45,7 +45,7 @@
                         
                         // Dispatch change event
                         const changeEvent = new CustomEvent('change', {
-                            detail: { selectedRating: parentElement._selectedRating },
+                            detail: { selectedRating: parseInt(parentElement._selectedRating) },
                             bubbles: true
                         });
                         parentElement.dispatchEvent(changeEvent);
@@ -74,14 +74,14 @@
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
-                @Model.ReviewStats.FiveStars
+                @Model.ReviewStats.FiveStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.FiveStars, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewCount))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.FiveStars, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewCount))%
             </div>
         </div>
         
@@ -95,14 +95,14 @@
                 <i class="far fa-star text-muted"></i>
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
-                @Model.ReviewStats.FourStars
+                @Model.ReviewStats.FourStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.FourStars, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewCount))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.FourStars, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewCount))%
             </div>
         </div>
         
@@ -119,14 +119,14 @@
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
-                @Model.ReviewStats.ThreeStars
+                @Model.ReviewStats.ThreeStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.ThreeStars, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewCount))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.ThreeStars, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewCount))%
             </div>
         </div>
         
@@ -143,14 +143,14 @@
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
-                @Model.ReviewStats.TwoStars
+                @Model.ReviewStats.TwoStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.TwoStars, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewCount))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.TwoStars, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewCount))%
             </div>
         </div>
         
@@ -164,14 +164,14 @@
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
-                @Model.ReviewStats.OneStar
+                @Model.ReviewStats.OneStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.OneStar, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewCount))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.OneStar, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewCount))%
             </div>
         </div>
     </div>
