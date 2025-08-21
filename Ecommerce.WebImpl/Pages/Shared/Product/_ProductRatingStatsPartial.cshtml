@@ -2,6 +2,205 @@
 @functions{
     static uint Percent(uint c, uint t) => t != 0 ? (uint)(c / (float)t * 100f) : 0u;
 }
-<div class="card-header-pills">
-
+<div class="rating-stats-container">
+    <script>
+        ((s) => {
+            document.addEventListener('DOMContentLoaded', initializeRatingStats);
+            s.parentElement.addEventListener('htmx:load', initializeRatingStats);
+            function initializeRatingStats(e) {
+                if(e.type === 'htmx:load'){
+                    e.stopPropagation();
+                }
+                const parentElement = s.parentElement;
+                
+                // Initialize custom properties on the parent element
+                parentElement._selectedRating = null;
+                parentElement._reviewCount = @Model.ReviewCount;
+                parentElement._ratingStats = {
+                    fiveStars: @Model.ReviewStats.FiveStars,
+                    fourStars: @Model.ReviewStats.FourStars,
+                    threeStars: @Model.ReviewStats.ThreeStars,
+                    twoStars: @Model.ReviewStats.TwoStars,
+                    oneStar: @Model.ReviewStats.OneStar
+                };
+                
+                // Add click event listeners to rating rows
+                const ratingRows = parentElement.querySelectorAll('[data-rating]');
+                ratingRows.forEach(row => {
+                    row.addEventListener('click', function() {
+                        const rating = this.getAttribute('data-rating');
+                        
+                        // Remove previous selection
+                        ratingRows.forEach(r => r.classList.remove('selected'));
+                        
+                        // Toggle selection
+                        if (parentElement._selectedRating === rating) {
+                            parentElement._selectedRating = null;
+                            parentElement.removeAttribute('data-selected-rating');
+                        } else {
+                            parentElement._selectedRating = rating;
+                            parentElement.setAttribute('data-selected-rating', rating);
+                            this.classList.add('selected');
+                        }
+                        
+                        // Dispatch change event
+                        const changeEvent = new CustomEvent('change', {
+                            detail: { selectedRating: parentElement._selectedRating },
+                            bubbles: true
+                        });
+                        parentElement.dispatchEvent(changeEvent);
+                    });
+                });
+                
+                console.log('initialized ProductRatingStats from ' + e.type);
+            }
+        })(document.currentScript);
+        //# sourceURL=ProductRatingStatsPartial.js
+    </script>
+    
+    <!-- Total reviews count -->
+    <div class="mb-3">
+        <h6 class="fw-bold">@Model.ReviewCount Reviews</h6>
+    </div>
+    
+    <!-- Rating breakdown -->
+    <div class="rating-breakdown">
+        <!-- 5 Stars -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="5">
+            <div class="stars me-2">
+                @for (int i = 0; i < 5; i++)
+                {
+                    <i class="fas fa-star text-warning"></i>
+                }
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.FiveStars
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.FiveStars, Model.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.FiveStars, Model.ReviewCount))%
+            </div>
+        </div>
+        
+        <!-- 4 Stars -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="4">
+            <div class="stars me-2">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <i class="fas fa-star text-warning"></i>
+                }
+                <i class="far fa-star text-muted"></i>
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.FourStars
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.FourStars, Model.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.FourStars, Model.ReviewCount))%
+            </div>
+        </div>
+        
+        <!-- 3 Stars -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="3">
+            <div class="stars me-2">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <i class="fas fa-star text-warning"></i>
+                }
+                @for (int i = 0; i < 2; i++)
+                {
+                    <i class="far fa-star text-muted"></i>
+                }
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.ThreeStars
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.ThreeStars, Model.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.ThreeStars, Model.ReviewCount))%
+            </div>
+        </div>
+        
+        <!-- 2 Stars -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="2">
+            <div class="stars me-2">
+                @for (int i = 0; i < 2; i++)
+                {
+                    <i class="fas fa-star text-warning"></i>
+                }
+                @for (int i = 0; i < 3; i++)
+                {
+                    <i class="far fa-star text-muted"></i>
+                }
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.TwoStars
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.TwoStars, Model.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.TwoStars, Model.ReviewCount))%
+            </div>
+        </div>
+        
+        <!-- 1 Star -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="1">
+            <div class="stars me-2">
+                <i class="fas fa-star text-warning"></i>
+                @for (int i = 0; i < 4; i++)
+                {
+                    <i class="far fa-star text-muted"></i>
+                }
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.OneStar
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.OneStar, Model.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.OneStar, Model.ReviewCount))%
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .rating-stats-container .cursor-pointer {
+            cursor: pointer;
+        }
+        
+        .rating-stats-container .rating-row:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .rating-stats-container .rating-row.selected {
+            background-color: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+        }
+        
+        .rating-stats-container .progress {
+            border-radius: 10px;
+            background-color: #e9ecef;
+        }
+        
+        .rating-stats-container .progress-bar {
+            border-radius: 10px;
+        }
+        
+        .rating-stats-container .stars {
+            min-width: 80px;
+        }
+    </style>
 </div>
