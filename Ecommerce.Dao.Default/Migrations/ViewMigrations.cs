@@ -589,7 +589,6 @@ public static class ViewMigrations
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] spspr
             WHERE spspr.{nameof(SellerStats.ReviewCount)} > 0
         ");
-
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}] WITH SCHEMABINDING AS
             SELECT 
