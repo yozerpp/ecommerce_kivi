@@ -1,57 +1,18 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
-<div class="mb-4">
-    <button class="btn btn-outline-primary d-flex align-items-center justify-content-start ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormCollapse" aria-expanded="false" aria-controls="reviewFormCollapse">
-        <i class="bi bi-pencil-square me-2"></i>Değerlendirme Yaz
-    </button>
-    
-    <div class="collapse mt-3" id="reviewFormCollapse">
-        <div class="card">
-            <div class="card-body">
-            <form hx-post="/@nameof(Reviews)?handler=create" hx-target="#popupResult" hx-swap="innerHTML">
-                <input type="hidden" name="ProductId" value="@Model.ProductId" />
-                <input type="hidden" name="SellerId" value="" />
-                
-                <div class="mb-3">
-                    <label class="form-label">Puan</label>
-                    <div class="d-flex gap-1 mb-2">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            <i class="bi bi-star star-rating" data-rating="@i" style="cursor: pointer; font-size: 1.5rem; color: #ddd;"></i>
-                        }
-                    </div>
-                    <input type="hidden" name="Rating" id="ratingInput" value="0" />
-                </div>
-                
-                <div class="mb-3">
-                    <label for="reviewTitle" class="form-label">Başlık</label>
-                    <input type="text" class="form-control" id="reviewTitle" name="Title" placeholder="Değerlendirmeniz için bir başlık yazın" maxlength="100" />
-                </div>
-                
-                <div class="mb-3">
-                    <label for="reviewContent" class="form-label">Yorumunuz</label>
-                    <textarea class="form-control" id="reviewContent" name="Content" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000"></textarea>
-                </div>
-                
-                <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-send me-1"></i>Değerlendirmeyi Gönder
-                    </button>
-                </div>
-            </form>
-            </div>
-        </div>
-    </div>
-</div>
+﻿@using Ecommerce.Entity
+@model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
+<div class="mb-4 partial-parent" >
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', load);
+    document.addEventListener('htmx:load', load);
+    function load() {
         const stars = document.querySelectorAll('.star-rating');
         const ratingInput = document.getElementById('ratingInput');
-        
+
         stars.forEach((star, index) => {
             star.addEventListener('click', function() {
                 const rating = index + 1;
                 ratingInput.value = rating;
-                
+
                 stars.forEach((s, i) => {
                     if (i < rating) {
                         s.style.color = '#ffc107';
@@ -64,7 +25,7 @@
                     }
                 });
             });
-            
+
             star.addEventListener('mouseenter', function() {
                 const rating = index + 1;
                 stars.forEach((s, i) => {
@@ -76,7 +37,7 @@
                 });
             });
         });
-        
+
         document.querySelector('.card').addEventListener('mouseleave', function() {
             const currentRating = parseInt(ratingInput.value);
             stars.forEach((s, i) => {
@@ -91,5 +52,41 @@
                 }
             });
         });
-    });
+    }
 </script>
+    <button class="btn btn-outline-primary d-flex align-items-center justify-content-start ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormCollapse" aria-expanded="false" aria-controls="reviewFormCollapse">
+        <i class="bi bi-pencil-square me-2"></i>Değerlendirme Yaz
+    </button>
+
+    <div class="collapse mt-3">
+        <div class="card">
+            <div class="card-body">
+                <form hx-post="/@nameof(Reviews)" hx-target="#popupResult" hx-swap="innerHTML">
+                    <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.ProductId))" value="@Model.ProductId"/>
+                    <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.SellerId))"/>
+                    <div class="mb-3">
+                        <label class="form-label">Puan</label>
+                        <div class="d-flex gap-1 mb-2">
+                            @for (int i = 1; i <= 5; i++){
+                                <i class="bi bi-star star-rating" data-rating="@i" style="cursor: pointer; font-size: 1.5rem; color: #ddd;"></i>
+                            }
+                        </div>
+                        <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Rating))" id="ratingInput" value="0"/>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reviewContent" class="form-label">Yorumunuz</label>
+                        <textarea class="form-control" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Comment))" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Değerlendirmeyi Gönder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
