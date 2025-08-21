@@ -83,6 +83,14 @@
                 parent._productEdited = false;
                 parent._editControls =  document.querySelectorAll('.edit-control');
                 document.getElementById('carousels').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
+                
+                // Match column heights
+                const leftColumn = document.getElementById('left-column');
+                const rightColumn = document.getElementById('right-column');
+                if (leftColumn && rightColumn) {
+                    const leftHeight = leftColumn.offsetHeight;
+                    rightColumn.style.height = leftHeight + 'px';
+                }
                 @if (Model.Creating){
                 <text>
                     parent._editControls.forEach(e=>e.classList.remove('edit-control'));
@@ -133,7 +141,7 @@
             </li>
         }
         <li class="row section my-3 align-content-center align-items-stretch">
-            <div class="col-6 d-flex flex-column" style="margin-bottom: 10rem;">
+            <div class="col-6 d-flex flex-column" style="margin-bottom: 10rem; min-height: 700px;" id="left-column">
                 <div id="carousels" class="my-1">
                     @await Html.PartialAsync("Shared/Product/_CarouselPartial", new _CarouselPartial(){
                         Editable = editable,Creating = Model.Creating,
@@ -158,7 +166,7 @@
                     }
                 </div>
             </div>
-            <div class="col-6 h-100">
+            <div class="col-6 h-100 d-flex flex-column" id="right-column">
                 <ul class="list-unstyled g-1 py-1">
                     <li class="d-flex align-items-center align-content-center justify-content-center">
                         @await Html.PartialAsync("Shared/Product/_CategoryHierarchyPartial", (Model.ViewedProduct.CategoryId, Model.Categories))
@@ -185,7 +193,7 @@
                         </li>
                     }
                     @if (!Model.Creating){
-                    <li id="offers" class="my-3">
+                    <li id="offers" class="my-3 flex-grow-1 d-flex flex-column">
                         <script>
                             function fetchOffers(){
                                 const o = document.getElementById('offerList');
@@ -211,7 +219,7 @@
                                 </a>
                             </div>
                         </div>
-                        <div data-sortColumn="@(nameof(OfferStats.ReviewAverage))" data-sortDesc="1" hx-get="/@(nameof(Product))?handler=offers&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)" hx-trigger="fire,load" hx-target="this" hx-swap="innerHTML" id="offerList">
+                        <div data-sortColumn="@(nameof(OfferStats.ReviewAverage))" data-sortDesc="1" hx-get="/@(nameof(Product))?handler=offers&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)" hx-trigger="fire,load" hx-target="this" hx-swap="innerHTML" id="offerList" class="flex-grow-1 overflow-auto" style="max-height: 400px;">
                         </div>
                     </li>    
                     }
