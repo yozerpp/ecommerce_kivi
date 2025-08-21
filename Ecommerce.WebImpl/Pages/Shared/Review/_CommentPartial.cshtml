@@ -1,7 +1,30 @@
 ﻿@using Ecommerce.Entity
 @model _CommentPartial
 
-<div>
+<div class="partial-parent">
+    <script>
+        ((s) => {
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener("htmx:load", load);
+            
+            function load(e) {
+                if (e.type === 'htmx:load') {
+                    e.stopPropagation();
+                }
+                const parent = s.parentElement;
+                
+                // Initialize Bootstrap tooltips
+                parent.querySelectorAll('[data-bs-toggle="tooltip"], [title]').forEach(element => {
+                    if (!element._tt) {
+                        element._tt = new bootstrap.Tooltip(element);
+                    }
+                });
+                
+                console.log('loaded @(nameof(_CommentPartial)) from ' + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=CommentPartial.js
+    </script>
     <div class="d-flex w-100 justify-content-between">
         <div>
             <h5 class="mb-1 text-secondary fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
@@ -14,15 +37,6 @@
         </div>
     </div>
     <div class="small d-flex container-fluid align-items-center justify-content-end">
-        <script>
-            (()=>{
-                const cs = document.currentScript;
-                document.addEventListener('DOMContentLoaded', () => {
-                    cs.nextElementSibling._tt =  new bootstrap.Tooltip(cs.nextElementSibling);
-                    cs.nextElementSibling.nextElementSibling._tt = new bootstrap.Tooltip(cs.nextElementSibling.nextElementSibling);
-                })    
-            })()
-        </script>
         <div class="d-inline-flex gap-2">
             @if (Model.CommentUserView.ReviewComment.Stats.ReplyCount > 0){
                 <span class="d-inline-flex align-items-center">

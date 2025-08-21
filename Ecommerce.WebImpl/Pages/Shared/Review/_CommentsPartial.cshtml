@@ -6,10 +6,31 @@
     var commentId = Model.Comments.First().ReviewComment.ParentId;
     var threadId = commentId ?? reviewId;
     var curPage = Model.NextPage - 1;
-    <div style="padding-left: @((Model.NestLevel * 0.5).ToString("N", CultureInfo.InvariantCulture.NumberFormat))em;">
+    <div class="partial-parent" style="padding-left: @((Model.NestLevel * 0.5).ToString("N", CultureInfo.InvariantCulture.NumberFormat))em;">
+        <script>
+            ((s) => {
+                document.addEventListener("DOMContentLoaded", load);
+                s.parentElement.addEventListener("htmx:load", load);
+                
+                function load(e) {
+                    if (e.type === 'htmx:load') {
+                        e.stopPropagation();
+                    }
+                    const parent = s.parentElement;
+                    
+                    // Trigger htmx:load on child comment partials
+                    parent.querySelectorAll('.comment-partial').forEach(commentPartial => {
+                        commentPartial.dispatchEvent(new Event('htmx:load', {bubbles: false}));
+                    });
+                    
+                    console.log('loaded @(nameof(_CommentsPartial)) from ' + e.type);
+                }
+            })(document.currentScript)
+            //# sourceURL=CommentsPartial.js
+        </script>
         <div class="list-group flex-column gap-2">
             @foreach (var comment in Model.Comments){
-                <div class="list-group-item flex-column gap-2">
+                <div class="list-group-item flex-column gap-2 comment-partial">
                     @if (Model.IsStaff || Model.CurrentUserId!=null && Model.CurrentUserId == comment.ReviewComment.UserId){
                         <div class="d-flex justify-content-end align-items-center">
                             <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
