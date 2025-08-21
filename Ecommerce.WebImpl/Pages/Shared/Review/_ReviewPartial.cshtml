@@ -1,82 +1,90 @@
-﻿@model Ecommerce.Entity.ProductReview
+﻿@model ReviewUserView
 
-
-<div class="rounded-1 container-fluid flex-column gap-3 ps-3">
+<div class="rounded-1 review partial-parent container-fluid flex-column gap-3 ps-3">
     <div class="list-group flex-column gap-1">
         <div class="w-100 mt-2 list-group-item">
             <div class="row w-100 justify-content-between">
                 <div class="col-5"></div>
                 <div class="col-2">
-                    @await Html.PartialAsync(nameof(_ReviewStarPartial), new _ReviewStarPartial(){ Rating = Model.Rating })
+                    @await Html.PartialAsync(nameof(_ReviewStarPartial), new _ReviewStarPartial(){ Rating = Model.Review.Rating })
                 </div>
                 <div class="col-4"></div>
                 <div class="col-1">
-                    <small>@(Utils.GetRelativeTime(Model.Created) ?? "şimdi")</small>
+                    <small>@(Utils.GetRelativeTime(Model.Review.Created) ?? "şimdi")</small>
                 </div>
             </div>
-            @if (Model.Reviewer != null){
-                <div class="m-1">
-                    <p class="fs-5">@(Model.Reviewer.FullName)</p>
-                </div>
-            }
-            @if (Model.Comment != null){
+            <div class="m-1">
+                <p class="ms-1 fs-6 text-secondary-emphasis">@(Model.Review.Reviewer?.FullName?? (Model.Review.Name ?? ""))</p>
+            </div>
+            @if (Model.Review.Comment != null){
                 <div class="m-2 d-flex">
-                    <p class="mb-1">@Model.Comment</p>
+                    <p class="mb-1">@Model.Review.Comment</p>
                 </div>
             }
-            @if (Model.HasBought){
+            @if (Model.Review.HasBought){
                 <div class="container-fluid d-flex justify-content-end align-content-center">
                     <small>Bu kullanıcının bu ürünü satın aldığı doğrulandı.</small>
                 </div>
             }
             <div class="small container-fluid d-inline-flex mx-0 gap-2 pe-1 justify-content-end align-items-center">
-                <script>
-                    (()=>{
-                        const cs = document.currentScript;
-                        document.addEventListener('DOMContentLoaded', () => {
-                            cs.nextElementSibling._tt =  new bootstrap.Tooltip(cs.nextElementSibling);
-                            cs.nextElementSibling.nextElementSibling._tt = new bootstrap.Tooltip(cs.nextElementSibling.nextElementSibling);
-                        })    
-                    })()
-                </script>
-                <div class="me-auto d-flex gap-2">
-                    @if (Model.Stats?.CommentCount > 0)
-                    {
-                        <span class="d-inline-flex align-items-center">
-                            <i class="bi bi-chat-dots me-1"></i> @Model.Stats.CommentCount
-                        </span>
-                    }
-                    @if (Model.Stats?.Votes != null)
-                    {
-                        <span class="d-inline-flex align-items-center">
-                            <i class="bi bi-hand-thumbs-up me-1"></i> @Model.Stats.Votes
-                        </span>
-                    }
+                <div class="ms-auto d-inline-flex gap-2">
+                    <span class="d-inline-flex align-items-center">
+                        <button  data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Review.Id)" class="p-0 me-1 hover-grow border-0 text-dark" style="background-color: inherit;" hx-trigger="click" hx-target="#comments@(Model.Review.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Review.Id&ParentId=null">
+                            <i class="bi bi-chat-dots"></i>
+                        </button> @Model.Review.Stats.CommentCount
+                    </span>
+
+                    <a  data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Review.Id)" aria-expanded="false" aria-controls="reply@(Model.Review.Id)">
+                        <i class="bg-light text-dark bi bi-reply hover-grow"></i>
+                    </a>
+                    <script>
+                        ((cs)=>{
+                            const parent = cs.closest('.partial-parent');
+                            parent.addEventListener('htmx:load', _=>cs.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true})));
+                        })(document.currentScript)
+                    </script>
+                    @await Html.PartialAsync("Shared/Review/_VotePartial",new _VotePartial(){
+                        ReviewId = Model.Review.Id,
+                        CommentId = null,
+                        Karma = Model.Review.Stats?.Votes??0,
+                        CurrentUserVote = Model.CurrentUserVote
+                    } )
+                    
                 </div>
-                <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Id)" class="p-0 text-decoration-none" href="javascript:void(0);" hx-trigger="click" hx-target="#comments@(Model.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Id">
-                    <i class="bi bg-light text-dark bi-chat-dots"></i>
-                </a>
-                <a onmouseenter="event.currentTarget._tt.show()" onmouseleave="event.currentTarget._tt.hide()" data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Id)" aria-expanded="false" aria-controls="reply@(Model.Id)">
-                    <i class="bg-light text-dark bi bi-reply"></i>
-                </a>
             </div>
         </div>
     </div>
     <div>
-        <div hx-on::after-swap="document.getElementById('commentsBtn@(Model.Id)')?.remove()" id="comments@(Model.Id)"></div>
-        <div class="collapse mt-3 card" id="reply@(Model.Id)">
-            <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Id)" hx-swap="innerHTML">
-                <input type="hidden" name="SentComment.ReviewId" value="@Model.Id"/>
+        <div hx-on::after-swap="const b = document.getElementById('commentsBtn@(Model.Review.Id)');if(b){b.classList.remove('hover-grow');;b.disabled=true;b.removeAttribute('hx-get');}" id="comments@(Model.Review.Id)"></div>
+        <div class="collapse mt-3 card" id="reply@(Model.Review.Id)">
+            <script>
+                ((s)=>{
+                    document.addEventListener('DOMContentLoaded', load);
+                    s.closest('.partial-parent').addEventListener('htmx:load', load);
+                    function load(e){
+                        s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
+                            if(!e.detail.successful) return;
+                            document.getElementById('commentsBtn@(Model.Review.Id)')
+                                .dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
+                            s.parentElement.parentElement.previousElementSibling.querySelector('a[aria-controls="reply@(Model.Review.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                        });
+                    }
+                })(document.currentScript)
+                //# sourceURL=ReviewPartial.js
+                
+            </script>
+            <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Review.Id)" hx-swap="innerHTML">
+                <input type="hidden" name="SentComment.ReviewId" value="@Model.Review.Id"/>
                 <div class="row g-2">
                     <div class="col-9 rounded-2 input-group mb-3">
                         <textarea class="input-group-text form-control" name="SentComment.Comment" placeholder="Cevaplayın"></textarea>
                     </div>
                     <div class="col-3 pt-5">
-                        <button type="submit" class="btn btn-outline-primary">Gönder</button>
+                        <button type="button" onclick="event.currentTarget.parentElement.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-outline-primary">Gönder</button>
                     </div>
                 </div>
             </form>
-            <div class="mt-3" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentResult@(Model.Id)"></div>
-        </div>    
+            <div class="mt-3" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentResult@(Model.Review.Id)"></div>
+        </div>
     </div>
 </div>

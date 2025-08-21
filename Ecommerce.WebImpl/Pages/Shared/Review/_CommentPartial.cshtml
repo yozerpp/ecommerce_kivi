@@ -15,13 +15,11 @@
     </div>
     <div class="small d-flex container-fluid align-items-center justify-content-end">
         <div class="d-inline-flex gap-2">
-            @if (Model.CommentUserView.ReviewComment.Stats.ReplyCount > 0){
-                <span class="d-inline-flex align-items-center">
-                    <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-dark btn-link border-0" style="background-color: inherit;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
-                        <i class="bi bi-chat-dots"></i>
-                    </button> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
-                </span>   
-            }
+            <span class="d-inline-flex align-items-center">
+                <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-dark btn-link border-0" style="background-color: inherit;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
+                    <i class="bi bi-chat-dots"></i>
+                </button> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
+            </span>
             <a data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
                 <i class="bg-light text-dark bi bi-reply hover-grow"></i>
             </a>
@@ -53,11 +51,8 @@
                 function load(e){
                     s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
                         if(!e.detail.successful) return;
-                        const btn = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');
-                        if(btn && !btn.disabled) {
-                            btn.dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
-                        }
-                        s.parentElement.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                        document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                        s.parentElement.previousElementSibling.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
                     });
                 }
             })(document.currentScript)
