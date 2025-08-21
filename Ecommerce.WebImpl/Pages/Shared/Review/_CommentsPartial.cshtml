@@ -2,28 +2,32 @@
 @model Ecommerce.WebImpl.Pages.Shared.Review._CommentsPartial
 
 @if (Model.Comments.Count > 0){
-    var reviewId = Model.Comments.First().ReviewId;
-    var commentId = Model.Comments.First().ParentId;
+    var reviewId = Model.Comments.First().ReviewComment.ReviewId;
+    var commentId = Model.Comments.First().ReviewComment.ParentId;
     var threadId = commentId ?? reviewId;
     var curPage = Model.NextPage - 1;
     <div style="padding-left: @((Model.NestLevel * 0.5).ToString("N", CultureInfo.InvariantCulture.NumberFormat))em;">
         <div class="list-group flex-column gap-2">
             @foreach (var comment in Model.Comments){
                 <div class="list-group-item flex-column gap-2">
-                    @if (Model.IsStaff || Model.CurrentUserId!=null && Model.CurrentUserId == comment.UserId){
+                    @if (Model.IsStaff || Model.CurrentUserId!=null && Model.CurrentUserId == comment.ReviewComment.UserId){
                         <div class="d-flex justify-content-end align-items-center">
                             <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
-                                <input type="hidden" name="@(nameof(Reviews.SentComment)).Id" value="@(comment.Id)"/>
+                                <input type="hidden" name="@(nameof(Reviews.SentComment)).Id" value="@(comment.ReviewComment.Id)"/>
                                 <button type="submit" class="btn-danger">Sil</button>
                             </form>
                         </div>
                     }
-                    <partial name="Review/_CommentPartial" model="new _CommentPartial(comment, Model.NestLevel)"/>
+                    @await Html.PartialAsync("Review/_CommentPartial", new _CommentPartial(comment){
+                        NestLevel = Model.NestLevel
+                    })
                 </div>
             }
         </div>
-    <br>
-    <a href="#" hx-trigger="click" id="comments@(threadId)_@(curPage)" class="mt-2" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@(reviewId)&CommentId=@(commentId)&NestLevel=@(Model.NestLevel)&CommentsPage=@(Model.NextPage)" hx-target="#comments@(threadId)_@(curPage)" hx-swap="outerHTML">Daha fazla yükle</a>
+        <br>
+        @if (Model.Comments.Count == 10){
+            <a href="#" hx-trigger="click" id="comments@(threadId)_@(curPage)" class="mt-2" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@(reviewId)&CommentId=@(commentId)&NestLevel=@(Model.NestLevel)&CommentsPage=@(Model.NextPage)" hx-target="#comments@(threadId)_@(curPage)" hx-swap="outerHTML">Daha fazla yükle</a>
+        }
     </div>
 }
 else{
