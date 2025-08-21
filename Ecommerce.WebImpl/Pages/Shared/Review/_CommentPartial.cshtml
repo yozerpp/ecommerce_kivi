@@ -44,6 +44,23 @@
         </div>
     </div>
     <div class="collapse mt-3" id="replyComment@(Model.CommentUserView.ReviewComment.Id)">
+        <script>
+            ((s)=>{
+                document.addEventListener('DOMContentLoaded', load);
+                s.closest('.partial-parent').addEventListener('htmx:load', load);
+                function load(e){
+                    s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
+                        if(!e.detail.successful) return;
+                        const btn = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');
+                        if(btn && !btn.disabled) {
+                            btn.dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
+                        }
+                        s.parentElement.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                    });
+                }
+            })(document.currentScript)
+            //# sourceURL=CommentPartialReload.js
+        </script>
         <form class="card card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML">
             <input type="hidden" name="SentComment.ReviewId" value="@Model.CommentUserView.ReviewComment.ReviewId"/>
             <input type="hidden" name="@(nameof(Reviews.SentComment)).@nameof(ReviewComment.ParentId)" value="@Model.CommentUserView.ReviewComment.Id"/>
