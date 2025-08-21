@@ -2,58 +2,68 @@
 @model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
 <div class="mb-4 partial-parent" >
     <script>
-    document.addEventListener('DOMContentLoaded', load);
-    document.addEventListener('htmx:load', load);
-    function load() {
-        const stars = document.querySelectorAll('.star-rating');
-        const ratingInput = document.getElementById('ratingInput');
+        ((s) => {
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener("htmx:load", load);
+            
+            function load(e) {
+                const parent = s.parentElement;
+                const stars = parent.querySelectorAll('.star-rating');
+                const ratingInput = parent.querySelector('.rating-input');
+                const card = parent.querySelector('.card');
 
-        stars.forEach((star, index) => {
-            star.addEventListener('click', function() {
-                const rating = index + 1;
-                ratingInput.value = rating;
+                stars.forEach((star, index) => {
+                    star.addEventListener('click', function() {
+                        const rating = index + 1;
+                        ratingInput.value = rating;
 
-                stars.forEach((s, i) => {
-                    if (i < rating) {
-                        s.style.color = '#ffc107';
-                        s.classList.remove('bi-star');
-                        s.classList.add('bi-star-fill');
-                    } else {
-                        s.style.color = '#ddd';
-                        s.classList.remove('bi-star-fill');
-                        s.classList.add('bi-star');
-                    }
+                        stars.forEach((s, i) => {
+                            if (i < rating) {
+                                s.style.color = '#ffc107';
+                                s.classList.remove('bi-star');
+                                s.classList.add('bi-star-fill');
+                            } else {
+                                s.style.color = '#ddd';
+                                s.classList.remove('bi-star-fill');
+                                s.classList.add('bi-star');
+                            }
+                        });
+                    });
+
+                    star.addEventListener('mouseenter', function() {
+                        const rating = index + 1;
+                        stars.forEach((s, i) => {
+                            if (i < rating) {
+                                s.style.color = '#ffc107';
+                            } else {
+                                s.style.color = '#ddd';
+                            }
+                        });
+                    });
                 });
-            });
 
-            star.addEventListener('mouseenter', function() {
-                const rating = index + 1;
-                stars.forEach((s, i) => {
-                    if (i < rating) {
-                        s.style.color = '#ffc107';
-                    } else {
-                        s.style.color = '#ddd';
-                    }
-                });
-            });
-        });
-
-        document.querySelector('.card').addEventListener('mouseleave', function() {
-            const currentRating = parseInt(ratingInput.value);
-            stars.forEach((s, i) => {
-                if (i < currentRating) {
-                    s.style.color = '#ffc107';
-                    s.classList.remove('bi-star');
-                    s.classList.add('bi-star-fill');
-                } else {
-                    s.style.color = '#ddd';
-                    s.classList.remove('bi-star-fill');
-                    s.classList.add('bi-star');
+                if (card) {
+                    card.addEventListener('mouseleave', function() {
+                        const currentRating = parseInt(ratingInput.value);
+                        stars.forEach((s, i) => {
+                            if (i < currentRating) {
+                                s.style.color = '#ffc107';
+                                s.classList.remove('bi-star');
+                                s.classList.add('bi-star-fill');
+                            } else {
+                                s.style.color = '#ddd';
+                                s.classList.remove('bi-star-fill');
+                                s.classList.add('bi-star');
+                            }
+                        });
+                    });
                 }
-            });
-        });
-    }
-</script>
+                
+                console.log('loaded @(nameof(_ReviewFormPartial)) with ' + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=ReviewFormPartial.js
+    </script>
     <button class="btn btn-outline-primary d-flex align-items-center justify-content-start ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormCollapse" aria-expanded="false" aria-controls="reviewFormCollapse">
         <i class="bi bi-pencil-square me-2"></i>Değerlendirme Yaz
     </button>
@@ -71,7 +81,7 @@
                                 <i class="bi bi-star star-rating" data-rating="@i" style="cursor: pointer; font-size: 1.5rem; color: #ddd;"></i>
                             }
                         </div>
-                        <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Rating))" id="ratingInput" value="0"/>
+                        <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Rating))" class="rating-input" value="0"/>
                     </div>
 
                     <div class="mb-3">
