@@ -2,29 +2,6 @@
 @model _CommentPartial
 
 <div class="partial-parent">
-    <script>
-        ((s) => {
-            document.addEventListener("DOMContentLoaded", load);
-            s.parentElement.addEventListener("htmx:load", load);
-            
-            function load(e) {
-                if (e.type === 'htmx:load') {
-                    e.stopPropagation();
-                }
-                const parent = s.parentElement;
-                
-                // Initialize Bootstrap tooltips
-                parent.querySelectorAll('[data-bs-toggle="tooltip"], [title]').forEach(element => {
-                    if (!element._tt) {
-                        element._tt = new bootstrap.Tooltip(element);
-                    }
-                });
-                
-                console.log('loaded @(nameof(_CommentPartial)) from ' + e.type);
-            }
-        })(document.currentScript)
-        //# sourceURL=CommentPartial.js
-    </script>
     <div class="d-flex w-100 justify-content-between">
         <div>
             <h5 class="mb-1 text-secondary fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
@@ -40,14 +17,23 @@
         <div class="d-inline-flex gap-2">
             @if (Model.CommentUserView.ReviewComment.Stats.ReplyCount > 0){
                 <span class="d-inline-flex align-items-center">
-                    <a data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-decoration-none text-dark" href="javascript:void(0);" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
+                    <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="p-0 me-1 hover-grow text-dark btn-link border-0" style="background-color: inherit;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
                         <i class="bi bi-chat-dots"></i>
-                    </a> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
+                    </button> @Model.CommentUserView.ReviewComment.Stats.ReplyCount
                 </span>   
             }
             <a data-bs-placement="right" title="Cevapla" class="p-0 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#replyComment@(Model.CommentUserView.ReviewComment.Id)" aria-expanded="false" aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)">
                 <i class="bg-light text-dark bi bi-reply hover-grow"></i>
             </a>
+            <script>
+                ((s)=>{
+                    s.closest('.partial-parent').addEventListener('htmx:load', e => {
+                        e.stopPropagation();
+                        s.nextElementSibling.dispatchEvent(new Event('htmx:load', { bubbles: false }));
+                    });
+                })(document.currentScript)
+                //# sourceURL=CommentPartial.js
+            </script>
             @await Html.PartialAsync("Shared/Review/_VotePartial", new _VotePartial(){
                 ReviewId = null,
                 CommentId = Model.CommentUserView.ReviewComment.Id,
@@ -72,5 +58,5 @@
         </form>
         <div class="mt-3" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentReplyResult@(Model.CommentUserView.ReviewComment.Id)"></div>
     </div>
-    <div hx-on::after-swap="document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)').remove()" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
+    <div hx-on::after-swap="const b = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');b.disabled=true;b.removeAttribute('hx-get');b.classList.remove('hover-grow');" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
 </div>
