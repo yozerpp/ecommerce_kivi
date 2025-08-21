@@ -5,9 +5,7 @@
     @foreach (var offer in Model.Offers){
         var editable = Model.ViewingSellerId == offer.SellerId;
         @* if(iii!=0){<div class="separator"></div>} *@
-        <li id="offer@(iii)" style="cursor: pointer;" onclick="event.currentTarget.parentElement.querySelector('.bg-light')?.classList?.remove('bg-light'); 
-            event.currentTarget.classList.add('bg-light');document.getElementById('sellerIdInput').value = @(offer.SellerId);document.getElementById('sellerIdReviewInput').value = @(offer.SellerId);"
-            class="hover-darken list-group-item d-flex">
+        <li class="offer-item hover-darken list-group-item d-flex" style="cursor: pointer;" data-sellerid="@(offer.SellerId)">
             <ul class="list-unstyled row g-1 d-flex">
                 <li class="col-4  justify-content-start overflow-x-hidden align-content-center">
                     <button asp-page="/Seller" asp-route-Id="@(offer.SellerId)" class="btn btn-secondary">
