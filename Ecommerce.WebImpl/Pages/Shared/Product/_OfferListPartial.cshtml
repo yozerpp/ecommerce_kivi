@@ -1,6 +1,43 @@
 ﻿@using Ecommerce.Entity.Views
 @model Ecommerce.WebImpl.Pages.Shared.Product._OfferListPartial
-<ul class="list-group row flex-grow-0 overflow-auto">
+<ul class="list-group row flex-grow-0 overflow-auto partial-parent">
+    <script>
+        ((s) => {
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener("htmx:load", load);
+            
+            function load(e) {
+                if (e.type === 'htmx:load') {
+                    e.stopPropagation();
+                }
+                const parent = s.parentElement;
+                parent._selectedSellerId = null;
+                
+                parent.querySelectorAll('.offer-item').forEach(item => {
+                    item.addEventListener('click', function(event) {
+                        // Remove previous selection
+                        parent.querySelector('.bg-light')?.classList?.remove('bg-light');
+                        
+                        // Add selection to current item
+                        event.currentTarget.classList.add('bg-light');
+                        
+                        // Update selected seller ID
+                        const sellerId = parseInt(event.currentTarget.dataset.sellerid);
+                        parent._selectedSellerId = sellerId;
+                        
+                        // Dispatch custom event for external listeners
+                        parent.dispatchEvent(new CustomEvent('sellerSelected', {
+                            detail: { sellerId: sellerId },
+                            bubbles: true
+                        }));
+                    });
+                });
+                
+                console.log('loaded @(nameof(_OfferListPartial)) from ' + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=OfferListPartial.js
+    </script>
     @{ var iii = 0; }
     @foreach (var offer in Model.Offers){
         var editable = Model.ViewingSellerId == offer.SellerId;
