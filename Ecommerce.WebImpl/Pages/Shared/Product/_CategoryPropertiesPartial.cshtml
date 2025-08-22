@@ -4,7 +4,7 @@
 @{
     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Create) throw new InvalidEnumArgumentException("Use other one for creation");
 }
-<div class="container categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50" : "container-fluid")">
+<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50" : "container-fluid")">
     <h4 class="fw-bold fs-5">Ürün Özellikleri</h4>
     <script>
             ((s)=>{
@@ -41,7 +41,7 @@
                     </text>
                     }
                     }
-                    console.log('loaded @(nameof(_CategoryPropertiesPartial)) with ' + e.type);
+                    console.log('loaded @(nameof(_CategoryPropertiesPartial)) from ' + e.type);
                 }
             })(document.currentScript)
             //# sourceURL=CategoryPropertiesPartial.js
@@ -68,12 +68,15 @@
                         <div data-proptype="slider" data-propertyid="@metadata.Id" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-none":"")">
                             <script>
                         ((s)=>{
-                            const parent=  s.parentElement.parentElement.parentElement.parentElement;
+                            const parent=  s.closest('.partial-parent');
                             function  load(e){
+                                if(e.type === 'htmx:load'){
+                                    e.stopPropagation();
+                                    s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false}));
+                                }
                                 s.nextElementSibling.addEventListener('change',(e)=>{
                                     parent._props.set(@(metadata.Id),{min: s.nextElementSibling._min, max: s.nextElementSibling._max});
                                 });
-                                s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                             }
                             document.addEventListener('DOMContentLoaded',load);
                             parent.addEventListener('htmx:load',load);
