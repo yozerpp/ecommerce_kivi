@@ -624,6 +624,156 @@ internal static class Initializer
             transaction.Commit();
         }
 
+        // Seed Sellers
+        using (var transaction = context.Database.BeginTransaction())
+        {
+            if (!context.Set<Seller>().Any())
+            {
+                var sellers = new[]
+                {
+                    new Seller()
+                    {
+                        Email = "toystore@example.com",
+                        NormalizedEmail = "TOYSTORE@EXAMPLE.COM",
+                        PasswordHash = "hashedpassword123",
+                        FirstName = "John",
+                        LastName = "Smith",
+                        ShopName = "ToyWorld Store",
+                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5551234567" },
+                        Address = new Address()
+                        {
+                            Line1 = "123 Toy Street",
+                            Line2 = "Suite 100",
+                            District = "Kadikoy",
+                            City = "Istanbul",
+                            Country = "Türkiye",
+                            ZipCode = "34710"
+                        }
+                    },
+                    new Seller()
+                    {
+                        Email = "techgadgets@example.com",
+                        NormalizedEmail = "TECHGADGETS@EXAMPLE.COM",
+                        PasswordHash = "hashedpassword456",
+                        FirstName = "Sarah",
+                        LastName = "Johnson",
+                        ShopName = "Tech Gadgets Pro",
+                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5559876543" },
+                        Address = new Address()
+                        {
+                            Line1 = "456 Electronics Ave",
+                            District = "Besiktas",
+                            City = "Istanbul",
+                            Country = "Türkiye",
+                            ZipCode = "34349"
+                        }
+                    },
+                    new Seller()
+                    {
+                        Email = "fashionhub@example.com",
+                        NormalizedEmail = "FASHIONHUB@EXAMPLE.COM",
+                        PasswordHash = "hashedpassword789",
+                        FirstName = "Michael",
+                        LastName = "Brown",
+                        ShopName = "Fashion Hub",
+                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5551122334" },
+                        Address = new Address()
+                        {
+                            Line1 = "789 Fashion Blvd",
+                            District = "Sisli",
+                            City = "Istanbul",
+                            Country = "Türkiye",
+                            ZipCode = "34394"
+                        }
+                    }
+                };
+                context.Set<Seller>().AddRange(sellers);
+                context.SaveChanges();
+            }
+            transaction.Commit();
+        }
+
+        // Seed ProductOffers
+        using (var transaction = context.Database.BeginTransaction())
+        {
+            if (!context.Set<ProductOffer>().Any())
+            {
+                var products = context.Set<Product>().ToList();
+                var sellers = context.Set<Seller>().ToList();
+                
+                var productOffers = new List<ProductOffer>();
+                
+                // Create offers for each product from different sellers
+                foreach (var product in products)
+                {
+                    foreach (var seller in sellers)
+                    {
+                        var basePrice = 50m + (product.Id * 10m) + (seller.Id * 5m);
+                        
+                        productOffers.Add(new ProductOffer()
+                        {
+                            ProductId = product.Id,
+                            SellerId = seller.Id,
+                            Price = basePrice,
+                            Discount = 0.85m + (seller.Id * 0.05m), // 85%, 90%, 95%
+                            Stock = (uint)(100 + (seller.Id * 20)) // 120, 140, 160
+                        });
+                    }
+                }
+                
+                context.Set<ProductOffer>().AddRange(productOffers);
+                context.SaveChanges();
+            }
+            transaction.Commit();
+        }
+
+        // Seed ProductOptions
+        using (var transaction = context.Database.BeginTransaction())
+        {
+            if (!context.Set<ProductOptions>().Any())
+            {
+                var productOffers = context.Set<ProductOffer>().ToList();
+                var productCategoryProperties = context.Set<ProductCategoryProperty>()
+                    .Include(pcp => pcp.CategoryProperty)
+                    .Where(pcp => pcp.CategoryProperty.EnumValues != null && pcp.CategoryProperty.EnumValues.Contains("|"))
+                    .ToList();
+                
+                var productOptions = new List<ProductOptions>();
+                
+                foreach (var offer in productOffers)
+                {
+                    // Find category properties for this product that have enum values
+                    var relevantProperties = productCategoryProperties
+                        .Where(pcp => pcp.ProductId == offer.ProductId && 
+                                     !string.IsNullOrEmpty(pcp.CategoryProperty.EnumValues))
+                        .ToList();
+                    
+                    foreach (var categoryProperty in relevantProperties)
+                    {
+                        var enumValues = categoryProperty.CategoryProperty.EnumValues
+                            .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                            .Where(v => !string.IsNullOrWhiteSpace(v))
+                            .ToList();
+                        
+                        if (enumValues.Count > 1)
+                        {
+                            productOptions.Add(new ProductOptions()
+                            {
+                                ProductId = offer.ProductId,
+                                SellerId = offer.SellerId,
+                                CategoryPropertyId = categoryProperty.CategoryPropertyId,
+                                Options = enumValues
+                            });
+                        }
+                    }
+                }
+                
+                context.Set<ProductOptions>().AddRange(productOptions);
+                context.SaveChanges();
+            }
+            transaction.Commit();
+        }
+
         // Removed the separate seed for ProductCategoryProperties as it's now part of Product seed
         // using (var transaction = context.Database.BeginTransaction())
         // {
