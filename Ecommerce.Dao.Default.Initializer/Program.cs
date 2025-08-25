@@ -738,13 +738,14 @@ internal static class Initializer
         // Seed ProductOptions
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (context.Set<ProductOffer>().All(o=>o.Options.Count==0))
+            if (!context.Set<ProductOption>().Any())
             {
                 var productOffers = context.Set<ProductOffer>().ToList();
                 var productCategoryProperties = context.Set<ProductCategoryProperty>()
                     .Include(pcp => pcp.CategoryProperty)
                     .ToList();
                 
+                var productOptions = new List<ProductOption>();
                 
                 foreach (var offer in productOffers)
                 {
@@ -824,21 +825,24 @@ internal static class Initializer
                             }
                         }
 
-                        var productOptions = offer.Options = new List<ProductOption>();
-                        // Only create ProductOptions if we have multiple options
+                        // Create individual ProductOption instances for each option value
                         if (options.Count > 1)
                         {
-                            productOptions.Add(new ProductOption()
+                            foreach (var option in options.Distinct())
                             {
-                                ProductId = offer.ProductId,
-                                SellerId = offer.SellerId,
-                                CategoryPropertyId = categoryProperty.CategoryPropertyId,
-                                Options = options.Distinct().ToList()
-                            });
+                                productOptions.Add(new ProductOption()
+                                {
+                                    ProductId = offer.ProductId,
+                                    SellerId = offer.SellerId,
+                                    CategoryPropertyId = categoryProperty.CategoryPropertyId,
+                                    Option = option
+                                });
+                            }
                         }
                     }
                 }
                 
+                context.Set<ProductOption>().AddRange(productOptions);
                 context.SaveChanges();
             }
             transaction.Commit();
