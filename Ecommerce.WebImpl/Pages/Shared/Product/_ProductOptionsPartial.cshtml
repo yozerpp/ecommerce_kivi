@@ -51,9 +51,94 @@ _options:Map<int,string>
             </button>
         }
         @if (Model.Editable){
-            <button>
-                
+            <button type="button" class="btn btn-success border-1 border-opacity-50 border-success-subtle rounded-2" 
+                    onclick="addOption()">
+                <span class="text-center fs-6 text-success">+ Add Option</span>
             </button>
         }
     </div>
+    @if (Model.Editable){
+        <div class="container-fluid justify-content-end align-content-center d-flex mt-3">
+            <button type="button" class="btn btn-danger me-2" onclick="deleteSelectedOption()">
+                Delete Selected Option
+            </button>
+        </div>
+        
+        <script>
+            function addOption() {
+                // For now, we'll add a simple option - this could be enhanced with a modal for user input
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Product?handler=addOption&OptionId=0';
+                
+                // Create ProductOption properties for model binding
+                const productIdInput = document.createElement('input');
+                productIdInput.type = 'hidden';
+                productIdInput.name = 'ProductOption.ProductId';
+                productIdInput.value = '@(Model.Options.FirstOrDefault()?.ProductId ?? 0)';
+                form.appendChild(productIdInput);
+                
+                const sellerIdInput = document.createElement('input');
+                sellerIdInput.type = 'hidden';
+                sellerIdInput.name = 'ProductOption.SellerId';
+                sellerIdInput.value = '@(Model.Options.FirstOrDefault()?.SellerId ?? 0)';
+                form.appendChild(sellerIdInput);
+                
+                const valueInput = document.createElement('input');
+                valueInput.type = 'hidden';
+                valueInput.name = 'ProductOption.Value';
+                valueInput.value = 'New Option';
+                form.appendChild(valueInput);
+                
+                // Add CSRF token if available
+                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (csrfToken) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = csrfToken.value;
+                    form.appendChild(tokenInput);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+            
+            function deleteSelectedOption() {
+                const parent = document.querySelector('.partial-parent');
+                let selectedOptionId = null;
+                
+                // Get the currently selected option ID from the active tab
+                const activeTab = document.querySelector('.tab-pane:not(.d-none)');
+                if (activeTab) {
+                    const selectedElement = activeTab.querySelector('[data-selected]');
+                    if (selectedElement && selectedElement.dataset.optionid) {
+                        selectedOptionId = selectedElement.dataset.optionid;
+                    }
+                }
+                
+                if (!selectedOptionId) {
+                    alert('Please select an option to delete.');
+                    return;
+                }
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/Product?handler=deleteOption&OptionId=${selectedOptionId}`;
+                
+                // Add CSRF token if available
+                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (csrfToken) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = csrfToken.value;
+                    form.appendChild(tokenInput);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        </script>
+    }
 </div>
