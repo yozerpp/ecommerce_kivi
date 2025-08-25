@@ -735,34 +735,97 @@ internal static class Initializer
                 var productOffers = context.Set<ProductOffer>().ToList();
                 var productCategoryProperties = context.Set<ProductCategoryProperty>()
                     .Include(pcp => pcp.CategoryProperty)
-                    .Where(pcp => pcp.CategoryProperty.EnumValues != null && pcp.CategoryProperty.EnumValues.Contains("|"))
                     .ToList();
                 
                 var productOptions = new List<ProductOptions>();
                 
                 foreach (var offer in productOffers)
                 {
-                    // Find category properties for this product that have enum values
+                    // Find category properties for this product
                     var relevantProperties = productCategoryProperties
-                        .Where(pcp => pcp.ProductId == offer.ProductId && 
-                                     !string.IsNullOrEmpty(pcp.CategoryProperty.EnumValues))
+                        .Where(pcp => pcp.ProductId == offer.ProductId)
                         .ToList();
                     
                     foreach (var categoryProperty in relevantProperties)
                     {
-                        var enumValues = categoryProperty.CategoryProperty.EnumValues
-                            .Split('|', StringSplitOptions.RemoveEmptyEntries)
-                            .Where(v => !string.IsNullOrWhiteSpace(v))
-                            .ToList();
+                        var options = new List<string>();
+                        var currentValue = categoryProperty.Value;
                         
-                        if (enumValues.Count > 1)
+                        // Check if this is an enum property
+                        if (!string.IsNullOrEmpty(categoryProperty.CategoryProperty.EnumValues) && 
+                            categoryProperty.CategoryProperty.EnumValues.Contains("|"))
+                        {
+                            // For enum properties: create subset of enum values with current value first
+                            var enumValues = categoryProperty.CategoryProperty.EnumValues
+                                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .ToList();
+                            
+                            if (enumValues.Count > 1)
+                            {
+                                // Add current value first
+                                if (!string.IsNullOrEmpty(currentValue) && enumValues.Contains(currentValue))
+                                {
+                                    options.Add(currentValue);
+                                }
+                                
+                                // Add a subset of other enum values (not all)
+                                var otherValues = enumValues.Where(v => v != currentValue).Take(2).ToList();
+                                options.AddRange(otherValues);
+                            }
+                        }
+                        else
+                        {
+                            // For non-enum properties: create variations based on the current value
+                            if (!string.IsNullOrEmpty(currentValue))
+                            {
+                                // Add current value first
+                                options.Add(currentValue);
+                                
+                                if (categoryProperty.CategoryProperty.IsNumber)
+                                {
+                                    // For number properties: create numeric variations
+                                    if (decimal.TryParse(currentValue, out var numValue))
+                                    {
+                                        // Add some variations around the current number
+                                        var variation1 = (numValue * 0.8m).ToString("0.##");
+                                        var variation2 = (numValue * 1.2m).ToString("0.##");
+                                        var variation3 = (numValue + 10).ToString("0.##");
+                                        
+                                        options.Add(variation1);
+                                        options.Add(variation2);
+                                        options.Add(variation3);
+                                    }
+                                }
+                                else
+                                {
+                                    // For string properties: create string variations
+                                    switch (categoryProperty.CategoryProperty.PropertyName.ToLower())
+                                    {
+                                        case "brand":
+                                            options.AddRange(new[] { "Generic", "Premium", "Deluxe" });
+                                            break;
+                                        case "color":
+                                            options.AddRange(new[] { "Black", "White", "Gray" });
+                                            break;
+                                        default:
+                                            // Generic string variations
+                                            options.AddRange(new[] { $"{currentValue} Plus", $"{currentValue} Pro", $"Standard {currentValue}" });
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Only create ProductOptions if we have multiple options
+                        if (options.Count > 1)
                         {
                             productOptions.Add(new ProductOptions()
                             {
                                 ProductId = offer.ProductId,
                                 SellerId = offer.SellerId,
                                 CategoryPropertyId = categoryProperty.CategoryPropertyId,
-                                Options = enumValues
+                                Options = options.Distinct().ToList()
                             });
                         }
                     }
