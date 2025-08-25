@@ -18,14 +18,15 @@ internal static class Initializer
 
         Setup();
         CreateDb();
-        // using (var ctx = new DefaultDbContext(_dbContextOptions)) {
-        //     SeedCustom(ctx);
-        // }
+        using (var ctx = new DefaultDbContext(_dbContextOptions)) {
+            ctx.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
+            ctx.ChangeTracker.AutoDetectChangesEnabled = true;
+            SeedCustom(ctx);
+        }
         InitDb();
         CreateViews();
     }    
     private static DbContextOptions<DefaultDbContext> _dbContextOptions;
-    private const bool Skip = false;
 
     private static void Setup() {
         _dbContextOptions = new DbContextOptionsBuilder<DefaultDbContext>()
@@ -143,7 +144,7 @@ internal static class Initializer
         // Seed Category
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (context.Set<Category>().Any())
+            if (!context.Set<Category>().Any())
             {
                 var categories = new[]
                 {
@@ -182,7 +183,7 @@ internal static class Initializer
         // Seed Category CategoryProperties
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (context.Set<CategoryProperty>().Any())
+            if (!context.Set<CategoryProperty>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
                 var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
@@ -373,7 +374,7 @@ internal static class Initializer
         // Seed Products
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (context.Set<Product>().Any())
+            if (!context.Set<Product>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
                 var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
@@ -638,8 +639,11 @@ internal static class Initializer
                         PasswordHash = "hashedpassword123",
                         FirstName = "John",
                         LastName = "Smith",
+                        Session = new Session(){
+                            Cart = new Cart()
+                        },
                         ShopName = "ToyWorld Store",
-                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5551234567" },
+                        PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551234567" },
                         Address = new Address()
                         {
                             Line1 = "123 Toy Street",
@@ -656,9 +660,11 @@ internal static class Initializer
                         NormalizedEmail = "TECHGADGETS@EXAMPLE.COM",
                         PasswordHash = "hashedpassword456",
                         FirstName = "Sarah",
-                        LastName = "Johnson",
+                        LastName = "Johnson",                        Session = new Session(){
+                            Cart = new Cart()
+                        },
                         ShopName = "Tech Gadgets Pro",
-                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5559876543" },
+                        PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5559876543" },
                         Address = new Address()
                         {
                             Line1 = "456 Electronics Ave",
@@ -674,9 +680,11 @@ internal static class Initializer
                         NormalizedEmail = "FASHIONHUB@EXAMPLE.COM",
                         PasswordHash = "hashedpassword789",
                         FirstName = "Michael",
-                        LastName = "Brown",
+                        LastName = "Brown",                        Session = new Session(){
+                            Cart = new Cart()
+                        },
                         ShopName = "Fashion Hub",
-                        PhoneNumber = new PhoneNumber() { CountryCode = "+90", Number = "5551122334" },
+                        PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551122334" },
                         Address = new Address()
                         {
                             Line1 = "789 Fashion Blvd",
@@ -730,14 +738,13 @@ internal static class Initializer
         // Seed ProductOptions
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (!context.Set<ProductOptions>().Any())
+            if (context.Set<ProductOffer>().All(o=>o.Options.Count==0))
             {
                 var productOffers = context.Set<ProductOffer>().ToList();
                 var productCategoryProperties = context.Set<ProductCategoryProperty>()
                     .Include(pcp => pcp.CategoryProperty)
                     .ToList();
                 
-                var productOptions = new List<ProductOptions>();
                 
                 foreach (var offer in productOffers)
                 {
@@ -816,11 +823,12 @@ internal static class Initializer
                                 }
                             }
                         }
-                        
+
+                        var productOptions = offer.Options = new List<ProductOption>();
                         // Only create ProductOptions if we have multiple options
                         if (options.Count > 1)
                         {
-                            productOptions.Add(new ProductOptions()
+                            productOptions.Add(new ProductOption()
                             {
                                 ProductId = offer.ProductId,
                                 SellerId = offer.SellerId,
@@ -831,42 +839,10 @@ internal static class Initializer
                     }
                 }
                 
-                context.Set<ProductOptions>().AddRange(productOptions);
                 context.SaveChanges();
             }
             transaction.Commit();
         }
-
-        // Removed the separate seed for ProductCategoryProperties as it's now part of Product seed
-        // using (var transaction = context.Database.BeginTransaction())
-        // {
-        //     if (context.Set<ProductCategoryProperties>().Any())
-        //     {
-        //         var productCategoryProperties = new[]
-        //         {
-        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 1, Value = "51" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 1, Value = "opt2" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 1, Value = "-57" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 1, Value = "strVal" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 2, Value = "49" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 2, Value = "opt3" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 2, Value = "15" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 2, Value = "strstr" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 1, ProductId = 3, Value = "120" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 2, ProductId = 3, Value = "opt1" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 3, ProductId = 3, Value = "80" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 4, ProductId = 3, Value = "asdasd" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 4, Value = "124" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 4, Value = "some string" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 5, ProductId = 5, Value = "89" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 6, ProductId = 5, Value = "wireless tech" },
-        //             new ProductCategoryProperties() { CategoryPropertyId = 7, ProductId = 5, Value = "very good" }
-        //         };
-        //         context.Set<ProductCategoryProperties>().AddRange(productCategoryProperties);
-        //         context.SaveChanges();
-        //     }
-        //     transaction.Commit();
-        // }
     }
 
     
