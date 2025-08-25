@@ -1,0 +1,59 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.Product._ProductOptionsPartial
+@{
+    var optionsGrouped = Model.Options.GroupBy(o => 
+        o.CategoryPropertyId != null 
+        ? o.CategoryPropertyId.Value.ToString() 
+        : o.Key ?? "").ToArray();
+}
+<!--Type:
+_options:Map<int,string>
+-->
+<div class="container-fluid partial-parent">
+    <script>
+        ((s)=>{
+            document.addEventListener('DOMContentLoaded', load);
+            const parent =s.parentElement;
+            parent.addEventListener('htmx:load', load);
+            function load(e){
+                if(e.type ==='htmx:load') e.stopPropagation();
+                parent._options = new Map();
+                s.nextElementSibling.querySelectorAll('.tab-pane').forEach(el=>{
+                    const opt = e.firstElementChild;
+                    opt.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}));
+                    const key = opt.dataset.propertyid!=undefined?parseInt(opt.dataset.propertyid):opt.dataset.keyname;
+                    opt.addEventListener('change', e=>{
+                        e.stopPropagation();
+                        parent._options.set(key, opt.dataset.selected);
+                    })
+                    parent._options.set(key,opt.dataset.selected);
+                });
+            }
+        })(document.currentScript)
+        //# sourceURL=/ProductOptions/@(nameof(_ProductOptionsPartial)).js
+        </script>
+    <div class="tab-content border-0" style="background-color: inherit">
+        @foreach (var options in optionsGrouped){
+            var propertyId = uint.Parse(options.Key);
+            var propName = propertyId == 0 ? null : options.Key;
+            <div id="option@(options.Key.GetHashCode())" role="tabpanel" aria-labelledby="option@(options.GetHashCode())-tab" 
+                 class="tab-pane border-0 px-2 py-4" style="background-color: inherit">
+                @await Html.PartialAsync("Shared/Product/_ProductOptionPartial", new _ProductOptionPartial{PropertyId = propertyId==0?null:propertyId, CustomKey = propName, Options = options.ToArray(), Editable = Model.Editable })
+            </div>
+        }
+    </div>
+    <div role="tablist" class="w-100 d-flex py-1 mt-2 ps-2 justify-content-start align-content-center align-items-center">
+        @foreach(var opt in optionsGrouped){
+            <button id="option@(opt.Key.GetHashCode())-tab" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#option@(opt.GetHashCode())" aria-controls="option@(opt.GetHashCode())" aria-selected="false"
+                class="btn btn-light border-1 border-opacity-50 border-secondary-subtle rounded-2">
+                <p class="text-center fs-4 text-muted">
+                    @(opt.First().Property.CategoryProperty.PropertyName)
+                </p>
+            </button>
+        }
+        @if (Model.Editable){
+            <button>
+                
+            </button>
+        }
+    </div>
+</div>
