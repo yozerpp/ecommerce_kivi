@@ -18,9 +18,9 @@ internal static class Initializer
 
         Setup();
         CreateDb();
-        using (var ctx = new DefaultDbContext(_dbContextOptions)) {
-            SeedCustom(ctx);
-        }
+        // using (var ctx = new DefaultDbContext(_dbContextOptions)) {
+        //     SeedCustom(ctx);
+        // }
         InitDb();
         CreateViews();
     }    
@@ -30,7 +30,7 @@ internal static class Initializer
     private static void Setup() {
         _dbContextOptions = new DbContextOptionsBuilder<DefaultDbContext>()
             .UseSqlServer("Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;Trust Server Certificate=True;Encrypt=True;",
-                c=>c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName))
+                c=>c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName).CommandTimeout(600))
             .EnableSensitiveDataLogging(false).EnableServiceProviderCaching().ConfigureWarnings(w=>w.Ignore(CoreEventId.DetachedLazyLoadingWarning)).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking).Options;
     }
     private static void CreateDb() {
@@ -113,10 +113,11 @@ internal static class Initializer
                 {typeof(Coupon),CouponCount},
                 {typeof(ProductReview), ProductReviewCount},
                 {typeof(ReviewComment), ReviewCommentCount},
+                {typeof(CardPayment), OrderCount + 1000},
                 {typeof(ReviewVote), ReviewVoteCount},
                 {typeof(Cart), CartCount},
-                {typeof(CategoryProperty),CategoryPropertyCount},
-                {typeof(ProductCategoryProperties),ProductCategoryPropertyCount},
+                // {typeof(CategoryProperty),CategoryPropertyCount},
+                // {typeof(ProductCategoryProperty),ProductCategoryPropertyCount},
                 // {typeof(RefundRequest), RefundRequestCount},
                 // { typeof(CartItem), CartItemCount},
                 { typeof(Session), SessionCount},
@@ -130,6 +131,9 @@ internal static class Initializer
                 {typeof(ProductFavor), ProductFavorCount},
                 {typeof(SellerFavor), SellerFavorCount},
                 {typeof(Image), 100}
+            }, config:new Config(){
+                FetchRealAddresses = true,
+                AddressFetcherApiKey = "d4907aae36c14038bc231576e0b5e8ca"
             }, defaultCount:0
         );
         initializer.initialize();
@@ -139,7 +143,7 @@ internal static class Initializer
         // Seed Category
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (!context.Set<Category>().Any())
+            if (context.Set<Category>().Any())
             {
                 var categories = new[]
                 {
@@ -178,7 +182,7 @@ internal static class Initializer
         // Seed Category CategoryProperties
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (!context.Set<CategoryProperty>().Any())
+            if (context.Set<CategoryProperty>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
                 var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
@@ -228,7 +232,7 @@ internal static class Initializer
                         CategoryId = electronicsCategory.Id,
                         IsNumber = true,
                         IsRequired = false,
-                        MaxValue = 100,
+                        MaxValue = 99,
                         MinValue = 1,
                     },
                     new CategoryProperty()
@@ -369,7 +373,7 @@ internal static class Initializer
         // Seed Products
         using (var transaction = context.Database.BeginTransaction())
         {
-            if (!context.Set<Product>().Any())
+            if (context.Set<Product>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
                 var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
@@ -411,12 +415,12 @@ internal static class Initializer
                         {
                             Depth = 25m, Height = 12m, Weight = 0.8m, Width = 15m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = ageRangeProp.Id, Value = "6-8 years" },
-                            new ProductCategoryProperties() { CategoryPropertyId = materialProp.Id, Value = "Plastic" },
-                            new ProductCategoryProperties() { CategoryPropertyId = batteryProp.Id, Value = "Yes" },
-                            new ProductCategoryProperties() { CategoryPropertyId = brandProp.Id, Value = "SpeedRacer" }
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "6-8 years" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Plastic" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "Yes" },
+                            new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "SpeedRacer" }
                         }
                     },
                     new Product()
@@ -428,12 +432,12 @@ internal static class Initializer
                         {
                             Depth = 30m, Height = 20m, Weight = 1.2m, Width = 30m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = ageRangeProp.Id, Value = "3-5 years" },
-                            new ProductCategoryProperties() { CategoryPropertyId = materialProp.Id, Value = "Wood" },
-                            new ProductCategoryProperties() { CategoryPropertyId = batteryProp.Id, Value = "No" },
-                            new ProductCategoryProperties() { CategoryPropertyId = brandProp.Id, Value = "EduToys" }
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "3-5 years" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Wood" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "No" },
+                            new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "EduToys" }
                         }
                     },
                     new Product()
@@ -445,12 +449,12 @@ internal static class Initializer
                         {
                             Depth = 20m, Height = 35m, Weight = 0.5m, Width = 25m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = ageRangeProp.Id, Value = "0-2 years" },
-                            new ProductCategoryProperties() { CategoryPropertyId = materialProp.Id, Value = "Fabric" },
-                            new ProductCategoryProperties() { CategoryPropertyId = batteryProp.Id, Value = "No" },
-                            new ProductCategoryProperties() { CategoryPropertyId = brandProp.Id, Value = "CuddleBear" }
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "0-2 years" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Fabric" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "No" },
+                            new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "CuddleBear" }
                         }
                     },
                     
@@ -464,12 +468,12 @@ internal static class Initializer
                         {
                             Depth = 25m, Height = 2.5m, Weight = 2.3m, Width = 35m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = screenSizeProp.Id, Value = "15.6" },
-                            new ProductCategoryProperties() { CategoryPropertyId = osProp.Id, Value = "Windows" },
-                            new ProductCategoryProperties() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
-                            new ProductCategoryProperties() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
+                            new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "15.6" },
+                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Windows" },
+                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
+                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
                         }
                     },
                     new Product()
@@ -481,11 +485,11 @@ internal static class Initializer
                         {
                             Depth = 12m, Height = 4m, Weight = 0.1m, Width = 7m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = osProp.Id, Value = "Other" },
-                            new ProductCategoryProperties() { CategoryPropertyId = connectivityProp.Id, Value = "Wireless" },
-                            new ProductCategoryProperties() { CategoryPropertyId = warrantyProp.Id, Value = "12" }
+                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Other" },
+                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "Wireless" },
+                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "12" }
                         }
                     },
                     new Product()
@@ -497,12 +501,12 @@ internal static class Initializer
                         {
                             Depth = 0.8m, Height = 15m, Weight = 0.18m, Width = 7m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = screenSizeProp.Id, Value = "6.1" },
-                            new ProductCategoryProperties() { CategoryPropertyId = osProp.Id, Value = "Android" },
-                            new ProductCategoryProperties() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
-                            new ProductCategoryProperties() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
+                            new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "6.1" },
+                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Android" },
+                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
+                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
                         }
                     },
                     
@@ -516,12 +520,12 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 70m, Weight = 0.2m, Width = 50m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = sizeProp.Id, Value = "M" },
-                            new ProductCategoryProperties() { CategoryPropertyId = colorProp.Id, Value = "Blue" },
-                            new ProductCategoryProperties() { CategoryPropertyId = fabricProp.Id, Value = "Cotton" },
-                            new ProductCategoryProperties() { CategoryPropertyId = genderProp.Id, Value = "Unisex" }
+                            new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "M" },
+                            new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Blue" },
+                            new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Cotton" },
+                            new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Unisex" }
                         }
                     },
                     new Product()
@@ -531,14 +535,14 @@ internal static class Initializer
                         Description = "Classic blue denim jeans with modern fit",
                         Dimensions = new Dimensions()
                         {
-                            Depth = 2m, Height = 100m, Weight = 0.6m, Width = 40m
+                            Depth = 2m, Height = 20m, Weight = 0.6m, Width = 40m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = sizeProp.Id, Value = "L" },
-                            new ProductCategoryProperties() { CategoryPropertyId = colorProp.Id, Value = "Dark Blue" },
-                            new ProductCategoryProperties() { CategoryPropertyId = fabricProp.Id, Value = "Denim" },
-                            new ProductCategoryProperties() { CategoryPropertyId = genderProp.Id, Value = "Men" }
+                            new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "L" },
+                            new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Dark Blue" },
+                            new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Denim" },
+                            new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Men" }
                         }
                     },
                     
@@ -552,12 +556,12 @@ internal static class Initializer
                         {
                             Depth = 3m, Height = 24m, Weight = 0.8m, Width = 17m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = genreProp.Id, Value = "Science" },
-                            new ProductCategoryProperties() { CategoryPropertyId = pageCountProp.Id, Value = "450" },
-                            new ProductCategoryProperties() { CategoryPropertyId = languageProp.Id, Value = "English" },
-                            new ProductCategoryProperties() { CategoryPropertyId = publicationYearProp.Id, Value = "2023" }
+                            new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Science" },
+                            new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "450" },
+                            new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "English" },
+                            new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2023" }
                         }
                     },
                     new Product()
@@ -569,12 +573,12 @@ internal static class Initializer
                         {
                             Depth = 1m, Height = 21m, Weight = 0.3m, Width = 15m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = genreProp.Id, Value = "Children" },
-                            new ProductCategoryProperties() { CategoryPropertyId = pageCountProp.Id, Value = "32" },
-                            new ProductCategoryProperties() { CategoryPropertyId = languageProp.Id, Value = "Turkish" },
-                            new ProductCategoryProperties() { CategoryPropertyId = publicationYearProp.Id, Value = "2022" }
+                            new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Children" },
+                            new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "32" },
+                            new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "Turkish" },
+                            new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2022" }
                         }
                     },
                     
@@ -588,12 +592,12 @@ internal static class Initializer
                         {
                             Depth = 30m, Height = 30m, Weight = 2.5m, Width = 30m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = roomTypeProp.Id, Value = "Garden" },
-                            new ProductCategoryProperties() { CategoryPropertyId = assemblyProp.Id, Value = "No" },
-                            new ProductCategoryProperties() { CategoryPropertyId = powerSourceProp.Id, Value = "Manual" },
-                            new ProductCategoryProperties() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Outdoor" }
+                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Garden" },
+                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "No" },
+                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Manual" },
+                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Outdoor" }
                         }
                     },
                     new Product()
@@ -605,12 +609,12 @@ internal static class Initializer
                         {
                             Depth = 20m, Height = 45m, Weight = 1.2m, Width = 15m
                         },
-                        CategoryProperties = new List<ProductCategoryProperties>()
+                        CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperties() { CategoryPropertyId = roomTypeProp.Id, Value = "Office" },
-                            new ProductCategoryProperties() { CategoryPropertyId = assemblyProp.Id, Value = "Yes" },
-                            new ProductCategoryProperties() { CategoryPropertyId = powerSourceProp.Id, Value = "Electric" },
-                            new ProductCategoryProperties() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Indoor" }
+                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Office" },
+                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "Yes" },
+                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Electric" },
+                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Indoor" }
                         }
                     }
                 };
@@ -623,7 +627,7 @@ internal static class Initializer
         // Removed the separate seed for ProductCategoryProperties as it's now part of Product seed
         // using (var transaction = context.Database.BeginTransaction())
         // {
-        //     if (!context.Set<ProductCategoryProperties>().Any())
+        //     if (context.Set<ProductCategoryProperties>().Any())
         //     {
         //         var productCategoryProperties = new[]
         //         {
