@@ -35,6 +35,9 @@
             <th scope="col" colspan="2">
                 <p class="fs-5">Kupon</p>
             </th>
+            <th scope="col" colspan="2">
+                <p class="fs-5">Seçenekler</p>
+            </th>
             <th scope="col" colspan="3">
                 <p class="fs-5">Teslimat Durumu</p>
             </th>
@@ -60,6 +63,20 @@
                 <td colspan="2" class="align-middle text-center">
                     @if (item.CouponId != null){
                         <p class="overflow-y-scroll">@(item.CouponId)</p>
+                    }
+                </td>
+                <td colspan="2" class="align-middle text-center">
+                    @if (item.SelectedOptions != null && item.SelectedOptions.Any()){
+                        <div class="text-wrap small">
+                            @foreach (var option in item.SelectedOptions){
+                                <span class="badge bg-secondary me-1 mb-1">
+                                    @if (!string.IsNullOrEmpty(option.Key)){
+                                        <text>@(option.Key): </text>
+                                    }
+                                    @(option.Value)
+                                </span>
+                            }
+                        </div>
                     }
                 </td>
                 <td colspan="3" class="align-middle text-center">
