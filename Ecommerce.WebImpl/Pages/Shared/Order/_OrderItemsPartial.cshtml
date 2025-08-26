@@ -3,27 +3,43 @@
 @using Ecommerce.Entity.Common
 @using Microsoft.AspNetCore.Html
 @model _OrderItemsPartial
-<div id="order@(Model.Order.Id)" class="container-fluid">
-    <table id="order@(Model.Order.Id)-body" class="container-fluid ps-5 ms-2 gap-2  table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
+<div class="container-fluid partial-parent">
+    <script>
+        ((s)=>{
+            document.addEventListener('DOMContentLoaded', load);
+            s.parentElement.addEventListener('htmx:load', load);
+            function load(e){
+                if(e.type ==='htmx:load'){
+                    e.stopPropagation();
+                    s.nextElementSibling.firstElementChild.nextElementSibling.querySelectorAll('.promptable').forEach(p=>p.dispatchEvent(new Event('htmx:load',{bubbles:false,cancelable:true})));
+                }
+            }
+        })(document.currentScript)
+        //# sourceURL=@(nameof(_OrderItemsPartial)).js
+        </script>
+    <table class="container-fluid ps-5 ms-2 gap-2 order-table table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
         <thead class="text-center align-middle">
         <tr class="table-striped-columns">
             <th scope="col" colspan="3">
                 <p class="fs-5">Resim</p>
             </th>
-            <th scope="col" colspan="1">
+            <th scope="col" colspan="2">
                 <p class="fs-5">Ürün Adı</p>
             </th>
-            <th scope="col" colspan="1">
+            <th scope="col" colspan="2">
                 <p class="fs-5">Satıcı</p>
-            </th>
-            <th scope="col" colspan="3">
-                <p class="fs-5">Gönderi Adresi</p>
             </th>
             <th scope="col" colspan="2">
                 <p class="fs-5">Fiyat</p>
             </th>
             <th scope="col" colspan="2">
                 <p class="fs-5">Kupon</p>
+            </th>
+            <th scope="col" colspan="3">
+                <p class="fs-5">Teslimat Durumu</p>
+            </th>
+            <th scope="col" colspan="2">
+                <p class="fs-5">İşlemler</p>
             </th>
         </tr>
         </thead>
@@ -32,15 +48,12 @@
             var p = item.ProductOffer!.Product!;
             <tr class="mt-2">
                 <td colspan="3 align-middle text-center">
-                    <img class="img-fluid text-center rounded-2 align-middle" src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))"/>
+                    <img class="img-fluid text-center rounded-2 align-middle" src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))" alt="Ürün Resmi"/>
                 </td>
-                <td colspan="1" class="align-middle text-center">
+                <td colspan="2" class="align-middle text-center">
                     <p class="fs-5">@(p.Name)</p>
                 </td>
-                <td colspan="1" class="align-middle text-center">@item.ProductOffer.Seller.ShopName</td>
-                <td colspan="3" class="align-middle text-center">
-                    <p class="fs-5 text-wrap align-middle text-center">@(item.ProductOffer.Seller.Address.ToString())</p>
-                </td>
+                <td colspan="2" class="align-middle text-center">@item.ProductOffer.Seller.ShopName</td>
                 <td colspan="2" class="align-middle text-center">
                     <partial name="Shared/_ItemPricePartial" model="item.Aggregates"/>
                 </td>
@@ -48,6 +61,112 @@
                     @if (item.CouponId != null){
                         <p class="overflow-y-scroll">@(item.CouponId)</p>
                     }
+                </td>
+                <td colspan="3" class="align-middle text-center">
+                    @switch (item.Status){
+                        case OrderStatus.Shipped:
+                            <div>
+                                <p class="text-center">@(item.SentShipment.Status.ToLocalizedString())</p>
+                                <div class="d-inline-flex align-items-center justify-content-center p-0 gap-2">
+                                    <p class="text-muted text-wrap mb-0">Takip No: 
+                                        <a href="javascript:void(0);" class="link-info">@(item.SentShipment.TrackingNumber)
+                                            <i class="bi fs-4 bi-arrow-right-square"></i>
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                            break;
+                        default:
+                            <p class="mb-0 text-center">@(item.Status.ToLocalizedString())</p>
+                            break;
+                    }
+                </td>
+                <td colspan="2" class="align-middle text-center">
+                    @{ var hasActions = (Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment)) != 0 ||
+                                    (Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0; }
+                @if (hasActions){
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                İşlemler
+                            </button>
+                            <ul class="dropdown-menu">
+                                @if (Model.ViewedBySeller && Model.Order.Status == OrderStatus.WaitingConfirmation){
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/Seller?handler=cancelOrder" class="m-0" hx-swap="innerHTML" hx-target="#popupResult">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="OrderId" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-danger">
+                                                Siparişi Reddet
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/Seller?handler=confirmOrder" class="m-0" hx-swap="innerHTML" hx-target="#popupResult">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="@(nameof(SellerModel.OrderId))" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-success">
+                                                Siparişi Onayla
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                                @if (Model.ViewedBySeller && Model.Order.Status == OrderStatus.WaitingShipment){
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/Seller?handler=confirmShipment" hx-swap="innerHTML" hx-target="#popupResult">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-primary-emphasis">
+                                                Teslimat Bildir
+                                            </button>
+                                        </form>
+                                    </li>
+
+                                }
+                                @if (!Model.ViewedBySeller && Model.Order.Status < OrderStatus.Shipped){
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                            @if (Model.Token != null){
+                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                            }
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-danger">
+                                                İptal Et
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                                @if (!Model.ViewedBySeller && Model.Order.Status == OrderStatus.Delivered){
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/@nameof(Orders)?handler=complete" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                            @Html.AntiForgeryToken()
+                                            @if (Model.Token != null){
+                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                            }
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-success">
+                                                Teslimatı Onayla
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                                @if (!Model.ViewedBySeller && (Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0){
+                                    <li>
+                                        <form hx-trigger="click" hx-post="/@nameof(Orders)?handler=refund" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                            @Html.AntiForgeryToken()
+                                            @if (Model.Token != null){
+                                                <input type="hidden" name="token" value="@Model.Token"/>
+                                            }
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <button type="button" class="dropdown-item text-warning">
+                                                İade Et
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                }
                 </td>
             </tr>
         }
