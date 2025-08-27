@@ -1,12 +1,82 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Product._AddToCartButtonPartial
 
-<form class="container-fluid" hx-post="/Cart" hx-target="#popupResult" hx-swap="innerHTML">
+<form id="addToCartButtonForm" class="container-fluid">
     @Html.AntiForgeryToken()
     <input type="hidden" name="productId" value="@Model.ProductId"/>
-    <input type="hidden" name="sellerId" value="null"/>
+    <input id="sellerIdInput" type="hidden" name="sellerId" value="null"/>
+    <input type="hidden" name="incr" min="-1" max="1"/>
     <div class="row" onmouseenter="this.lastElementChild.classList.add('col-lg-7');this.firstElementChild.classList.remove('d-none')"
          onmouseleave="this.lastElementChild.classList.remove('col-lg-7');this.firstElementChild.classList.add('d-none')">
-        <input type="number" style="height: 100%;" class="col-lg-5 col-12 rounded-1 shadow-sm d-none" min="1" name="quantity" step="1" placeholder="Miktar"/>
+        <div class="col-lg-5 col-12 d-none d-flex align-items-center gap-1">
+            <button onclick="event.preventDefault();event.currentTarget.parentElement.nextElementSibling.querySelector('input[name=incr]').value = -1;event.currentTarget.closest('form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" type="button" class="p-0 btn hover-grow-small btn-link d-none existing-item"><i class="hover-grow-small bi bi-file-minus-fill rounded-circle fs-6 text-danger"></i></button>
+            <input type="number" style="height: 100%;" class="form-control rounded-1 shadow-sm flex-grow-1" min="0" name="quantity" step="1" placeholder="Miktar"/>
+            <button onclick="event.preventDefault();event.currentTarget.parentElement.nextElementSibling.querySelector('input[name=incr]').value = 1;event.currentTarget.closest('form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" type="button" class="p-0 hover-grow-small btn btn-link"><i class="hover-grow-small bi bi-plus-circle-fill fs-6 text-success"></i></button>
+        </div>
         <button type="submit" class="col-12 btn rounded-1 btn-primary" style="background-color: darkorange">Sepete Ekle</button>
     </div>
+    <div id="addToCartButtonResult"></div>
 </form>
+
+<script>
+    ((s) => {
+        const form = document.getElementById('addToCartButtonForm');
+        
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            let body = {};
+            const incr = e.currentTarget.querySelector('input[name="incr"]');
+            const q = e.currentTarget.querySelector('input[name="quantity"]');
+            
+            if(incr.value) {
+                let v = parseInt(q.value);
+                const i = parseInt(incr.value);
+                if(v === 0) return;
+                v = isNaN(v) ? 0 : v;
+                q.value = (v + (body.quantity = i)).toString();
+                incr.value = null;
+            }
+            else body.quantity = q.value;
+            
+            body.__RequestVerificationToken = e.currentTarget.querySelector('input[name="__RequestVerificationToken"]').value;
+            body.productId = @Model.ProductId;
+            body.sellerId = document.getElementById('sellerIdInput').value;
+
+            // Collect product options if available
+            const offerOptions = document.getElementById('offerOptions');
+            if(offerOptions && offerOptions.firstElementChild && offerOptions.firstElementChild._options) {
+                let i = 0;
+                for(const [k,v] of offerOptions.firstElementChild._options.entries()) {
+                    const prefix = 'Options[' + i++ + '].';
+                    const keyInputName = isNaN(parseInt(k)) ? prefix + 'Key' : (prefix + 'CategoryPropertyId');
+                    body[keyInputName] = k;
+                    body[prefix + 'Id'] = parseInt(v);
+                    body[prefix + 'ProductId'] = @Model.ProductId;
+                }
+            }
+
+            htmx.ajax('POST', '/Cart', {
+                target: '#addToCartButtonResult',
+                swap: 'innerHTML',
+                source: e.currentTarget,
+                values: body,
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                handler: function (elt, e) {
+                    if(e.xhr.status >= 300 || e.xhr.status < 200) return;
+                    const q = parseInt(elt.querySelector('input[name="quantity"]').value);
+                    if(q > 0)
+                        elt.querySelectorAll('button.existing-item').forEach(b => b.classList.remove('d-none'));
+                    else 
+                        elt.querySelectorAll('button.existing-item').forEach(b => b.classList.add('d-none'));
+                    
+                    // Dispatch CartChangedEvent if the class exists
+                    if(typeof CartChangedEvent !== 'undefined') {
+                        document.dispatchEvent(new CartChangedEvent(q, parseInt(elt.querySelector('#sellerIdInput').value), @Model.ProductId));
+                    }
+                }
+            });
+        });
+        
+        console.log("loaded AddToCartButtonPartial");
+    })(document.currentScript);
+    //# sourceURL=AddToCartButtonPartial.js
+</script>
