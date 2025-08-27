@@ -2,56 +2,92 @@
 @using System.Globalization
 @using Ecommerce.Entity.Common
 @using Microsoft.AspNetCore.Html
+@using Customer = Ecommerce.WebImpl.Pages.Customer
 @using JsonSerializer = System.Text.Json.JsonSerializer
 @{
     IHtmlContent OrderHeadingItem((string, string, int) v) => Html.Raw($""""
-                                                                            <li class="list-group-item rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-between">
-                                                                                <p class="fs-6 h-50 fw-bold border-1 border-black {(v.Item1.Length == 0 ? "" : "border-bottom")}">{v.Item1}</p>
+                                                                            <li class="list-group-item mx-0 rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-between">
+                                                                                <p class="fs-6 h-50 fw-bold border-1 border-black text-nowrap {(v.Item1.Length == 0 ? "" : "border-bottom")}">{v.Item1}</p>
                                                                                 <p class="fs-5 h-50">{v.Item2}</p>
                                                                             </li>
                                                                         """");
 
 }
 @if (Model.Orders.Count > 0){
-    <ul id="orderList" class="container-fluid list-unstyled gap-4">
+    <div class="container-fluid partial-parent gap-4">
+        <script>
+            ((s)=>{
+                document.addEventListener('DOMContentLoaded', load);
+                s.parentElement.addEventListener('htmx:load', load);
+                function load(e){
+                    if(e.type==='htmx:load') e.stopPropagation();
+                    Array.from(s.nextElementSibling.firstElementChild.lastElementChild.children)
+                        .filter(e=>e.nodeType === Node.ELEMENT_NODE).forEach((o)=>{
+                        o.selected = o.value === '@(Model.PageSize)'
+                    });
+                    if(s.parentElement.lastElementChild.classList.contains('order-fetcher')){
+                        s.parentElement.lastElementChild.addEventListener('htmx:afterRequest', e=>{
+                            if(event.detail.xhr.status===204) {
+                                event.detail.elt.removeAttribute('hx-get');
+                                event.detail.elt.removeAttribute('hx-trigger');
+                            }
+                        })
+                    }
+                    s.parentElement.querySelector('.order-list').dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false}));
+                }
+                //# sourceURL=OrderListPartial.js
+            })(document.currentScript)
+        </script>
         <div>
-            @if (Model.Orders.Count > 9 && Model.Url != null){
-                <form method="get" asp-page="@(Model.Url.Split('?').FirstOrDefault() ?? Model.Url)" asp-page-handler="@(Model.Url.Split("handler").LastOrDefault()?.Split('=').FirstOrDefault()??"")">
+            @if (Model.Orders.Count > 4 && Model.Url != null){
+                <form action="@Model.Url">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="page" value="1"/>
-                    <input type="hidden" name="pageSize" value="10"/>
-                    <select class="dropdown-toggle dropdown" style="cursor: pointer;" onchange="event.currentTarget.previousElementSibling.value = event.currentTarget.value;
-                        event.currentTarget.parentElement.submit();">
-                        <option class="dropdown-item" selected value="10">10</option>
+                    <input type="hidden" name="@(nameof(Customer.PageNumber))" value="1"/>
+                    <select name="@(nameof(Customer.PageSize))" class="dropdown-toggle dropdown rounded-1 shadow-none border-secondary-subtle border-1" style="cursor: pointer;"
+                            onchange="event.currentTarget.parentElement.submit();">
+                        <option class="dropdown-item" value="5">5</option>
+                        <option class="dropdown-item" value="10">10</option>
                         <option class="dropdown-item" value="20">20</option>
                         <option class="dropdown-item" value="50">50</option>
                         <option class="dropdown-item" value="100">100</option>
                     </select>
-    </form>
+                </form>
             }
-            <ul class="list-group-horizontal row">
-                @OrderHeadingItem(("Sipariş No", "", 1))
-                @OrderHeadingItem(("Sipariş Tarihi", "", 3))
-                @OrderHeadingItem(("Sipariş Durumu", "", 2))
+            <ul class="list-group-horizontal row gap-0 px-0">
+                @OrderHeadingItem(("Sipariş N.", "", 1))
+                @OrderHeadingItem(("Sipariş Tarihi", "", 2))
+                @OrderHeadingItem(("Sipariş Durumu", "", 3))
                 @OrderHeadingItem(("Teslimat Adresi", "", 3))
-                @OrderHeadingItem(("Ürün Sayısı", "", 1))
+                @OrderHeadingItem(("Ürün Say.", "", 1))
                 <div class="col-2"></div>
             </ul>
         </div>
-        @foreach (var order in Model.Orders){
-            <li class="mt-3">
-                @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
-                    Collapsable = Model.Collapsable, Order = order, Token = Model.Token
-                })
-            </li>
-        }
+        <ul class="list-unstyled order-list gap-0 px-0">
+            <script>
+                ((s)=>{
+                    s.parentElement.addEventListener('htmx:load', load);
+                    function load(e){
+                        e.stopPropagation();
+                        s.parentElement.querySelectorAll(':scope>li>.partial-parent').forEach(o=>o.dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false})));
+                        console.log('initialized @(nameof(_OrderListPartial)) from ' + e.type);
+                    }
+                })(document.currentScript)
+                //# sourceURL=OrderListPartialSelect.js
+            </script>
+            @foreach (var order in Model.Orders){
+                <li class="mb-3">
+                    @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
+                        Collapsable = Model.Collapsable, Order = order, Token = Model.Token, ViewedBySeller = Model.ViewedBySeller
+                    })
+                </li>
+            }
+        </ul>
         @if (Model.Url != null){
-            <div id="orderFetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ Model.Page, Model.PageSize }))" hx-trigger="revealed" hx-select="#orderList>li" hx-target="this" hx-swap="beforebegin"
-                 hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"
-                 hx-on::after-request="if(event.detail.xhr.status!=204 && event.detail.successful) event.detail.elt.removeAttribute('data-hx-revealed');"></div>    
+            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ Model.Page, Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
+                 hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"></div>
         }
-        
-    </ul>
+
+    </div>
 }
 else{
     <div class="d-flex px-3 justify-content-center flex-grow-1 h-75 align-content-center">
