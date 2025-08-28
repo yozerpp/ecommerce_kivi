@@ -111,12 +111,27 @@
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 e.stopPropagation();
+                
+                // Show loading state
+                const submitButton = document.getElementById('submitPayment');
+                const loadingElement = document.getElementById('paymentLoading');
+                submitButton.disabled = true;
+                submitButton.textContent = 'İşleniyor...';
+                loadingElement.classList.remove('d-none');
+                
                 const {error} = await stripe.confirmPayment({
                     elements: elems,
                     confirmParams: {
                         return_url: '@Html.Raw(ViewData["ReturnUrl"]??throw new ArgumentNullException())'
                     }
                 });
+                
+                // Hide loading state if there's an error
+                if (error) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Ödemeyi Onayla';
+                    loadingElement.classList.add('d-none');
+                }
             }
             //# sourceURL=@(nameof(Checkout))_3.js
             
@@ -305,9 +320,41 @@
         <div class="tab-pane fade @(Model.SelectedTab==3?"show active":"")" id="nav-payment" role="tabpanel" aria-labelledby="nav-payment-tab">
             @if (Model.SelectedTab == 3){
                 <div class="container-fluid">
+                    <!-- Order Total Display -->
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0 fw-bold">Sipariş Özeti</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-8">
+                                    <p class="mb-1">Ürün Toplamı:</p>
+                                    <p class="mb-1">Kargo Ücreti:</p>
+                                    <hr>
+                                    <p class="fw-bold fs-5 mb-0">Ödenecek Toplam:</p>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <p class="mb-1">@Model.Cart.Aggregates.CouponDiscountedPrice.Value.ToString("C")</p>
+                                    <p class="mb-1">@((Model.SelectedShippingOffers?.Values.Sum(o => o.Price + o.Tax) ?? 0).ToString("C"))</p>
+                                    <hr>
+                                    <p class="fw-bold fs-4 text-success mb-0">@((Model.Cart.Aggregates.CouponDiscountedPrice.Value + (Model.SelectedShippingOffers?.Values.Sum(o => o.Price + o.Tax) ?? 0)).ToString("C"))</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <form class="container-fluid" id="paymentForm">
                         <div id="paymentElements">
                         </div>
+                        
+                        <!-- Loading Status -->
+                        <div id="paymentLoading" class="d-none text-center mt-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Yükleniyor...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Ödemeniz işleniyor, lütfen bekleyin...</p>
+                        </div>
+                        
                         <div class="d-flex mt-3 container-fluid justify-content-center align-content-center">
                             <button class="btn btn-lg btn-primary" type="button" onclick="sendPayment(event)" id="submitPayment">Ödemeyi Onayla</button>
                         </div>
