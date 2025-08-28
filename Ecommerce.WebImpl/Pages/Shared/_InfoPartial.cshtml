@@ -1,22 +1,184 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared._InfoPartial
 
+<style>
+    .info-alert {
+        border: none;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        animation: slideInDown 0.4s ease-out;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .info-alert::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, 
+            @(Model.Success ? "#28a745, #20c997" : "#dc3545, #fd7e14"));
+        animation: shimmer 2s infinite;
+    }
+    
+    .info-alert.alert-success {
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.1));
+        border-left: 4px solid #28a745;
+        color: #155724;
+    }
+    
+    .info-alert.alert-danger {
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(253, 126, 20, 0.1));
+        border-left: 4px solid #dc3545;
+        color: #721c24;
+    }
+    
+    .info-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+    
+    .info-icon.success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .info-icon.danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 8px;
+    }
+    
+    .info-content {
+        flex: 1;
+    }
+    
+    .info-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+    
+    .info-message {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+    
+    .info-close {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+        padding: 4px;
+        border-radius: 4px;
+    }
+    
+    .info-close:hover {
+        opacity: 1;
+        background: rgba(0,0,0,0.1);
+    }
+    
+    @@keyframes slideInDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    @@keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .fade-out {
+        animation: fadeOut 0.3s ease-out forwards;
+    }
+    
+    @@keyframes fadeOut {
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    }
+</style>
+
 <div 
-    class="alert card shadow-sm small alert-@(Model.Success?"success":"danger") alert-dismissible fade show mt-2"
+    class="alert info-alert shadow-lg alert-@(Model.Success?"success":"danger") alert-dismissible fade show mt-3"
     role="alert"
     hx-swap="outerHTML"
     hx-target="this"
     hx-include="this"
     hx-on::load="setTimeout(()=>{
-        @(Model.Redirect!=null
-            ? (Model.Redirect == "refresh" ? "window.location.reload()" : $"window.location.href='{Model.Redirect}'")
-            :"this.remove();")
+        @if (Model.Redirect != null)
+        {
+            if (Model.Redirect == "refresh")
+            {
+                @:document.querySelector('.info-content').innerHTML = '<div class=\"d-flex align-items-center\"><div class=\"loading-spinner\"></div><span>Refreshing page...</span></div>';
+                @:setTimeout(() => window.location.reload(), 1500);
+            }
+            else
+            {
+                @:window.location.href='@Model.Redirect';
+            }
+        }
+        else
+        {
+            @:this.classList.add('fade-out');
+            @:setTimeout(() => this.remove(), 300);
+        }
     },@(Model.Redirect!=null?0:Model.TimeOut))"
 >
-    <div class="card-body">
-        @if (Model.Title != null){
-            <p class="card-title">@Model.Title</p>
-        }
-        <p class="card-text">@Model.Message</p>
+    <div class="d-flex align-items-start p-3">
+        <div class="info-icon @(Model.Success?"success":"danger")">
+            @if (Model.Success)
+            {
+                <span>✓</span>
+            }
+            else
+            {
+                <span>!</span>
+            }
+        </div>
+        
+        <div class="info-content">
+            @if (Model.Title != null)
+            {
+                <div class="info-title">@Model.Title</div>
+            }
+            <div class="info-message">@Model.Message</div>
+        </div>
+        
+        <button type="button" class="info-close" data-bs-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
