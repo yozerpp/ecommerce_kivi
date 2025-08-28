@@ -33,19 +33,20 @@
         })(document.currentScript)
         //# sourceURL=@(nameof(_OrderPartial)).js
     </script>
-    <div class="row mx-0 align-items-center">
-        <div class="col-10">
-            <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable ? "pointer" : "default")" data-bs-toggle="@(Model.Collapsable ? "collapse" : "")" data-bs-target="#order-table-@(Model.Order.Id)" aria-controls="order-table-@(Model.Order.Id)" aria-expanded="false">
-                <ul class="list-group-horizontal row px-0 mx-0">
-                    @OrderHeadingItem(("", Model.Order.Id.ToString(), 1))
-                    @OrderHeadingItem(("", Model.Order.Date.ToString("g", CultureInfo.CurrentCulture), 2))
-                    @OrderHeadingItem(("", Model.Order.Status.ToLocalizedString(), 4))
-                    @OrderHeadingItem(("", Model.Order.ShippingAddress.ToString(), 4))
-                    @OrderHeadingItem(("", Model.Order.Aggregates.ItemCount?.ToString() ?? "0", 1))
-                </ul>
-            </a>
-        </div>
-        <div class="d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
+    <div class="border rounded-3 mb-3 shadow-sm bg-white">
+        <div class="row mx-0 align-items-center border-bottom bg-light rounded-top-3 py-2">
+            <div class="col-10">
+                <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable ? "pointer" : "default")" data-bs-toggle="@(Model.Collapsable ? "collapse" : "")" data-bs-target="#order-table-@(Model.Order.Id)" aria-controls="order-table-@(Model.Order.Id)" aria-expanded="false">
+                    <ul class="list-group-horizontal row px-0 mx-0">
+                        @OrderHeadingItem(("", Model.Order.Id.ToString(), 1))
+                        @OrderHeadingItem(("", Model.Order.Date.ToString("g", CultureInfo.CurrentCulture), 2))
+                        @OrderHeadingItem(("", Model.Order.Status.ToLocalizedString(), 4))
+                        @OrderHeadingItem(("", Model.Order.ShippingAddress.ToString(), 4))
+                        @OrderHeadingItem(("", Model.Order.Aggregates.ItemCount?.ToString() ?? "0", 1))
+                    </ul>
+                </a>
+            </div>
+            <div class="d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
             @if ((Model.Order.Status & (OrderStatus.WaitingPayment | OrderStatus.WaitingConfirmation)) !=0 || Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
                 <div>
                     <form  hx-post="/@(nameof(Orders))?handler=cancel" hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();">
@@ -70,9 +71,10 @@
             @* @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){ *@
             @*     DisplayText = "Teslimat Adresini Değiştir", Description = "Henüz Kargolanmamış öğelerin teslimat adresleri değiştirilecek.",  Target = "#popupResult", Inputs = addressInputs.ToArray(), Url = Url.Page(nameof(Orders), "changeAddress"), Classes = "dropdown-item", FormClasses = "m-0", *@
             @* }) *@
+            </div>
         </div>
+        @await Html.PartialAsync("Shared/Order/_OrderItemsPartial", new _OrderItemsPartial(){
+            IsCollapsable = Model.Collapsable, Order = Model.Order, Token = Model.Token
+        })
     </div>
-    @await Html.PartialAsync("Shared/Order/_OrderItemsPartial", new _OrderItemsPartial(){
-        IsCollapsable = Model.Collapsable, Order = Model.Order, Token = Model.Token
-    })
 </div>

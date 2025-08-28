@@ -3,7 +3,7 @@
 @using Ecommerce.Entity.Common
 @using Microsoft.AspNetCore.Html
 @model _OrderItemsPartial
-<div class="container-fluid partial-parent">
+<div class="container-fluid partial-parent p-0">
     <script>
         ((s)=>{
             document.addEventListener('DOMContentLoaded', load);
@@ -17,7 +17,7 @@
         })(document.currentScript)
         //# sourceURL=@(nameof(_OrderItemsPartial)).js
         </script>
-    <table id="order-table-@(Model.Order.Id)" class="container-fluid ps-5 ms-2 gap-2 order-table table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
+    <table id="order-table-@(Model.Order.Id)" class="table table-responsive table-striped mb-0 @(Model.IsCollapsable ? "collapse" : "")">
         <thead class="text-center align-middle">
         <tr class="table-striped-columns">
             <th scope="col" colspan="2">
