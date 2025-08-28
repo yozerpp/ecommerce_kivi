@@ -326,6 +326,10 @@
                             <h5 class="mb-0 fw-bold">Sipariş Özeti</h5>
                         </div>
                         <div class="card-body">
+                            @{
+                                var shippingCost = Model.ShippingCost;
+                                var itemsCost = Model.ItemsCost;
+                            }
                             <div class="row">
                                 <div class="col-8">
                                     <p class="mb-1">Ürün Toplamı:</p>
@@ -334,10 +338,10 @@
                                     <p class="fw-bold fs-5 mb-0">Ödenecek Toplam:</p>
                                 </div>
                                 <div class="col-4 text-end">
-                                    <p class="mb-1">@Model.Cart.Aggregates.CouponDiscountedPrice.Value.ToString("C")</p>
-                                    <p class="mb-1">@((Model.SelectedShippingOffers?.Values.Sum(o => o.Price + o.Tax) ?? 0).ToString("C"))</p>
+                                    <p class="mb-1">@itemsCost.ToString("C")</p>
+                                    <p class="mb-1">@(shippingCost.ToString("C"))</p>
                                     <hr>
-                                    <p class="fw-bold fs-4 text-success mb-0">@((Model.Cart.Aggregates.CouponDiscountedPrice.Value + (Model.SelectedShippingOffers?.Values.Sum(o => o.Price + o.Tax) ?? 0)).ToString("C"))</p>
+                                    <p class="fw-bold fs-4 text-success mb-0">@((itemsCost + shippingCost).ToString("C"))</p>
                                 </div>
                             </div>
                         </div>
