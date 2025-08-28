@@ -21,7 +21,7 @@
                 s.parentElement.addEventListener('htmx:load', load);
                 function load(e){
                     if(e.type==='htmx:load') e.stopPropagation();
-                    Array.from(s.nextElementSibling.firstElementChild.lastElementChild.children)
+                    Array.from(s.nextElementSibling.firstElementChild.nextElementSibling.lastElementChild.children)
                         .filter(e=>e.nodeType === Node.ELEMENT_NODE).forEach((o)=>{
                         o.selected = o.value === '@(Model.PageSize)'
                     });
@@ -40,32 +40,38 @@
         </script>
         <div>
             @if (Model.Orders.Count > 4 && Model.Url != null){
-                var hxAttrs = $"""hx-get="{Model.Url}" hx-trigger="submit" hx-swap="outerHTML" hx-target="closest .partial-parent" """;
-                var boostArgs = $@"action=""{Model.Url}"" method=""get""";
                 <script>
                     ((s)=>{
-                        const form = s.nextElementSibling;
-                        if (@Model.Partial.ToString().ToLower()) {
-                            // htmx call
+                        document.addEventListener('DOMContentLoaded', load);
+                        s.closest('.partial-parent').addEventListener('htmx:load', load);
+                        function load(e){
+                            if(e.type==='htmx:load') e.stopPropagation();
+                            const form = s.nextElementSibling;
+                            @if (Model.Partial) {
+                            <text>
                             form.addEventListener('submit', (e) => {
                                 e.preventDefault();
                                 htmx.ajax('GET', '@Model.Url', {
-                                    values: new FormData(form),
+                                    values: Object.fromEntries(new FormData(form).entries()),
                                     target: form.closest('.partial-parent'),
                                     swap: 'outerHTML'
                                 });
                             });
-                        } else {
-                            // navigation
+                            </text>
+                            } else {
+                            <text>
                             form.addEventListener('submit', (e) => {
                                 const formData = new FormData(form);
                                 const params = new URLSearchParams(formData);
-                                window.location.href = '@Model.Url?' + params.toString();
+                                window.location.href = '@Html.Raw(Model.Url)' + @Html.Raw(Model.Url.Contains('?')?"'&'":"'?'") + params.toString();
                             });
+                            </text>
+                            }
                         }
+                        //# sourceURL=orderListPagere.js
                     })(document.currentScript)
                 </script>
-                <form @Html.Raw(Model.Partial?hxAttrs:boostArgs)>
+                <form >
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="page" value="1"/>
                     <input type="hidden" name="token" value="@Model.Token"/>
@@ -113,7 +119,7 @@
             }
         </ul>
         @if (Model.Url != null){
-            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ page=Model.Page,pageSize= Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
+            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')partial=true" hx-vals="@(JsonSerializer.Serialize(new{ page=Model.Page,pageSize= Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
                  hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"></div>
         }
 
