@@ -43,10 +43,28 @@
                 var hxAttrs = $"""hx-get="{Model.Url}" hx-trigger="submit" hx-swap="outerHTML" hx-target="closest .partial-parent" """;
                 var boostArgs = $@"action=""{Model.Url}"" method=""get""";
                 <script>
-                    (()=>{
-                    
+                    ((s)=>{
+                        const form = s.nextElementSibling;
+                        if (@Model.Partial.ToString().ToLower()) {
+                            // htmx call
+                            form.addEventListener('submit', (e) => {
+                                e.preventDefault();
+                                htmx.ajax('GET', '@Model.Url', {
+                                    values: new FormData(form),
+                                    target: form.closest('.partial-parent'),
+                                    swap: 'outerHTML'
+                                });
+                            });
+                        } else {
+                            // navigation
+                            form.addEventListener('submit', (e) => {
+                                const formData = new FormData(form);
+                                const params = new URLSearchParams(formData);
+                                window.location.href = '@Model.Url?' + params.toString();
+                            });
+                        }
                     })(document.currentScript)
-                    </script>
+                </script>
                 <form @Html.Raw(Model.Partial?hxAttrs:boostArgs)>
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="page" value="1"/>
