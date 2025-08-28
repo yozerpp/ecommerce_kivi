@@ -35,17 +35,25 @@
                     }
                     s.parentElement.querySelector('.order-list').dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false}));
                 }
-                //# sourceURL=OrderListPartial.js
             })(document.currentScript)
+            //# sourceURL=OrderListPartial.js
         </script>
         <div>
             @if (Model.Orders.Count > 4 && Model.Url != null){
-                <form action="@Model.Url">
+                var hxAttrs = $"""hx-get="{Model.Url}" hx-trigger="submit" hx-swap="outerHTML" hx-target="closest .partial-parent" """;
+                var boostArgs = $@"action=""{Model.Url}"" method=""get""";
+                <script>
+                    (()=>{
+                    
+                    })(document.currentScript)
+                    </script>
+                <form @Html.Raw(Model.Partial?hxAttrs:boostArgs)>
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="@(nameof(Customer.PageNumber))" value="1"/>
-                    <select name="@(nameof(Customer.PageSize))" class="dropdown-toggle dropdown rounded-1 shadow-none border-secondary-subtle border-1" style="cursor: pointer;"
-                            onchange="event.currentTarget.parentElement.submit();">
-                        <option class="dropdown-item" value="5">5</option>
+                    <input type="hidden" name="page" value="1"/>
+                    <input type="hidden" name="token" value="@Model.Token"/>
+                    <select name="pageSize" class="dropdown-toggle dropdown rounded-1 shadow-none border-secondary-subtle border-1" style="cursor: pointer;"
+                            onchange="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));">
+                        <option class="dropdown-item" value="5" selected>5</option>
                         <option class="dropdown-item" value="10">10</option>
                         <option class="dropdown-item" value="20">20</option>
                         <option class="dropdown-item" value="50">50</option>
@@ -87,7 +95,7 @@
             }
         </ul>
         @if (Model.Url != null){
-            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ Model.Page, Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
+            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ page=Model.Page,pageSize= Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
                  hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"></div>
         }
 
