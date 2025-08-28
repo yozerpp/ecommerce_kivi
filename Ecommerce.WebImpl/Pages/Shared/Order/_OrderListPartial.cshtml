@@ -17,22 +17,46 @@
     <div class="container-fluid partial-parent gap-4">
         <script>
             ((s)=>{
+                let currentPage = @Model.Page;
+                let currentPageSize = @Model.PageSize;
+                
                 document.addEventListener('DOMContentLoaded', load);
                 s.parentElement.addEventListener('htmx:load', load);
                 s.parentElement.addEventListener('htmx:afterRequest', function(e) {
-                    const currentPage = @Model.Page;
-                    const currentPageSize = @Model.PageSize;
                     htmx.ajax('GET', '@Model.Url', {
                         values: { page: currentPage, pageSize: currentPageSize },
                         target: s.parentElement,
                         swap: 'outerHTML'
                     });
                 });
+                
+                // Update current page when pagination buttons are clicked
+                s.parentElement.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('page-link')) {
+                        const url = e.target.getAttribute('hx-get');
+                        if (url) {
+                            const urlParams = new URLSearchParams(url.split('?')[1]);
+                            const newPage = urlParams.get('page');
+                            const newPageSize = urlParams.get('pageSize');
+                            if (newPage) currentPage = parseInt(newPage);
+                            if (newPageSize) currentPageSize = parseInt(newPageSize);
+                        }
+                    }
+                });
+                
+                // Update current page size when dropdown changes
+                s.parentElement.addEventListener('change', function(e) {
+                    if (e.target.name === 'pageSize') {
+                        currentPageSize = parseInt(e.target.value);
+                        currentPage = 1; // Reset to first page when page size changes
+                    }
+                });
+                
                 function load(e){
                     if(e.type==='htmx:load') e.stopPropagation();
                     Array.from(s.nextElementSibling.firstElementChild.nextElementSibling.lastElementChild.children)
                         .filter(e=>e.nodeType === Node.ELEMENT_NODE).forEach((o)=>{
-                        o.selected = o.value === '@(Model.PageSize)'
+                        o.selected = o.value === currentPageSize.toString();
                     });
                     s.parentElement.querySelector('.order-list').dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false}));
                 }
