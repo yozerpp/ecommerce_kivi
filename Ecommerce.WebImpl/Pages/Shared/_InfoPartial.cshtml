@@ -8,13 +8,13 @@
     hx-include="this"
     hx-on::load="setTimeout(()=>{
         @(Model.Redirect!=null
-        ? (Model.Redirect == "refresh" ? "window.location.reload()" : $"window.location.href='{Model.Redirect}'")
-        :"this.remove();")
-    },@(Model.TimeOut))"
-    >
+            ? (Model.Redirect == "refresh" ? "window.location.reload()" : $"window.location.href='{Model.Redirect}'")
+            :"this.remove();")
+    },@(Model.Redirect!=null?0:Model.TimeOut))"
+>
     <div class="card-body">
         @if (Model.Title != null){
-        <p class="card-title">@Model.Title</p>
+            <p class="card-title">@Model.Title</p>
         }
         <p class="card-text">@Model.Message</p>
     </div>
