@@ -89,7 +89,15 @@
                 if(selectedOffers.size < @(Model.ShippingOffersGrouped.Count)){
                     alert("Lütfen Sepetinizdeki tüm satıcılar için kargo seçimi yapın.")
                     event.stopImmediatePropagation();
+                    return;
                 }
+                
+                // Show loading state
+                const submitButton = event.target;
+                const loadingElement = document.getElementById('shippingLoading');
+                submitButton.disabled = true;
+                submitButton.textContent = 'İşleniyor...';
+                loadingElement.classList.remove('d-none');
             }
             //# sourceURL=@(nameof(Checkout))_2.js
         </script>
@@ -235,6 +243,14 @@
         
         <div class="tab-pane fade @(Model.SelectedTab==2?"active show":"")" id="nav-shipment" role="tabpanel" aria-labelledby="nav-shipment-tab">
             @if (Model.SelectedTab ==2){
+                <!-- Loading Status for Shipping -->
+                <div id="shippingLoading" class="d-none text-center mt-3 mb-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Kargo seçimleri işleniyor, lütfen bekleyin...</p>
+                </div>
+                
                 <div class="container-fluid row g-4">
                     <div id="items" class="col-8 card-group d-flex flex-column list-unstyled px-5">
                         <h3 class="fw-bold fs-4">Ürün Paketleri</h3>
@@ -407,7 +423,7 @@
                 }
                 @if (Model.SelectedTab <=2){
                     var query = Model.SelectedTab switch{1=>"",2=>"?handler=shipment",_=>throw new ArgumentOutOfRangeException()};
-                    <form onsubmit="@Html.Raw(Model.SelectedTab switch{1=>"assignCheckoutInputs()",2=>"assignShippingInputs(event)"})" id="tab1-2Form" hx-post="/@(nameof(Checkout))@(query)" hx-target="#InfoErrorResult" hx-swap="innerHTML" class="@(Model.SelectedTab == 1 ? "ms-auto" : "")">
+                    <form onsubmit="@Html.Raw(Model.SelectedTab switch{1=>"assignCheckoutInputs()",2=>"assignShippingInputs(event)"})" id="tab1-2Form" hx-post="/@(nameof(Checkout))@(query)" hx-target="#InfoErrorResult" hx-swap="innerHTML">
                         @Html.AntiForgeryToken()
                         <input id="@nameof(Address.City)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.City))" value="@(Model.Address?.City)"/>
                         <input id="@nameof(Address.District)Input" type="hidden" name="@(nameof(Checkout.Address)).@(nameof(Address.District))" value="@(Model.Address?.District)"/>
