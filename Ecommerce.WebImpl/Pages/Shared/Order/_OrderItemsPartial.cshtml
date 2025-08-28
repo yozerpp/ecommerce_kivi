@@ -17,10 +17,10 @@
         })(document.currentScript)
         //# sourceURL=@(nameof(_OrderItemsPartial)).js
         </script>
-    <table class="container-fluid ps-5 ms-2 gap-2 order-table table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
+    <table id="order-table-@(Model.Order.Id)" class="container-fluid ps-5 ms-2 gap-2 order-table table-responsive table-striped @(Model.IsCollapsable ? "collapse" : "")">
         <thead class="text-center align-middle">
         <tr class="table-striped-columns">
-            <th scope="col" colspan="3">
+            <th scope="col" colspan="2">
                 <p class="fs-5">Resim</p>
             </th>
             <th scope="col" colspan="2">
@@ -50,7 +50,7 @@
         @foreach (var item in Model.Order.Items){
             var p = item.ProductOffer!.Product!;
             <tr class="mt-2">
-                <td colspan="3 align-middle text-center">
+                <td colspan="2"  class="align-middle text-center">
                     <img class="img-fluid text-center rounded-2 align-middle" src="@(Utils.GetImageUrlOrDefault(p.MainImage?.Data))" alt="Ürün Resmi"/>
                 </td>
                 <td colspan="2" class="align-middle text-center">
@@ -71,9 +71,9 @@
                             @foreach (var option in item.SelectedOptions){
                                 <span class="badge bg-secondary me-1 mb-1">
                                     @if (!string.IsNullOrEmpty(option.Key)){
-                                        <text>@(option.Key): </text>
+                                        <text><b class="p-0">@(option.Key): </b></text>
                                     }
-                                    @(option.Value)
+                                    <p class="p-0">@(option.Value)</p>
                                 </span>
                             }
                         </div>
@@ -99,19 +99,21 @@
                     }
                 </td>
                 <td colspan="2" class="align-middle text-center">
-                    @{ var hasActions = (Model.Order.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment)) != 0 ||
-                                    (Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0; }
+                    @{ var hasActions = (item.Status & (OrderStatus.WaitingConfirmation | OrderStatus.WaitingPayment | OrderStatus.WaitingShipment)) != 0 ||
+                                    (item.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0; }
                 @if (hasActions){
                         <div class="btn-group">
                             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                 İşlemler
                             </button>
                             <ul class="dropdown-menu">
-                                @if (Model.ViewedBySeller && Model.Order.Status == OrderStatus.WaitingConfirmation){
+                                @if (Model.ViewedBySeller && item.Status == OrderStatus.WaitingConfirmation){
                                     <li>
                                         <form hx-trigger="click" hx-post="/Seller?handler=cancelOrder" class="m-0" hx-swap="innerHTML" hx-target="#popupResult">
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="OrderId" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
                                             <button type="button" class="dropdown-item text-danger">
                                                 Siparişi Reddet
                                             </button>
@@ -120,18 +122,22 @@
                                     <li>
                                         <form hx-trigger="click" hx-post="/Seller?handler=confirmOrder" class="m-0" hx-swap="innerHTML" hx-target="#popupResult">
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="@(nameof(SellerModel.OrderId))" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
                                             <button type="button" class="dropdown-item text-success">
                                                 Siparişi Onayla
                                             </button>
                                         </form>
                                     </li>
                                 }
-                                @if (Model.ViewedBySeller && Model.Order.Status == OrderStatus.WaitingShipment){
+                                @if (Model.ViewedBySeller && item.Status == OrderStatus.WaitingShipment){
                                     <li>
                                         <form hx-trigger="click" hx-post="/Seller?handler=confirmShipment" hx-swap="innerHTML" hx-target="#popupResult">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
+                                            <input type="hidden" name="token" value="@Model.Token"/>
                                             <button type="button" class="dropdown-item text-primary-emphasis">
                                                 Teslimat Bildir
                                             </button>
@@ -139,42 +145,49 @@
                                     </li>
 
                                 }
-                                @if (!Model.ViewedBySeller && Model.Order.Status < OrderStatus.Shipped){
+                                @if (!Model.ViewedBySeller && item.Status < OrderStatus.Shipped){
                                     <li>
-                                        <form hx-trigger="click" hx-post="/@(nameof(Orders))?handler=cancel" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                        <form hx-trigger="click" hx-post="/@(nameof(Orders))?handler=cancelItem" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
                                             @if (Model.Token != null){
                                                 <input type="hidden" name="token" value="@Model.Token"/>
                                             }
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
                                             <button type="button" class="dropdown-item text-danger">
                                                 İptal Et
                                             </button>
                                         </form>
                                     </li>
                                 }
-                                @if (!Model.ViewedBySeller && Model.Order.Status == OrderStatus.Delivered){
+                                @if (!Model.ViewedBySeller && item.Status == OrderStatus.Delivered){
                                     <li>
                                         <form hx-trigger="click" hx-post="/@nameof(Orders)?handler=complete" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
+                                            <input type="hidden" name="token" value="@Model.Token"/>
                                             @Html.AntiForgeryToken()
                                             @if (Model.Token != null){
                                                 <input type="hidden" name="token" value="@Model.Token"/>
                                             }
-                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
                                             <button type="button" class="dropdown-item text-success">
                                                 Teslimatı Onayla
                                             </button>
                                         </form>
                                     </li>
                                 }
-                                @if (!Model.ViewedBySeller && (Model.Order.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0){
+                                @if (!Model.ViewedBySeller && (item.Status & (OrderStatus.Delivered | OrderStatus.Complete)) != 0){
                                     <li>
                                         <form hx-trigger="click" hx-post="/@nameof(Orders)?handler=refund" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
                                             @Html.AntiForgeryToken()
                                             @if (Model.Token != null){
                                                 <input type="hidden" name="token" value="@Model.Token"/>
                                             }
-                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@Model.Order.Id"/>
+                                            <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
+                                            <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
+                                            <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
                                             <button type="button" class="dropdown-item text-warning">
                                                 İade Et
                                             </button>

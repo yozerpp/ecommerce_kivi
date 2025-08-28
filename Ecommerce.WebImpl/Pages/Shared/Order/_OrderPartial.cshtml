@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using Ecommerce.Entity.Common
 @using Microsoft.AspNetCore.Html
+@using Microsoft.IdentityModel.Abstractions
 @using Stripe.Terminal
 @model Ecommerce.WebImpl.Pages.Shared.Order._OrderPartial
 @{
@@ -22,6 +23,7 @@
                     e.stopPropagation();
                     s.parentElement.lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false ,cancelable:true}));
                     const tt = s.nextElementSibling.querySelector('button[data-bs-toggle="tooltip"]');
+                    if(!tt) return;
                     const toggle = new bootstrap.Tooltip(tt, {toggle: false});
                     tt.addEventListener('mouseover', e=>toggle.show());
                     tt.addEventListener('mouseout', e=>toggle.hide());
@@ -33,7 +35,7 @@
     </script>
     <div class="row mx-0 align-items-center">
         <div class="col-10">
-            <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable ? "pointer" : "default")" data-bs-toggle="@(Model.Collapsable ? "collapse" : "")" data-bs-target=":scope .order-table" aria-controls=":scope .order-table" aria-expanded="false">
+            <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable ? "pointer" : "default")" data-bs-toggle="@(Model.Collapsable ? "collapse" : "")" data-bs-target="#order-table-@(Model.Order.Id)" aria-controls="order-table-@(Model.Order.Id)" aria-expanded="false">
                 <ul class="list-group-horizontal row px-0 mx-0">
                     @OrderHeadingItem(("", Model.Order.Id.ToString(), 1))
                     @OrderHeadingItem(("", Model.Order.Date.ToString("g", CultureInfo.CurrentCulture), 2))
@@ -44,9 +46,14 @@
             </a>
         </div>
         <div class="d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
-            @if (Model.Order.Status == OrderStatus.WaitingPayment || Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
+            @if ((Model.Order.Status & (OrderStatus.WaitingPayment | OrderStatus.WaitingConfirmation)) !=0 || Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
                 <div>
-                    <button hx-post="/@(nameof(Orders))?handler=cancel" data-bs-toggle="tooltip" title="Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için ekibimizden iptal etmesini isteyebilrsin." hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();" class="btn hover-grow-small btn-sm btn-danger">İptal Talep Et</button>
+                    <form  hx-post="/@(nameof(Orders))?handler=cancel" hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="token" value="@Model.Token"/>
+                        <input type="hidden" name="@(nameof(Orders.OrderId))" value="@Model.Order.Id"/>
+                        <button type="submit" data-bs-toggle="tooltip" title="Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için ekibimizden iptal etmesini isteyebilrsin." class="btn hover-grow-small btn-sm btn-danger">İptal Talep Et</button>
+                    </form>
                 </div>
             }
             @* @{ var addressInputs = new List<InputModel>([ *@
@@ -66,6 +73,6 @@
         </div>
     </div>
     @await Html.PartialAsync("Shared/Order/_OrderItemsPartial", new _OrderItemsPartial(){
-        IsCollapsable = Model.Collapsable, Order = Model.Order
+        IsCollapsable = Model.Collapsable, Order = Model.Order, Token = Model.Token
     })
 </div>
