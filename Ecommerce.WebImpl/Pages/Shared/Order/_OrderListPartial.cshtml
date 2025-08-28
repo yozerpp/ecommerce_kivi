@@ -19,20 +19,21 @@
             ((s)=>{
                 document.addEventListener('DOMContentLoaded', load);
                 s.parentElement.addEventListener('htmx:load', load);
+                s.parentElement.addEventListener('htmx:afterRequest', function(e) {
+                    const currentPage = @Model.Page;
+                    const currentPageSize = @Model.PageSize;
+                    htmx.ajax('GET', '@Model.Url', {
+                        values: { page: currentPage, pageSize: currentPageSize },
+                        target: s.parentElement,
+                        swap: 'outerHTML'
+                    });
+                });
                 function load(e){
                     if(e.type==='htmx:load') e.stopPropagation();
                     Array.from(s.nextElementSibling.firstElementChild.nextElementSibling.lastElementChild.children)
                         .filter(e=>e.nodeType === Node.ELEMENT_NODE).forEach((o)=>{
                         o.selected = o.value === '@(Model.PageSize)'
                     });
-                    if(s.parentElement.lastElementChild.classList.contains('order-fetcher')){
-                        s.parentElement.lastElementChild.addEventListener('htmx:afterRequest', e=>{
-                            if(event.detail.xhr.status===204) {
-                                event.detail.elt.removeAttribute('hx-get');
-                                event.detail.elt.removeAttribute('hx-trigger');
-                            }
-                        })
-                    }
                     s.parentElement.querySelector('.order-list').dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false}));
                 }
             })(document.currentScript)
@@ -119,8 +120,39 @@
             }
         </ul>
         @if (Model.Url != null){
-            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')partial=true" hx-vals="@(JsonSerializer.Serialize(new{ page=Model.Page,pageSize= Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
-                 hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"></div>
+            <div class="d-flex justify-content-center mt-3">
+                <nav>
+                    <ul class="pagination">
+                        @if (Model.Page > 1) {
+                            <li class="page-item">
+                                <button class="page-link" type="button" 
+                                        hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@(Model.Page - 1)&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
+                                        @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
+                                    Previous
+                                </button>
+                            </li>
+                        }
+                        
+                        @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.Page + 2, Model.Page + 10); i++) {
+                            <li class="page-item @(i == Model.Page ? "active" : "")">
+                                <button class="page-link" type="button"
+                                        hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@i&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
+                                        @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
+                                    @i
+                                </button>
+                            </li>
+                        }
+                        
+                        <li class="page-item">
+                            <button class="page-link" type="button"
+                                    hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@(Model.Page + 1)&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
+                                    @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
+                                Next
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         }
 
     </div>
