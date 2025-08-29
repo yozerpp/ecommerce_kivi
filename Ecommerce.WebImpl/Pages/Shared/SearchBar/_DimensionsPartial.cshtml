@@ -1,26 +1,92 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.SearchBar._DimensionsPartial
 
-<!--
-Type:
-_width;
-_height;
-_depth;
-_weight;
--->
-<div class="@Model.ClassNames">
-    <div class="d-inline-flex gap-2">
-        <label class="d-inline-flex fw-bold">Ağırlık</label>
-        <p data-dimtype="w" class="fs-6">@(Model.Dimensions.Weight)</p>    
+<div class="@Model.ClassNames dimensions-container">
+    <div class="row g-2">
+        <div class="col-md-6">
+            <div class="d-flex align-items-center gap-2">
+                <label class="fw-bold text-muted small">Ağırlık:</label>
+                <span id="weight-display" class="fs-6 editable-field" data-dimtype="weight">@(Model.Dimensions.Weight) kg</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex align-items-center gap-2">
+                <label class="fw-bold text-muted small">Boyutlar (G×Y×D):</label>
+                <span class="fs-6 dimensions-display">
+                    <span id="width-display" class="editable-field" data-dimtype="width">@(Model.Dimensions.Width)</span>×<span id="height-display" class="editable-field" data-dimtype="height">@(Model.Dimensions.Height)</span>×<span id="depth-display" class="editable-field" data-dimtype="depth">@(Model.Dimensions.Depth)</span> cm
+                </span>
+            </div>
+        </div>
     </div>
-    <div class="d-inline-flex gap-2">
-        <label class="d-inline-flex fw-bold">Boyutlar <small>(WxHxD)</small></label>
-        <span class="fs-6"><p data-dimtype="wi">@(Model.Dimensions.Width)</p>x<p data-dimtype="h">@(Model.Dimensions.Height)</p>x<p data-type="d">@(Model.Dimensions.Depth)</p></span>
-    </div>
-    @if (Model.Editable){
-        <div data-editing="false">
+    
+    @if (Model.Editable)
+    {
+        <div class="mt-2">
             @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                OnClick = "const p = event.currentTarget.parentElement;if(p.dataset.editing==='false')p.querySelector('p[data-dimtype]').forEach(el=>el.setAttribute('contenteditable', 'true');p.querySelector('p[data-dimtype]'))"
-            })    
+                Target = "weight-display,width-display,height-display,depth-display",
+                OnClick = "document.querySelector('.dimensions-container').dataset.editing = 'true';"
+            })
         </div>
     }
 </div>
+
+<script>
+    document.addEventListener('contentChanged', function(e) {
+        if (e.target.classList.contains('editable-field')) {
+            const dimType = e.target.dataset.dimtype;
+            const newValue = parseFloat(e.target.textContent.replace(/[^\d.]/g, ''));
+            
+            if (!isNaN(newValue)) {
+                // Update the display with proper units
+                switch(dimType) {
+                    case 'weight':
+                        e.target.textContent = newValue + ' kg';
+                        break;
+                    case 'width':
+                    case 'height':
+                    case 'depth':
+                        e.target.textContent = newValue;
+                        break;
+                }
+                
+                // Dispatch event for external handling
+                document.dispatchEvent(new CustomEvent('dimensionChanged', {
+                    detail: {
+                        type: dimType,
+                        value: newValue,
+                        element: e.target
+                    }
+                }));
+            }
+            
+            document.querySelector('.dimensions-container').dataset.editing = 'false';
+        }
+    });
+</script>
+
+<style>
+    .dimensions-container {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+    }
+    
+    .editable-field {
+        background: transparent;
+        border: none;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s ease;
+        min-width: 3rem;
+        display: inline-block;
+    }
+    
+    .editable-field:hover {
+        background: rgba(13, 110, 253, 0.1);
+    }
+    
+    .dimensions-display {
+        font-family: 'Courier New', monospace;
+        font-weight: 500;
+    }
+</style>
