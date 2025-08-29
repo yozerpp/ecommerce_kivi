@@ -1,0 +1,77 @@
+﻿@using System.Drawing
+@using System.Text.Json
+@model Ecommerce.WebImpl.Pages.Shared.Dashboard._OrderStatisticsPartial
+@functions{
+    string ToHex(Color c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
+}
+<div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+    ((s)=> {
+        function load() {
+            const orderChart = echarts.init(s.nextElementSibling);
+            @{
+                var orderedOrders = Model.Orders.OrderBy(o => o.Date).ToArray();
+                var format = Model.Orders.GroupBy(o => o.Date.Month).Count() > 3 ? "Y" : "M";
+                var groupedOrders = orderedOrders.GroupBy(o => o.Date.ToString(format)).ToArray();
+                var spendingLabel = Model.ViewerRole switch{
+                    Entity.User.UserRole.Customer => "Toplam Harcama (₺)",
+                    Entity.User.UserRole.Staff => "Toplam Alışveriş (₺)",
+                    Entity.User.UserRole.Seller => "Toplam Satış (₺)",
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+            orderChart.setOption({
+                title: {text: 'Sipariş Verileri'},
+                tooltip: {trigger: 'axis'},
+                legend: {
+                    data: [
+                        'Sipariş Sayısı',
+                        '@spendingLabel',
+                        'Kullanılan İndirim'
+                    ]
+                },
+                xAxis: {
+                    type: 'category',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(groupedOrders.Select(g => g.Key)))
+                },
+                yAxis: [
+                    {type: 'value', name: 'Sipariş Sayısı', position: 'left', axisLabel: {formatter: '{value}'}},
+                    {
+                        type: 'value',
+                        name: '@spendingLabel',
+                        position: 'right',
+                        offset: 60,
+                        axisLabel: {formatter: '{value} ₺'}
+                    },
+                    {type: 'value', name: 'Kullanılan İndirim', position: 'right', axisLabel: {formatter: '{value}'}}
+
+                ],
+                series: [{
+                    name: 'Sipariş Sayısı',
+                    type: 'line',
+                    smooth: false,
+                    color: '#@ToHex(Color.DodgerBlue)',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(groupedOrders.Select(o => o.Count())))
+                }, {
+                    name: 'Toplam Harcama',
+                    type: 'line',
+                    color: '#@ToHex(Color.DarkOrange)',
+                    smooth: true,
+                    data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Sum(o => o.Aggregates.CouponDiscountedPrice))))
+                }, {
+                    name: 'Kullanılan İndirim',
+                    type: 'bar',
+                    color: '#@ToHex(Color.ForestGreen)',
+                    smooth: false,
+                    data: @(Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Sum(o => o.Aggregates.TotalDiscountAmount)))))
+                }
+                ]
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", load);
+    })(document.currentScript)
+</script>
+<div class="container-fluid"></div>
+</div>

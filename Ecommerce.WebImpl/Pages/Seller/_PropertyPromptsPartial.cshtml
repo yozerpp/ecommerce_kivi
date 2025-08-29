@@ -1,0 +1,39 @@
+﻿
+<!--Type:
+_prompts: List<_PropertyPromptPartial>
+-->
+<div class="propertyPrompts container-fluid d-flex flex-column">
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+            document.addEventListener('DOMContentLoaded',load);
+            document.addEventListener('htmx:load',load);
+            function load(e) {
+                if(e.type==='htmx:load'){
+                    e.stopPropagation();
+                }
+                parent._prompts = [];
+                const moreBtn=parent.lastElementChild;
+                const prompts = s.nextElementSibling;
+                moreBtn.addEventListener('click', (e)=>{
+                    e.stopImmediatePropagation();
+                    const template = cloneWithScript(prompts.firstElementChild.firstElementChild)
+                    template.classList.remove('d-none');
+                    prompts.insertBefore(template, null);
+                    template.dispatchEvent(new Event('htmx:load', {bubbles: false}));
+                    parent._prompts.push(template);
+                })
+            }
+        })(document.currentScript)
+        //# sourceURL=PropertyPromptsPartial.js
+    </script>
+    <div class="prompts input-group">
+        <div class="d-none template">
+            @await Html.PartialAsync("Seller/_PropertyPromptPartial")
+        </div>
+    </div>
+    <button type="button" class="border-1 border-secondary-subtle bg-light p-0">
+        <i class="bi bi-plus-square-fill fs-4 text-success">
+        </i>
+    </button>
+</div>

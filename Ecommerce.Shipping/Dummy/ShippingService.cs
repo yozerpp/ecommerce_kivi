@@ -2,86 +2,97 @@
 using Ecommerce.Entity.Common;
 using Ecommerce.Mail;
 using Ecommerce.Shipping.Entity;
+using Ecommerce.Shipping.Geliver.Types.Network;
+using Microsoft.EntityFrameworkCore;
+using ShipmentStatus = Ecommerce.Entity.Common.ShipmentStatus;
 
 namespace Ecommerce.Shipping.Dummy;
 
-public class ShippingService :IShippingService
+public class ShippingService (ShippingContext _context):IShippingService
 {
-    private readonly IRepository<Shipment> _shipmentRepository;
-    private readonly IRepository<ShippingOffer> _offerRepository;
-    private readonly IRepository<Provider> _providerRepository;
-    public ShippingService(IRepository<Shipment> shipmentRepository, IRepository<ShippingOffer> offerRepository, IRepository<Provider> providerRepository) {
-        _shipmentRepository = shipmentRepository;
-        _offerRepository = offerRepository;
-        _providerRepository = providerRepository;
+
+
+    public async Task<ICollection<ShippingOffer>> GetOffers(GetOfferOptions options) {
+        var tot = options.Items.Sum(i => (i.ItemPrice ?? 0) * i.Quantity);
+        var ctxId = Guid.NewGuid().ToString();
+        if (options.Sender.Id == null!){
+            options.Sender.Id=Guid.NewGuid().ToString();
+            _context.DeliveryInfos.Add(options.Sender);
+        }
+        if (options.Recipient.Id == null!){
+            options.Recipient.Id = Guid.NewGuid().ToString();
+            _context.DeliveryInfos.Add(options.Recipient);
+        }
+        await _context.SaveChangesAsync();
+        return _context.Providers.AsEnumerable().Select(p => new ShippingOffer(){
+            Price = tot,
+            Tax = tot * .2m,
+            ContextId = ctxId,
+            Currency = "TRY",
+            Items = options.Items,
+            Provider = p,
+            ProviderId = p.Id,
+            Sender = options.Sender,
+            SenderId = options.Sender.Id,
+            Recipient = options.Recipient,
+            RecipientId = options.Recipient.Id,
+            ApiId = null,
+        }).ToArray();
     }
-    public List<ShippingOffer> GetOffers(IEnumerable<Dimensions> dimensions, Address shipmentAddress, Address recipientAddress) {
-        var ret =  _providerRepository.All().Select(p => {
-            var a = dimensions.Sum(dimension=> decimal.Round(Random.Shared.NextInt64(1,10001)*0.001m,2) *
-                                               (decimal)(dimension.Depth * dimension.Height * dimension.Width));
-            var o = new ShippingOffer(){
-                Amount = a,
-                AmountTax = a * 0.18m,
-                DeliveryAddress = shipmentAddress,
-                ShippingAddress = recipientAddress,
-                Currency = "TR",
-                ProviderId = p.Id,
-            };
-            return _offerRepository.Add(o);
-            }
-        ).ToList();
-        _offerRepository.Flush();
+
+    public async Task<Shipment> AcceptOffer(AcceptOfferOptions options) {
+        var offer = _context.ShippingOffers.Include(p => p.Sender).Include(shippingOffer => shippingOffer.Items)
+            .Include(shippingOffer => shippingOffer.Provider).Include(shippingOffer => shippingOffer.Recipient).First(o => o.Id == options.OfferId);
+        var ret =  _context.Shipments.Add(CreateShipmentFromOffer(offer)).Entity;
+        await _context.SaveChangesAsync();
+        await _context.ShippingOffers.Where(o => o.ContextId == offer.ContextId && o.Id != offer.Id).ExecuteDeleteAsync();
         return ret;
     }
 
-    public Shipment? GetShipment(ulong id) {
-        return _shipmentRepository.First(s => s.Id == id);
+    public async Task<Shipment> GetStatus(string id) {
+        var sid = ulong.Parse(id);
+        var s = _context.Shipments.First(s=>s.Id == sid);
+        s.ShipmentStatus += 1;
+        await _context.SaveChangesAsync();
+        return s;
     }
-    public Shipment? GetShipmentByTrackingNumber(string trackingNumber) {
-        return _shipmentRepository.First(s => s.TrackingNumber == trackingNumber);
+
+    public Task CancelShipment(string id) {
+        throw new NotImplementedException();
     }
-    public List<Shipment> AcceptOffer(ICollection<IShippingService.ShipmentCreateOptions> args) {
-        var offerIds = args.Select(a => a.OfferId).ToList();
-        var name = args.First().RecepientNane;
-        var ret = _offerRepository.Where(o => offerIds.Contains(o.Id)).Select((o, i) =>
-            _shipmentRepository.Save(new Shipment(){
-                DeliveryAddress = o.DeliveryAddress,
-                ShippingAddress = o.ShippingAddress,
-                CurrentAddress = o.ShippingAddress,
-                OfferId = o.Id,
-                RecepientName = name,
-                RecepientPhoneNumber = args.ElementAt(i).RecepientPhoneNumber,
-                SenderPhoneNumber = args.ElementAt(i).SenderPhoneNumber,
-                RecepientEmail = args.ElementAt(i).RecepientEmail,
-                SenderEmail = args.ElementAt(i).SenderEmail,
-                Status = Status.Created,
-                ProviderId = o.ProviderId,
-            })
-        ).ToList();
-        _shipmentRepository.Flush();
+
+    public Task<Shipment> Refund(string shipmentId, int count) {
+        throw new NotImplementedException();
+    }
+
+    public async Task<ICollection<Shipment>> AcceptOfferBatch(ICollection<AcceptOfferOptions> options) {
+        var offerIds =  options.Select(o => o.OfferId).ToArray();
+        var offers = _context.ShippingOffers.Include(p => p.Sender).Include(shippingOffer => shippingOffer.Items)
+            .Include(shippingOffer => shippingOffer.Provider).Include(shippingOffer => shippingOffer.Recipient)
+            .Where(o => offerIds.Contains(o.Id)).ToArray();
+        var ret = offers.Select(CreateShipmentFromOffer).ToArray();
+        _context.Shipments.AddRange(ret);
+        var contextIds = offers.Select(o => o.ContextId).ToArray();
+        await _context.SaveChangesAsync();
+        await _context.ShippingOffers.Where(o => contextIds.Contains(o.ContextId) && !offerIds.Contains(o.Id)).ExecuteDeleteAsync();
         return ret;
     }
-    public void UpdateAddress(ulong shipmentId, Address address) {
-        _shipmentRepository.UpdateExpr([
-            (s=>s.DeliveryAddress, address)
-        ], s => s.Id == shipmentId);
-    }
-    public void UpdatePhoneNumber(ulong shipmentId, PhoneNumber phoneNumber) {
-        _shipmentRepository.UpdateExpr([
-        (s=>s.RecepientPhoneNumber, phoneNumber)
-        ], s=>s.Id == shipmentId);
+
+
+    public Task ChangeAddress(ChangeAddressOptions options) {
+        throw new NotImplementedException();
     }
 
-    public void Cancel(ulong shipmentId) {
-        //make api call
-        _shipmentRepository.UpdateExpr([
-            (s=>s.Status, Status.Cancelled)
-        ], s => s.Id == shipmentId);
-    }
-
-    public void Deliver(ulong shipmentId) {
-        _shipmentRepository.UpdateExpr([
-            (s=>s.Status, Status.Delivered)
-        ], s => s.Id == shipmentId);
-    }
+    private static Shipment CreateShipmentFromOffer(ShippingOffer offer) => new(){
+        ShipmentStatus = ShipmentStatus.Processing,
+        Items = offer.Items,
+        ApiId = null,
+        OfferId = offer.Id,
+        Provider = offer.Provider,
+        ProviderId = offer.ProviderId,
+        Recipient = offer.Recipient,
+        RecipientId = offer.RecipientId,
+        Sender = offer.Sender,
+        SenderId = offer.SenderId,
+    };
 }

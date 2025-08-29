@@ -6,11 +6,24 @@
 @using Microsoft.AspNetCore.Html
 @using Stripe
 @using Product = Ecommerce.WebImpl.Pages.Product
-@inject Dictionary<uint, Category> Categories;
+@inject IDictionary<uint,Category> Categories;
 @model AddProduct
 @{
     ViewBag.User = Model.CurrentUser;
     ViewBag.Title = "Yeni Ürün Ekle";
+}
+@section Scripts{
+    <script>
+        ((s)=>{
+           document.addEventListener('DOMContentLoaded', load);
+           function  load (){
+               document.getElementById('productList').addEventListener('productSelected', e=>{
+                   console.log('selected product ' + e.detail.productId);
+                   document.getElementById('offerpid').value = e.detail.productId;
+               })
+           }
+        })(document.currentScript)
+    </script>
 }
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
@@ -43,7 +56,7 @@
                                 <div class="mb-4">
                                     <h5 class="text-muted mb-3">Ürün Ara</h5>
                                     @await Html.PartialAsync("Shared/SearchBar/_SearchBarPartial", new _SearchBarPartial(){
-                                        Categories = Model.Categories,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
+                                        Categories = Model.Categories.Values,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
                                     })
                                 </div>
                                 
@@ -52,9 +65,9 @@
                                         <h6 class="mb-0">Teklif Bilgileri</h6>
                                     </div>
                                     <div class="card-body">
-                                        <form onsubmit="document.getElementById('offerpid').value = event.currentTarget.nextElementSibling.firstElementChild._selected.dataset.id"  hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
+                                        <form   hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
                                             @Html.AntiForgeryToken()
-                                            <input id="offerpid" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))"/>
+                                            <input id="offerpid" type="hidden" name="@(nameof(AddProduct.NewOffer)).@(nameof(ProductOffer.ProductId))"/>
                                             <div class="row g-3">
                                                 <div class="col-md-6">
                                                     <label class="form-label fw-semibold">Fiyat (₺)</label>
@@ -76,45 +89,58 @@
                                 
                                 <div class="border rounded" style="max-height: 400px; overflow-y: auto;">
                                     <div id="productList" class="p-3">
-                                        <!-- Product search results will appear here -->
                                     </div>
                                 </div>
                                 
                                 <div id="addExistingResult" class="mt-3"></div>
                             </div>
                         </div>
-                        
                         <div class="tab-pane fade" id="new-product" role="tabpanel" aria-labelledby="new-tab">
                             <div class="p-4">
-                                <script>
-                                    ((s)=>{
-                                        document.addEventListener('DOMContentLoaded', ()=>{
-                                            const picker = s.nextElementSibling.querySelector('.category-picker');
-                                            picker.addEventListener('change', ()=>{
-                                                picker.parentElement.nextElementSibling.setAttribute('hx-vals', `{"categoryId":${picker.dataset.id}}`);
-                                                htmx.trigger(picker.parentElement.nextElementSibling, 'change', {cancelable:true, bubbles:false})
-                                            })
-                                        })
-                                    })(document.currentScript)
-                                </script>
-                                
                                 <div class="mb-4">
                                     <h5 class="text-muted mb-3">Kategori Seçimi</h5>
-                                    <div class="card bg-light">
-                                        <div class="card-body">
-                                            @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "category-picker-seller"){AllowNonSelection = false})
+                                        <div class="dropdown px-3 bg-white border-0">    
+                                            <script>
+                                                ((s)=>{
+                                                    const parent = s.parentElement;
+                                                    document.addEventListener('DOMContentLoaded', ()=>{
+                                                        const p=s.nextElementSibling.nextElementSibling.firstElementChild;
+                                                        parent._promptCopy = document.getElementById('productTemplate').firstElementChild.cloneNode(true);
+                                                        p.addEventListener('change', (e)=>{
+                                                            if(p.dataset.id==='0'){
+                                                                document.getElementById('createCategory').classList.remove('d-none');
+                                                                document.getElementById('productTemplate').innerHTML = '';
+                                                                document.getElementById('productTemplate').appendChild(parent._promptCopy);
+                                                            } else {
+                                                                document.getElementById('createCategory').classList.add('d-none');
+                                                                htmx.ajax('GET', '/Seller/@(nameof(AddProduct))?handler=template&categoryId='+ p.dataset.id, {
+                                                                    target: '#productTemplate',
+                                                                    swap: 'innerHTML',
+                                                                })
+                                                            }
+                                                            s.nextElementSibling.innerHTML = p.dataset.name;
+                                                        });     
+                                                    })
+                                                })(document.currentScript)
+                                        </script>
+                                        <button data-bs-toggle="dropdown" aria-expanded="false" class="dropdown-toggle btn btn-sm btn-primary" style="background-color: darkorange">Seçiniz</button>
+                                        <div class="dropdown-menu">
+                                            @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "categoryPickerSeller"){ AllowNonSelection = true, NonSelectionText = "Yeni Kategori" })
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="border rounded p-3 bg-white">
-                                    <div hx-get="/@(nameof(AddProduct))?handler=template" hx-trigger="change" hx-target="this" hx-swap="innerHTML">
+                                    <div id="createCategory" class="container-fluid d-none border rounded p-3 bg-white">
+                                        @await Html.PartialAsync("Seller/_CreateCategoryPartial", new _CreateCategoryPartial(){
+                                            Categories = Model.Categories.Values,
+                                            ForProductTemplate = true, Target = "#productTemplate"
+                                        })
+                                    </div>
+                                    <div id="productTemplate">
                                         <div class="text-center text-muted py-5">
                                             <i class="fas fa-arrow-up fa-2x mb-3"></i>
-                                            <p>Yukarıdan bir kategori seçin</p>
+                                            <p>Kategori Seçin veya Oluşturun</p>
                                         </div>
                                     </div>
-                                </div>
                             </div>
                         </div>
                     </div>

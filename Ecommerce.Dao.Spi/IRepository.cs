@@ -8,15 +8,16 @@ public interface IRepository<TEntity> where TEntity : class
     public List<TEntity> All(string[][]? includes = null);
     public List<TP> All<TP>(Expression<Func<TEntity, TP>> select,string[][]? includes = null);
     public int Count(Expression<Func<TEntity, bool>> predicate);
+    public void Clear();
     public int CountProjected<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate);
     public List<TEntity> Where(Expression<Func<TEntity, bool>> predicate,int offset=0, int limit = 20, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null, string[][]? includes=null);
     public List<TP> Where<TP>(Expression<Func<TEntity,TP>> select,Expression<Func<TP, bool>> predicate,int offset=0, int limit = 20, (Expression<Func<TP, object>>, bool)[]? orderBy=null, string[][]? includes=null);
     public TEntity Attach(TEntity entity);
     public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate,
-        int offset = 0, int limit = 20, (Expression<Func<TEntity, object>>, bool)[]? orderBy = null,
-        string[][]? includes = null);
-    public TEntity? First(Expression<Func<TEntity, bool>> predicate,string[][]? includes=null,(Expression<Func<TEntity, object>>, bool)[]? orderBy=null);
-    public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null);
+        int offset = 0, int limit = 20, ICollection<(Expression<Func<TEntity, object>>, bool)>? orderBy = null,
+        string[][]? includes = null, bool nonTracking=false);
+    public TEntity? First(Expression<Func<TEntity, bool>> predicate,string[][]? includes=null,(Expression<Func<TEntity, object>>, bool)[]? orderBy=null, bool nonTracking = false);
+    public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null, bool nonTracking = false);
     public bool TryAdd(TEntity entity);
     public Task<bool> TryAddAsync(TEntity entity, CancellationToken cancellation = default);
     public List<TP> WhereProjectGroup<TP, TG>(Expression<Func<TEntity, TP>> select,
@@ -31,7 +32,8 @@ public interface IRepository<TEntity> where TEntity : class
     public Task<TEntity> AddAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
     public TEntity Save(TEntity entity, bool flush = true);
     public Task<TEntity> SaveAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
-    public TEntity Update(TEntity entity, bool ignoreNulls, params string[] updateProperties);
+    public TEntity UpdateInclude(TEntity entity,  params string[] updateProperties);
+    public TEntity UpdateIgnore(TEntity entity,bool ignoreNulls, params string[] ignoreProperties);
     public TEntity Update(TEntity entity);
     public Task<TEntity> UpdateAsync(TEntity entity, bool flush = true, CancellationToken token = default);
     public int UpdateExpr((Expression<Func<TEntity,object>>,object)[] memberAccessorsAndValues, Expression<Func<TEntity, bool>> predicate, string[][]? includes = null);

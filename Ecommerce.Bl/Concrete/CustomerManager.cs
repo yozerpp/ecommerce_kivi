@@ -2,6 +2,7 @@
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Views;
 
 namespace Ecommerce.Bl.Concrete;
@@ -16,24 +17,10 @@ public class CustomerManager : ICustomerManager
         _imageRepository = imageRepository;
         _orderRepository = orderRepository;
     }
-    public Customer Update(Customer customer, bool updateImage =false) {
-        if (updateImage){
-            customer.ProfilePicture = _imageRepository.Add(new Image(){
-                Data = customer.ProfilePicture.Data,
-            });
-        }
-        else{
-            customer.ProfilePictureId = null;
-            customer.ProfilePicture = null;
-        }
-        var ret =  _customerRepository.Update(customer, true);
-        _customerRepository.Flush();
-        return ret;
-    }
 
     public ICollection<Entity.Order> GetOrders(uint customerId, int page = 1, int pageSize =10) {
         return _orderRepository.WhereP(OrderManager.OrderWithItemsAggregateProjection, o => o.UserId == customerId, offset:
-            (page -1)*pageSize, pageSize*pageSize);
+            (page -1)*pageSize, pageSize*page);
     }
     public Customer? GetCustomer(uint id) {
         return _customerRepository.FirstP(UserWithoutAggregateProjection,c => c.Id == id, includes:[[nameof(Customer.Session)]]);
@@ -41,6 +28,11 @@ public class CustomerManager : ICustomerManager
     public Customer? GetWithAggregates(uint id) {
         return _customerRepository.FirstP(WithAggregates,u => u.Id == id, includes:[[nameof(Customer.Session)]]);
     }
+
+    public void UpdateAddresses(uint id,ICollection<Address> addresses) {
+        _customerRepository.UpdateExpr([(customer => customer.Addresses, addresses)], c => c.Id == id);
+    }
+
     private static readonly Expression<Func<Customer, Customer>> UserWithoutAggregateProjection = 
         u => new Customer {
             Id = u.Id, 
@@ -59,7 +51,7 @@ public class CustomerManager : ICustomerManager
 
     private static Expression<Func<Customer, Customer>> WithAggregates = c => new Customer{
         Id = c.Id,
-        StripeId = c.StripeId,
+        ApiId = c.ApiId,
         NormalizedEmail = c.NormalizedEmail,
         Email = c.Email,
         FirstName = c.FirstName,

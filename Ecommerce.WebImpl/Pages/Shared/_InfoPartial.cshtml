@@ -137,26 +137,40 @@
     hx-swap="outerHTML"
     hx-target="this"
     hx-include="this"
-    hx-on::load="setTimeout(()=>{
-        @if (Model.Redirect != null)
-        {
-            if (Model.Redirect == "refresh")
-            {
-                @:document.querySelector('.info-content').innerHTML = '<div class=\"d-flex align-items-center\"><div class=\"loading-spinner\"></div><span>Refreshing page...</span></div>';
-                @:setTimeout(() => window.location.reload(), 1500);
+    >
+    <script>
+        ((s)=>{
+            document.addEventListener('DOMContentLoaded', load);
+            s.parentElement.addEventListener('htmx:load', load);
+            function load(e){
+                setTimeout(()=>{
+                    @if (Model.Redirect != null)
+                    {
+                    if (Model.Redirect == "refresh")
+                    {
+                    <text>
+                    document.querySelector('.info-content').innerHTML = '<div class="d-flex align-items-center"><div class="loading-spinner"></div><span>Refreshing page...</span></div>';
+                    setTimeout(() => window.location.reload(), 1500);
+                    </text>
+                    }
+                    else
+                    {
+                    <text>
+                    window.location.href='@Model.Redirect';
+                    </text>
+                    }
+                    }
+                    else
+                    {
+                    <text>
+                        e.currentTarget.classList.add('fade-out');
+                        setTimeout(() => this.remove(), 300);
+                    </text>    
+                }
+                },@(Model.Redirect!=null?0:Model.TimeOut))
             }
-            else
-            {
-                @:window.location.href='@Model.Redirect';
-            }
-        }
-        else
-        {
-            @:this.classList.add('fade-out');
-            @:setTimeout(() => this.remove(), 300);
-        }
-    },@(Model.Redirect!=null?0:Model.TimeOut))"
->
+        })(document.currentScript)
+    </script>
     <div class="d-flex align-items-start p-3">
         <div class="info-icon @(Model.Success?"success":"danger")">
             @if (Model.Success)

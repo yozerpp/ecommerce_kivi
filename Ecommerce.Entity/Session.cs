@@ -1,9 +1,13 @@
-﻿namespace Ecommerce.Entity;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Ecommerce.Entity;
 
 public class Session
 {
     public ulong Id { get; set; }
     public uint CartId { get; set; }
+    [NotMapped]
+    public uint? ItemCount { get; set; }
     public Cart Cart { get; set; }
     public uint? UserId {get;set;}
     public User? User {get;set;}

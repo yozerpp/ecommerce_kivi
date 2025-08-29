@@ -4,28 +4,29 @@
 @functions{
     string ToHex(Color c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
 }
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>  
 <script>
-    function loadReviewChart() {
-        const reviewChartDiv = document.getElementById('reviewChart');
+    ((s)=>{
+    function loadReviewChart(s) {
+        const reviewChartDiv = s.nextElementSibling;
         if (!reviewChartDiv) {
             console.error("Review chart div not found!");
             return;
         }
         const reviewChart = echarts.init(reviewChartDiv);
-
         @{
             // Group reviews by creation date (e.g., month)
-            var orderedReviews = Model.Reviews.OrderBy(r => r.CreatedAt).ToArray();
-            var format = orderedReviews.GroupBy(r => r.CreatedAt.Month).Count() > 3 ? "yyyy-MM" : "yyyy-MM-dd"; // Adjust format based on data density
-            var groupedReviews = orderedReviews.GroupBy(r => r.CreatedAt.ToString(format))
-                                               .OrderBy(g => g.Key) // Ensure chronological order
-                                               .Select(g => new {
-                                                   Date = g.Key,
-                                                   Count = g.Count(),
-                                                   AverageRating = g.Average(r => r.Rating)
-                                               })
-                                               .ToArray();
+            var orderedReviews = Model.Reviews.OrderBy(r => r.Created).ToArray();
+            var format = orderedReviews.GroupBy(r => r.Created.Month).Count() > 3 ? "yyyy-MM" : "yyyy-MM-dd"; // Adjust format based on data density
+            var groupedReviews = orderedReviews.GroupBy(r => r.Created.ToString(format))
+                .OrderBy(g => g.Key) // Ensure chronological order
+                .Select(g => new{
+                    Date = g.Key,
+                    Count = g.Count(),
+                    AverageRating = g.Average(r => r.Rating)
+                })
+                .ToArray();
         }
 
         const dates = @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.Date)));
@@ -33,8 +34,8 @@
         const averageRatings = @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.AverageRating)));
 
         reviewChart.setOption({
-            title: { text: 'İnceleme Verileri' },
-            tooltip: { trigger: 'axis' },
+            title: {text: 'İnceleme Verileri'},
+            tooltip: {trigger: 'axis'},
             legend: {
                 data: ['İnceleme Sayısı', 'Ortalama Derecelendirme']
             },
@@ -47,7 +48,7 @@
                     type: 'value',
                     name: 'İnceleme Sayısı',
                     position: 'left',
-                    axisLabel: { formatter: '{value}' }
+                    axisLabel: {formatter: '{value}'}
                 },
                 {
                     type: 'value',
@@ -56,7 +57,7 @@
                     min: 0,
                     max: 5, // Assuming ratings are 1-5
                     interval: 1,
-                    axisLabel: { formatter: '{value} Yıldız' }
+                    axisLabel: {formatter: '{value} Yıldız'}
                 }
             ],
             series: [
@@ -79,12 +80,7 @@
         });
     }
     document.addEventListener("DOMContentLoaded", loadReviewChart);
+    })(document.currentScript)
 </script>
-<div>
-    <h3 class="card-title">İncelemeler</h3>
-    <div class="mt-3 card-body">
-        <div id="reviewChart" style="width: 100%; height: 400px;">
-            
-        </div>
-    </div>
+<div class="container-fluid"></div>
 </div>

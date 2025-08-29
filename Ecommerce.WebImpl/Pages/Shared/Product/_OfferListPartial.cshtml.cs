@@ -5,6 +5,6 @@ namespace Ecommerce.WebImpl.Pages.Shared.Product;
 
 public class _OfferListPartial 
 {
-    public required ICollection<ProductOffer> Offers { get; set; } 
+    public required ICollection<(uint? existingQuantity, ProductOffer offer)> Offers { get; set; } 
     public required uint? ViewingSellerId { get; init; }
 }

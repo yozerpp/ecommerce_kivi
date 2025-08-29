@@ -18,41 +18,35 @@ public class BaseModel: PageModel
     public Ecommerce.Entity.Seller? CurrentSeller { get; private set; } 
     public Entity.Customer? CurrentCustomer { get; private set; }
     public Staff? CurrentStaff { get; private set; }
-    public User? CurrentUser { get; private set; }
+    public Entity.User? CurrentUser { get; private set; }
     public Session CurrentSession { get; private set; }
 
     public override void OnPageHandlerSelected(PageHandlerSelectedContext context) {
-        if (!context.HandlerMethod?.MethodInfo.GetCustomAttribute<HasRoleAttribute>()?.Roles.Any(r =>
-                r == nameof(Entity.User) &&
-                context.HttpContext.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role)) ||
-                context.HttpContext.User.HasClaim(ClaimTypes.Role, r)) ?? false){
-        throw new UnauthorizedAccessException("You do not have permission to access this page. Please log in or contact the administrator.");
-        }
+        AuthorizeRoles(context);
+        // AssignProps(context);
         base.OnPageHandlerSelected(context);
     }
 
-    public override void OnPageHandlerExecuting(PageHandlerExecutingContext context) {
+    private void AuthorizeRoles(PageHandlerSelectedContext context) {
+        if (!context.HandlerMethod?.MethodInfo.GetCustomAttribute<HasRoleAttribute>()?.Roles.Any(r =>
+                r == nameof(Entity.User) &&
+                context.HttpContext.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role)) ||
+                context.HttpContext.User.HasClaim(ClaimTypes.Role, r)) ?? false)
+            throw new UnauthorizedAccessException("You do not have permission to access this page. Please log in or contact the administrator.");
+    }
+
+    private void AssignProps(PageHandlerExecutingContext context) {
+        ViewData[nameof(Entity.Session)] = CurrentSession = context.HttpContext.Items[nameof(Session)] as Session;
         CurrentCustomer = context.HttpContext.Items[nameof(Entity.User)] as Entity.Customer;
         CurrentSeller = context.HttpContext.Items[nameof(Entity.User)] as Ecommerce.Entity.Seller;
         CurrentStaff = context.HttpContext.Items[nameof(Entity.User)] as Staff;
-        CurrentSession = GetItem<Session>(nameof(Session))!;
-        CurrentUser = (CurrentStaff as User ?? CurrentSeller) ?? CurrentCustomer;
-        ViewData[nameof(Entity.Cart)] = CurrentSession.Cart;
-        ViewData[nameof(Entity.User)] = CurrentUser;
+        CurrentUser = (CurrentStaff as Entity.User ?? CurrentSeller) ?? CurrentCustomer;
+        if(CurrentUser!=null)
+            ViewData[nameof(Entity.User)] = CurrentUser;
+    }
+    public override void OnPageHandlerExecuting(PageHandlerExecutingContext context) {
+        AssignProps(context);
         base.OnPageHandlerExecuting(context);
     }
 
-    protected string GetUserPageLink() {
-        return CurrentUser switch{
-            Entity.Seller => Url.Page("/Seller", new{ CurrentUser.Id }),
-            Entity.Customer => Url.Page("/Customer", new{ CustomerId = CurrentUser.Id }),
-            _ => throw new NotImplementedException(),
-        };
-    }
-    public T? GetItem<T>(string contextKey) where T : class {
-        var c = HttpContext.Items[contextKey];
-        if (c == null) return null;
-        if (c is not T c1) throw new InvalidOperationException("Context item is not of the expected type. Expected:" + typeof(T).FullName + " Actual: " + c.GetType().FullName);
-        return c1;
-    }
 }

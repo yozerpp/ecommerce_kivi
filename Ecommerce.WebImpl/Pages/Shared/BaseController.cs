@@ -9,14 +9,14 @@ public class BaseController : Controller
     protected Ecommerce.Entity.Seller? CurrentSeller { get; private set; } 
     protected Entity.Customer? CurrentCustomer { get; private set; }
     protected Staff? CurrentStaff { get; private set; }
-    protected User? CurrentUser { get; private set; }
+    protected Entity.User? CurrentUser { get; private set; }
     public Session CurrentSession { get; private set; }
     public override void OnActionExecuting(ActionExecutingContext context) {
         CurrentCustomer = context.HttpContext.Items[nameof(Entity.User)] as Entity.Customer;
         CurrentSeller = context.HttpContext.Items[nameof(Entity.User)] as Ecommerce.Entity.Seller;
         CurrentStaff = context.HttpContext.Items[nameof(Entity.User)] as Staff;
         CurrentSession = GetItem<Session>(nameof(Session))!;
-        CurrentUser = (CurrentStaff as User ?? CurrentSeller) ?? CurrentCustomer;
+        CurrentUser = (CurrentStaff as Entity.User ?? CurrentSeller) ?? CurrentCustomer;
         base.OnActionExecuting(context);
     }
     public T? GetItem<T>(string contextKey) where T : class {

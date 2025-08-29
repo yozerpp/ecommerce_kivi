@@ -43,6 +43,23 @@ public class Dimensions : IEquatable<Dimensions>
         return HashCode.Combine(Width, Height, Depth, Weight);
     }
 
+    public static Dimensions operator +(Dimensions a, Dimensions b) {
+        return new Dimensions(){
+            Width = a.Width + b.Width,
+            Height = a.Height + b.Height,
+            Depth = a.Depth + b.Depth,
+            Weight = a.Weight + b.Weight,
+        };
+    }
+
+    public static Dimensions operator -(Dimensions a, Dimensions b) {
+        return new Dimensions(){
+            Width = a.Width - b.Width,
+            Height = a.Height - b.Height,
+            Depth = a.Depth - b.Depth,
+            Weight = a.Weight - b.Weight,
+        };
+    }
     public static bool operator ==(Dimensions? left, Dimensions? right) {
         return Equals(left, right);
     }

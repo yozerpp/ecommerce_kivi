@@ -3,42 +3,48 @@
 @{
     ViewData["BgColor"] = "bg-light";
 }
-@if (Model.Type == Orders.PageType.Email){
-    <div class="container-fluid d-flex flex-grow-1 flex-column align-content-center align-content-center justify-content-center h-100" style="min-height: 100vh;">
-        <h3 class="fs-5 text-center fw-bold">Siparişinizde Kullandığınız Email'i giriniz.</h3>
-        @await Html.PartialAsync("Shared/_SeperatorPartial", (3,4,"border-1 border-black"))
-        <div class="card rounded-1 text-center align-self-center w-50 align-middle shadow border-black border-1">
-            <form hx-post="/@(nameof(Orders))" hx-trigger="submit" hx-target="#emailResult" hx-swap="innerHTML">
-                @Html.AntiForgeryToken()
-                <div class="card-body">
-                    <div class="input-group d-inline-flex justify-content-center container-fluid align-middle align-self-center text-center mb-5">
-                        <label class="col-form-label">Email</label>
-                        <input class="form-control" type="email" name="email" required/>
+
+@switch (Model.View){
+    case Orders.ViewType.Auth:
+        <div class="container-fluid d-flex flex-grow-1 flex-column align-content-center align-content-center justify-content-center h-100" style="min-height: 100vh;">
+            <h3 class="fs-5 text-center fw-bold">Siparişinizde Kullandığınız Email'i giriniz.</h3>
+            @await Html.PartialAsync("Shared/_SeperatorPartial", (3,4,"border-1 border-black"))
+            <div class="card rounded-1 text-center align-self-center w-50 align-middle shadow border-black border-1">
+                <form hx-post="/@nameof(Orders)" hx-trigger="submit" hx-target="#emailResult" hx-swap="innerHTML">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="@(nameof(Orders.OrderId))" value="@(Model.OrderId)"/>
+                    <div class="card-body">
+                        <div class="input-group d-inline-flex justify-content-center container-fluid align-middle align-self-center text-center mb-5">
+                            <label class="col-form-label">Email</label>
+                            <input class="form-control" type="email" name="email" required/>
+                        </div>
+                        <div class="text-end align-self-end">
+                            <button type="submit" onclick="event.currentTarget.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary">Email Gönder</button>
+                        </div>
                     </div>
-                    <div class="text-end align-self-end">
-                        <button type="submit" onclick="event.currentTarget.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary">Email Gönder</button>
-                    </div>
+                </form>
+                <div id="emailResult" class="container-fluid">
                 </div>
-            </form>
-            <div id="emailResult" class="container-fluid">
             </div>
         </div>
-    </div>
-} else if (Model.Type == Orders.PageType.View){
-    <div class="container-fluid">
-        <h3 class="fs-3 fw-bold text-center align-middle">Siparişler</h3>
-        <div class="card bg-white border-black border-2 rounded-2">
-            <div class="card-body">
-                @await Html.PartialAsync("Shared/Order/_OrderListPartial", new Shared.Order._OrderListPartial()
-                {
-                    Orders = Model.OrderCollection,
-                    Page = 1,
-                    PageSize = 10,
-                    Url = Url.Page(nameof(Orders), "view", new {token = Model.Token}, Request.Scheme),
-                    Token = Model.Token,
-                    Collapsable = true
-                })
+        break;
+    case Orders.ViewType.Show:
+        <div class="container-fluid">
+            <h3 class="fs-3 fw-bold text-center align-middle">Siparişler</h3>
+            <div class="card bg-white border-black border-2 rounded-2">
+                <div class="card-body">
+                    @await Html.PartialAsync("Shared/Order/_OrderListPartial", new Shared.Order._OrderListPartial()
+                    {
+                        Orders = Model.OrderCollection,
+                        Page = Model.PageNumber,
+                        Partial = false,
+                        PageSize = Model.PageSize,
+                        Url = Url.Page(nameof(Orders),null, new {token = Model.Token}),
+                        Token = Model.Token,
+                        Collapsable = true
+                    })
+                </div>
             </div>
         </div>
-    </div>
+        break;
 }

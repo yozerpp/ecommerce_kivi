@@ -1,13 +1,13 @@
 ﻿using Ecommerce.Entity.Views;
 using Ecommerce.Entity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-
+using Order = Ecommerce.Entity.Order;
 namespace Ecommerce.WebImpl.Pages.Shared.Dashboard;
 
-public class _SellerStatistics : PageModel
+public class _SellerStatistics 
 {
     public SellerStats Stats { get; set; }
-    public List<Order> Orders { get; set; } = new();
+    public List<Entity.Order> Orders { get; set; } = new();
     public List<ProductReview> Reviews { get; set; } = new();
     public Entity.User.UserRole ViewerRole { get; set; } = Entity.User.UserRole.Seller;
     
@@ -17,7 +17,7 @@ public class _SellerStatistics : PageModel
     public double AverageOrderValue => Orders.Any() ? (double)TotalRevenue / TotalOrdersCount : 0;
     
     public int TotalReviewsCount => Reviews.Count;
-    public double AverageRating => Reviews.Any() ? Reviews.Average(r => r.Rating) : 0;
+    public double AverageRating => (double)(Reviews.Any() ? Reviews.Average(r => r.Rating) : 0);
     public int FiveStarReviews => Reviews.Count(r => r.Rating == 5);
     public int FourStarReviews => Reviews.Count(r => r.Rating == 4);
     public int ThreeStarReviews => Reviews.Count(r => r.Rating == 3);

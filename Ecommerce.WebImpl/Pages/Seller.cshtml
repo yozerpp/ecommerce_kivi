@@ -20,7 +20,7 @@
         <div class="card shadow-sm mb-4 ">
             @if (editable){
                 <div class="container-fluid d-flex gap-3 justify-content-end pt-3 pe-5">
-                    <button onclick="document.getElementById('editForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-success" >Değişiklikleri Kaydet</button>
+                    <button onclick="document.getElementById('editForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn  edit-control btn-success" >Değişiklikleri Kaydet</button>
                     
                     <button onclick="editables.forEach(e=>e.classList.toggle('edit-control'))" class="btn-primary btn">Bilgilerini Düzenle</button>
                 </div>
@@ -39,7 +39,7 @@
                         <div class="row mb-3">
                             <div class="col-auto">
                                 <div class="d-flex align-items-center">
-                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage ?? 0m, 2).ToString("F")</span>
+                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage, 2).ToString("F")</span>
                                     <i class="bi bi-star-fill text-warning fs-5"></i>
                                 </div>
                             </div>
@@ -120,14 +120,16 @@
                     <i class="bi bi-box-seam me-2"></i>Ürünler
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#ordersSection" type="button" role="tab">
-                    <i class="bi bi-bag me-2"></i>Siparişler
-                </button>
-            </li>
+            @if (editable){
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#ordersSection" type="button" role="tab">
+                        <i class="bi bi-bag me-2"></i>Siparişler
+                    </button>
+                </li>
+            }
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reviews-tab" data-bs-toggle="pill" data-bs-target="#reviewsSection" type="button" role="tab">
-                    <i class="bi bi-star me-2"></i>Değerlendirmeler
+                    <i class="bi bi-star"></i>Değerlendirmeler
                 </button>
             </li>
         </ul>
@@ -192,20 +194,23 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Orders Tab -->
-            <div class="tab-pane fade" id="ordersSection" role="tabpanel">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-bag me-2"></i>Siparişler
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="orders" hx-get="/Seller?handler=orders" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+            @if (editable){
+                <div class="tab-pane fade" id="ordersSection" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-bag me-2"></i>Siparişler
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="orders" hx-get="/Seller?handler=orders&@(nameof(SellerModel.Id))=@(Model.ViewedSeller.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
+
 
             <!-- Reviews Tab -->
             <div class="tab-pane fade" id="reviewsSection" role="tabpanel">
@@ -227,7 +232,10 @@
                         </form>
                     </div>
                     <div class="card-body">
-                        <div id="reviews" hx-target="this" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML"></div>
+                        <div id="reviews" hx-target="this" hx-on::after-request="if(event.detail.xhr.status===204)event.currentTarget.firstElementChild.classList.remove('d-none');" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML">
+                            <h3 class="d-none fs-4 fw-bold text-center mt-2 w-100">Henüz Değerlendirme Yok.</h3>
+                        </div>
+                    
                     </div>
                 </div>
             </div>
@@ -248,18 +256,18 @@
 
                 // Update Address fields - Corrected IDs and access to .value
                 // The _AddressPartial uses IDs like Address.Line1_ when Editable is true
-                document.getElementById('AddressLine1Input').value = document.getElementById('@(nameof(Address.Line1))_').value;
-                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').value;
-                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').value;
-                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').value;
-                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').value;
-                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').value;
+                document.getElementById('AddressLine1Input').value = document.getElementById('@(nameof(Address.Line1))_').innerHTML;
+                document.getElementById('AddressLine2Input').value = document.getElementById('@(nameof(Address.Line2))_').innerHTML;
+                document.getElementById('AddressNeighborhoodInput').value = document.getElementById('@(nameof(Address.District))_').innerHTML;
+                document.getElementById('AddressStateInput').value = document.getElementById('@(nameof(Address.Country))_').innerHTML;
+                document.getElementById('AddressCityInput').value = document.getElementById('@(nameof(Address.City))_').innerHTML;
+                document.getElementById('AddressZipCodeInput').value = document.getElementById('@(nameof(Address.ZipCode))_').innerHTML;
                 
 
                 // Update Phone Number fields
                 // The _PhoneNumberPartial uses IDs like PhoneNumber.CountryCode_ when Editable is true
-                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))_').value;
-                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))_').value;
+                document.getElementById('PhoneNumberCountryCodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML;
+                document.getElementById('PhoneNumberNumberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML;
 
                 // Trigger HTMX submit
                 htmx.trigger(editForm, 'go');

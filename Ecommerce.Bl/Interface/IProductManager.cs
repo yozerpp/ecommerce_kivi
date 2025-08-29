@@ -13,6 +13,8 @@ public interface IProductManager
     public ICollection<Category> GetCategoriesByName(string name, bool includeChildren = false,
         bool includeProperties = true);
 
+    public List<Product> GetFromSeller(uint sellerId, int page = 1, int pageSize = 20, bool includeImage = false,
+        bool fetchReviews = false, bool fetchOffers = false);
     public List<Product> Search(string predicateQuery, ICollection<SearchOrder> orders, bool includeImage = false, bool fetchReviews=false, bool fetchOffers=false, int page = 1, int pageSize = 20);
     public List<Product> Search(ICollection<SearchPredicate> predicates,
         ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false,
@@ -21,7 +23,7 @@ public interface IProductManager
     public ICollection<ProductFavor> GetFavorers(uint productId);
     public ICollection<Product> GetMoreProductsFromCategories(Session session, int page = 1,
         int pageSize = 20);
-    public bool Favor(ProductFavor favor);
+    public bool SwitchFavor(ProductFavor favor);
     public Product? GetByIdWithAggregates(uint productId, bool fetchOffers = false, bool fetchReviews = true, bool fetchImage=true);
     public ICollection<ProductOffer> GetOffers(uint? productId = null, uint? sellerId = null, bool includeAggregates = true);
     public Product? GetById(uint id, bool withOffers = true);

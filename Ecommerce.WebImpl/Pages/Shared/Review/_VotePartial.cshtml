@@ -1,0 +1,80 @@
+﻿@using Ecommerce.Entity
+@model _VotePartial
+<span class="d-inline-flex align-items-center">
+    <script>
+        ((s)=>{
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener('htmx:load', load);
+            function load(e)  {
+                if(e.type === 'htmx:load') 
+                    e.stopPropagation();
+                const d = s.nextElementSibling.lastElementChild;
+                const l = d.previousElementSibling;
+                const t = d.nextSibling;
+                const p = s.parentElement;
+                const i = l.previousElementSibling;
+                const f = i.parentElement;
+                p.dataset.vote = '@Model.CurrentUserVote';
+                l.addEventListener('click',_=>{
+                    const v = parseInt(p.dataset.vote)
+                    if(v <= 0){
+                        d.classList.remove('bi-hand-thumbs-down-fill');d.classList.add('bi-hand-thumbs-down');
+                        l.classList.add('bi-hand-thumbs-up-fill');l.classList.remove('bi-hand-thumbs-up');
+                        t.nodeValue =' '+ (parseInt(t.nodeValue.trim()) + v*(-1) + 1).toString()
+                        p.dataset.vote = '1';
+                    } else {
+                        p.dataset.vote = '0';
+                        l.classList.add('bi-hand-thumbs-up');l.classList.remove('bi-hand-thumbs-up-fill');
+                        t.nodeValue =' ' +(parseInt(t.nodeValue.trim()) -1).toString()
+                    }
+                    f.dispatchEvent(new Event('submit', {cancelable:true, bubbles:false}))
+                })                    
+                d.addEventListener('click',_=>{
+                    const v = parseInt(p.dataset.vote)
+                    if(v >= 0){
+                        l.classList.remove('bi-hand-thumbs-up-fill');l.classList.add('bi-hand-thumbs-up');
+                        d.classList.add('bi-hand-thumbs-down-fill');d.classList.remove('bi-hand-thumbs-down');
+                        t.nodeValue =' '+ (parseInt(t.nodeValue.trim()) + v*(-1) -1).toString()
+                        p.dataset.vote = '-1';
+                    } else {
+                        p.dataset.vote = '0';
+                        d.classList.add('bi-hand-thumbs-down');d.classList.remove('bi-hand-thumbs-down-fill');
+                        t.nodeValue =' ' +(parseInt(t.nodeValue.trim()) +1).toString()
+                    }
+                    f.dispatchEvent(new Event('submit', {cancelable:true, bubbles:false}))
+                })
+                f.addEventListener('submit',e=>{
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    const v = parseInt(p.dataset.vote);
+                    let action;
+                    if(v === 0){
+                        action = '/@(nameof(Reviews))?handler=unVote';
+                    } else {
+                        action = '/@(nameof(Reviews))?handler=vote';
+                        i.value = v > 0 ? 'true' : 'false';
+                    }
+                    const data = new FormData(f);
+                    console.log(data);
+                    console.log(action);
+                    fetch(action, {method: 'POST', body: data});
+                });
+                console.log('loaded @(nameof(_VotePartial)) from ' + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=VotePartial.js
+    </script>
+    <form class="d-inline-flex align-items-center">
+        @Html.AntiForgeryToken()
+        @if (Model.ReviewId != null){
+            <input type="hidden" name="@(nameof(Reviews.SentVote)).@(nameof(ReviewVote.ReviewId))" value="@Model.ReviewId"/>
+        }
+        else if (Model.CommentId != null){
+            <input type="hidden" name="@(nameof(Reviews.SentVote)).@(nameof(ReviewVote.CommentId))" value="@Model.CommentId"/>
+        }
+        <input type="hidden" name="@(nameof(Reviews.SentVote)).@(nameof(ReviewVote.Up))"/>
+        <i class="bi hover-grow bi-hand-thumbs-up@(Model.CurrentUserVote > 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i>
+        <i class="bi bi hover-grow bi-hand-thumbs-down@(Model.CurrentUserVote < 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i> @Model.Karma
+    </form>
+</span>
+

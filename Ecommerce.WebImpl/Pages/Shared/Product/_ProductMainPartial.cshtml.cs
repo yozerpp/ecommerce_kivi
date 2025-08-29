@@ -7,6 +7,8 @@ public class _ProductMainPartial
 {
     public bool Editable { get; init; }
     public bool StaffVisiting { get; init; }
+    public uint? ViewingSellerId { get; init; }
+    public required IDictionary<uint,Category> Categories { get; init; }
     public Entity.Product ViewedProduct { get; init; }
     public ProductOffer SellerOffer { get; init; }
     public ICollection<uint> Favorites { get; init; }

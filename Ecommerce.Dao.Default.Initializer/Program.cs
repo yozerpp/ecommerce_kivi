@@ -133,7 +133,7 @@ internal static class Initializer
                 {typeof(SellerFavor), SellerFavorCount},
                 {typeof(Image), 100}
             }, config:new Config(){
-                FetchRealAddresses = true,
+                FetchRealAddresses = false,
                 AddressFetcherApiKey = "d4907aae36c14038bc231576e0b5e8ca"
             }, defaultCount:0
         );
@@ -648,8 +648,8 @@ internal static class Initializer
                         {
                             Line1 = "123 Toy Street",
                             Line2 = "Suite 100",
-                            District = "Kadikoy",
-                            City = "Istanbul",
+                            District = "Kadıköy",
+                            City = "İstanbul",
                             Country = "Türkiye",
                             ZipCode = "34710"
                         }
@@ -668,8 +668,8 @@ internal static class Initializer
                         Address = new Address()
                         {
                             Line1 = "456 Electronics Ave",
-                            District = "Besiktas",
-                            City = "Istanbul",
+                            District = "Beşiktaş",
+                            City = "İstanbul",
                             Country = "Türkiye",
                             ZipCode = "34349"
                         }
@@ -688,8 +688,8 @@ internal static class Initializer
                         Address = new Address()
                         {
                             Line1 = "789 Fashion Blvd",
-                            District = "Sisli",
-                            City = "Istanbul",
+                            District = "Şişli",
+                            City = "İstanbul",
                             Country = "Türkiye",
                             ZipCode = "34394"
                         }
@@ -835,7 +835,7 @@ internal static class Initializer
                                     ProductId = offer.ProductId,
                                     SellerId = offer.SellerId,
                                     CategoryPropertyId = categoryProperty.CategoryPropertyId,
-                                    Option = option
+                                    Value = option
                                 });
                             }
                         }

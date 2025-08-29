@@ -1,16 +1,18 @@
 ﻿@model _EditablePartial
-@{ Model.Target ??="null";}
 <a class="col-auto hover-grow hover-darken edit-control text-decoration-none text-secondary mx-3" href="javascript:void(0);" onclick="
-    @foreach (var target in Model.Target?.Split(',') ??[]){
+    @foreach (var target in Model.Target.Split(',')){
         <text>
             {
-                const _t= @(target!="null"?$"document.getElementById('{Model.Target}')":"event.currentTarget.previousElementSibling");
+                @(Model.OnClick??"");
+                const _t= 
+                @if (Model.Target == "previous"){ <text>event.currentTarget.previousElementSibling;</text> }
+                else if (Model.Target == "next"){ <text>event.currentTarget.nextElementSibling;</text> }
+                else{ <text>document.getElementById('@(target)');</text> }
                 _t.setAttribute('contenteditable',true);
                 _t.onkeydown=(e)=>{if(e.keyCode == '13')e.currentTarget.blur();}
                 if(document.activeElement === _t)
                     return;
                 _t.focus();
-                @(Model.OnClick??"");
             }
         </text>
     }

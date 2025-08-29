@@ -7,10 +7,13 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Views;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-
+using Microsoft.SqlServer.Server;
 namespace Ecommerce.Bl.Concrete;
 
 public class JwtManager : IJwtManager
@@ -20,10 +23,12 @@ public class JwtManager : IJwtManager
     private readonly IRepository<Session> _sessionRepository;
     private readonly TokenValidationParameters _tokenValidationParameters;
     private readonly IRepository<User> _userRepository;
-    public JwtManager(TokenValidationParameters parameters, SigningCredentials signingCredentials, IRepository<User> userRepository, IRepository<Session> sessionRepository) {
+    private readonly DbContext _dbContext;
+    public JwtManager(TokenValidationParameters parameters, SigningCredentials signingCredentials, IRepository<User> userRepository, IRepository<Session> sessionRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
         _tokenValidationParameters = parameters;
         _userRepository = userRepository;
         this._sessionRepository = sessionRepository;
+        _dbContext = dbContext;
         _credentials = signingCredentials;
     }
     public string Serialize(SecurityToken securityToken) {
@@ -131,12 +136,36 @@ public class JwtManager : IJwtManager
         }
 
         if (role == null){
-            session = _sessionRepository.First(s => s.Id == id);
+            var s = _dbContext.Database.SqlQueryRaw<SessionSimple>(
+                $"SELECT s.Id, s.{nameof(Session.CartId)}, s.{nameof(Session.UserId)}, c.{nameof(CartAggregates.ItemCount)} as {nameof(Session.ItemCount)} FROM [data].[{nameof(Session)}] s LEFT JOIN [data].[{nameof(CartAggregates)}] c ON c.{nameof(CartAggregates.CartId)} = s.{nameof(Session.CartId)} WHERE s.Id = {{0}}",
+                id).FirstOrDefault();
+            session = new Session(){
+                Id = s.Id,
+                CartId = s.CartId,
+                ItemCount = s.ItemCount,
+                UserId = s.UserId
+            };
+            _dbContext.Attach(session);
             user = null;
         }
         else{
-            user = _userRepository.First(u => u.Id == id, includes:[[nameof(Staff.Session)]]);
+            user = _userRepository.First(u => u.Id == id, includes:[[nameof(User.Session), nameof(Session.Cart)], [nameof(User.ProfilePicture)]], nonTracking:true);
+            if (user is Customer){
+                var uid = user.SessionId;
+                user.Session.Cart.Aggregates = new CartAggregates(){
+                    ItemCount = _sessionRepository.FirstP(s => s.Cart.Aggregates.ItemCount,
+                        s => s.Id == uid, nonTracking: true)
+                };    
+            }
             session = null;
         }
+    }
+
+    private class SessionSimple
+    {
+        public ulong Id { get; set; }
+        public uint CartId { get; set; }
+        public uint? UserId { get; set; }
+        public uint? ItemCount { get; set; }
     }
 }

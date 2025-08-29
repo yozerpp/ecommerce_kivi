@@ -55,16 +55,15 @@
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary fs-6">@(property.Value)</span>
-                        if (Model.Editable){
+                        @if (Model.Editable){
                             @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                OnClick = "event.currentTarget.nextElementSibling.classList.toggle('d-none');return;"
+                                Target="next"
                             })
                             <div data-proptype="number" data-propertyid="@metadata.Id" class="col-auto propertyInput d-none">
                                 <input type="number" min="@(metadata.MinValue??-100000)" max="@(metadata.MaxValue??1000000)"/>
                             </div>
+                            }
                         </div>
-                        }
-                        
                     }
                     else{
                         <div data-proptype="slider" data-propertyid="@metadata.Id" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-none":"")">
@@ -93,40 +92,40 @@
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-success fs-6">@(property.Value)</span>
-                        if(Model.Editable){ 
+                        @if(Model.Editable){ 
                             @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){ 
                                 Target = "next" ,
                                 OnClick = "event.currentTarget.nextElementSibling.classList.toggle('d-none');return;"
 
                             })
+                            <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
+                                <select>
+                                    <option selected>Seçiniz</option>
+                                    @{ 
+                                        var vals = metadata.EnumValues.Split('|');
+                                        if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter)
+                                            vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
+                                        var i = 0;
+                                    }
+                                    @foreach (var val in vals){
+                                        <option value="@val">@val</option>
+                                    }
+                                </select>
+                            </div>
+                            }
                         </div>
-                        }
                     }   
-                    <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
-                        <select>
-                            <option selected>Seçiniz</option>
-                            @{ 
-                                var vals = metadata.EnumValues.Split('|');
-                               if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter)
-                                   vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
-                               var i = 0;
-                            }
-                            @foreach (var val in vals){
-                                <option value="@val">@val</option>
-                            }
-                        </select>
-                    </div>
                 }else{
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-info text-dark fs-6">@property.Value</span>
-                        if (Model.Editable){
+                        @if (Model.Editable){
                             @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
                                 Target = "next",
                                 OnClick = "event.currentTarget.nextElementSibling.classList.toggle('d-none');return;"
                             })
-                        </div>
                         }
+                        </div>
                     }
                     <div data-proptype="text" data-propertyid="@metadata.Id" class="propertyInput col-auto @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-none":"")">
                         <input id="@(Model.InputNamePrefix)-@(metadata.PropertyName)" 

@@ -1,10 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using log4net;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-namespace Ecommerce.Dao.Default.Initializer;
+namespace Ecommerce.Dao.Initializer;
 
 internal class RelationRandomizer
 {
@@ -14,7 +15,10 @@ internal class RelationRandomizer
     private readonly Dictionary<IKey, IEnumerator<ISet<object>>> _keyEnumerators = new();
     private readonly Dictionary<IForeignKey, IEnumerator<object>> _foreignKeyEnumerators = new();
     private readonly Dictionary<IAnnotatable, Lock> _enumeratorLocks = new();
-    internal RelationRandomizer(ICollection<IEntityType> types) {
+    private readonly ILog _logger = LogManager.GetLogger(typeof(RelationRandomizer));
+    private readonly Config _config;
+    internal RelationRandomizer(ICollection<IEntityType> types, Config config) {
+        _config = config;
         foreach (var entityType in types){
             var compositeKeys = entityType.GetProperties() //properties that participate in a composite key
                 .SelectMany(p => p.GetContainingKeys().Where(k => k.Properties.Count > 1)).ToHashSet();
@@ -35,8 +39,17 @@ internal class RelationRandomizer
                 _enumeratorLocks[keyValuePair.f] = new Lock();
             }
         }
+        _logger.Info($"Foreign Keys: {ForeignKeys.Count}\n" + 
+                            string.Join('\n',ForeignKeys.Select(f => f.Key.ToDebugString()))+
+                            $"\nComposite Keys: {CompositeKeys.Count}\n" +
+                            string.Join('\n',CompositeKeys.Select(f => f.Key.ToDebugString())));
     }
-
+    public ICollection<IForeignKey> GetForeignKeys(IEntityType type) {
+        return type.GetForeignKeys().Where(fk => ForeignKeys.ContainsKey(fk)).ToHashSet();
+    }
+    public ICollection<IKey> GetCompositeKeys(IEntityType type) {
+        return type.GetKeys().Where(k => CompositeKeys.ContainsKey(k)).ToHashSet();
+    }
     public void SetGlobalStore(EntityCache globalStore) {
         _globalStore = globalStore;
     }
@@ -46,7 +59,7 @@ internal class RelationRandomizer
         try{
             if (!_keyEnumerators.TryGetValue( key, out var enumerator)){
                 enumerator = _keyEnumerators[ key] =
-                    CartesianLive(navigations.Select(n => _globalStore.GetAll(n.TargetEntityType,key)).ToArray()).GetEnumerator();
+                    CartesianLive(navigations.Select(n => _globalStore.GetAll(n.TargetEntityType,key)).ToArray(), key).GetEnumerator();
             }
             if (!enumerator.MoveNext()) throw new IndexOutOfRangeException();
             var ret = enumerator.Current.Select(k =>
@@ -79,7 +92,7 @@ internal class RelationRandomizer
         lck.Enter();
         try{
             if (!_foreignKeyEnumerators.TryGetValue(foreignKey, out var enumerator)){
-                enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore.GetAll(foreignKey.PrincipalEntityType,foreignKey)).GetEnumerator();
+                enumerator = _foreignKeyEnumerators[foreignKey] = UniqueEnumerable(_globalStore.GetAll(foreignKey.PrincipalEntityType,foreignKey), foreignKey).GetEnumerator();
             }
             do{
                 if (!enumerator.MoveNext())
@@ -92,8 +105,8 @@ internal class RelationRandomizer
         }
     }
 
-    private static IEnumerable<ISet<object>> CartesianLive(
-    BlockingCollection<object>[] sources,
+    private IEnumerable<ISet<object>> CartesianLive(
+    BlockingCollection<object>[] sources,IKey key,
     CancellationToken cancellationToken = default){
     object lck = new();
     var allItems = new List<object>[sources.Length];
@@ -109,14 +122,16 @@ internal class RelationRandomizer
         readerTasks[i] = Task.Run(() =>
         {
             // Don't consume - just copy items as they arrive
-            foreach (var item in sources[index].GetConsumingEnumerable(cancellationToken))
+            while(!sources[index].IsCompleted)
             {
-                lock (lck)
-                {
-                    allItems[index].Add(item);
-                    Monitor.PulseAll(lck);
-                }
+                if (sources[index].TryTake(out var item, TimeSpan.FromMinutes(3))){
+                    lock (lck){
+                        allItems[index].Add(item);
+                        Monitor.PulseAll(lck);
+                    }
+                }else _logger.Warn("BlockingCollection timed out while trying to retrieve an item for "+ key.DeclaringEntityType.Name.ToString() + "(" +key.ToDebugString() + ")");
             }
+            _logger.Info("No more items to consume for " + key.DeclaringEntityType.Name + "(" + key.ToDebugString() + ")");
         }, cancellationToken);
     }
     List<string> processedIndices = new();
@@ -200,13 +215,12 @@ internal class RelationRandomizer
     private object RetrieveRandom(IEntityType type) {
         return _globalStore.Get(type);
     }
-    private static IEnumerable<object> UniqueEnumerable(BlockingCollection<object> objects) {
+    private IEnumerable<object> UniqueEnumerable(BlockingCollection<object> objects,IForeignKey foreignKey) {
         while (!objects.IsCompleted){
             if (!objects.TryTake(out var item, TimeSpan.FromMinutes(3))){
-                Console.WriteLine("BlockingCollection timed out while trying to take an item.");
-                yield break;
+                _logger.Warn("BlockingCollection timed out while trying to retrieve an item for " + foreignKey.ToDebugString());
             }
-            yield return item;
+            else yield return item;
         }
     }
     // private static IEnumerable<EqualityComparableSet<object>> CartesianEnumerable(BlockingCollection<object>[] sets)

@@ -93,7 +93,7 @@
                 }
                 
                 // Show loading state
-                const submitButton = event.target;
+                const submitButton = event.target.querySelector('button[type="submit"]');
                 const loadingElement = document.getElementById('shippingLoading');
                 submitButton.disabled = true;
                 submitButton.textContent = 'İşleniyor...';
@@ -225,7 +225,7 @@
                                                 @((item.ProductOffer.Price * item.ProductOffer.Discount * (item.Coupon?.DiscountRate ?? 1m)).ToString("C"))
                                             </p>
                                             <p class="mb-1">Adet: @item.Quantity</p>
-                                            <p class="fw-semibold">Toplam: @decimal.Round(item.Aggregates.CouponDiscountedPrice.Value,2).ToString("C")</p>
+                                            <p class="fw-semibold">Toplam: @decimal.Round(item.Aggregates.CouponDiscountedPrice,2).ToString("C")</p>
                                         </div>
                                     </li>
                                 }

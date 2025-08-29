@@ -1,4 +1,6 @@
-﻿using Ecommerce.Entity.Common;
+﻿using System.Collections;
+using System.Collections.Concurrent;
+using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Events;
 
 namespace Ecommerce.Entity;
@@ -15,6 +17,33 @@ public class Staff : User
     public ICollection<PermissionRequest> SentPermissionRequests { get; set; } = new List<PermissionRequest>();
     public ICollection<PermissionRequest> ReceivedPermissionRequests { get; set; } = new List<PermissionRequest>();
     public bool HasPermission(Permission permission) {
-        return PermissionGrants.Any(grant => grant.Permission.Equals( permission));
+        return PermissionClaims.Any(grant =>grant.NotExpired && grant.Permission.Equals( permission));
+    }
+}
+public class StaffBag(params IEnumerable<Staff> staves)
+{
+    private readonly List<Staff> _staves = staves.ToList();
+    public Staff this[int index]
+    {
+        get {
+            lock (_staves){
+             return _staves[index];
+            }
+        }
+        set{
+            lock(_staves){
+                _staves[index] = value;
+            }
+        }
+    }
+    public void Add(Staff staff) {
+        lock (_staves){
+            _staves.Add(staff);
+        }
+    }
+    public IEnumerable<Staff> WithPermission(Permission permission) {
+        lock (_staves){
+            return _staves.Where(s => s.HasPermission(permission));
+        }
     }
 }

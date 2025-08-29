@@ -1,4 +1,5 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared.Product._ProductRatingStatsPartial
+﻿@using Ecommerce.Entity
+@model Ecommerce.WebImpl.Pages.Shared.Product._ProductRatingStatsPartial
 @functions{
     static uint Percent(uint c, uint t) => t != 0 ? (uint)(c / (float)t * 100f) : 0u;
 }
@@ -15,9 +16,9 @@
                 
                 // Initialize custom properties on the parent element
                 parentElement._selectedRating = null;
-                parentElement._sortBy = 'date';
+                parentElement._sortBy = '@(nameof(ProductReview.Created))';
                 parentElement._sortOrder = 'desc';
-                parentElement._reviewCount = @Model.ReviewCount;
+                parentElement._reviewCount = @(Model.ReviewStats.ReviewCount??0);
                 parentElement._ratingStats = {
                     fiveStars: @Model.ReviewStats.FiveStarCount,
                     fourStars: @Model.ReviewStats.FourStarCount,
@@ -52,7 +53,7 @@
                                 sortBy: parentElement._sortBy,
                                 sortOrder: parentElement._sortOrder
                             },
-                            bubbles: true
+                            bubbles: true,cancelable:true
                         });
                         parentElement.dispatchEvent(changeEvent);
                     });
@@ -63,15 +64,17 @@
                 const sortOrderSelect = parentElement.querySelector('[data-sort-order]');
                 
                 if (sortBySelect) {
-                    sortBySelect.addEventListener('change', function() {
-                        parentElement._sortBy = this.value;
+                    sortBySelect.addEventListener('change', function(e) {
+                        e.stopPropagation();
+                        parentElement._sortBy = event.currentTarget.value;
                         dispatchSortChange();
                     });
                 }
                 
                 if (sortOrderSelect) {
-                    sortOrderSelect.addEventListener('change', function() {
-                        parentElement._sortOrder = this.value;
+                    sortOrderSelect.addEventListener('change', function(e) {
+                        e.stopPropagation();
+                        parentElement._sortOrder = event.currentTarget.value;
                         dispatchSortChange();
                     });
                 }
@@ -83,7 +86,7 @@
                             sortBy: parentElement._sortBy,
                             sortOrder: parentElement._sortOrder
                         },
-                        bubbles: true
+                        bubbles: true,cancelable:true
                     });
                     parentElement.dispatchEvent(changeEvent);
                 }
@@ -96,19 +99,19 @@
     
     <!-- Total reviews count -->
     <div class="mb-3">
-        <h6 class="fw-bold">@Model.ReviewCount Reviews</h6>
+        <h6 class="fw-bold">@(Model.ReviewStats.ReviewCount??0) Reviews</h6>
     </div>
     
     <!-- Sort controls -->
     <div class="mb-3 d-flex gap-2 align-items-center">
-        <small class="text-muted">Sort by:</small>
+        <small class="text-muted">Sırala:</small>
         <select class="form-select form-select-sm" data-sort-by style="width: auto;">
-            <option value="date">Date</option>
-            <option value="rating">Rating</option>
+            <option value="@(nameof(ProductReview.Created))">Tarih</option>
+            <option value="@(nameof(ProductReview.Rating))">Değerlendirme</option>
         </select>
         <select class="form-select form-select-sm" data-sort-order style="width: auto;">
-            <option value="desc">Newest First</option>
-            <option value="asc">Oldest First</option>
+            <option value="desc">Azalan</option>
+            <option value="asc">Artan</option>
         </select>
     </div>
     
@@ -119,7 +122,7 @@
             <div class="stars me-2">
                 @for (int i = 0; i < 5; i++)
                 {
-                    <i class="fas fa-star text-warning"></i>
+                    <i class="bi bi-star-fill text-warning"></i>
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
@@ -127,10 +130,10 @@
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewStats.ReviewCount??0))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.FiveStarCount??0, Model.ReviewStats.ReviewCount??0))%
             </div>
         </div>
         
@@ -139,19 +142,19 @@
             <div class="stars me-2">
                 @for (int i = 0; i < 4; i++)
                 {
-                    <i class="fas fa-star text-warning"></i>
+                    <i class="bi bi-star-fill text-warning"></i>
                 }
-                <i class="far fa-star text-muted"></i>
+                <i class="bi bi-star-fill text-muted"></i>
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
                 @Model.ReviewStats.FourStarCount
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewStats.ReviewCount??0))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.FourStarCount??0, Model.ReviewStats.ReviewCount??0))%
             </div>
         </div>
         
@@ -160,11 +163,11 @@
             <div class="stars me-2">
                 @for (int i = 0; i < 3; i++)
                 {
-                    <i class="fas fa-star text-warning"></i>
+                    <i class="bi bi-star-fill text-warning"></i>
                 }
                 @for (int i = 0; i < 2; i++)
                 {
-                    <i class="far fa-star text-muted"></i>
+                    <i class="bi bi-star-fill text-muted"></i>
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
@@ -172,10 +175,10 @@
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewStats.ReviewCount??0))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.ThreeStarCount??0, Model.ReviewStats.ReviewCount??0))%
             </div>
         </div>
         
@@ -184,11 +187,11 @@
             <div class="stars me-2">
                 @for (int i = 0; i < 2; i++)
                 {
-                    <i class="fas fa-star text-warning"></i>
+                    <i class="bi bi-star-fill text-warning"></i>
                 }
                 @for (int i = 0; i < 3; i++)
                 {
-                    <i class="far fa-star text-muted"></i>
+                    <i class="bi bi-star-fill text-muted"></i>
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
@@ -196,20 +199,20 @@
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewStats.ReviewCount??0))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.TwoStarCount??0, Model.ReviewStats.ReviewCount??0))%
             </div>
         </div>
         
         <!-- 1 Star -->
         <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="1">
             <div class="stars me-2">
-                <i class="fas fa-star text-warning"></i>
+                <i class="bi bi-star-fill text-warning"></i>
                 @for (int i = 0; i < 4; i++)
                 {
-                    <i class="far fa-star text-muted"></i>
+                    <i class="bi bi-star-fill text-muted"></i>
                 }
             </div>
             <div class="review-count me-2 text-muted" style="min-width: 40px;">
@@ -217,10 +220,10 @@
             </div>
             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                 <div class="progress-bar bg-warning rounded-pill" 
-                     style="width: @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewCount))%"></div>
+                     style="width: @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewStats.ReviewCount??0))%"></div>
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
-                @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewCount))%
+                @(Percent(Model.ReviewStats.OneStarCount??0, Model.ReviewStats.ReviewCount??0))%
             </div>
         </div>
     </div>

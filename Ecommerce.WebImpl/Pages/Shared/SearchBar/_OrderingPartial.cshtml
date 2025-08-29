@@ -82,7 +82,7 @@
                 <div class="input-group">
                     <label class="form-control btn-outline-secondary bg-secondary-subtle" for="@(prop.Name)Order">@(prop.Name)</label>
                     <div class="input-group-text">
-                        <input data-propname="@prop.Name" id="@(prop.Name)Order" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
+                        <input data-propname="@(nameof(Product.Stats))_@prop.Name" id="@(prop.Name)Order" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
                     </div>
                 </div>
             </div>

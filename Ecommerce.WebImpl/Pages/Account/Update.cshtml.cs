@@ -85,7 +85,7 @@ public class UpdateModel : BaseModel
                 Type.Email => "E-Posta",
                 Type.Password => "Şifre", _ => throw new InvalidOperationException("Unknown Update Type: " + UpdateType)
             } + " Değiştirildi",
-            Redirect = GetUserPageLink(),
+            Redirect = Url.Page(nameof(Pages.User), new {UserId = userId}),
         });
     }
 }

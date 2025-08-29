@@ -1,119 +1,41 @@
 ﻿@model _ReviewsPartial
-
-<!-- Leave Review Form -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="bi bi-star me-2"></i>Değerlendirme Yaz
-        </h5>
-    </div>
-    <div class="card-body">
-        <form hx-post="/@nameof(Reviews)?handler=create" hx-target="#popupResult" hx-swap="innerHTML">
-            <input type="hidden" name="ProductId" value="@Model.ProductId" />
-            <input type="hidden" name="SellerId" value="" />
-            
-            <div class="mb-3">
-                <label class="form-label">Puan</label>
-                <div class="d-flex gap-1 mb-2">
-                    @for (int i = 1; i <= 5; i++)
-                    {
-                        <i class="bi bi-star star-rating" data-rating="@i" style="cursor: pointer; font-size: 1.5rem; color: #ddd;"></i>
-                    }
-                </div>
-                <input type="hidden" name="Rating" id="ratingInput" value="0" />
-            </div>
-            
-            <div class="mb-3">
-                <label for="reviewTitle" class="form-label">Başlık</label>
-                <input type="text" class="form-control" id="reviewTitle" name="Title" placeholder="Değerlendirmeniz için bir başlık yazın" maxlength="100" />
-            </div>
-            
-            <div class="mb-3">
-                <label for="reviewContent" class="form-label">Yorumunuz</label>
-                <textarea class="form-control" id="reviewContent" name="Content" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000"></textarea>
-            </div>
-            
-            <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-send me-1"></i>Değerlendirmeyi Gönder
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const stars = document.querySelectorAll('.star-rating');
-    const ratingInput = document.getElementById('ratingInput');
-    
-    stars.forEach((star, index) => {
-        star.addEventListener('click', function() {
-            const rating = index + 1;
-            ratingInput.value = rating;
-            
-            stars.forEach((s, i) => {
-                if (i < rating) {
-                    s.style.color = '#ffc107';
-                    s.classList.remove('bi-star');
-                    s.classList.add('bi-star-fill');
-                } else {
-                    s.style.color = '#ddd';
-                    s.classList.remove('bi-star-fill');
-                    s.classList.add('bi-star');
-                }
-            });
-        });
-        
-        star.addEventListener('mouseenter', function() {
-            const rating = index + 1;
-            stars.forEach((s, i) => {
-                if (i < rating) {
-                    s.style.color = '#ffc107';
-                } else {
-                    s.style.color = '#ddd';
-                }
-            });
-        });
-    });
-    
-    document.querySelector('.card').addEventListener('mouseleave', function() {
-        const currentRating = parseInt(ratingInput.value);
-        stars.forEach((s, i) => {
-            if (i < currentRating) {
-                s.style.color = '#ffc107';
-                s.classList.remove('bi-star');
-                s.classList.add('bi-star-fill');
-            } else {
-                s.style.color = '#ddd';
-                s.classList.remove('bi-star-fill');
-                s.classList.add('bi-star');
-            }
-        });
-    });
-});
-</script>
-
 @if (Model.Reviews.Count > 0){
-    <div class="list-unstyled ms-3 flex-column gap-3">
-        @foreach (var review in Model.Reviews){
-            <div>
-                @if (Model.IsStaff || Model.CurrentUserId != null && Model.CurrentUserId == review.Review.ReviewerId){
-                    <div class="d-flex justify-content-end align-items-center">
-                        <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
-                            <input type="hidden" name="@(nameof(Reviews.SentReview)).Id" value="@(review.Review.Id)"/>
-                            <button type="submit" class="btn-danger">Sil</button>
-                        </form>
-                    </div>
-                }
-                @await Html.PartialAsync("Review/_ReviewPartial", review)
-            </div>
+    <div class="partial-parent">
+        <script>
+            ((s)=>{
+               s.parentElement.addEventListener('htmx:load', load);
+               document.addEventListener('DOMContentLoaded', load);
+               function load(e){
+                   if(e.type ==='htmx:load'){
+                       e.stopPropagation();
+                   }
+                    Array.from(s.nextElementSibling.children).filter(n=>n.nodeType === Node.ELEMENT_NODE).forEach(n=>{
+                        n.lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles: false}));
+                    });
+               } 
+            })(document.currentScript)
+            //# sourceURL=ReviewsPartial.js
+        </script>
+        <div class="list-unstyled reviews px-0 mx-0 flex-column gap-3">
+            @foreach (var review in Model.Reviews){
+                <div>
+                    @if (Model.IsStaff || Model.CurrentUserId != null && Model.CurrentUserId == review.Review.ReviewerId){
+                        <div class="d-flex justify-content-end align-items-center">
+                            <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
+                                <input type="hidden" name="@(nameof(Reviews.SentReview)).Id" value="@(review.Review.Id)"/>
+                                <button type="submit" class="btn-danger">Sil</button>
+                            </form>
+                        </div>
+                    }
+                    @await Html.PartialAsync("Review/_ReviewPartial", review)
+                </div>
+            }
+        </div>
+        @if (Model.Reviews.Count == 10){
+            <a href="#" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove()" hx-trigger="click" hx-get="/@nameof(Reviews)?ReviewsPage=@(Model.NextPage)&@(nameof(Reviews.ProductId))=@(Model.ProductId)" hx-target="closest .partial-parent" hx-swap="afterend">Daha fazla yükle</a>
         }
     </div>
-    <br>
-    if (Model.Reviews.Count == 10){
-        <a href="#" id="reviews@(Model.NextPage)"  hx-trigger="click" hx-get="/@nameof(Reviews)?ReviewsPage=@(Model.NextPage)" hx-target="#reviews@(Model.NextPage)" hx-swap="outerHTML">Daha fazla yükle</a>
-    }
+
 }
 else{
     <div class="invisible" hx-on::afterSwap="detail.elt.remove()"></div>

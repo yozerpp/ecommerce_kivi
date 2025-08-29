@@ -10,7 +10,8 @@ public class Address
     public string District { get; set; }
     public string City { get; set; }
     public string Country { get; set; }
-    public string ZipCode { get; set; }
+    public string ZipCode { get; set; } //CCxxx
+    public string? ApiId { get; set; }
     public override string ToString() {
         return $"{Line1}\n{Line2} {District}/{City} {Country} {ZipCode}";
     }

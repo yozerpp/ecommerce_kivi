@@ -2,6 +2,7 @@
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -18,7 +19,8 @@ public class UserManager :IUserManager
     private readonly ICartManager _cartManager;
     private readonly IRepository<Staff> _staffRepository;
     private readonly IRepository<AnonymousUser> _anonymousUserRepository;
-    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager) {
+    private readonly IRepository<Image>  _imageRepository;
+    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager, IRepository<Image> imageRepository) {
         this._jwtManager = manager;
         _anonymousUserRepository = anonymousUserRepository;
         _userRepository = userRepository;
@@ -26,9 +28,9 @@ public class UserManager :IUserManager
         this._customerRepository = customerRepository;
         this._hashFunction = hashFunction;
         this._cartManager = cartManager;
+        _imageRepository = imageRepository;
         _sellerRepository = sellerRepository;
     }
-
     public Customer? LoginCustomer(string email, string password, bool rememberMe, out string? token)
     {
         return (Customer?)doLogin(email, password, 0 ,rememberMe, out token);
@@ -94,8 +96,17 @@ public class UserManager :IUserManager
         return (T)ret;
     }
 
-    public void Update(User user) {
-        _userRepository.Update(user);
+    public void Update(User user, bool updateImage) {
+        if (updateImage){
+            user.ProfilePicture = _imageRepository.Add(new Image(){
+                Data = user.ProfilePicture.Data,
+            });
+        }
+        else{
+            user.ProfilePictureId = null;
+            user.ProfilePicture = null;
+        }
+        
         _userRepository.Flush();
     }
 
@@ -129,5 +140,13 @@ public class UserManager :IUserManager
 
     public void CreateAnonymous(AnonymousUser anonymousUser) {
         _anonymousUserRepository.TryAdd(anonymousUser);
+    }
+
+    public User? Get(uint id, bool includeImage=false) {
+        return _userRepository.First(u=>u.Id==id, includes:includeImage?[[nameof(User.ProfilePicture)]]:[]);
+    }
+
+    public void UpdatePhone(uint id, PhoneNumber phoneNumber) {
+        _userRepository.UpdateExpr([(user => user.PhoneNumber, phoneNumber)], u => u.Id == id);
     }
 }

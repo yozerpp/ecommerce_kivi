@@ -10,6 +10,7 @@ public class Seller : User
     [ShopName]
     public string ShopName { get; set; }
     public SellerStats Stats { get; set; }
+    public SellerOrderStats OrderStats { get; set; }
     public ICollection<Product> Products { get; set; } = new List<Product>();
     public Address Address { get; set; }
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();

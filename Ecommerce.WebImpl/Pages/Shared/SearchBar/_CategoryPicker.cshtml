@@ -2,18 +2,18 @@
 @using Ecommerce.Entity
 @model _CategoryPicker
 
-<ul id="@Model.RootElementId@(rootId)" class="d-flex flex-grow-1 list-group rounded-1 shadow-sm overflow-x-visible">
+<ul id="@Model.RootElementId" class="d-flex flex-grow-1 list-group category-picker rounded-1 shadow-sm overflow-x-visible" >
     @{
-        var onClickHandler = $@"const parent = document.getElementById('{Model.RootElementId}@(rootId)');
+        var onClickHandler = $@"const parent = document.getElementById('{Model.RootElementId}');
                                 parent.dataset.name=event.currentTarget.getAttribute('data-name');
                                 parent.dataset.id=event.currentTarget.getAttribute('data-id');
                                 parent.dispatchEvent(new Event('change', {{cancelable:true, bubbles:true}}));
                               ";
     }
     @if (Model.AllowNonSelection){
-        @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", (onClickHandler, new Category(){Name = "Tümü", Id = 0}, new HashSet<Category>()))
+        @await Html.PartialAsync("Shared/SearchBar/_CategoryItemPartial", (onClickHandler, Model.RootElementId, new Category(){Name = Model.NonSelectionText, Id = 0}, new HashSet<Category>()))
     }
     @foreach (var category in Model.Categories){
-        <partial name="Shared/SearchBar/_CategoryItemPartial" model="(onClickHandler, category, new HashSet<Category>())"/>
+        <partial name="Shared/SearchBar/_CategoryItemPartial" model="(onClickHandler, Model.RootElementId,category, new HashSet<Category>())"/>
     }
 </ul>

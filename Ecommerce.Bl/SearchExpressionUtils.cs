@@ -21,8 +21,8 @@ public static class SearchExpressionUtils
         orderByExpressions = OrderByExpression<T>(ordering);
     }
 
-    public static void BuildPredicate<T>(string query, out Expression<Func<T, bool>> predicateExpr) {
-        if (query == null){
+    public static void BuildPredicate<T>(string? query, out Expression<Func<T, bool>> predicateExpr) {
+        if (string.IsNullOrWhiteSpace(query)){
             predicateExpr = Expression.Lambda<Func<T, bool>>(Expression.Constant(true), Expression.Parameter(typeof(T)));
             return;            
         }
@@ -32,14 +32,10 @@ public static class SearchExpressionUtils
         var expr = Visit(param, rootNode);
         predicateExpr = Expression.Lambda<Func<T, bool>>(expr, param);
     }
-    public static void Build<T>(string queryString, ICollection<SearchOrder> ordering,
+    public static void Build<T>(string? queryString, ICollection<SearchOrder> ordering,
         out Expression<Func<T, bool>> predicateExpr, out ICollection<(Expression<Func<T, object>>,bool)> orderByExpressions)
     {
-        var param = Expression.Parameter(typeof(T), "t");
-        var parser = new Parser(typeof(T), queryString);
-        var rootNode = parser.Parse();
-        var expr = Visit(param, rootNode);
-        predicateExpr = (Expression<Func<T, bool>>)Expression.Lambda(expr, param);
+        BuildPredicate(queryString, out predicateExpr);
         orderByExpressions = OrderByExpression<T>(ordering);
     }
 
@@ -47,14 +43,12 @@ public static class SearchExpressionUtils
         var ret = new List<(Expression<Func<T, object>>,bool)>();
         var parameter = Expression.Parameter(typeof(T), "t");
         foreach (var searchOrder in orders){
-            var property = typeof(T).GetProperty(searchOrder.PropName);
-            if (property == null) continue;
-            var left = Expression.Property(parameter, property);
+            var left = searchOrder.PropName.Split('_').Aggregate((Expression)parameter, Expression.PropertyOrField);
             Expression<Func<T, object>> orderByExpression = Expression.Lambda<Func<T, object>>(Expression.Convert(left, typeof(object)), parameter);
-            ret.Add((orderByExpression, searchOrder.Ascending));
+            ret.Add((orderByExpression, !searchOrder.Ascending));
         }
 
-        return ret;
+            return ret;
     }
     private interface IPredicateNode
     {
@@ -552,10 +546,10 @@ public static class SearchExpressionUtils
         BuildPredicate<Product>(
             $"""
              |(
-                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value))}=first,
-                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.CategoryPropertyId))}=4),
-                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.Value))}%opt1,
-                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperties.CategoryPropertyId))}=2)
+                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperty.Value))}=first,
+                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperty.CategoryPropertyId))}=4),
+                &({string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperty.Value))}%opt1,
+                    {string.Join('_', nameof(Product.CategoryProperties), nameof(ProductCategoryProperty.CategoryPropertyId))}=2)
                 )"
              """,out var predicateExpr);
         Console.WriteLine(predicateExpr.ToString());

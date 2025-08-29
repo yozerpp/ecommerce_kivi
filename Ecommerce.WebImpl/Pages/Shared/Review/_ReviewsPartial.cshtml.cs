@@ -6,9 +6,8 @@ namespace Ecommerce.WebImpl.Pages.Shared.Review;
 
 public class _ReviewsPartial
 {
-    [BindProperty]
-    public ICollection<ProductReview> Reviews { get; init; }
-    [BindProperty]
+    public uint? ProductId { get; init; }
+    public ICollection<ReviewUserView> Reviews { get; init; }
     public int NextPage { get; init; }
     public uint? CurrentUserId { get; init; }
     public bool IsStaff { get; init; }

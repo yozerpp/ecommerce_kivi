@@ -3,7 +3,7 @@
     var (onClickHandler, rootId,category, visited)= Model;
 }
 
-<li class="list-unstyled rounded-end-1 shadow-sm">
+<li class="list-unstyled rounded-end-1 shadow-sm overflow-x-visible overflow-y-visible">
     <script>
         @if (category.Children.Count > 0){
             <text>
@@ -28,8 +28,8 @@
     <ul class="p-0 list-unstyled position-relative"
         onmouseenter="@(category.Children.Count > 0?$"childrenElement{rootId}{category.Id}.show();":";")event.currentTarget.classList.add('bg-light');"
         onmouseleave="@(category.Children.Count > 0?$"childrenElement{rootId}{category.Id}.hide();":";")event.currentTarget.classList.remove('bg-light');"
-        class="rounded-end-1 p-3" style="cursor: pointer">
-        <li data-id="@(category.Id)" data-name="@(category.Name)" onclick="@Html.Raw(onClickHandler??"")" class="rounded-end-1 p-5" style="cursor: pointer">
+        class="rounded-end-1 p-2" style="cursor: pointer">
+        <li data-id="@(category.Id)" data-name="@(category.Name)" onclick="event.preventDefault();@Html.Raw(onClickHandler??"")" class="rounded-end-1 p-4" style="cursor: pointer">
             <p class="m-0 fs-5 small fw-bold">@category.Name</p>
         </li>
         @if (category.Children.Count > 0){

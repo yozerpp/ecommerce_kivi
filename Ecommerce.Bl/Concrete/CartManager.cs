@@ -207,7 +207,7 @@ public class CartManager : ICartManager
         Cart = new Cart(){
             Id = s.CartId,
             Aggregates = new CartAggregates(){
-                ItemCount = s.Cart.Aggregates.ItemCount,
+                ItemCount = ((uint?)s.Cart.Aggregates.ItemCount)??0,
             }
         },
         CartId = s.CartId,
@@ -254,7 +254,7 @@ public class CartManager : ICartManager
         CouponDiscountAmount = ca.CouponDiscountAmount,
         DiscountAmount = ca.DiscountAmount,
         TotalDiscountPercentage = ca.TotalDiscountPercentage,
-        ItemCount = ca.ItemCount,
+        ItemCount = (uint?)ca.ItemCount ?? 0,
         CartId = ca.CartId,
     }??null;
     private static readonly Expression<Func<CartItemAggregates, CartItemAggregates?>> CartItemAggregatesProjection = cia => (CartItemAggregates?) new CartItemAggregates(){

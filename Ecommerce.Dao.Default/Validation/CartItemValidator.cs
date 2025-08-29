@@ -18,7 +18,7 @@ public class CartItemValidator : IValidator<CartItem>
         var res = _couponRepository.FirstP(c => new{
             C1 = c.ExpirationDate > DateTime.Now,
             C2 = c.SellerId == sid
-        }, coupon => coupon.Id == cid);
+        }, coupon => coupon.Id == cid, nonTracking:true);
         if(res==null) 
             throw new ValidationException("Coupon not found.");
         // if(!res.C1)

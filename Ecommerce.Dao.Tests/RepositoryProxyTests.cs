@@ -70,6 +70,10 @@ public class RepositoryProxyTests
             throw new NotImplementedException();
         }
 
+        public void Clear() {
+            throw new NotImplementedException();
+        }
+
         public int CountProjected<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate) {
             throw new NotImplementedException();
         }
@@ -84,6 +88,25 @@ public class RepositoryProxyTests
             return[];
         }
 
+        public T Attach(T entity) {
+            throw new NotImplementedException();
+        }
+
+        public List<TP> WhereP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20, ICollection<(Expression<Func<T, object>>, bool)>? orderBy = null,
+            string[][]? includes = null, bool nonTracking = false) {
+            throw new NotImplementedException();
+        }
+
+        public T? First(Expression<Func<T, bool>> predicate, string[][]? includes = null, (Expression<Func<T, object>>, bool)[]? orderBy = null,
+            bool nonTracking = false) {
+            throw new NotImplementedException();
+        }
+
+        public TP? First<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate, string[][]? includes = null,
+            (Expression<Func<TP, object>>, bool)[]? orderBy = null, bool nonTracking = false) {
+            throw new NotImplementedException();
+        }
+
         public List<TP> WhereP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, int offset = 0, int limit = 20,
             (Expression<Func<T, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
             return[];
@@ -95,6 +118,24 @@ public class RepositoryProxyTests
         public TP? First<TP>(Expression<Func<T, TP>> select, Expression<Func<TP, bool>> predicate, string[][]? includes = null,
             (Expression<Func<TP, object>>, bool)[]? orderBy = null) {
             return default(TP);
+        }
+
+        public bool TryAdd(T entity) {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> TryAddAsync(T entity, CancellationToken cancellation = default) {
+            throw new NotImplementedException();
+        }
+
+        public List<TP> WhereProjectGroup<TP, TG>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, Expression<Func<T, TG>> groupBy, int offset = 0,
+            int limit = 20, (Expression<Func<T, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
+            throw new NotImplementedException();
+        }
+
+        public TP? FirstP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, string[][]? includes = null,
+            (Expression<Func<T, object>>, bool)[]? orderBy = null, bool nonTracking = false) {
+            throw new NotImplementedException();
         }
 
         public TP? FirstP<TP>(Expression<Func<T, TP>> select, Expression<Func<T, bool>> predicate, string[][]? includes = null,
@@ -114,6 +155,14 @@ public class RepositoryProxyTests
 
         public T Save(T entity, bool flush = true) => entity;
         public Task<T> SaveAsync(T entity, bool flush = true, CancellationToken cancellationToken = default) {
+            throw new NotImplementedException();
+        }
+
+        public T UpdateInclude(T entity, params string[] updateProperties) {
+            throw new NotImplementedException();
+        }
+
+        public T UpdateIgnore(T entity, bool ignoreNulls, params string[] ignoreProperties) {
             throw new NotImplementedException();
         }
 

@@ -31,9 +31,8 @@ public class GlobalExceptionHandler(
             while (ex is TargetInvocationException){
                 ex = ex.InnerException;
             }
-
             bool arg;
-            if ((arg= (ex is ArgumentException|| ex is ValidationException)) || ex is UnauthorizedAccessException){
+            if ((arg= ex is ArgumentException or ValidationException or ArgumentNullException or ArgumentOutOfRangeException) || ex is UnauthorizedAccessException){
                 _logger.LogWarning("Caught: " + e);
                 context.Response.StatusCode = 200;
                 context.Response.ContentType = "text/html";

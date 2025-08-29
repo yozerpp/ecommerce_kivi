@@ -2,7 +2,7 @@
 @inherits _NotificationPartialModel
 
 <div class="dropdown d-flex justify-content-center align-content-center">
-    <button class="btn p-0 d-inline-flex align-content-center align-items-center justify-content-center" 
+    <button class="btn hover-grow p-0 d-inline-flex align-content-center align-items-center justify-content-center" 
             data-bs-toggle="collapse" data-bs-target="#notifications" aria-controls="notifications" aria-expanded="false">
         <i class="bi bi-bell text-warning bg-white p-0 fs-4 position-relative m-0 class d-inline-flex justify-content-start align-content-start align-items-start">
             @{ int count = Notifications.Count(n=>!n.IsRead);}
@@ -45,12 +45,10 @@
                     }
                     <img class="img-fluid" style="height: 5em;" src="@src" alt="@(src.Split('.').First())"/>
                 </div>
-                <div class="col-9"></div>
-                <div>
-                    @*TODO: Do a switch case here*@
-                    <p>
-                        @(notification.ToString())
-                    </p>
+                <div class="col-9">
+                    @switch (notification){
+                        
+                    }
                 </div>
             </li>
         }

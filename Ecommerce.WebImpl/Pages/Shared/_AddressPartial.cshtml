@@ -51,7 +51,7 @@
                 <div class="row g-2">
                     <div class="col-md-6">
                         <div class="d-flex align-items-center">
-                            <small class="text-muted me-2">Adres 1:</small>
+                            <small class="text-muted me-2">1.Satır :</small>
                             <span id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" class="fw-medium">@Model.Address.Line1</span>
                             @if (Model.Editable){
                                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
@@ -60,8 +60,8 @@
                     </div>
                     <div class="col-md-6">
                         <div class="d-flex align-items-center">
-                            <small class="text-muted me-2">Adres 2:</small>
-                            <span id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" class="fw-medium">@Model.Address.Line2</span>
+                            <small class="text-muted me-2">2. Satır:</small>
+                            <span id="@(nameof(Address.Line2)+ '_' + (Model.Id ??""))" class="fw-medium">@Model.Address.Line2</span>
                             @if (Model.Editable){
                                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
                             }

@@ -26,7 +26,7 @@ public class NotificationService : INotificationService
         }
         _notificationRepository.Flush();
         foreach (var notification in notifications){
-            _notificationHub.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", notification);
+            await _notificationHub.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", notification);
         }
     }
 

@@ -9,7 +9,7 @@ public class _CommentsPartial
     public int NextPage { get; set; }
 
     [BindProperty] public int NestLevel { get; set; } = 1;
-    public List<ReviewComment> Comments { get; set; } 
+    public List<CommentUserView> Comments { get; set; } 
     public uint? CurrentUserId { get; init; }
     public bool IsStaff { get; init; } 
 }

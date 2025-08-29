@@ -2,12 +2,12 @@
 
 <div class="flex-column align-content-center justify-content-center">
     <div class="d-flex justify-content-center">
-        @{ var roundedRating = (int)Math.Round(Model.Rating, MidpointRounding.AwayFromZero); }
+        @{ var roundedRating = (int)Math.Round(Model.Rating, MidpointRounding.ToZero); }
         @for (int i = 0; i < roundedRating; i++){
-            <i class="px-0 mx-0 img-fluid bi bi-star-fill text-warning bg-white" style="height: 2em;"></i>
+            <i class="px-0 mx-0 img-fluid bi bi-star-fill text-warning"  style="height: 2em;background-color: inherit;"></i>
         }
         @for (int i = 0; i < 5 - roundedRating; i++){
-            <i class="px-0 mx-0 img-fluid bi bi-star text-secondary bg-white" style="height: 2em;"></i>
+            <i class="px-0 mx-0 img-fluid bi bi-star text-secondary" style="height: 2em;background-color: inherit;"></i>
         }
     </div>
     @if (Model.RatingCount != null){
@@ -18,6 +18,6 @@
             else{
                 <p class="small">Değerlendirme Yok</p>
             }
-    </div>
+        </div>
     }
 </div>

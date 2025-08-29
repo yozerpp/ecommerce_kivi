@@ -11,16 +11,22 @@ using Ecommerce.Entity.Events;
 using Ecommerce.Mail;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
+using Ecommerce.Shipping.Dto;
 using Ecommerce.Shipping.Dummy;
 using Ecommerce.Shipping.Entity;
 using Ecommerce.WebImpl.Pages.Shared;
+using LinqKit;
+using MessagePack;
+using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
 using Address = Ecommerce.Entity.Common.Address;
 using Session = Ecommerce.Entity.Session;
 using Shipment = Ecommerce.Shipping.Entity.Shipment;
+using ShipmentStatus = Ecommerce.Entity.Common.ShipmentStatus;
 
 namespace Ecommerce.WebImpl.Pages;
 
@@ -29,15 +35,20 @@ public class Checkout : BaseModel
     private readonly IOrderManager _orderManager;
     private readonly ICartManager _cartManager;
     private readonly IJwtManager _jwtManager;
+    private readonly IRepository<Order> _orderRepository;
     private readonly IShippingService _shippingService;
+    private readonly DbContext _dbContext;
     private readonly PaymentIntentService _paymentIntentService = new();
     private readonly CustomerService _customerService = new();
     private readonly CustomerSessionService _customerSessionService = new();
+    private readonly IRepository<Entity.Shipment> _shipmentRepository;
+    private readonly IRepository<OrderItem> _orderItemRepository;
     private readonly INotificationService _notificationService;
     private readonly Aes _encryption;
     private readonly IUserManager _userManager;
+    private readonly IRepository<AnonymousUser> _anonymousUserRepository;
     private readonly IMailService _mailService;
-    public Checkout(IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager, IJwtManager jwtManager, INotificationService notificationService, IRepository<Entity.Seller> sellerRepository) {
+    public Checkout(IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager, IJwtManager jwtManager, INotificationService notificationService, IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository) {
         _orderManager = orderManager;
         _mailService = mailService;
         _userManager = userManager;
@@ -45,6 +56,11 @@ public class Checkout : BaseModel
         _cartManager = cartManager;
         _jwtManager = jwtManager;
         _notificationService = notificationService;
+        _orderRepository = orderRepository;
+        _anonymousUserRepository = anonymousUserRepository;
+        _shipmentRepository = shipmentRepository;
+        _dbContext = dbContext;
+        _orderItemRepository = orderItemRepository;
         _encryption = CreateAes();
     }
 
@@ -53,18 +69,23 @@ public class Checkout : BaseModel
     [BindProperty]
     public Order CreatedOrder { get; set; }  
     [BindProperty] 
-    public Dictionary<uint,ShippingOffer[]> ShippingOffersGrouped { get; set; }
-    [BindProperty]
+    public ICollection<IGrouping<Entity.Seller,ShippingOffer>> ShippingOffersGrouped { get; set; }
+    [BindProperty(SupportsGet = true)]
     public string? Email { get; set; }
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public Address? Address { get; set; } 
-    [BindProperty] public Entity.Cart Cart { get; set; }
-    
-    [BindProperty]
+    [BindProperty(SupportsGet = true)] public string? Name { get; set; }
+    [BindProperty(SupportsGet = true)]
     public PhoneNumber? PhoneNumber { get; set; }
-    [BindProperty] public string? Name { get; set; }
-    [BindProperty]
-    public Dictionary<uint,ulong> SelectedShippingOffers { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string ApiCustomerId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public uint OrderId { get; set; }
+    public decimal ShippingCost { get; set; }
+    public decimal ItemsCost { get; set; }
+    public ICollection<IGrouping<Entity.Seller, CartItem>> CartItemsGrouped { get; private set; }
+    [BindProperty] public Entity.Cart Cart { get; set; }
+    [BindProperty] public Dictionary<uint,ulong> SelectedShippingOffers { get; set; }
     public enum Result
     {
         Success,NonExistent,Fail,Processing
@@ -79,107 +100,198 @@ public class Checkout : BaseModel
             "succeeded" => Result.Success,
             _ => Result.Fail
         };
-        Order order;
-        if (OrderResult != Result.Success || (order = _orderManager.GetOrder(orderId, true ,true)!)==null) return Page();
-        var newSession = _cartManager.newSession(CurrentUser, true);
-        if (CurrentUser == null){
-            Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
-            var token = _jwtManager.CreateToken(newSession);
-            Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme,_jwtManager.Serialize(token), new CookieOptions(){
-                MaxAge = TimeSpan.FromDays(3),//TODO: Overrrides RememberMe choice
-            });
+        if (OrderResult != Result.Success) return Page();
+        var order = _orderManager.GetOrder(orderId, true, true);
+        if (order == null){
+            OrderResult = Result.NonExistent;
+            return Page();
         }
+        CreatedOrder = order;
+        if (order.Status != OrderStatus.WaitingPayment) return Page();
+        _orderManager.ChangeOrderStatus(order, OrderStatus.WaitingConfirmation, true);
+        _cartManager.Clear(CurrentSession.CartId);
         var t = _notificationService.SendBatchAsync(order.Items.DistinctBy(i=>i.SellerId).Select(i =>
             new OrderNotification(){
                 UserId = i.SellerId,
                 OrderId = order.Id,
                 ProductId = i.ProductId
             }).ToArray());
-        _mailService.SendAsync(order?.Email ?? CurrentCustomer?.Email, "Siparişiniz Alındı",
+        var mailTask = _mailService.SendAsync(order?.Email ?? CurrentCustomer?.Email, "Siparişiniz Alındı",
             "Siparişiniz alınmıştır, sipariş numaranız: " + order.Id + "Sipariş detaylarınızı " +
-            (CurrentCustomer == null
-                ? Url.Page("/Order", new{ OrderId = order.Id }) + " Sayfasından takip edebilirsiniz."
-                : "Kullanıcı sayfanızdan görüntüleyebilirsiniz."), from: "yozer ticaret");
-        t.Wait();
-        CreatedOrder = order;
+            Url.Page("/" + nameof(Orders), null, new{ OrderId = order.Id }, Request.Scheme) +
+            " Sayfasından takip edebilirsiniz.");
+        Task.WaitAll(t);
         return Page();
     }
-
-    private Order CreateOrder(Dictionary<uint, ulong>selectedShippingOffers, ICollection<CartItem> items,string email,string name,PhoneNumber phoneNumber, Address address) {
-        var shippingItems=selectedShippingOffers //TODO make shipment item a seperate entity
-            .OrderBy(o => o.Key.GetHashCode()).Select(o => {
-                var shippedItems = items.Where(i => i.SellerId == o.Key);
-                var seller = shippedItems.First().ProductOffer.Seller;
-                return (shippedItems, new IShippingService.ShipmentCreateOptions(){
-                    OfferId = o.Value, RecepientEmail = email,
-                    SenderEmail = seller.Email,
-                    RecepientNane =name, 
-                    RecepientPhoneNumber = phoneNumber,
-                    SenderPhoneNumber = seller.PhoneNumber
-                });
-            }).ToList();
-        var shippings = _shippingService.AcceptOffer(shippingItems.Select(s=>s.Item2).ToArray()).Select(s=>new Entity.Shipment(){
-            Provider = s.Provider?.Name,TrackingNumber = s.TrackingNumber,Status = ShipmentStatus.Shipping,
-            RecepientAddress = s.DeliveryAddress, SenderAddress = s.ShippingAddress
-        }).ToList();
-        return _orderManager.CreateOrder(CurrentSession, shippings, items, CurrentCustomer, null, address);
-    }
-    public IActionResult OnGetPayment( string intentSecret, [FromQuery] string customerSessionSecret, [FromQuery] string intentId, [FromQuery] uint orderId) {
+    public IActionResult OnGetPayment( string intentSecret, [FromQuery] string sessionSecret, [FromQuery] decimal shippingCost, [FromQuery] decimal itemsCost, [FromQuery] string intentId, [FromQuery] uint orderId) {
         SelectedTab = 3;
         ViewData["StripePublicKey"] = Environment.GetEnvironmentVariable("STRIPE_PK");
         ViewData["IntentSecret"] = Decrypt(intentSecret);
-        ViewData["SessionSecret"] = Decrypt(customerSessionSecret);
+        ViewData["SessionSecret"] = Decrypt(sessionSecret);
         ViewData["ReturnUrl"] = Url.Page('/' + nameof(Checkout), "created", new{ intentId, orderId}, Request.Scheme);
+        ShippingCost = shippingCost;
+        ItemsCost = itemsCost;
         return Page();
     }
 
+    public async Task<IActionResult> OnPostShipment() {
+        AnonymousUser? anonymousUser = null;
+        if(CurrentCustomer==null && (anonymousUser = _userManager.FindAnonymousUser(Email)) == null) throw new UnauthorizedAccessException("Yönlendirme sırasında bir hata oluştu, lütfen tekrar deneyin.");
+        var address= Address??CurrentCustomer?.PrimaryAddress ?? throw new ArgumentException("Lütfen Adres bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
+        var customerEmail = CurrentCustomer?.Email ??Email?? throw new ArgumentException("Lütfen E-Posta bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
+        var customerPhoneNumber = PhoneNumber??CurrentCustomer?.PhoneNumber ?? throw new ArgumentException("Lütfen Telefon Numaranızı girin veya müşteri hesabınızla giriş yapın.");
+        var name = CurrentCustomer?.FullName?? Name ?? throw new ArgumentException("Lütfen Adınızı girin veya müşteri hesabınızla giriş yapın.");
+        var order = _orderManager.GetOrder(OrderId, false, true);
+        if (order == null) throw new ArgumentException("Invalid Order Id");
+        string apiId;
+        if ((apiId = CurrentCustomer?.ApiId ?? anonymousUser?.ApiId) == null){
+            apiId = (await CreateStripeCustomer( customerEmail, name, address, customerPhoneNumber)).Id;
+            if (CurrentCustomer != null){
+                CurrentCustomer.ApiId = apiId;
+                _userManager.Update(CurrentCustomer, false);
+            }
+            else{
+                anonymousUser.ApiId = apiId;
+                _anonymousUserRepository.UpdateInclude(anonymousUser, nameof(AnonymousUser.ApiId));
+                _anonymousUserRepository.Flush();
+            }
+        }
+        var apiShipments = await Task.WhenAll(SelectedShippingOffers.Values.Select(async oid =>
+            await _shippingService.AcceptOffer(new AcceptOfferOptions(){
+                OfferId = oid
+            })));
+        var shipments = apiShipments.Select(s => {
+            var shipment = _shipmentRepository.Add(new Entity.Shipment(){
+                ApiId = s.ApiId,
+                Provider = s.Provider?.Name,
+                RecepientAddress = s.Recipient.Address,
+                SenderAddress = s.Sender.Address,
+                Status = ShipmentStatus.Processing,
+                TrackingNumber = s.TrackingNumber,
+                Cost = s.Price + s.Tax,
+            });
+            shipment.OrderItems = s.Items.Select(si => {
+                var ids = si.ItemId.Split('|');
+                var oid = uint.Parse(ids[0]);
+                var sid = uint.Parse(ids[1]);
+                var pid = uint.Parse(ids[2]);
+                var oi =  new OrderItem{
+                    OrderId = oid, SellerId = sid, ProductId = pid, SentShipment = shipment,
+                };
+                _orderItemRepository.UpdateInclude(oi, nameof(OrderItem.SentShipment));
+                return oi;
+            }).ToArray();
+            return shipment;
+        }).ToArray();
+        var cost = shipments.Sum(s => s.Cost);
+        _orderItemRepository.Flush();
+        _orderRepository.UpdateExpr([(o => o.ShippingCost, cost)], o => o.Id == OrderId);
+        var (sessionSecret, intentSecret, intentId) = await CreatePaymentIntent(
+            _cartManager.Get(CurrentSession, true, false, false, false, true), 
+            cost,
+            address, name, customerPhoneNumber, apiId);
+        Response.Headers.Append("HX-Redirect",Url.Page(nameof(Checkout),"payment",new {
+                intentSecret,
+                sessionSecret,
+                intentId,
+                itemsCost = order.Aggregates.CouponDiscountedPrice,
+                shippingCost = cost,
+                orderId=OrderId,
+            }
+        ));
+        return new OkResult();
+    }
+    public async Task<IActionResult> OnGetShipment([FromQuery] string addressBin, [FromQuery] string phoneNumberBin) {
+        SelectedTab = 2;
+        var items = _cartManager.Get(CurrentSession, false, true, false, true, true).Items;
+        Address = MessagePackSerializer.Deserialize<Address>(Convert.FromBase64String(addressBin), MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance));
+        PhoneNumber = MessagePackSerializer.Deserialize<PhoneNumber>(Convert.FromBase64String(phoneNumberBin), MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance));
+        var total = _orderRepository.FirstP(o => (decimal?)o.Aggregates.CouponDiscountedPrice, o => o.Id == OrderId,nonTracking:true) ?? throw new ArgumentException("Invalid Order Id");
+        CartItemsGrouped = items.GroupBy(i => i.ProductOffer.Seller).ToArray();
+        ShippingOffersGrouped = CartItemsGrouped.SelectMany(group =>
+            _shippingService.GetOffers(new GetOfferOptions{
+                Items = group.Select(i => new ShipmentItem(){
+                    Dimensions = i.ProductOffer.Product.Dimensions,
+                    ItemId = string.Join('|',OrderId, i.ProductOffer.SellerId.ToString(), i.ProductOffer.ProductId.ToString()),
+                    ItemName = i.ProductOffer.Product.Name,
+                    ItemPrice = i.ProductOffer.DiscountedPrice,
+                    ItemSku = i.ProductOffer.Product.Sku,
+                    Quantity = i.Quantity,
+                }).ToArray(),
+                OrderInfo = new OrderInfo{
+                    OrderId = OrderId.ToString(), Total = total,
+                },
+                Sender = new DeliveryInfo(){
+                    Address = group.Key.Address,
+                    Email = group.Key.Email,
+                    Name = group.Key.FullName,
+                    PhoneNumber = group.Key.PhoneNumber,
+                    Id = group.Key.Address.ApiId,
+                },
+                Recipient = new DeliveryInfo(){
+                    Address = Address,
+                    Email = Email,
+                    Name = Name,
+                    PhoneNumber = PhoneNumber,
+                    Id = Address.ApiId,
+                }
+            }).Result.Select(o=>(group.Key,o))).GroupBy(o=>o.Key, o=>o.o).ToArray();
+        return Page();
+    }
     public IActionResult OnPost() {
-        var customerEmail = Email ?? CurrentCustomer?.Email;
-        var deliveryAddress = Address ?? CurrentCustomer?.PrimaryAddress;
-        var customerName = CurrentCustomer?.FullName ?? Name;
-        var customerPhoneNumber =  PhoneNumber ?? CurrentCustomer?.PhoneNumber;
+var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentException("Lütfen E-posta bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
+        var deliveryAddress = Address ?? CurrentCustomer?.PrimaryAddress ?? throw new ArgumentException("Lütfen Adres bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
+        var customerName = CurrentCustomer?.FullName ?? Name ?? throw new ArgumentException("Lütfen Adınızı girin veya müşteri hesabınızla giriş yapın.");
+        var customerPhoneNumber =  PhoneNumber ?? CurrentCustomer?.PhoneNumber ?? throw new ArgumentException("Lütfen Telefon Numaranızı girin veya müşteri hesabınızla giriş yapın.");
+        ValidateParams(deliveryAddress, customerEmail, customerPhoneNumber, customerName);
+        var ao = new Address(){
+            City = deliveryAddress.City, Country = deliveryAddress.Country, Line1 = deliveryAddress.Line1,
+            Line2 = deliveryAddress.Line2, ZipCode = deliveryAddress.ZipCode, District = deliveryAddress.District
+        };
+        AnonymousUser? anonymousUser = null;
+        var cid = CurrentSession.CartId;
+        var items = _dbContext.Set<CartItem>().Include(i=>i.SelectedOptions).Where(ci => ci.CartId == cid).ToArray();
+        if(CurrentCustomer==null && (anonymousUser = _userManager.FindAnonymousUser(customerEmail))==null) 
+            _userManager.CreateAnonymous(anonymousUser = new AnonymousUser(){Email = customerEmail});
+        var order = _orderManager.CreateOrder(CurrentSession, items, CurrentCustomer, anonymousUser,
+            deliveryAddress, customerName);
+
+        // var (sessionSecret, intentSecret, intentId) =await CreatePaymentIntent(cart, ao, customerName, customerPhoneNumber, customer);
+
+        Response.Headers.Append("HX-Redirect",Url.Page(nameof(Checkout),"shipment",new {
+                OrderId = order.Id,
+                Name= customerName,
+                Email=customerEmail,
+                addressBin=Convert.ToBase64String(MessagePackSerializer.Serialize(ao, MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance))),
+                phoneNumberBin = Convert.ToBase64String(MessagePackSerializer.Serialize(customerPhoneNumber,  MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance))),
+            }
+        ));
+        return new OkResult();
+    }
+    private void ValidateParams(Address? deliveryAddress, string? customerEmail, PhoneNumber? customerPhoneNumber,
+        string? customerName) {
         if (CurrentCustomer==null&& (deliveryAddress == null || string.IsNullOrWhiteSpace(deliveryAddress.City) || string.IsNullOrWhiteSpace(deliveryAddress.District) ||
-            string.IsNullOrWhiteSpace(deliveryAddress.Country) || string.IsNullOrWhiteSpace(deliveryAddress.Line1) ||
-            string.IsNullOrWhiteSpace(deliveryAddress.ZipCode) ) || string.IsNullOrWhiteSpace(customerEmail) || 
+                                     string.IsNullOrWhiteSpace(deliveryAddress.Country) || string.IsNullOrWhiteSpace(deliveryAddress.Line1) ||
+                                     string.IsNullOrWhiteSpace(deliveryAddress.ZipCode) ) || string.IsNullOrWhiteSpace(customerEmail) || 
             string.IsNullOrWhiteSpace(customerPhoneNumber?.ToString()) || string.IsNullOrWhiteSpace(customerName) ){
             throw new ArgumentException("Lütfen Adres ve E-posta bilgilerinizi doldurun veya müşteri hesabınızla giriş yapın.");
         }
-        var cart = _cartManager.Get(CurrentSession, true,true, false);
-        var createTask = Task.Run(Order ()=>CreateOrder(SelectedShippingOffers,cart.Items, customerEmail, customerName, customerPhoneNumber, deliveryAddress));
-        var ao = new AddressOptions(){
-            City = deliveryAddress.City, Country = deliveryAddress.Country, Line1 = deliveryAddress.Line1,
-            Line2 = deliveryAddress.Line2, PostalCode = deliveryAddress.ZipCode, State = deliveryAddress.District
-        };
-        var customer = CreateStripeCustomer(CurrentCustomer,customerEmail, ao, customerPhoneNumber, out var anonymousUser);
-        var (sessionSecret, intentSecret, intentId) = CreatePaymentIntent(cart, ao, customerName, customerPhoneNumber, customer);
-        
-        createTask.Wait();
-        var order = createTask.Result;
-        Response.Headers.Append("HX-Redirect",Url.Page(nameof(Checkout),"payment",new {
-                intentId,
-                intentSecret, 
-                customerSessionSecret = sessionSecret, 
-                orderId = order.Id
-            } 
-        ));
-        if (CurrentCustomer == null){
-            _orderManager.AssociateWithAnonymousUser(anonymousUser.Email, order,order.Id);
-        }
-        return new OkResult();
     }
 
-    private (string sessionSecret, string intentSecret, string intentId) CreatePaymentIntent(Entity.Cart? cart, AddressOptions ao,
-        string customerName, PhoneNumber customerPhoneNumber, Stripe.Customer customer) {
+    private async Task<(string sessionSecret, string intentSecret, string intentId)> CreatePaymentIntent(Entity.Cart? cart, decimal extraCosts, Address address,
+        string customerName, PhoneNumber customerPhoneNumber, string customerId) {
+        var ao = new AddressOptions(){
+            City = address.City, Country = address.Country, Line1 = address.Line1,
+            Line2 = address.Line2, PostalCode = address.ZipCode, State = address.District
+        };
         var o = new PaymentIntentCreateOptions(){
-            Amount = ((long)cart.Aggregates.CouponDiscountedPrice)*100, CaptureMethod = "automatic",
+            Amount = (long)(cart.Aggregates.CouponDiscountedPrice + extraCosts)*100L, CaptureMethod = "automatic",
             Shipping = new ChargeShippingOptions(){
                 Address = ao,
                 Name = customerName,
                 Phone = customerPhoneNumber.ToString(),
-                // Carrier = string.Join('|', shippings.Select(s => s.Provider)), //TODO
-                // TrackingNumber = string.Join('|', shippings.Select(s => s.TrackingNumber))
             },
-            Customer = customer.Id,
+            Customer = customerId,
             Currency = "try",  
             Description = "E-Ticaret Siparişi",
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions(){
@@ -187,7 +299,7 @@ public class Checkout : BaseModel
             },
         };
         var customerSessionOptions = new CustomerSessionCreateOptions(){
-            Customer = customer.Id,
+            Customer = customerId,
             Components = new CustomerSessionComponentsOptions(){
                 PaymentElement = new CustomerSessionComponentsPaymentElementOptions(){
                     Enabled = true,
@@ -200,46 +312,35 @@ public class Checkout : BaseModel
                 },
             }
         };
-        var customerSession = _customerSessionService.Create(customerSessionOptions);
+        var customerSession = await _customerSessionService.CreateAsync(customerSessionOptions);
         var sessionSecret = Encrypt(customerSession.ClientSecret);
-        var intent = _paymentIntentService.Create(o);
+        var intent = await _paymentIntentService.CreateAsync(o);
         var intentSecret = Encrypt(intent.ClientSecret);
         var intentId = Encrypt(intent.Id);
         return (sessionSecret, intentSecret, intentId);
     }
 
-    private Stripe.Customer CreateStripeCustomer(Entity.Customer?currentCustomer,string customerEmail, AddressOptions ao, PhoneNumber customerPhoneNumber,
-        out AnonymousUser? anonymousUser) {
-        Stripe.Customer customer;
-        anonymousUser = null;
-        if (currentCustomer?.StripeId == null || (anonymousUser = _userManager.FindAnonymousUser(customerEmail)) == null){
-            customer = _customerService.Create(new CustomerCreateOptions{
-                Address = ao,
-                Shipping = new ShippingOptions(){
-                    Address = ao, Name = Name ?? currentCustomer?.FullName,
-                    Phone = customerPhoneNumber.ToString(),
-                },
-                Balance = 0, Email = customerEmail,
-                Phone = customerPhoneNumber!.ToString()
-            });
-            if (currentCustomer != null){
-                currentCustomer.StripeId = customer.Id;
-                _userManager.Update(currentCustomer);
-            }
-            else _userManager.CreateAnonymous(anonymousUser = new AnonymousUser{ Email = customerEmail, StripeId = customer.Id });
-        }
-        else customer = _customerService.Get(currentCustomer?.StripeId ?? anonymousUser.StripeId);
-
+    private async Task<Stripe.Customer> CreateStripeCustomer(string customerEmail, string name, Address address , PhoneNumber customerPhoneNumber) {
+        var ao = new AddressOptions(){
+            City = address.City, Country = address.Country, Line1 = address.Line1,
+            Line2 = address.Line2, PostalCode = address.ZipCode, State = address.District
+        };
+        var co = new CustomerCreateOptions{
+            Address = ao,
+            Shipping = new ShippingOptions(){
+                Address = ao, Name = name,
+                Phone = customerPhoneNumber.ToString(),
+            },
+            Balance = 0, Email = customerEmail,
+            Phone = customerPhoneNumber!.ToString()
+        };
+        var customer = await _customerService.CreateAsync(co);
         return customer;
     }
 
     public IActionResult OnGet() {
         SelectedTab = 1;
-        var s= (Session)HttpContext.Items[nameof(Session)];
-        Cart = _cartManager.Get(s, true, true, true);
-        ShippingOffersGrouped = Cart.Items.GroupBy(i => i.SellerId).ToDictionary(items =>
-            items.Key ,items => _shippingService.GetOffers(items.OrderBy(i=>i.ProductId.GetHashCode()).Select(i => i.ProductOffer.Product.Dimensions), Address.Empty,
-                Address.Empty).ToArray());
+        Cart = _cartManager.Get(CurrentSession, true, true, true);
         return Page();
     }
     private string Encrypt(string secret) {

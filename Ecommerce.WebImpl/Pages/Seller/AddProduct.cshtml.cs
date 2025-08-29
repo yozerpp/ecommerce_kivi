@@ -1,26 +1,27 @@
 ﻿using Ecommerce.Bl.Interface;
+using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
+using Ecommerce.Entity.Common;
+using Ecommerce.Entity.Views;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages.Seller;
 
 [Authorize(Policy = nameof(Entity.Seller))]
 public class AddProduct : BaseModel
 {
-    private readonly IProductManager _productManager;
     private readonly ISellerManager _sellerManager;
-    public AddProduct(IProductManager productManager, ISellerManager sellerManager) {
-        _productManager = productManager;
+    public readonly IDictionary<uint,Category> Categories;
+    public readonly IRepository<Category> _categoryRepository;
+    public AddProduct(IProductManager productManager, ISellerManager sellerManager, IDictionary<uint,Category> categories, IRepository<Category> categoryRepository) {
         _sellerManager = sellerManager;
-    }
-    [BindProperty]
-    public ICollection<Category> Categories { get; private set; }
-    public void OnGet() {
-        Categories = _productManager.GetCategories();
+        Categories = categories;
+        _categoryRepository = categoryRepository;
     }
     [BindProperty]
     public ProductOffer NewOffer { get; set; }
@@ -38,9 +39,9 @@ public class AddProduct : BaseModel
         // throw new Exception();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,
-            Message = "Ürün ilanınız başarıyla oluşturuldu.",
+            Message = "Ürün ilanınız başarıyla oluşturuldu. Bu linkten ürün sayfasına ulaşabilirsiniz: " + Url.Page(nameof(Product), null, new {ProductId=NewOffer.ProductId}, Request.Scheme),
             Title = "İşlem Başarılı",
-            Redirect = "/Seller/Seller?SellerId=" + CurrentSeller.Id
+            TimeOut = 10000
         });
     }
     [BindProperty]
@@ -66,6 +67,38 @@ public class AddProduct : BaseModel
             Redirect = "/Product?ProductId=" + craeted.ProductId
         });
     }
-    [BindProperty(SupportsGet = true)]
-    public int CategoryId { get; set; }
+    [BindProperty]
+    public Category CreatedCategory { get; set; }
+    
+    public IActionResult OnPostCategory([FromQuery] bool getTemplate) {
+        _categoryRepository.Clear();
+        _categoryRepository.Add(CreatedCategory);
+        _categoryRepository.Flush();
+        Categories.Add(CreatedCategory.Id, CreatedCategory);
+        if(!getTemplate)
+            return Partial(nameof(_InfoPartial), new _InfoPartial(){
+            Success = true, Message = "Kategori Başarıyla Oluşturuldu. Ürün detaylarını belirlemeye geçebilirsiniz.",
+        });
+        return OnGetTemplate(CreatedCategory.Id);
+    }
+    public PartialViewResult OnGetTemplate([FromQuery] uint categoryId) {
+        var cat = Categories[categoryId];
+        var props = cat.CategoryProperties.Select(s => new ProductCategoryProperty(){
+            CategoryPropertyId = s.Id,
+            CategoryProperty = s,
+            ProductId = 0,
+        }).ToArray();
+        return Partial("Shared/Product/_ProductMainPartial", new _ProductMainPartial(){
+            Categories =Categories,
+            Creating = true,
+            ViewingSellerId = CurrentSeller.Id,
+            ViewedProduct = new Entity.Product(){
+                Name = "Başlık",
+                Description = "Açıklama",
+                CategoryId = cat.Id,CategoryProperties = props, 
+                Dimensions = new Dimensions(),
+                Stats = new ProductStats(),
+            }
+        });
+    }
 }

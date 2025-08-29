@@ -1,0 +1,81 @@
+﻿@using Ecommerce.Entity
+@model Ecommerce.WebImpl.Pages.Seller._CreateCategoryPartial
+
+
+<form data-id class="d-flex partial-parent flex-column px-3 gap-5">
+    @Html.AntiForgeryToken()
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+            document.addEventListener('DOMContentLoaded',load);
+            parent.addEventListener('htmx:load', load);
+            function load(e){
+                if(e.type ==='htmx:load'){
+                    e.stopPropagation();
+                }
+                parent.addEventListener('htmx:afterRequest', event=>{
+                    if(!event.detail.successful)return;
+                    event.detail.elt.dataset.id=event.detail.elt.querySelector('select[name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.ParentId))"]').value;
+                })
+                const prompts = parent.lastElementChild.previousElementSibling.lastElementChild;
+                parent.querySelector('select').addEventListener('change',(e)=>{
+                    parent.dataset.id = e.currentTarget.value;
+                });
+                parent.querySelector('.propertyPrompts').dispatchEvent(new Event('htmx:load', {bubbles: false}));
+                parent.lastElementChild.addEventListener('click', e=>{
+                    e.preventDefault();
+                    const formData = new FormData(parent);
+                    prompts._prompts.forEach((p,i)=>{
+                        const prefix = '@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.CategoryProperties))[' +i + '].';
+                        formData.append(prefix + '@(nameof(CategoryProperty.PropertyName))', p._inputName);
+                        formData.append(prefix + '@(nameof(CategoryProperty.IsRequired))', p._required);
+                        if(p._dataType==='number'){
+                            formData.append(prefix + '@(nameof(CategoryProperty.IsNumber))', 'true');
+                            formData.append(prefix + '@(nameof(CategoryProperty.MinValue))', p._constraint.min.toString());
+                            formData.append(prefix + '@(nameof(CategoryProperty.MaxValue))', p._constraint.max.toString());
+                        } else if(p._dataType==='enum'){
+                            formData.append(prefix + '@(nameof(CategoryProperty.EnumValues))', p._constraint)
+                        }
+                    })
+                    htmx.ajax('POST', '/Seller/AddProduct?handler=category&getTemplate=@(Model.ForProductTemplate)', {
+                        target: '@Model.Target',
+                        swap: 'innerHTML', 
+                        values: Object.fromEntries(formData.entries()),
+                        source: parent,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }
+                    });
+                })
+                console.log('loaded @(nameof(_CreateCategoryPartial)) from ' + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=CreateCategoryPartial.js
+    </script>
+    <div class="input-group">
+        <label class="fs-5 input-group-text fw-bold">Kategori İsmi</label>
+        <input name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Name))" type="text" class="form-control" required/>    
+    </div>
+    <div class="pt-1">
+        <label class="fs-4 fw-bold">Kategori Açıklaması</label>
+        <textarea name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Description))" type="text" class="form-control" required></textarea>    
+    </div>
+    <div >
+        <label class="fs-5 fw-bold">Üst Kategori</label>
+        <select name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.ParentId))" class="form-select">
+                <option>Yok</option>
+            @foreach (var category in Model.Categories){
+                <div class="d-inline-flex gap-2">
+                    <i class="bi bi-option"></i><option value="@(category.Id)">@(category.Name)</option>
+                </div>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="fs-5 fw-bold">Kategori Özelliklerini Belirle</label>
+        @await Html.PartialAsync("_PropertyPromptsPartial")
+    </div>
+    <div class="container-fluid d-flex pe-2">
+        <button type="button" class="btn btn-primary" style="background-color: darkorange">Kategori Oluştur</button>
+    </div>
+</form>

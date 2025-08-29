@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Bl.Interface;
-using Ecommerce.Entity; 
+using Ecommerce.Entity;
+using Ecommerce.Entity.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -30,9 +31,10 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
         return _userManager.Register(newUser);
     }
 
-    public void Update(User user) {
-        _userManager.Update(user);
+    public void Update(User user, bool updateImage) {
+        _userManager.Update(user, updateImage);
     }
+
 
     public AnonymousUser? FindAnonymousUser(string? email) {
         return _userManager.FindAnonymousUser(email);
@@ -52,5 +54,13 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
 
     public void CreateAnonymous(AnonymousUser anonymousUser) {
         _userManager.CreateAnonymous(anonymousUser);
+    }
+
+    public User Get(uint id, bool includeImage = false) {
+        return _userManager.Get(id, includeImage);
+    }
+
+    public void UpdatePhone(uint id, PhoneNumber phoneNumber) {
+        _userManager.UpdatePhone(id, phoneNumber);
     }
 }

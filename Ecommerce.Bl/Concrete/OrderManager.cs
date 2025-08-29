@@ -192,16 +192,30 @@ public class OrderManager : IOrderManager
     public Order? GetAnonymousOrder(string email, uint id) {
         return _orderRepository.First(o => o.Email == email && o.UserId == null && o.Id==id, includes:[[nameof(Order.Aggregates)]]);
     }
+
+    private string[][] GetOrderIncludes(bool includeItems, bool includeAggregates, bool? includeItemAggregates = null) {
+        includeItemAggregates??=includeAggregates;
+        var ret = new List<string[]>();
+        if (includeItems){
+            ret.Add([nameof(Order.Items), nameof(OrderItem.SelectedOptions), nameof(ProductOption.Property), nameof(ProductCategoryProperty.CategoryProperty)]);
+            if (includeItemAggregates.Value){
+                ret.Add([nameof(Order.Items) ,nameof(OrderItem.Aggregates)]);
+            }
+        }
+        if(includeAggregates)
+            ret.Add([nameof(Order.Aggregates)]);
+        return ret.ToArray();
+    }
     public List<Order> GetAllOrdersFromCustomer(Customer user, bool includeItems = false,int page = 1, int pageSize = 10) {
         var uid = user.Id;
         var ret = _orderRepository.WhereP(includeItems?OrderWithItemsAggregateProjection:OrderWithoutItemsProjection,o => o.UserId == uid,
-            includes:[[nameof(Order.Aggregates)]],offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
+            includes:GetOrderIncludes(includeItems, true,true),offset: (page - 1) * pageSize, limit: page*pageSize, orderBy:[(o => o.Date, false)]);
         return ret;
     }
 
     public List<Order> GetAllOrdersFromAnonymousUser(string email, bool includeItemAggregates = false, int page = 1, int pageSize = 10) {
         return GetWithAggregates(o => o.Email == email, page, pageSize,
-            [[nameof(Order.Items), nameof(OrderItem.Aggregates)]]);
+            GetOrderIncludes(true, true,includeItemAggregates));
     }
     private List<Order> GetWithAggregates(Expression<Func<Order,bool>> predicates, int page, int pageSize, string[][]? includes=null) {
         var orders = _orderRepository.WhereP(OrderWithoutAggregatesWithItemsProjection, predicates, offset: (page - 1) * pageSize,

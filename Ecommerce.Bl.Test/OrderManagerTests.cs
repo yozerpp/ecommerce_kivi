@@ -105,7 +105,7 @@ public class OrderManagerTests
     [Test, Order(1)]
     public void CreateAnonymously()
     {
-        var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
@@ -121,7 +121,7 @@ public class OrderManagerTests
 
     [Test, Order(2)]
     public void CreateLogged() {
-        var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment() { TransactionId = "21345", Amount = 100, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
@@ -142,7 +142,7 @@ public class OrderManagerTests
     public void CancelOrder()
     {
         // First, create an order to cancel
-        var payment = new Payment() { TransactionId = "98765", Amount = 50, PaymentMethod = PaymentMethod.CASH };
+        var payment = new Payment() { TransactionId = "98765", Amount = 50, PaymentMethod = PaymentMethod.Cash };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
@@ -161,7 +161,7 @@ public class OrderManagerTests
     public void CompleteOrder()
     {
         // First, create an order to complete
-        var payment = new Payment() { TransactionId = "11223", Amount = 75, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment() { TransactionId = "11223", Amount = 75, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
@@ -185,7 +185,7 @@ public class OrderManagerTests
     public void UpdateOrder()
     {
         // First, create an order to update
-        var payment = new Payment() { TransactionId = "44556", Amount = 120, PaymentMethod = PaymentMethod.CASH };
+        var payment = new Payment() { TransactionId = "44556", Amount = 120, PaymentMethod = PaymentMethod.Cash };
         payment = TestContext._paymentRepository.Add(payment);
         var offer = TestContext._offerRepository.First(f => true);
         TestContext._cartManager.Add(_session.Cart, offer);
@@ -237,7 +237,7 @@ public class OrderManagerTests
         TestContext._cartRepository.Flush();
 
         // Create the order
-        var payment = new Payment() { TransactionId = "ORDER_AGG_TEST", Amount = 100, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment() { TransactionId = "ORDER_AGG_TEST", Amount = 100, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         var createdOrder = TestContext._orderManager.CreateOrder(_session,out _, _customer);
 

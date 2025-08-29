@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 using Bogus;
 using Bogus.DataSets;
 using Ecommerce.Dao.Spi;
@@ -13,20 +14,34 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Address = Ecommerce.Entity.Common.Address;
 
-namespace Ecommerce.Dao.Default.Initializer;
+namespace Ecommerce.Dao.Initializer;
 
 internal class ValueRandomizer
 {
+
+    private readonly Config _config;
     private readonly ILog _logger;
     private readonly ConcurrentDictionary<Type, Func<object>> _constructorCache = new();
     private readonly string[] _preGeneratedNames = Enumerable.Range(0, 10000)
         .Select(_ => new Person().FirstName).ToArray();
     private Internet Internet = new();
     private Randomizer Randomizer => new();
-
+    private readonly IAddressRandomizer _addressRandomizer;
+    public ValueRandomizer(Config config) {
+        _config = config;
+        if (_config.FetchRealAddresses)
+            _addressRandomizer = new GeoApifyAddressFetcher(_config.AddressFetcherApiKey ??
+                                                            throw new ArgumentNullException(
+                                                                nameof(Config.AddressFetcherApiKey)),
+                _config.UniqueAddressCount);
+        else _addressRandomizer = new IdenticalAddressRandomizer();
+    }
     public object Create(IEntityType entityType) {
         var entity = CreateInstance(entityType.ClrType);
-        foreach (var prop in entityType.GetProperties().Where(p=> !p.IsShadowProperty()  && !p.IsForeignKey()&&
+        foreach (var prop in entityType.GetProperties().Where(p=>
+                     !p.Equals((p.DeclaringType as IEntityType)?.FindDiscriminatorProperty())&&!p.IsShadowProperty()  &&
+                                                                  (p.ValueGenerated != ValueGenerated.OnAdd ||
+                                                                   p.ValueGenerated != ValueGenerated.OnAddOrUpdate)&& !p.IsForeignKey()&&
                                                                   !p.GetViewColumnMappings().Any()&&
             (p.DeclaringType.Equals(entityType) || !entityType.IsAssignableFrom(p.DeclaringType))) )
         {
@@ -46,7 +61,8 @@ internal class ValueRandomizer
             var val = RandomizeComplex(navigation.TargetEntityType);
             PropertyCache.SetProperty(entity, navigation.PropertyInfo, val);
         }
-        foreach (var listProp in entityType.GetProperties().Where(p=> p.ClrType.GetInterfaces().Any(t=>t.IsGenericType&&t.GetGenericTypeDefinition() == typeof(ICollection<>) &&
+        foreach (var listProp in entityType.GetProperties().Where(p=> p.ClrType.GetInterfaces().Any(t=>
+                     t.IsGenericType&&t.GetGenericTypeDefinition() == typeof(ICollection<>) &&
                      (!t.GetGenericArguments()[0].IsGenericType || t.GetGenericArguments()[0].GetGenericTypeDefinition() != typeof(KeyValuePair<,>))))){
             var type = listProp.ClrType.GenericTypeArguments[0];
             var val = CreateCollectionInstance(listProp.ClrType);
@@ -60,20 +76,13 @@ internal class ValueRandomizer
         return entity;
 
     }
-
     private object RandomizeComplex(ITypeBase type) {
         var propType = type.ClrType;
         object value;
-        if ( typeof(PhoneNumber).IsAssignableFrom(propType)) {
-            if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
-                value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = new Bogus.Faker().Phone.PhoneNumber()};    
-            } else value = new Faker().Phone.PhoneNumber();
+        if ( typeof(PhoneNumber).IsAssignableFrom(propType)){
+            value = RandomizePhoneNumber(propType);
         } else if(typeof(Address).IsAssignableFrom(propType)){
-            value = new Address{
-                City = new Faker().Address.City(), District = new Faker().Address.County(),
-                Country = new Faker().Address.State(), Line1 = new Faker().Address.StreetName(),
-                ZipCode = new Faker().Address.ZipCode()
-            };
+            value = _addressRandomizer.Randomize();
         }
         else{
             value = Activator.CreateInstance(type.ClrType);
@@ -85,6 +94,17 @@ internal class ValueRandomizer
 
         return value;
     }
+
+    private object RandomizePhoneNumber(Type propType) {
+        object value;
+        var n = new Bogus.Faker("tr").Phone.PhoneNumber().Trim('(', ')', '-', 'x');
+        if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
+            value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = n};    
+        } else value = n;
+
+        return value;
+    }
+
     private object? RandomizeValue(Type propType, PropertyInfo property, IPropertyBase prop) {
         object? value= null;
             if (property.GetCustomAttribute<ImageAttribute>()!=null){
@@ -108,16 +128,10 @@ internal class ValueRandomizer
             {
                 value = new Faker().Company.CompanyName();
             }
-            else if ( typeof(PhoneNumber).IsAssignableFrom(propType)) {
-                if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
-                    value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = new Bogus.Faker().Phone.PhoneNumber()};    
-                } else value = new Faker().Phone.PhoneNumber();
+            else if ( typeof(PhoneNumber).IsAssignableFrom(propType)){
+                value = RandomizePhoneNumber(propType);
             } else if(typeof(Address).IsAssignableFrom(propType)){
-                value = new Address{
-                    City = new Faker().Address.City(), District = new Faker().Address.County(),
-                    Country = new Faker().Address.Country(), Line1 = new Faker().Address.StreetAddress(),
-                    ZipCode = new Faker().Address.ZipCode(), Line2 = new Faker().Address.SecondaryAddress()
-                };
+                value = _addressRandomizer.Randomize();
             }
             else if ( propType== typeof(string)) {
                 if (property.Name.Contains("Username", StringComparison.OrdinalIgnoreCase))
@@ -273,4 +287,143 @@ internal class ValueRandomizer
         return ms.ToArray();
     }
 
+}
+
+internal interface IAddressRandomizer
+{
+    public Address Randomize();
+}
+internal class FakeAddressRdomizaner : IAddressRandomizer
+{
+    private readonly Faker _faker = new("tr");
+    public Address Randomize() {
+        return new Address{
+            City = _faker.Address.City(), District = _faker.Address.County(),
+            Country = "TR", Line1 = _faker.Address.StreetAddress(),
+            ZipCode = _faker.Address.ZipCode("#####"), Line2 = _faker.Address.SecondaryAddress()
+        };
+    }
+}
+internal class GeoApifyAddressFetcher: IAddressRandomizer
+{
+    private readonly List<Address> _addresses;
+    private readonly HttpClient _http = new();
+    private readonly string _apiKey;
+    private readonly uint _uniqueInstances;
+    public GeoApifyAddressFetcher(string apiKey, uint uniqueInstances = 500) {
+        _apiKey = apiKey;
+        const string addressFile = "Addresses.json";
+        _uniqueInstances = uniqueInstances;
+        _addresses = File.Exists(Path.Combine(AppContext.BaseDirectory, addressFile))?JsonSerializer.Deserialize<List<Address>>(
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, addressFile))):null;
+        if (_addresses == null ||_addresses.Count == 0){
+            _addresses = GetAddressesAsync().GetAwaiter().GetResult();
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(_addresses);
+            using var s = File.OpenWrite(Path.Combine(AppContext.BaseDirectory, addressFile));
+            s.Write(bytes, 0, bytes.Length);
+        }
+        if (_addresses.Count == 0)
+            throw new Exception("Could not fetch addresses from GeoApify. Please check your API key and network connection.");
+    }
+  public async Task<List<Address>> GetAddressesAsync(int batchSize = 100)
+    {
+        var result = new List<Address>();
+        int offset = 0;
+
+        while (result.Count < _uniqueInstances)
+        {
+            // Fetch one batch
+            var url =
+                $"https://api.geoapify.com/v2/places?categories=building&filter=place:515118ef22a79d414059ed444948a4a54340f00101f90191aa020000000000c0020b9203065475726b6579&lang=en&limit={batchSize}&offset={offset}&apiKey={_apiKey}";
+
+            using var response = await _http.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            var json = await JsonDocument.ParseAsync(stream);
+
+            var features = json.RootElement.GetProperty("features");
+
+            var addresses = features.EnumerateArray()
+                .Select(f => MapToAddress(f.GetProperty("properties")))
+                .Where(addr => addr != null) // drop invalid ones
+                .Cast<Address>()
+                .ToList();
+
+            result.AddRange(addresses);
+
+            offset += batchSize;
+
+            if (features.GetArrayLength() == 0)
+            {
+                // No more results
+                break;
+            }
+        }
+
+        // return only up to the desired count
+        return result.Take((int)_uniqueInstances).ToList();
+    }
+
+    private Address? MapToAddress(JsonElement properties)
+    {
+        string line1 = properties.GetPropertyOrNull("address_line1");
+        string line2 = properties.GetPropertyOrNull("address_line2") ?? "";
+        string district = properties.GetPropertyOrNull("suburb");
+        string city = properties.GetPropertyOrNull("city");
+        string country = properties.GetPropertyOrNull("country");
+        string zip = properties.GetPropertyOrNull("postcode");
+
+        // Skip invalid
+        if (string.IsNullOrWhiteSpace(line1) ||
+            string.IsNullOrWhiteSpace(district) ||
+            string.IsNullOrWhiteSpace(city) ||
+            string.IsNullOrWhiteSpace(country) ||
+            string.IsNullOrWhiteSpace(zip))
+        {
+            return null;
+        }
+
+        return new Address
+        {
+            Line1 = line1,
+            Line2 = line2,
+            District = district,
+            City = city,
+            Country = country,
+            ZipCode = zip
+        };
+    }    public Address Randomize() {
+        return _addresses[new Randomizer().Int(0, _addresses.Count - 1)];
+    }
+}
+
+internal class IdenticalAddressRandomizer : IAddressRandomizer
+{
+    private Address _address;
+
+    public IdenticalAddressRandomizer(Address? address = null) {
+        _address = address ?? new Address(){
+            District = "Altındağ",
+            City = "Ankara",
+            Line1 = "Doğanbey Mahallesi, Cumhuriyet Cd. No:7",
+            Country = "TR",
+            ZipCode = "06050"
+        };
+    }
+
+    public Address Randomize() {
+        return _address;
+    }
+}
+public static class JsonExtensions
+{
+    public static string? GetPropertyOrNull(this JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+        return null;
+    }
 }

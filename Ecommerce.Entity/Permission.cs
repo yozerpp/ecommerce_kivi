@@ -2,6 +2,10 @@
 
 public class Permission
 {
+    public static Permission EditOrder = new(){
+        Id = "edit_order",
+        Description = "Allows changing status of orders",
+    };
     public static Permission EditProduct = new(){
         Id = "edit_product",
         Description = "Allows editing product details"

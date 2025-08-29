@@ -29,8 +29,8 @@
                 document.getElementById('properties').lastElementChild._props.entries().forEach((e,i)=>{
                     const [k,v] = e;
                     const pfx = '@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.CategoryProperties))[' + i + '].';
-                    const valueInp =createInput(pfx + '@nameof(ProductCategoryProperties.Value)',v);
-                    const idInp = createInput(pfx + '@nameof(ProductCategoryProperties.CategoryPropertyId)', k);
+                    const valueInp =createInput(pfx + '@nameof(ProductCategoryProperty.Value)',v);
+                    const idInp = createInput(pfx + '@nameof(ProductCategoryProperty.CategoryPropertyId)', k);
                     const f = document.getElementById('editForm');
                     f.appendChild(idInp);
                     f.appendChild(valueInp);
@@ -110,7 +110,52 @@
                 })
                 if(e.type === 'htmx:load'){
                     document.getElementById('properties').lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
+                    document.getElementById('offerOptions').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                 }
+                document.getElementById('addToCartForm').addEventListener('submit', e=>{
+                    e.preventDefault();
+                    let body ={};
+                    const incr = e.currentTarget.querySelector('input[name="incr"]');
+                    const q = e.currentTarget.querySelector('input[name="quantity"]');
+                    if(incr.value) {
+                        let v= parseInt(q.value);
+                        const i = parseInt(incr.value);
+                        if(v===0) return;
+                        v=isNaN(v)?0:v;
+                        q.value = (v + (body.quantity = i)).toString();
+                        incr.value = null;
+                    }
+                    else body.quantity =q.value;
+                    body.__RequestVerificationToken = document.getElementById('addToCartForm').querySelector('input[name="__RequestVerificationToken"]').value;
+                    body.productId= @Model.ViewedProduct.Id;
+                    body.sellerId = document.getElementById('sellerIdInput').value;
+
+                    const options = document.getElementById('offerOptions').firstElementChild;
+                    let i=0;
+                    for(const [k,v] of options._options.entries()){
+                        const prefix = '@(nameof(Cart.Options))[' +i++ + '].';
+                        const keyInputName = isNaN(parseInt(k))?prefix + '@(nameof(ProductOption.Key))':(prefix + '@(nameof(ProductOption.CategoryPropertyId))')
+                        body[keyInputName] = k;
+                        body[prefix + '@(nameof(ProductOption.Id))']= parseInt(v);
+                        body[prefix + '@(nameof(ProductOption.ProductId))'] = @Model.ViewedProduct.Id;
+                    }
+                    htmx.ajax('POST', '/@nameof(Cart)', {
+                        target:'#addToCartResult',
+                        swap:'innerHTML',
+                        source:e.currentTarget,
+                        values: body,
+                        headers:{'Content-Type': 'application/x-www-form-urlencoded'},
+                        handler: function (elt,e){
+                            if(e.xhr.status>=300 || e.xhr.status < 200) return;
+                            const q = parseInt(elt.querySelector('input[name="quantity"]').value);
+                            if(q >0)
+                                elt.querySelectorAll('button.existing-item').forEach(b=>b.classList.remove('d-none'));
+                            else elt.querySelectorAll('button.existing-item').forEach(b=>b.classList.add('d-none'));
+                            document.dispatchEvent(new CartChangedEvent(q, parseInt(elt.querySelector('#sellerIdInput').value), @Model.ViewedProduct.Id));
+                        }
+                    })
+                    
+                })
                 console.log("loaded @(nameof(_ProductMainPartial)) from " + e.type)
             }
         })(document.currentScript)
@@ -125,11 +170,11 @@
                     }
                     <button type="button"  class="btn save-button btn-success edit-control col-auto" style="@(Model.Creating?"background-color: darkorange":"")">@(!Model.Creating?"Düzenlemeyi Kaydet":"İlan Ver")</button>
                     @if (editable && Model.StaffVisiting){
-                        <form hx-post="/Product?handler=delete" method="post" hx-swap="innerHTML" hx-target="#popupResult" class="col-auto">
+                        <formF hx-post="/Product?handler=delete" method="post" hx-swap="innerHTML" hx-target="#popupResult" class="col-auto">
                             <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.ViewedProduct.Id"/>
                             <button class="btn btn-danger"
                                     hx-trigger="click">Sil</button>
-                        </form>
+                        </formF>
                     }
                 </div>
             </li>
@@ -181,25 +226,53 @@
                             </div>
                         </div>
                         <div class="mx-3 col-auto">
-                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage ?? 0, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ?? 0u) }"/>
+                            <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = Model.ViewedProduct.Stats.RatingAverage, RatingCount = (int)(Model.ViewedProduct.Stats.ReviewCount ) }"/>
                         </div>
                     </li>
                 }
-                @if (!Model.Creating){
+                @if (Model.Creating){
+                    <li id="offerOptions">
+                        @await Html.PartialAsync("Shared/Product/_ProductOptionsPartial", new _ProductOptionsPartial(){
+                            Editable = true, Options = [], PropertyCandidates = Model.Categories[Model.ViewedProduct.CategoryId].CategoryProperties
+                        })
+                    </li>
+                }
+                else{
+                <li id="offerOptions" hx-get="/@(nameof(Product))?handler=options&@(nameof(Product.ProductId))=@(Model.ViewedProduct.Id)&categoryId=@(Model.ViewedProduct.CategoryId)" hx-trigger="fire"
+                    hx-target="this" hx-swap="innerHTML" class="container-fluid">
+                </li>
                 <li id="offers" class="flex-grow-1 d-flex flex-column">
                     <script>
                         ((s)=>{
                             s.closest('.partial-parent').addEventListener('htmx:load', load);
                             document.addEventListener('DOMContentLoaded', load);
                             function load(e){
-                                document.getElementById('offerList').addEventListener('htmx:afterSettle', e=>{
+                                document.getElementById('offerList').addEventListener('htmx:afterSwap', e=>{
                                     e.detail.elt.firstElementChild.style.maxHeight = (document.getElementById('carousels').offsetHeight - s.parentElement.offsetTop +s.parentElement.parentElement.offsetTop) + "px";
-                                    e.detail.elt.addEventListener('sellerSelected', e=>{
+                                    e.detail.elt.firstElementChild.addEventListener('sellerSelected', e=>{
                                         e.stopPropagation();
+                                        var opts = document.getElementById('offerOptions');
+                                        opts.setAttribute('hx-vals', JSON.stringify({SellerId: e.detail.sellerId}));
+                                        opts.dispatchEvent(new Event('fire', {bubbles:false, cancelable:true}));
                                         document.getElementById('sellerIdInput').value = e.detail.sellerId;
+                                        if(e.detail.quantity){
+                                            document.getElementById('addToCartForm').querySelector('input[name="quantity"]').value = e.detail.quantity;
+                                            document.getElementById('addToCartForm').querySelectorAll('button.existing-item').forEach(i=>i.classList.remove('d-none'));
+                                        } else {
+                                            document.getElementById('addToCartForm').querySelector('input[name="quantity"]').value = null;
+                                            document.getElementById('addToCartForm').querySelectorAll('button.existing-item').forEach(i => i.classList.add('d-none'));
+                                        }
                                         document.getElementById('nav-reviews').querySelector('.review-form')._setSellerId(e.detail.sellerId);
                                     });
                                 })    
+                                const offerListErrorToolTip = new bootstrap.Tooltip(document.getElementById('offerList'), {toggle:false, trigger:'manual',customClass:'bg-danger', title:'Lütfen ürünü satın almak istediğiniz satıcıyı seçiniz.',});
+                                document.getElementById('addToCartForm').addEventListener('submit', e=>{
+                                    if(document.getElementById('sellerIdInput').value) return;
+                                    e.preventDefault();
+                                    e.stopImmediatePropagation();
+                                    offerListErrorToolTip.show();
+                                    setTimeout(()=>offerListErrorToolTip.hide(), 3000);
+                                })
                             }
                         })(document.currentScript)
                         function fetchOffers(){
@@ -257,13 +330,15 @@
                     }
                     @if (!Model.Creating){
                         <div class="col-6 ms-auto me-4">
-                            <form hx-post="/@(nameof(Cart))" hx-target="#addToCartResult" hx-swap="innerHTML" class="form-check-inline">
+                            <form id="addToCartForm">
                                 @Html.AntiForgeryToken()
-                                <input type="hidden" name="productId" value="@Model.ViewedProduct.Id"/>
-                                <input id="sellerIdInput" type="hidden" name="sellerId"/>
-                                <div class="row justify-content-center gx-4">
-                                    <input class="col-auto rounded-1" type="number" min="1" name="quantity" placeholder="Miktar"/>
-                                    <button type="submit" class="col-auto btn btn-secondary" style="background-color: darkorange">Sepete Ekle</button>
+                                <input id="sellerIdInput" type="hidden" name="sellerId" />
+                                <div class="d-inline-flex justify-content-center align-items-center gap-2">
+                                    <button onclick="event.currentTarget.nextElementSibling.value = -1;event.currentTarget.closest('form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" type="button" class="p-0 btn hover-grow-small btn-link d-none existing-item"><i class="hover-grow-small bi bi-file-minus-fill rounded-circle fs-5 text-danger"></i></button>
+                                    <input type="hidden" name="incr" min="-1" max="1"/>
+                                    <input class="form-control small" type="number" min="0" name="quantity" placeholder="Miktar" required/>
+                                    <button type="submit" class="btn btn-secondary rounded-2 opacity-75 shadow-sm hover-grow-small border-dark-subtle border-opacity-50" style="background-color: orange">Sepete Ekle</button>
+                                    <button onclick="event.currentTarget.previousElementSibling.previousElementSibling.previousElementSibling.value = 1;event.currentTarget.closest('form').dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}))" type="button" class="p-0 hover-grow-small btn btn-link"><i class="hover-grow-small bi bi-plus-circle-fill fs-5 text-success"></i></button>
                                 </div>
                             </form>
                         </div>
@@ -303,9 +378,7 @@
                             })
                         </ul>
                     </div>
-
                 </div>
-
                 <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="#nav-reviews-tab">
                     @if (!Model.Creating){
                     <div class="container-fluid card bg-light">
@@ -341,7 +414,6 @@
                             ((s)=>{
                                 s.closest('.partial-parent').addEventListener('htmx:load', load);
                                 document.addEventListener("DOMContentLoaded", load);
-                                
                                 function load(e){
                                     if(e.type==='htmx:load')
                                         s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}))

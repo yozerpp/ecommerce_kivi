@@ -1,144 +1,180 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared.Product._ProductOptionsPartial
+﻿@using Ecommerce.Entity
+@using Product = Ecommerce.WebImpl.Pages.Product
+@model Ecommerce.WebImpl.Pages.Shared.Product._ProductOptionsPartial
 @{
     var optionsGrouped = Model.Options.GroupBy(o => 
-        o.CategoryPropertyId != null 
-        ? o.CategoryPropertyId.Value.ToString() 
-        : o.Key ?? "").ToArray();
+        o.option.CategoryPropertyId != null 
+        ? o.option.CategoryPropertyId.Value.ToString() 
+        : o.option.Key ?? "").ToArray();
 }
 <!--Type:
 _options:Map<int,string>
+_addedOptions: Map<int,string>
 -->
 <div class="container-fluid partial-parent">
     <script>
         ((s)=>{
-            document.addEventListener('DOMContentLoaded', load);
             const parent =s.parentElement;
+            document.addEventListener('DOMContentLoaded', load);
             parent.addEventListener('htmx:load', load);
             function load(e){
                 if(e.type ==='htmx:load') e.stopPropagation();
                 parent._options = new Map();
-                s.nextElementSibling.querySelectorAll('.tab-pane').forEach(el=>{
-                    const opt = e.firstElementChild;
+                parent._addedOptions = new Map();   
+                parent.querySelectorAll('.tab-pane').forEach(el=>{
+                    const opt = el.firstElementChild;
                     opt.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}));
                     const key = opt.dataset.propertyid!=undefined?parseInt(opt.dataset.propertyid):opt.dataset.keyname;
                     opt.addEventListener('change', e=>{
                         e.stopPropagation();
                         parent._options.set(key, opt.dataset.selected);
+                        document.getElementById(e.currentTarget.closest('div.tab-pane').getAttribute('aria-labelledby')).querySelector('.option-value p').innerText=opt.dataset.value;
                     })
                     parent._options.set(key,opt.dataset.selected);
                 });
+                s.nextElementSibling.nextElementSibling.querySelectorAll('button[role="tab"]').forEach(b=>{
+                    const tabctrl = new bootstrap.Tab(b);
+                    b.addEventListener('click', ev=> {
+                        ev.preventDefault();
+                        tabctrl.show();
+                    });
+                });
+                console.log("initialized @(nameof(_ProductOptionsPartial)) from " + e.type);
+                const addBtn = s.parentElement.querySelector(':scope > div[role="tablist"] .add-btn');
+                if(addBtn){
+                    const group = addBtn.nextElementSibling;
+                    group.addEventListener('click', ev => {
+                        if(!ev.target.dataset.id) return;
+                        const propertyId = parseInt(ev.target.dataset.id);
+                        const propertyName = ev.target.innerHTML;
+                        const metadata = {
+                            id: propertyId,
+                            enumvals: ev.target.dataset.enumvals?ev.target.dataset.enumvals.split('|'):null,
+                            isnumber: ev.target.dataset.isnumber === 'true',
+                            min: ev.target.dataset.min,
+                            max: ev.target.dataset.max,
+                            name: propertyName,
+                        };
+                        const newTabButton = createTabButton(propertyId, propertyName);
+                        const newTab = createTabContent(propertyId, metadata);
+                        parent.querySelector('[role="tablist"]').insertBefore(newTabButton, group.closest('.btn-group'));
+                        parent.querySelector('.tab-content').appendChild(newTab);
+                        const tabInstance = new bootstrap.Tab(newTabButton);
+                        newTabButton.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            tabInstance.show();
+                        });
+
+                        // Hide dropdown and remove option
+                        group.classList.remove('show', 'active');
+                        ev.target.remove();
+                    });
+                }
+            }
+            function setUpOptionGroup(group){
+                if (!parent._addedOptions) {
+                    parent._addedOptions = new Map();
+                }
+
+            }
+            function createTabButton(propertyId, propertyName){
+                const newTabButton = document.createElement('button');
+                newTabButton.id = `option-${propertyId}-tab`;
+                newTabButton.classList.add('text-center', 'bg-light', 'hover-grow-small', 'hover-shadow', 'btn-sm', 'border-1', 'border-opacity-25', 'shadow-sm', 'border-secondary-subtle', 'rounded-4')
+                newTabButton.setAttribute('data-bs-toggle', 'tab');
+                newTabButton.innerHTML = `<p class="mb-0 text-center text-muted">${propertyName}</p>`
+                newTabButton.setAttribute('data-bs-target', `#option-${propertyId}`);
+                return newTabButton;
+            }
+            function createTabContent(propertyId, metadata) {
+                const newTab = document.createElement('div');
+                newTab.id = `option-${propertyId}`;
+                newTab.className = 'tab-pane border-0 py-2';
+                newTab.setAttribute('role', 'tabpanel');
+                newTab.setAttribute('aria-labelledby', `option-${propertyId}-tab`);
+
+                const plusIcon = document.createElement('i');
+                plusIcon.classList.add('bi', 'bi-plus-circle-fill', 'text-success', 'fs-5');
+                plusIcon.style.cursor = 'pointer';
+                plusIcon.addEventListener('click', () => {
+                    const optionInput = createOptionInput(propertyId, metadata);
+                    newTab.insertBefore(optionInput, plusIcon); // Add input
+                });
+
+                newTab.appendChild(plusIcon);
+                return newTab;
+            }
+
+            function createOptionInput(propertyId, metadata) {
+                let optionInput;
+
+                if (metadata.enumvals) {
+                    optionInput = document.createElement('select');
+                    optionInput.classList.add('form-select', 'form-select-sm', 'border-secondary-subtle', 'border-2', 'rounded-4');
+                    metadata.enumvals.forEach((val,idx )=> {
+                        const option = document.createElement('option');
+                        option.value = val;
+                        option.textContent = val;
+                        optionInput.appendChild(option);
+                    })
+                } else {
+                    optionInput = document.createElement('input');
+                    optionInput.classList.add('form-control', 'form-control-sm', 'border-secondary-subtle', 'border-2',
+                        'rounded-4');
+                    optionInput.type = metadata.isnumber ? 'number' : 'text';
+
+                    if (metadata.min) optionInput.min = metadata.min;
+                    if (metadata.max) optionInput.max = metadata.max;
+                }
+
+                // Store value in _addedOptions
+                optionInput.addEventListener('change', () => {
+                    parent._addedOptions.set(propertyId, optionInput.value);
+                });
+
+                return optionInput;
             }
         })(document.currentScript)
         //# sourceURL=/ProductOptions/@(nameof(_ProductOptionsPartial)).js
         </script>
+    <h3 class="fs-5 fw-bold">Seçenekleri Tamamlayın</h3>
     <div class="tab-content border-0" style="background-color: inherit">
         @foreach (var options in optionsGrouped){
             var propertyId = uint.Parse(options.Key);
             var propName = propertyId == 0 ? null : options.Key;
-            <div id="option@(options.Key.GetHashCode())" role="tabpanel" aria-labelledby="option@(options.GetHashCode())-tab" 
-                 class="tab-pane border-0 px-2 py-4" style="background-color: inherit">
-                @await Html.PartialAsync("Shared/Product/_ProductOptionPartial", new _ProductOptionPartial{PropertyId = propertyId==0?null:propertyId, CustomKey = propName, Options = options.ToArray(), Editable = Model.Editable })
+            <div id="option@(options.Key.GetHashCode())" role="tabpanel" aria-labelledby="option@(options.Key.GetHashCode())-tab"
+                 class="tab-pane border-0 py-2" style="background-color: inherit">
+                @await Html.PartialAsync("Shared/Product/_ProductOptionPartial", new _ProductOptionPartial{ PropertyId = propertyId == 0 ? null : propertyId, CustomKey = propName, Options = options.ToArray(), Editable = Model.Editable })
             </div>
         }
     </div>
-    <div role="tablist" class="w-100 d-flex py-1 mt-2 ps-2 justify-content-start align-content-center align-items-center">
+    <div role="tablist" class="w-100 d-flex py-1 mt-2 ps-2 justify-content-start align-content-center gap-2 align-items-center">
+        <p class="mb-0 fs-6">Özellik:</p>
         @foreach(var opt in optionsGrouped){
-            <button id="option@(opt.Key.GetHashCode())-tab" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#option@(opt.GetHashCode())" aria-controls="option@(opt.GetHashCode())" aria-selected="false"
-                class="btn btn-light border-1 border-opacity-50 border-secondary-subtle rounded-2">
-                <p class="text-center fs-4 text-muted">
-                    @(opt.First().Property.CategoryProperty.PropertyName)
+            <button id="option@(opt.Key.GetHashCode())-tab" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#option@(opt.Key.GetHashCode())" aria-controls="option@(opt.Key.GetHashCode())" aria-selected="false"
+                class="text-center bg-light hover-grow-small hover-shadow btn-sm border-1 border-opacity-25 shadow-sm border-secondary-subtle rounded-4">
+                <p class="text-center fs-6 mb-0 text-muted">
+                    @(opt.FirstOrDefault().option?.Property?.CategoryProperty.PropertyName)
                 </p>
+                <div class=" d-inline-flex option-value justify-content-end align-content-center w-100">
+                    <p style="font-size: smaller" class="text-dark">@((opt.Any(o=>o.selected)?opt.First(o=>o.selected):opt.FirstOrDefault()).option?.Value)</p>
+                </div>
             </button>
         }
         @if (Model.Editable){
-            <button type="button" class="btn btn-success border-1 border-opacity-50 border-success-subtle rounded-2" 
-                    onclick="addOption()">
-                <span class="text-center fs-6 text-success">+ Add Option</span>
-            </button>
-        }
-    </div>
-    @if (Model.Editable){
-        <div class="container-fluid justify-content-end align-content-center d-flex mt-3">
-            <button type="button" class="btn btn-danger me-2" onclick="deleteSelectedOption()">
-                Delete Selected Option
-            </button>
-        </div>
-        
-        <script>
-            function addOption() {
-                // For now, we'll add a simple option - this could be enhanced with a modal for user input
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/Product?handler=addOption&OptionId=0';
-                
-                // Create ProductOption properties for model binding
-                const productIdInput = document.createElement('input');
-                productIdInput.type = 'hidden';
-                productIdInput.name = 'ProductOption.ProductId';
-                productIdInput.value = '@(Model.Options.FirstOrDefault()?.ProductId ?? 0)';
-                form.appendChild(productIdInput);
-                
-                const sellerIdInput = document.createElement('input');
-                sellerIdInput.type = 'hidden';
-                sellerIdInput.name = 'ProductOption.SellerId';
-                sellerIdInput.value = '@(Model.Options.FirstOrDefault()?.SellerId ?? 0)';
-                form.appendChild(sellerIdInput);
-                
-                const valueInput = document.createElement('input');
-                valueInput.type = 'hidden';
-                valueInput.name = 'ProductOption.Value';
-                valueInput.value = 'New Option';
-                form.appendChild(valueInput);
-                
-                // Add CSRF token if available
-                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (csrfToken) {
-                    const tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.name = '__RequestVerificationToken';
-                    tokenInput.value = csrfToken.value;
-                    form.appendChild(tokenInput);
-                }
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-            
-            function deleteSelectedOption() {
-                const parent = document.querySelector('.partial-parent');
-                let selectedOptionId = null;
-                
-                // Get the currently selected option ID from the active tab
-                const activeTab = document.querySelector('.tab-pane:not(.d-none)');
-                if (activeTab) {
-                    const selectedElement = activeTab.querySelector('[data-selected]');
-                    if (selectedElement && selectedElement.dataset.optionid) {
-                        selectedOptionId = selectedElement.dataset.optionid;
+            <div class="btn-group">
+                <button data-bs-toggle="dropdown" aria-expanded="false" type="button" role="button" aria-selected="false"
+                         class="add-btn text-center bg-light hover-grow-small hover-shadow btn-sm border-1 text-center border-opacity-25 shadow-sm border-secondary-subtle rounded-4 btn-group">
+                    <i class="bi bi-plus-circle-fill text-success fs-5 me-1"></i><p class="mb-0 p-0">Seçenek Grubu Ekle</p>
+                </button>
+                <ul class="dropdown-menu">
+                    @foreach (var candidate in Model.PropertyCandidates){
+                        <li>
+                            <a data-id="@(candidate.Id)"  data-enumvals="@(candidate.EnumValues?.TrimStart('|').TrimEnd('|'))" data-isnumber="@(candidate.IsNumber)" data-min="@candidate.MinValue" data-max="@candidate.MaxValue" style="cursor:pointer;" class="text-decoration-none dropdown-item text-secondary-emphasis">@(candidate.PropertyName)</a>
+                        </li>
                     }
-                }
-                
-                if (!selectedOptionId) {
-                    alert('Please select an option to delete.');
-                    return;
-                }
-                
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/Product?handler=deleteOption&OptionId=${selectedOptionId}`;
-                
-                // Add CSRF token if available
-                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (csrfToken) {
-                    const tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.name = '__RequestVerificationToken';
-                    tokenInput.value = csrfToken.value;
-                    form.appendChild(tokenInput);
-                }
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        </script>
-    }
+                </ul>
+            </div>
+              }
+    </div>
 </div>

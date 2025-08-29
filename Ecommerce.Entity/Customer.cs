@@ -9,7 +9,7 @@ namespace Ecommerce.Entity;
 
 public class Customer : User
 {
-    public string? StripeId { get; set; }
+    public string? ApiId { get; set; }
     public ICollection<Seller> FavoriteSellers { get; set; } = new List<Seller>();
     public ICollection<Product> FavoriteProducts { get; set; } = new List<Product>();
     public ICollection<CouponNotification> CouponNotifications { get; set;} = new List<CouponNotification>();

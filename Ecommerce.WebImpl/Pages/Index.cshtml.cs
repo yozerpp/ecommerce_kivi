@@ -18,8 +18,8 @@ public class HomepageModel : BaseModel
     private readonly ILogger<HomepageModel> _logger;
     private readonly IProductManager _productManager;
     private readonly ICartManager _cartManager;
-    public readonly Dictionary<uint,Category> Categories;
-    public HomepageModel(ILogger<HomepageModel> logger, IProductManager productManager, ICartManager cartManager, Dictionary<uint,Category> categories) {
+    public readonly IDictionary<uint,Category> Categories;
+    public HomepageModel(ILogger<HomepageModel> logger, IProductManager productManager, ICartManager cartManager, IDictionary<uint,Category> categories) {
         _logger = logger;
         _cartManager = cartManager;
         _productManager = productManager;
@@ -65,7 +65,7 @@ public class HomepageModel : BaseModel
     public ViewType_? ViewType { get; set; }
     public enum ViewType_
     {
-        Main,Featured,Seller
+        Page,Featured,List
     }
     public IActionResult OnGet() {
         var favorites = GetFavorites();
@@ -73,22 +73,28 @@ public class HomepageModel : BaseModel
             // ParseQuery(QueryString=QueryString.Replace('.','_'), out  preds,out orders  );
         // else GetParams(out preds, out orders);
         // Products = Search(preds, orders, PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){Product = p, CurrentFavored = favorites?.Contains(p.Id)}).ToList();
-        Products = _productManager.Search(QueryString, [], true, false, false, page: PageIndex).Select(p=>new ProductWithAggregatesCustomerView(){
+        
+        var products = _productManager.Search(QueryString, ParseOrders(OrderString), true, false, false, page: PageIndex);
+        CategoryRecommendations = [];
+        SellerRecommendations = [];
+        Products = products.Select(p=>new ProductWithAggregatesCustomerView(){
             Product = p,
             CurrentFavored = favorites?.Contains(p.Id)
         }).ToList();
-        CategoryRecommendations = [];
-        SellerRecommendations = [];
-        if(ViewType == null || ViewType == ViewType_.Main)
+        if (ViewType == null || ViewType == ViewType_.Page)
             return Page();
         if (ViewType == ViewType_.Featured)
             return Partial("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
                 PageIndex = PageIndex,
                 Type = null, Categories = Categories, Products = Products,
             });
-        if (ViewType == ViewType_.Seller){
-            
+        if (ViewType == ViewType_.List){
+            return Partial("Shared/Product/_ListView", new _ListView(){
+                Categories = Categories,
+                Products = products
+            });
         }
+        throw new NotImplementedException("View Type " + ViewType.ToString() + " not implemented");
     }
 
     private List<Entity.Product> Search(ICollection<SearchPredicate> preds, ICollection<SearchOrder> orders, int page) {
@@ -107,7 +113,7 @@ public class HomepageModel : BaseModel
     }
 
     public const string HasPropertiesKey = "HasProperties";
-    public IActionResult OnGetRecommended() {
+    public IActionResult OnGetRecommended([FromQuery(Name = "pageIndex")] int PageIndex = 1) {
         var products = Type==RecommendationType.Category?_productManager.GetMoreProductsFromCategories(CurrentSession, PageIndex): _cartManager.GetMoreProductsFromSellers(CurrentSession, page: PageIndex);
         if (products.Count == 0) return new NoContentResult();
         return Partial("Shared/Product/" + nameof(_FeaturedPartial), new _FeaturedPartial{
@@ -119,8 +125,8 @@ public class HomepageModel : BaseModel
         });
     }
 
-    private static ICollection<SearchOrder> ParseOrders(string q) {
-        if (q == null) return[];
+    private static ICollection<SearchOrder> ParseOrders(string? q) {
+        if (string.IsNullOrWhiteSpace(q)) return[];
             var orders = q.Split("&&",StringSplitOptions.RemoveEmptyEntries);
         return orders.Select(o => {
             var splt = o.Split(';', StringSplitOptions.RemoveEmptyEntries);

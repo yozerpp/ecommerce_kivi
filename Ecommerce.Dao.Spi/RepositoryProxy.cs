@@ -31,7 +31,7 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
         if (!typeof(IRepository<TE>).IsAssignableFrom(targetMethod.DeclaringType)) 
             return targetMethod.Invoke(_repository,args);
-        bool isAddOrUpdate = targetMethod.Name.Equals("Add") || targetMethod.Name.Equals("Update");
+        bool isAddOrUpdate = targetMethod.Name.Contains("Add") || targetMethod.Name.Contains("Update");
         if (isAddOrUpdate){
             if (_validators != null && args[0] is TE entity){
                 var errors = _validators.Select(v => v.Validate(entity))
@@ -42,7 +42,7 @@ public class RepositoryProxy<TE> : DispatchProxy where TE : class
             }
         }
 
-        if (isAddOrUpdate = (isAddOrUpdate || targetMethod.Name.Equals("Delete"))){
+        if (isAddOrUpdate = (isAddOrUpdate || targetMethod.Name.Contains("Delete") || targetMethod.Name.Equals("Flush"))){
             TransactionLock.EnterWriteLock();
         }
         else TransactionLock.EnterReadLock();

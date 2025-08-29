@@ -5,6 +5,7 @@ using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Views;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
@@ -15,13 +16,14 @@ public class SellerManager : ISellerManager
     private readonly IRepository<Seller> _sellerRepository;
     private readonly IRepository<ProductOffer> _productOfferRepository;
     private readonly IRepository<Coupon> _couponRepository;
-    private readonly IRepository<Category> _categoryRepository;
-    public SellerManager(IRepository<Category> categoryRepository,IRepository<Coupon> couponRepository,IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository) {
+    private readonly IRepository<Order> _orderRepository;
+
+    public SellerManager(IRepository<Coupon> couponRepository,IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository, IRepository<Order> orderRepository) {
         _productRepository = productRepository;
-        _categoryRepository = categoryRepository;
         _couponRepository = couponRepository;
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
+        _orderRepository = orderRepository;
     }
     public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeAggregates, bool includeCoupons = false) {
         var s =  _sellerRepository.FirstP(includeAggregates?WithAggregates:WithoutAggregates,s=>s.Id == sellerId,
@@ -30,18 +32,41 @@ public class SellerManager : ISellerManager
             s.Coupons = s.Coupons.Where(s => s.ExpirationDate > DateTime.UtcNow + TimeSpan.FromHours(3)).ToList();
         return s;
     }
-    public List<ProductOffer> GetOffers(uint sellerId, int page = 1, int pageSize = 20) {
+    public ICollection<Order> GetOrders(uint sellerId, uint?orderId = null, bool onlyOwnItems =true, int page = 1, int pageSize = 20) {
+        var orders =  _orderRepository.WhereP(OrderManager.OrderWithItemsAggregateProjection, o=>o.Items.Any(i=>i.SellerId == sellerId) && 
+                (!orderId.HasValue || orderId == o.Id), offset:(page-1)*pageSize, limit:page*pageSize,nonTracking:true
+            ,includes:[[nameof(Order.Items),nameof(OrderItem.SelectedOptions), nameof(ProductOption.Property), nameof(ProductCategoryProperty.CategoryProperty)]]);
+        if(onlyOwnItems)
+            orders.ForEach(o => {
+                o.Items = o.Items.Where(i=>i.SellerId == sellerId).ToList();
+            });
+        return orders;
+    }
+    public ICollection<ProductOffer> GetOffers(uint sellerId, int page = 1, int pageSize = 20) {
         page = page == -1 ? _productOfferRepository.Count(p => p.SellerId == sellerId) / pageSize + 1 : page;
-        return _productOfferRepository.Where(p => p.SellerId == sellerId, includes:[[nameof(ProductOffer.Product), nameof(Product.Images)],[nameof(ProductOffer.Product), nameof(Product.Category)]], offset: (page-1) * pageSize, limit: pageSize*page);
+        var offersDict= _productOfferRepository.WhereP(OfferStaltessWithProduct,p => p.SellerId == sellerId, includes:[[nameof(ProductOffer.Product), nameof(Product.Images)],[nameof(ProductOffer.Product), nameof(Product.Category)]], offset: (page-1) * pageSize, limit: pageSize*page,nonTracking:true).ToDictionary(o=>ValueTuple.Create(o.SellerId, o.ProductId), o=>o);
+        var stats = _productOfferRepository.WhereP(o => new OfferStats(){
+            ProductId = (uint?)o.Stats.ProductId ?? 0,
+            SellerId = (uint?)o.Stats.SellerId ?? 0,
+            ReviewAverage = (decimal?)o.Stats.ReviewAverage?? 0m,
+            ReviewCount = (uint?)o.Stats.ReviewCount?? 0,
+            RatingTotal = (decimal?)o.Stats.RatingTotal ?? 0m,
+            RefundCount = (uint?)o.Stats.RefundCount ?? 0,
+        },p=>p.SellerId == sellerId && p.Stats !=null, nonTracking:true);
+        stats.ForEach(o=>offersDict[(o.SellerId.Value, o.ProductId.Value)].Stats=o);
+        return offersDict.Values;
     }
  
     //@param Seller should contain user information as well.
     public void UpdateSeller(Seller seller) {
-        _sellerRepository.Update(seller);
+        var ignores = new List<string>([nameof(Seller.PasswordHash), nameof(Seller.Session), nameof(Seller.SessionId)]);
+        if (seller.ProfilePictureId == 0) seller.ProfilePictureId = null;
+        else if(seller.ProfilePictureId == null) ignores.AddRange([nameof(Seller.ProfilePictureId), nameof(Seller.ProfilePicture)]);
+        _sellerRepository.UpdateIgnore(seller,true,ignores.ToArray());
         _sellerRepository.Flush();
     }
 
-    public Product ListProduct(Seller seller, Product product) {
+    public Product ListProduct(Product product) {
         if(product.CategoryId==null && product.Category==null){
             throw new ArgumentException("A product should be associated with a new or existing category.");
         }
@@ -49,7 +74,6 @@ public class SellerManager : ISellerManager
         _productRepository.Flush();
         return ret;
     }
-
     public ProductOffer ListOffer(Seller seller, ProductOffer offer)
     {
         if (offer.ProductId==0 && offer.Product==null)
@@ -80,7 +104,6 @@ public class SellerManager : ISellerManager
             throw new ArgumentException("You already have an offer for this product.");
         }
     }
-    
     public ProductOffer updateOffer(Seller seller, ProductOffer offer, uint productId) {
         // throw new Exception();
         if (offer.Product!=null && _productRepository.Exists(p=>p.Id==offer.ProductId))
@@ -96,7 +119,6 @@ public class SellerManager : ISellerManager
         _productOfferRepository.Flush();
         return ret;
     }
-
     public void UnlistOffer(Seller seller, ProductOffer offer)
     {
         var o = _productOfferRepository.Delete(offer);
@@ -107,7 +129,6 @@ public class SellerManager : ISellerManager
         }
         _productOfferRepository.Flush();
     }
-
     public void CreateCoupon(Seller seller, Coupon coupon) {
         coupon.SellerId = seller.Id;
         var couponCount = _sellerRepository.First( s=>s.Id==seller.Id,includes:[[nameof(Seller.Coupons)]]).Coupons.Count;
@@ -115,7 +136,6 @@ public class SellerManager : ISellerManager
         _couponRepository.Add(coupon);
         _couponRepository.Flush();
     }
-
     private static string[][] GetIncludes(bool offer, bool reviews, bool coupons) {
         ICollection<string[]> ret = new List<string[]>();
         if (offer){
@@ -156,24 +176,25 @@ public class SellerManager : ISellerManager
         PhoneNumber = s.PhoneNumber,
         ProfilePicture = s.ProfilePicture,
         ProfilePictureId = s.ProfilePictureId,
-        Stats = new SellerStats(){
-            OfferCount = s.Stats.OfferCount ?? 0,
-            RefundCount = s.Stats.RefundCount ?? 0,
-            ReviewAverage = s.Stats.ReviewAverage??0m,
-            ReviewCount = s.Stats.ReviewCount ?? 0,
-            SaleCount = s.Stats.SaleCount ?? 0,
-            TotalSold = s.Stats.TotalSold ?? 0m,
-        }
+        Stats = s.Stats
     };
-
-    public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithStatlessProduct = o => new ProductOffer(){
+    public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithStatlessProduct = ((Expression<Func<ProductOffer,ProductOffer>>)(o => new ProductOffer(){
         ProductId = o.ProductId,
         SellerId = o.SellerId,
         Discount = o.Discount,
         Price = o.Price,
         Seller = o.Seller,
         Product = ProductManager.CardStatlessProjection.Invoke(o.Product),
-        Stats = o.Stats,
+        Stats = o.Stats!=null?ProductManager.OfferStatsProjection.Invoke(o.Stats):null,
         Stock = o.Stock,
-    };
+    })).Expand();    public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferStaltessWithProduct = ((Expression<Func<ProductOffer,ProductOffer>>)(o => new ProductOffer(){
+        ProductId = o.ProductId,
+        SellerId = o.SellerId,
+        Discount = o.Discount,
+        Price = o.Price,
+        Seller = o.Seller,
+        Product = ProductManager.CardStatlessProjection.Invoke(o.Product),
+        Stats = null,
+        Stock = o.Stock,
+    })).Expand();
 }

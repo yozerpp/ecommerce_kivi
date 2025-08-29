@@ -9,12 +9,7 @@
 
 <style>
     body {
-        background-color: var(--bs-secondary);
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding-top: 5vh;
+        background-color: var(--bs-light);
     }
     .login-container {
         width: 100%;
@@ -34,17 +29,10 @@
         border-color: #fd7e14;
         color: white;
     }
-    .btn-primary {
-        background-color: #fd7e14;
-        border-color: #fd7e14;
-    }
-    .btn-primary:hover {
-        background-color: #e8690b;
-        border-color: #e8690b;
-    }
+
 </style>
 
-<div class="login-container">
+<div class="login-container px-5 container-fluid d-flex align-content-center justify-content-center align-items-center" style="min-height: 70vh !important;">
     <div class="login-card">
         <div class="text-center">
             <h2 class="mb-4">Giriş Yap</h2>
@@ -87,7 +75,7 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">Giriş Yap</button>
+                        <button type="submit" class="btn btn-primary btn-lg shadow" style="background-color: darkorange;">Giriş Yap</button>
                     </div>
                 </form>
             </div>

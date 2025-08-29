@@ -17,48 +17,26 @@
     <div class="container-fluid partial-parent gap-4">
         <script>
             ((s)=>{
-                let currentPage = @Model.Page;
-                let currentPageSize = @Model.PageSize;
-                
                 document.addEventListener('DOMContentLoaded', load);
                 s.parentElement.addEventListener('htmx:load', load);
-                s.parentElement.addEventListener('htmx:afterRequest', function(e) {
-                    htmx.ajax('GET', '@Model.Url', {
-                        values: { page: currentPage, pageSize: currentPageSize },
-                        target: s.parentElement,
-                        swap: 'outerHTML'
-                    });
-                });
-                
-                // Update current page when pagination buttons are clicked
-                s.parentElement.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('page-link')) {
-                        const url = e.target.getAttribute('hx-get');
-                        if (url) {
-                            const urlParams = new URLSearchParams(url.split('?')[1]);
-                            const newPage = urlParams.get('page');
-                            const newPageSize = urlParams.get('pageSize');
-                            if (newPage) currentPage = parseInt(newPage);
-                            if (newPageSize) currentPageSize = parseInt(newPageSize);
-                        }
-                    }
-                });
-                
-                // Update current page size when dropdown changes
-                s.parentElement.addEventListener('change', function(e) {
-                    if (e.target.name === 'pageSize') {
-                        currentPageSize = parseInt(e.target.value);
-                        currentPage = 1; // Reset to first page when page size changes
-                    }
-                });
-                
                 function load(e){
                     if(e.type==='htmx:load') e.stopPropagation();
-                    Array.from(s.nextElementSibling.firstElementChild.nextElementSibling.lastElementChild.children)
-                        .filter(e=>e.nodeType === Node.ELEMENT_NODE).forEach((o)=>{
-                        o.selected = o.value === currentPageSize.toString();
-                    });
-                    s.parentElement.querySelector('.order-list').dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false}));
+                    const pageSizeForm = s.nextElementSibling.querySelector('form');
+                    if(pageSizeForm){
+                        pageSizeForm.querySelector('select').querySelectorAll('option').forEach(o=>{
+                            o.selected = o.value === '@(Model.PageSize)'
+                        })
+                    }
+                    if(s.parentElement.lastElementChild.classList.contains('order-fetcher')){
+                        s.parentElement.lastElementChild.addEventListener('htmx:afterRequest', e=>{
+                            if(event.detail.xhr.status===204) {
+                                event.detail.elt.removeAttribute('hx-get');
+                                event.detail.elt.removeAttribute('hx-trigger');
+                            }
+                        })
+                    }
+                    Array.from(s.nextElementSibling.nextElementSibling.querySelector('._orders').children).filter(e=>e.nodeType===Node.ELEMENT_NODE).forEach(o=>o.firstElementChild.dispatchEvent(new Event('htmx:load', {cancelable:true, bubbles:false})));
+                    console.log("initialized @(nameof(_OrderListPartial)) from " + e.type);
                 }
             })(document.currentScript)
             //# sourceURL=OrderListPartial.js
@@ -88,7 +66,7 @@
                             form.addEventListener('submit', (e) => {
                                 const formData = new FormData(form);
                                 const params = new URLSearchParams(formData);
-                                window.location.href = '@Html.Raw(Model.Url)' + @Html.Raw(Model.Url.Contains('?')?"'&'":"'?'") + params.toString();
+                                window.location.href = '@(Model.Url)' + @Html.Raw(Model.Url.Contains('?')?"''":"'?'") + params.toString();
                             });
                             </text>
                             }
@@ -135,48 +113,19 @@
                 })(document.currentScript)
                 //# sourceURL=OrderListPartialSelect.js
             </script>
-            @foreach (var order in Model.Orders){
-                <li class="mb-3">
-                    @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
-                        Collapsable = Model.Collapsable, Order = order, Token = Model.Token, ViewedBySeller = Model.ViewedBySeller
-                    })
-                </li>
-            }
+            <div class="_orders">
+                @foreach (var order in Model.Orders){
+                    <li class="mb-3">
+                        @await Html.PartialAsync("Shared/Order/_OrderPartial", new _OrderPartial(){
+                            Collapsable = Model.Collapsable, Order = order, Token = Model.Token, ViewedBySeller = Model.ViewedBySeller
+                        })
+                    </li>
+                }    
+            </div>
         </ul>
         @if (Model.Url != null){
-            <div class="d-flex justify-content-center mt-3">
-                <nav>
-                    <ul class="pagination">
-                        @if (Model.Page > 1) {
-                            <li class="page-item">
-                                <button class="page-link" type="button" 
-                                        hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@(Model.Page - 1)&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
-                                        @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
-                                    Previous
-                                </button>
-                            </li>
-                        }
-                        
-                        @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.Page + 2, Model.Page + 10); i++) {
-                            <li class="page-item @(i == Model.Page ? "active" : "")">
-                                <button class="page-link" type="button"
-                                        hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@i&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
-                                        @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
-                                    @i
-                                </button>
-                            </li>
-                        }
-                        
-                        <li class="page-item">
-                            <button class="page-link" type="button"
-                                    hx-get="@(Html.Raw(Model.Url))@(Model.Url.Contains('?')?'&':'?')page=@(Model.Page + 1)&pageSize=@Model.PageSize@(Model.Partial ? "&partial=true" : "")"
-                                    @if (Model.Partial) { <text>hx-target=".partial-parent" hx-swap="outerHTML"</text> }>
-                                Next
-                            </button>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
+            <div data-finished="0" class="order-fetcher" data-page="@Model.Page" data-pagesize="@Model.PageSize" hx-get="@(Html.Raw(Model.Url))" hx-vals="@(JsonSerializer.Serialize(new{ page=Model.Page,pageSize= Model.PageSize }))" hx-trigger="intersect threshold:0.7" hx-select=".partial-parent>.order-list" hx-target="this" hx-swap="beforebegin"
+                 hx-on::trigger="const that=event.detail.elt;const p=parseInt(that.dataset.page) + 1;that.dataset.page=p.toString();that.setAttribute('hx-vals', JSON.stringify({page: p, pageSize: that.dataset.pagesize}));"></div>
         }
 
     </div>

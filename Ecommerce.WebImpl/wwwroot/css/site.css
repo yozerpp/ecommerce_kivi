@@ -7,7 +7,10 @@ html {
     font-size: 16px;
   }
 }
-
+.propertyInput{
+  
+}
+.partial-parent{}
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
@@ -42,14 +45,23 @@ body {
 .separator-black{
   border-bottom: thin solid black;
 }
+.hover-shadow{
+   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
 .hover-darken:hover{
-  background-color: var(--bs-light);
+  background-color: var(--bs-secondary-bg);
+}
+.hover-grow-small:hover{
+    transform: scale(1.05);
+    transition: all 0.2s ease-out;
 }
 .hover-darken-2:hover{
-    background-color: var(--bs-secondary);
+    background-color: var(--bs-secondary-bg-subtle);
 }
 .hover-grow:hover{
     transform: scale(1.2);
+    transition: all 0.2s ease-out;
+
 }
 .edit-control{
   display: none !important;
@@ -73,4 +85,14 @@ body {
 .section {
   border: 1px solid #dee2e6;
   border-radius: 0.5rem;
+}
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* For Firefox */
+.no-spinner[type=number] {
+    -moz-appearance: textfield;
 }

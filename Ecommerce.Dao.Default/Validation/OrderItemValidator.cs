@@ -16,7 +16,7 @@ public class OrderItemValidator : Spi.IValidator<OrderItem>
         var res = _couponRepository.FirstP(c => new{
             C1 = c.ExpirationDate < DateTime.Now,
             C2 = c.SellerId == sid
-        }, coupon => coupon.Id == cid);
+        }, coupon => coupon.Id == cid, nonTracking:true);
         if(!res.C1)
             return new ValidationResult("Coupon used for this item is expired.", [nameof(Coupon.ExpirationDate)]);
         if (!res.C2)

@@ -8,7 +8,15 @@ namespace Ecommerce.Entity;
 public class Product
 {
     public Product(){}
+    public Product(string name, string description, Category category, Dimensions dimensions) {
+        Name = name;
+        Description = description;
+        Category = category;
+        Dimensions = dimensions;
+    }
     public uint Id { get; set; }
+    [ProductSku]
+    public string? Sku { get; set; }
     [ProductName]
     public string Name { get; set; }
     [ProductDescription]
@@ -17,6 +25,7 @@ public class Product
     public Category Category { get; set; }
     public Dimensions Dimensions { get; set; }
     public ProductStats Stats { get; set; }
+    public ProductRatingStats? RatingStats { get; set; }
     private readonly Image? _mainImage;
     [NotMapped]
     public Image? MainImage
@@ -30,7 +39,7 @@ public class Product
     public ICollection<ProductOffer> Offers { get; set; } = new List<ProductOffer>();
     public ICollection<Customer> FavoredCustomers { get; set; } = new List<Customer>();
     // Changed to a collection of ProductCategoryProperties for EAV model
-    public ICollection<ProductCategoryProperties> CategoryProperties { get; set; } = new List<ProductCategoryProperties>();
+    public ICollection<ProductCategoryProperty> CategoryProperties { get; set; } = new List<ProductCategoryProperty>();
     public bool Active { get; set; }
 
 

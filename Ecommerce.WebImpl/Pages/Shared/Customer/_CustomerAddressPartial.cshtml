@@ -1,18 +1,17 @@
 ﻿@using Ecommerce.Entity.Common
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.CustomerPartials._CustomerAddressPartial
-@using Customer = Pages.Customer;
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('customerAddress')._selectedIndex = @(Model.Addresses.Count > 0 ?0:"undefined");
     });
 </script>
 <div id="customerAddress" class="py-2">
-    <div class="dropdown mx-3 card-header rounded-1 mb-3">
+    <div class="dropdown mx-3 card card-header rounded-1 mb-3">
         <a href="javascript:void(0);" class="card-title bg-light-subtle rounded-1 border-dark-subtle border-1  card-title dropdown-toggle text-wrap text-decoration-none text-black" data-bs-toggle="dropdown" data-bs-target="#customerAddressDropdown" aria-controls="customerAddressDropdown" aria-expanded="false">@(Model.Addresses.ElementAtOrDefault(0)?.ToString().ReplaceLineEndings(" ")??"Kayıtlı Adres Yok")</a>
         <ul id="customerAddressDropdown" class="dropdown-menu">
             @for (int i = 0; i < Model.Addresses.Count; i++){
-                <li class="dropdown-item p-0">
+                <li class="dropdown-item border-top border-bottom border-secondary-subtle border-2  px-1 py-2">
                     <a onclick="event.currentTarget.parentElement.parentElement.previousElementSibling.innerHTML='@(Model.Addresses[i].ToString().ReplaceLineEndings(" "))';const ca = document.getElementById('customerAddress');const prevIdx = ca._selectedIndex;ca._selectedIndex = @(i); document.getElementById('_address' + prevIdx.toString()).classList.add('d-none');document.getElementById('_address@(i)').classList.remove('d-none');" 
                        href="javascript:void(0);"  class="text-black p-0 bg-white text-decoration-none">@(Model.Addresses[i].ToString().ReplaceLineEndings(" "))</a>
                 </li>
@@ -32,14 +31,14 @@
         <script>
             let editing=false;
         </script>
-        <input type="hidden" name="@nameof(Pages.Customer.CustomerId)" value="@Model.CustomerId"/>
+        <input type="hidden" name="@nameof(Pages.User.UserId)" value="@Model.CustomerId"/>
         @for (int i = 0; i < Model.Addresses.Count; i++){
-            <input id="addr@(i)@nameof(Address.City)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.City))" value="@(Model.Addresses[i].City)"/>
-            <input id="addr@(i)@nameof(Address.District)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.District))" value="@(Model.Addresses[i].District)"/>
-            <input id="addr@(i)@nameof(Address.Country)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Country))" value="@(Model.Addresses[i].Country)"/>
-            <input id="addr@(i)@nameof(Address.Line1)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Line1))" value="@(Model.Addresses[i].Line1)"/>
-            <input id="addr@(i)@nameof(Address.Line2)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.Line2))" value="@(Model.Addresses[i].Line2)"/>
-            <input id="addr@(i)@nameof(Address.ZipCode)" type="hidden" name="@(nameof(Customer.Addresses))[i].@(nameof(Address.ZipCode))" value="@(Model.Addresses[i].ZipCode)"/>
+            <input id="addr@(i)@nameof(Address.City)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.City))" value="@(Model.Addresses[i].City)"/>
+            <input id="addr@(i)@nameof(Address.District)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.District))" value="@(Model.Addresses[i].District)"/>
+            <input id="addr@(i)@nameof(Address.Country)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Country))" value="@(Model.Addresses[i].Country)"/>
+            <input id="addr@(i)@nameof(Address.Line1)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Line1))" value="@(Model.Addresses[i].Line1)"/>
+            <input id="addr@(i)@nameof(Address.Line2)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Line2))" value="@(Model.Addresses[i].Line2)"/>
+            <input id="addr@(i)@nameof(Address.ZipCode)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.ZipCode))" value="@(Model.Addresses[i].ZipCode)"/>
         }
         <button class="btn btn-secondary" onclick="if(editing){event.currentTarget.innerText='Adresi Düzenle';}else{event.currentTarget.innerText='Değişiklikleri Kaydet';document.getElementById('address').querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control'));}">
             Adresi Düzenle

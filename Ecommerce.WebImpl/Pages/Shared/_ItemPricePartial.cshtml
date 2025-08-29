@@ -6,18 +6,18 @@
 }
 @if (Model.DiscountedPrice != Model.BasePrice){
     <div class="d-flex container-fluid justify-content-center align-Models-center align-self-center">
-        <del class="small fw-bold">@(decimal.Round(Model.BasePrice.Value, 2).ToString("C"))</del>
-        <p style="font-size: x-small" class="float ms-1 fw-bold text-success">%@(decimal.Round((discountRate.Value) * 100m, 1).ToString("F1"))</p>
+        <del class="small fw-bold">@(decimal.Round(Model.BasePrice, 2).ToString("C"))</del>
+        <p style="font-size: x-small" class="float ms-1 fw-bold text-success">%@(decimal.Round((discountRate) * 100m, 1).ToString("F1"))</p>
     </div>
 }
-@if (Model.CouponDiscountedPrice!= Model.DiscountedPrice){
+@if (Model.CouponDiscountedPrice!=null && Model.CouponDiscountedPrice != Model.DiscountedPrice){
     <div class="d-flex container-fluid justify-content-center align-Models-center align-self-center">
-        <del class="small fw-bold">@(decimal.Round(Model.DiscountedPrice.Value, 2).ToString("C"))</del>
-        <p style="font-size: x-small" class="float ms-1 fw-bold text-success" style="color: darkorange">%@((couponDiscountRate * 100m).Value.ToString("F1")) Kupon</p>
+        <del class="small fw-bold">@(decimal.Round(Model.DiscountedPrice, 2).ToString("C"))</del>
+        <p style="font-size: x-small" class="float ms-1 fw-bold text-success" style="color: darkorange">%@((couponDiscountRate * 100m).ToString("F1")) Kupon</p>
     </div>
 }
 <div class="text-center">
     <p style="font-size: large">
-        @(decimal.Round(Model.CouponDiscountedPrice.Value, 2).ToString("C"))
+        @(decimal.Round(Model.CouponDiscountedPrice, 2).ToString("C"))
     </p>
 </div>

@@ -106,14 +106,14 @@ public class ProductManagerTests
         // Purchase from offer1
         TestContext._cartManager.Add(_buyerSession.Cart, _offer1, 2); // Buy 2 units
         TestContext._cartRepository.Flush();
-        var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.CARD };
+        var payment1 = new Payment { TransactionId = "AGG_SALE_1", Amount = _offer1.Price * 2, PaymentMethod = PaymentMethod.Card };
         payment1 = TestContext._paymentRepository.Add(payment1);
         TestContext._orderManager.CreateOrder(_buyerSession, out _buyerSession, _buyerCustomer);
         TestContext._orderRepository.Flush();
 
         // Purchase from offer2
         TestContext._cartManager.Add(_buyerSession.Cart, _offer2, 1); // Buy 1 unit
-        var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.CARD };
+        var payment2 = new Payment { TransactionId = "AGG_SALE_2", Amount = _offer2.Price * 1, PaymentMethod = PaymentMethod.Card };
         payment2 = TestContext._paymentRepository.Add(payment2);
         TestContext._orderManager.CreateOrder(_buyerSession, out _buyerSession, _buyerCustomer);
         TestContext._orderRepository.Flush();

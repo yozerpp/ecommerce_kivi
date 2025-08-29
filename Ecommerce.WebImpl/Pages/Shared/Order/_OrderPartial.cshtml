@@ -1,6 +1,7 @@
 ﻿@using System.Globalization
 @using System.Text.Encodings.Web
 @using System.Text.Json
+@using Bogus.DataSets
 @using Ecommerce.Entity.Common
 @using Microsoft.AspNetCore.Html
 @using Microsoft.IdentityModel.Abstractions
@@ -21,7 +22,7 @@
             function load(e){
                 if(e.type==='htmx:load'){
                     e.stopPropagation();
-                    s.parentElement.lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false ,cancelable:true}));
+                    s.nextElementSibling.lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false ,cancelable:true}));
                     const tt = s.nextElementSibling.querySelector('button[data-bs-toggle="tooltip"]');
                     if(!tt) return;
                     const toggle = new bootstrap.Tooltip(tt, {toggle: false});
@@ -35,25 +36,27 @@
     </script>
     <div class="border rounded-3 mb-3 shadow-sm bg-white">
         <div class="row mx-0 align-items-center border-bottom bg-light rounded-top-3 py-2">
-            <div class="col-10">
+            <div class="col-11">
                 <a class="hover-darken text-decoration-none text-black" style="cursor: @(Model.Collapsable ? "pointer" : "default")" data-bs-toggle="@(Model.Collapsable ? "collapse" : "")" data-bs-target="#order-table-@(Model.Order.Id)" aria-controls="order-table-@(Model.Order.Id)" aria-expanded="false">
                     <ul class="list-group-horizontal row px-0 mx-0">
                         @OrderHeadingItem(("", Model.Order.Id.ToString(), 1))
                         @OrderHeadingItem(("", Model.Order.Date.ToString("g", CultureInfo.CurrentCulture), 2))
                         @OrderHeadingItem(("", Model.Order.Status.ToLocalizedString(), 4))
                         @OrderHeadingItem(("", Model.Order.ShippingAddress.ToString(), 4))
-                        @OrderHeadingItem(("", Model.Order.Aggregates.ItemCount?.ToString() ?? "0", 1))
+                        @OrderHeadingItem(("", Model.Order.Aggregates.ItemCount.ToString(), 1))
                     </ul>
                 </a>
             </div>
-            <div class="d-inline-flex flex-column justify-content-center col-2 gap-2 text-center align-middle">
+            <div class="d-inline-flex flex-column justify-content-center col-1 gap-2 text-center align-middle">
             @if ((Model.Order.Status & (OrderStatus.WaitingPayment | OrderStatus.WaitingConfirmation)) !=0 || Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
+                var title = Model.ViewedBySeller ? "Siparişte sana ait olan tüm ürünleri iptal et." : "Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için ekibimizden iptal etmesini isteyebilrsin.";
+                var url = Model.ViewedBySeller ? "/" + nameof(Seller) + "?handler=cancelOrder": "/" +nameof(Orders) + "?handler=cancel";
                 <div>
-                    <form  hx-post="/@(nameof(Orders))?handler=cancel" hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();">
+                    <form  hx-post="/@(url)" hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="token" value="@Model.Token"/>
                         <input type="hidden" name="@(nameof(Orders.OrderId))" value="@Model.Order.Id"/>
-                        <button type="submit" data-bs-toggle="tooltip" title="Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için ekibimizden iptal etmesini isteyebilrsin." class="btn hover-grow-small btn-sm btn-danger">İptal Talep Et</button>
+                        <button type="submit" data-bs-toggle="tooltip" title="@title" class="btn hover-grow-small btn-sm btn-danger">İptal Talep Et</button>
                     </form>
                 </div>
             }
@@ -74,7 +77,7 @@
             </div>
         </div>
         @await Html.PartialAsync("Shared/Order/_OrderItemsPartial", new _OrderItemsPartial(){
-            IsCollapsable = Model.Collapsable, Order = Model.Order, Token = Model.Token
+            IsCollapsable = Model.Collapsable, Order = Model.Order, Token = Model.Token,ViewedBySeller = Model.ViewedBySeller   
         })
     </div>
 </div>

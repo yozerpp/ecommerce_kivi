@@ -1,26 +1,36 @@
 ﻿@using System.Security.Claims
 @using Ecommerce.Entity
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
-
+@using Cart = Ecommerce.WebImpl.Pages.Cart
+@{
+    var session = (Session)ViewData[nameof(Session)];
+}
 <ul class="navbar-nav d-flex justify-content-center align-content-center gap-1">
-    @if (ViewBag.Cart is Cart cart){
-        <li class="nav-item d-inline-flex">
-            <a class="nav-link justify-content-center align-content-center text-decoration-none text-dark p-0" href="/Cart" title="Sepet">
-                <i class="bi bi-cart bg-white fs-4 position-relative" style="color: orange;">
-                    @if (cart.Items.Count>0){
-                        <i class="text-danger z-3 float-end position-absolute top-0 end-0 fs-6 m-0 bi-@(cart.Items.Count)-circle-fill small" style="font-size: x-small !important;"></i>
-                        <!--Find a reliable and effiicent way to get the item count-->
-                    }
-                </i>
-                @* <img style="height: 2em;" src="cart-icon.jpg" alt="Sepet"/> *@
-            </a>
+    @if (session != null){
+        <li class="nav-item d-inline-flex align-content-center align-items-center">
+            @if (!ViewData.TryGetValue(nameof(Entity.User), out var u) || u is null or Entity.Customer){
+                <a asp-page="/@(nameof(Cart))" class="nav-link hover-grow justify-content-center align-content-center text-decoration-none text-dark p-0" title="Sepet">
+                    <i class="bi bi-cart  bg-white fs-4 position-relative" style="color: orange;">
+                        @if (session.ItemCount > 0){
+                            <i class="text-danger z-3 float-end position-absolute top-0 end-0 fs-5 m-0 ms-1 bi-@(session.ItemCount)-circle-fill" style="font-size: x-small !important;"></i>
+                            <!--Find a reliable and effiicent way to get the item count-->
+                        }
+                    </i>
+                    @* <img style="height: 2em;" src="cart-icon.jpg" alt="Sepet"/> *@
+                </a>
+            }
+            else if (u is Entity.Seller s){
+                <a asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link hover-grow justify-content-center align-items-center text-decoration-none text-danger p-0" style="color: darkorange">
+                    <i class="bi bi-shop fs-4"></i>
+                </a>
+            }
         </li>
     }
     @if ((Context.User.Identity?.IsAuthenticated ?? false) && Context.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role))){
         <li class="nav-item">
-            <a class="nav-link text-dark" href="@(ViewBag.User is Entity.Seller ? $"/Seller/SellerPage?Id={ViewBag.User.Id}" : $"/Customer?CustomerId={ViewBag.User.Id}")" title="Hesap">
+            <a asp-page="/@(nameof(Pages.User))" asp-route-UserId="@((ViewData[nameof(Entity.User)] as User).Id)" class="nav-link text-dark hover-grow" title="Hesap">
                 @if (ViewBag.User.ProfilePicture != null){
-                    <img style="height: 2em;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(ViewBag.User.ProfilePicture?.Data))" alt="Hesap"/>
+                    <img style="height: 2em;aspect-ratio: 1;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(ViewBag.User.ProfilePicture?.Data))" alt="Hesap"/>
                 }
                 else{
                     <i class="bi bi-person-circle text-secondary bg-light fs-4"></i>
@@ -38,10 +48,10 @@
     }
     else{
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Kaydol</a>
+            <a class="nav-link text-dark" asp-page="/Account/Register">Kaydol</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Giriş Yap</a>
+            <a class="nav-link text-dark" asp-page="/Account/Login">Giriş Yap</a>
         </li>
         <li class="nav-item">
             <a class="nav-link text-dark" asp-page="/@(nameof(Pages.Orders))">Siparişlerim</a>

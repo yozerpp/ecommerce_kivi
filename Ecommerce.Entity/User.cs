@@ -22,12 +22,12 @@ public abstract class User
     public Image? ProfilePicture { get; set; }
     public PhoneNumber PhoneNumber { get; set; }
     public bool Active { get; set; }
-    public ICollection<Request> Requests { get; set; }
+    // public ICollection<Request> Requests { get; set; }
     public ICollection<Notification> Notifications { get; set; }
     public ICollection<ReviewCommentNotification> ReviewCommentNotifications { get; set; } = new List<ReviewCommentNotification>();
     public override bool Equals(object? obj)
     {
-        if (obj is Customer other)
+        if (obj is User other)
         {
             if (Id == default)
             {

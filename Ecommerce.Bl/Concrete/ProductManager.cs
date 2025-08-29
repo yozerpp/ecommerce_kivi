@@ -26,19 +26,24 @@ public class ProductManager : IProductManager
 
     //can be used to update the vote as well.
 
-    public bool Favor(ProductFavor favor) {
-        if(_productFavorRepository.Delete(f=>f.ProductId == favor.ProductId && f.CustomerId == f.CustomerId)!=0)return false;
+    public bool SwitchFavor(ProductFavor favor) {
+        if(_productFavorRepository.Delete(f=>f.ProductId == favor.ProductId && f.CustomerId == favor.CustomerId)!=0)return false;
         _productFavorRepository.Add(favor);
         _productFavorRepository.Flush();
         return true;
     }
 
-    public List<Product> Search(string predicateQuery, ICollection<SearchOrder> orders, bool includeImage = false,
+    public List<Product> Search(string? predicateQuery, ICollection<SearchOrder> orders, bool includeImage = false,
         bool fetchReviews = false, bool fetchOffers = false, int page = 1, int pageSize = 20) {
-        SearchExpressionUtils.BuildPredicate<Product>(predicateQuery, out var predicateExpr);
-        var orderByExpressions = SearchExpressionUtils.OrderByExpression<Product>(orders);
+        if (predicateQuery!=null && !(predicateQuery.StartsWith('&') || predicateQuery.StartsWith('|')))
+            predicateQuery = $"&({predicateQuery})";
+        SearchExpressionUtils.Build<Product>(predicateQuery, orders, out var predicateExpr, out var orderByExpressions);
         return _productRepository.WhereP(CardProjection, predicateExpr, (page - 1) * pageSize, page * pageSize,
             orderByExpressions.ToArray()).DistinctBy(p=>p.Id).ToList();
+    }
+    public List<Product> GetFromSeller(uint sellerId, int page = 1, int pageSize = 20, bool includeImage = false, bool fetchReviews = false, bool fetchOffers = false) {
+        return _productRepository.WhereP(CardProjection, p => p.Offers.Any(o => o.SellerId == sellerId), (page - 1) * pageSize, page * pageSize,
+            includes: GetIncludes(includeImage, fetchOffers, fetchReviews)).DistinctBy(p=>p.Id).ToList();
     }
     public List<Product> Search(ICollection<SearchPredicate> predicates, ICollection<SearchOrder> ordering, bool includeImage = false, bool fetchReviews = false, bool fetchOffers=false, int page=1, int pageSize=20) {
         var offset = (page - 1) * pageSize;
@@ -61,11 +66,12 @@ public class ProductManager : IProductManager
     public void VisitCategory(SessionVisitedCategory category) {
         _customerVisitedCategoryRepository.TryAdd(category);
     }
-    private static string[][] GetIncludes(bool images, bool offers, bool reviews) {
+    private static string[][] GetIncludes(bool images, bool offers, bool reviews, bool categoryProperties = false) {
         var ret = new List<string[]>([[nameof(Product.Category)]]);
         if(images)ret.Add([nameof(Product.Images)]);
         if(offers) ret.Add([nameof(Product.Offers), nameof(ProductOffer.Seller)]);
         if(reviews) ret.Add([nameof(Product.Offers), nameof(ProductOffer.Reviews)]);
+        if(categoryProperties) ret.Add([nameof(Product.CategoryProperties), nameof(ProductCategoryProperty.CategoryProperty)]);
         return ret.ToArray();
     }
 
@@ -109,9 +115,32 @@ public class ProductManager : IProductManager
             o => (productId == null || o.ProductId == productId) && (sellerId == null || o.SellerId == sellerId),
             includes: [[nameof(ProductOffer.Seller)]]).ToArray();
     }
-    public Product? GetByIdWithAggregates(uint productId, bool fetchOffer = false, bool fetchReviews = true, bool fetchImage=true) {
-       return _productRepository.FirstP(MainProjection,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews));
+    public Product? GetByIdWithAggregates(uint productId, bool fetchOffer = false, bool fetchReviews = false, bool fetchImage=false) {
+       var pr  =_productRepository.FirstP(MainStatless,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews ,true));
+       pr.Stats = _productRepository.FirstP(p=>new ProductStats(){
+            FavorCount = p.Stats.FavorCount,
+            MinPrice = p.Stats.MinPrice ,
+            MaxPrice = p.Stats.MaxPrice ,
+            ReviewCount = p.Stats.ReviewCount ,
+            RatingAverage = p.Stats.RatingAverage,
+            OrderCount = p.Stats.OrderCount ,
+            SaleCount = p.Stats.SaleCount ,
+            RefundCount = p.Stats.RefundCount ,
+            RatingTotal = p.Stats.RatingTotal,
+            ProductId = p.Stats.ProductId ,
+       }, p => p.Id == pr.Id,nonTracking:true);
+       pr.RatingStats = _productRepository.FirstP(p => new ProductRatingStats(){
+           ReviewCount = p.RatingStats.ReviewCount??0,
+           FiveStarCount = p.RatingStats.FiveStarCount ?? 0,
+           FourStarCount = p.RatingStats.FourStarCount ?? 0,
+           ThreeStarCount = p.RatingStats.ThreeStarCount ?? 0,
+           TwoStarCount = p.RatingStats.TwoStarCount ?? 0,
+           OneStarCount = p.RatingStats.OneStarCount ?? 0,
+           ZeroStarCount = p.RatingStats.ZeroStarCount ?? 0,
+       }, p => p.Id == pr.Id, nonTracking: true);
+       return pr;
     }
+    
     public Product? GetById(uint id, bool withOffers = true) {
         return _productRepository.First(p => p.Id == id, 
             includes:GetIncludes(true, withOffers, false));
@@ -123,6 +152,14 @@ public class ProductManager : IProductManager
         _productRepository.Delete(product);
     }
 
+    public static readonly Expression<Func<OfferStats, OfferStats>> OfferStatsProjection = s => new OfferStats(){
+        ProductId = s.ProductId ?? 0,
+        SellerId = s.SellerId ?? 0,
+        RatingTotal = s.RatingTotal ?? 0m,
+        RefundCount = s.RefundCount ?? 0,
+        ReviewAverage = s.ReviewAverage ?? 0m,
+        ReviewCount = s.ReviewCount ?? 0,
+    };
     public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithStats = o => new ProductOffer(){
         ProductId = o.ProductId,
         SellerId = o.SellerId,
@@ -130,6 +167,8 @@ public class ProductManager : IProductManager
         Price = o.Price,
         Seller = o.Seller,
         Stats = new OfferStats(){
+            ProductId = o.Stats.ProductId ??0,
+            SellerId= o.Stats.SellerId ??0,
             ReviewAverage = (o.Stats.RatingTotal / o.Stats.ReviewCount) ?? 0,
             RefundCount = o.Stats.RefundCount ?? 0,
             ReviewCount = o.Stats.ReviewCount ?? 0
@@ -147,39 +186,58 @@ public class ProductManager : IProductManager
     };
 
     private static readonly Expression<Func<ProductStats, ProductStats>> StatsProjection = s => new ProductStats(){
-        FavorCount = s.FavorCount ?? 0,
-        MinPrice = s.MinPrice ?? 0m,
-        MaxPrice = s.MaxPrice ?? 0m,
-        ReviewCount = s.ReviewCount ?? 0,
-        RatingAverage = s.RatingAverage ?? 0m,
-        OrderCount = s.OrderCount ?? 0,
-        SaleCount = s.SaleCount ?? 0,
-        RefundCount = s.RefundCount ?? 0,
-        RatingTotal = s.RatingTotal??0m,
-        ProductId = s.ProductId??0u,
+        FavorCount = s.FavorCount ,
+        MinPrice = s.MinPrice ,
+        MaxPrice = s.MaxPrice ,
+        ReviewCount = s.ReviewCount ,
+        RatingAverage = s.RatingAverage  ,
+        OrderCount = s.OrderCount ,
+        SaleCount = s.SaleCount ,
+        RefundCount = s.RefundCount ,
+        RatingTotal = s.RatingTotal,
+        ProductId = s.ProductId ,
     };
     public static readonly Expression<Func<Product, Product>> MainProjection = ((Expression<Func<Product,Product>>)(p => new Product(){
         Id = p.Id,
         CategoryId = p.CategoryId,
         Description = p.Description,
         Dimensions = p.Dimensions,
-        Images = p.Images.Select(i=>new ImageProduct(){
+        Images = p.Images.Select(i=> new ImageProduct{
             Image = i.Image,
             IsPrimary = i.IsPrimary,
             ProductId = i.ProductId,
-            ImageId = i.ImageId,
-        }).ToArray(),
-        Name = p.Name,
+            ImageId = i.ImageId
+        }).ToArray(),        Name = p.Name,
         Active = p.Active,
         CategoryProperties = p.CategoryProperties,
         Stats = StatsProjection.Invoke(p.Stats),
+    })).Expand();   public static readonly Expression<Func<Product, Product>> MainStatless = ((Expression<Func<Product,Product>>)(p => new Product(){
+        Id = p.Id,
+        CategoryId = p.CategoryId,
+        Description = p.Description,
+        Dimensions = p.Dimensions,
+        Images = p.Images.Select(i=> new ImageProduct{
+            Image = i.Image,
+            IsPrimary = i.IsPrimary,
+            ProductId = i.ProductId,
+            ImageId = i.ImageId
+        }).Take(3).ToArray(),
+        Name = p.Name,
+        Active = p.Active,
+        CategoryProperties = p.CategoryProperties,
+        Stats = null,
     })).Expand();
     public static Expression<Func<Product, Product>> WithOfferAndAggregates = ((Expression<Func<Product,Product>>)(p => new Product{
         Id = p.Id,
         CategoryId = p.CategoryId,
         Description = p.Description,
         Dimensions = p.Dimensions,
-        Images = p.Images,
+        Images = p.Images.Select(i=> new ImageProduct{
+            Image = i.Image,
+            IsPrimary = i.IsPrimary,
+            ProductId = i.ProductId,
+            ImageId = i.ImageId
+        }).ToArray(),
         Name = p.Name,
         Active = p.Active,
         CategoryProperties = p.CategoryProperties,
@@ -200,6 +258,16 @@ public class ProductManager : IProductManager
         Active = p.Active,
         CategoryProperties = null,
         Stats = StatsProjection.Invoke(p.Stats),
+    })).Expand();
+    public static readonly Expression<Func<Product, Product>> CardStatlessProjection = ((Expression<Func<Product,Product>>)(p => new Product{
+        Id = p.Id,
+        CategoryId = p.CategoryId,
+        Description = p.Description,
+        Dimensions = p.Dimensions,
+        MainImage = MainImageProjection.Invoke(p.Images),
+        Name = p.Name,
+        CategoryProperties = null,
+        Stats = null,
     })).Expand();
 
 }

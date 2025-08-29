@@ -4,7 +4,6 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>Ecommerce.Dao.Default.Initializer</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +12,12 @@
 
     <ItemGroup>
       <PackageReference Include="EFCore.BulkExtensions" Version="8.1.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="app.config">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

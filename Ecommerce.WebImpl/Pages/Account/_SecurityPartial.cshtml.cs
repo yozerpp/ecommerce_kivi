@@ -5,5 +5,5 @@ namespace Ecommerce.WebImpl.Pages.Account;
 
 public class _SecurityPartial 
 {
-    public User ViewedUser { get; init; }
+    public Entity.User ViewedUser { get; init; }
 }

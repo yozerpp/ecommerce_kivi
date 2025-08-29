@@ -1,86 +1,39 @@
 ﻿using Ecommerce.Bl.Interface;
-using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
-using Ecommerce.Entity.Common;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
 
+[Authorize(Policy = nameof(Entity.Customer))]
 public class Customer : BaseModel
 {
-    private readonly IRepository<Entity.Customer> _customersRepository;
-    private readonly ICustomerManager _customerManager;
-    public Customer(IRepository<Entity.Customer> customersRepository, ICustomerManager customerManager) {
-        _customersRepository = customersRepository;
+    private ICustomerManager _customerManager;
+    public Customer(ICustomerManager customerManager) {
         _customerManager = customerManager;
     }
-    [BindProperty]
-    public Entity.Customer ViewedCustomer { get; set; }
-    [BindProperty]
-    public ICollection<Address> Addresses { get; set; }
     [BindProperty(SupportsGet = true)]
     public uint CustomerId { get; set; }
-    public IActionResult OnGet() {
-        var c = _customerManager.GetWithAggregates(CustomerId);
-        if (c == null) return NotFound($"Müşteri numarası {CustomerId} ile müşteri Bulunamadı");
-        ViewedCustomer = c;
-        return Page();
-    }
-    [BindProperty]
-    public bool IsImageEdited { get; set; }
-    public IActionResult OnPostUpdate() {
-        _customerManager.Update(ViewedCustomer, IsImageEdited);
-        return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, Message = "Profiliniz Güncellendi",
-            Title = "İşlem Başarılı", Redirect = Url.Page('/' + nameof(Customer), new{ CustomerId })
-        });
-    }
-    public IActionResult OnPostEditAddress() {
-        var id = CustomerId;
-        _customersRepository.UpdateExpr([
-            (c => c.Addresses, Addresses)
-        ], c => c.Id == id);
-        return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, Message = "Telefon Numaranız Güncellendi",
-            Title = "İşlem Başarılı"
-        });
-    }
-    [BindProperty(SupportsGet = true)]
-    public int PageNumber { get; set; }
-    [BindProperty(SupportsGet = true)]
-    public int PageSize { get; set; }
     public ICollection<Order> Orders { get; set; }
-    [HasRole(nameof(Staff), nameof(Entity.Customer))]
-    public IActionResult OnGetOrders() {
+    public IActionResult OnGetOrders([FromQuery] int page=1,  [FromQuery] int pageSize=5) {
         if (CustomerId == 0){
             if (CurrentCustomer == null)
                 throw new ArgumentNullException("Kullanıcı",
                     "Giriş yapmalı veya görüntülemek istediğiniz müşterinin kimlik bilgilerini yazmalısınız.");
             CustomerId = CurrentCustomer.Id;
         }
-        var orders = _customerManager.GetOrders(CustomerId, PageNumber,PageSize);
+        var orders = _customerManager.GetOrders(CustomerId, page,pageSize);
         if (orders.Count == 0) return new NoContentResult();
         return Partial("Shared/Order/_OrderListPartial", new _OrderListPartial(){
-            Page = PageNumber, Orders = orders, PageSize = PageSize, 
+            Page = page +1, Orders = orders, PageSize = pageSize, 
             Collapsable = true,
             Editable = true,
-            Url = Url.Page('/' +nameof(Customer), "orders", new {CustomerId}, Request.Scheme),
-        });
-    }
-    [BindProperty] public PhoneNumber PhoneNumber { get; set; }
-    public IActionResult OnPostEditPhone() {
-        var id = CustomerId;
-        _customersRepository.UpdateExpr([
-            (c => c.PhoneNumber, PhoneNumber)
-        ], c => c.Id == id);
-        return Partial(nameof(_InfoPartial), new _InfoPartial(){
-            Success = true, Message = "Adresiniz Güncellendi",
-            Title = "İşlem Başaraılı"
+            Url = Url.Page(nameof(Customer), "orders", new { CustomerId}),
+            Partial = true,
         });
     }
 }

@@ -3,15 +3,13 @@ using Ecommerce.Entity.Common.Meta;
 
 namespace Ecommerce.Entity;
 
-public class Payment
+public abstract class Payment
 {
     public uint Id { get; set; }
-    public string TransactionId { get; set; }
-    public uint? OrderId { get; set; }
+    public string PayerName { get; set; }
     public Order? Order { get; set; }
-    public decimal Amount { get; set; }
     public DateTime PaymentDate { get; set; }
-    public PaymentMethod PaymentMethod { get; set; }
+    public PaymentMethod Method { get; set; }
     public PaymentStatus Status { get; set; }
     public override bool Equals(object? obj)
     {

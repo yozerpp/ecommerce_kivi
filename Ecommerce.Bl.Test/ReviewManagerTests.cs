@@ -99,7 +99,7 @@ public class ReviewManagerTests
         // Simulate a purchase by _reviewerUser for _testOffer
         // First, ensure reviewer is logged in to create a cart item
         TestContext._cartManager.Add(_reviewerSession.Cart, _testOffer, 1);
-        var payment = new Payment { TransactionId = "REVIEW_PURCHASE_" + Guid.NewGuid().ToString(), Amount = _testOffer.Price, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment { TransactionId = "REVIEW_PURCHASE_" + Guid.NewGuid().ToString(), Amount = _testOffer.Price, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         TestContext._orderManager.CreateOrder(_reviewerSession, out var n,_reviewerCustomer);
         _reviewerSession = n;

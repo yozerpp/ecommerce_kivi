@@ -8,6 +8,6 @@ public class PhoneNumber
     public int CountryCode { get; set; }
     public string Number { get; set;}
     public override string ToString() {
-        return $"+{CountryCode} {Number}";
+        return $"+{CountryCode}{Number}";
     }
 }

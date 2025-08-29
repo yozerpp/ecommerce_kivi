@@ -10,7 +10,7 @@ public class PermissionClaim
     public Staff Grantee { get; set; }
     public Permission Permission { get; set; }
     public DateTime ValidUntil { get; set; }
-
+    public bool NotExpired => ValidUntil > DateTime.Now;
     protected bool Equals(PermissionClaim other) {
         return Id == other.Id && GranterId == other.GranterId && GranteeId == other.GranteeId && PermissionId == other.PermissionId;
     }

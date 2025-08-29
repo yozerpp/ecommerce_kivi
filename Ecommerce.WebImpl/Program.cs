@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
@@ -14,6 +15,7 @@ using Ecommerce.Mail;
 using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
+using Ecommerce.Shipping.Geliver;
 using Microsoft.EntityFrameworkCore;
 using Ecommerce.WebImpl.Data;
 using Ecommerce.WebImpl.Data.Identity;
@@ -41,7 +43,7 @@ builder.Services.AddDbContext<ShippingContext>(options =>
         options.UseSqlServer(ShippingContext.DefaultConntectionString,
             c => {
                 c.MigrationsAssembly(typeof(ShippingContext).Assembly.FullName); 
-            }).EnableServiceProviderCaching(),
+            }).EnableServiceProviderCaching().EnableSensitiveDataLogging(true),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var razorPageOptions = builder.Services.AddRazorPages();
@@ -57,18 +59,20 @@ builder.Services.AddSingleton<UserManager.HashFunction>(s => s);
 builder.Services.AddSingleton(BuildLocalizer);
 builder.Services.AddSingleton<EntityMapper.Factory>(sp=>new EntityMapper.Factory(sp.GetKeyedService<IModel>(nameof(DefaultDbContext)), sp.GetRequiredService<Localizer>()));
 builder.Services.AddSingleton<EntityMapper>(sp => sp.GetRequiredService<EntityMapper.Factory>().Create());
+//register BL
 var blEntities = GetEntityTypes(Assembly.GetAssembly(typeof(Cart)), "Ecommerce.Entity").ToList();
-var shippingEntities = GetEntityTypes(Assembly.GetAssembly(typeof(IShippingService)), "Ecommerce.Shipping.Entity").ToList();
 var blValidators = Assembly.GetAssembly(typeof(CartItemValidator)).GetTypes()
     .Where(t => t.Namespace?.Split('.').Last().Equals("Validation") ?? false).ToList();
 var blImpls = GetServices(true,Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Concrete").ToDictionary(t=>t.Name, t=>t);
-var shippingImpls = GetServices(true,Assembly.GetAssembly(typeof(IShippingService)), "Ecommerce.Shipping.Dummy").ToDictionary(t=>t.Name, t=>t);
 var blInterfaces = GetServices(false, Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Interface")
     .Order(Comparer<Type>.Create(CreateComparerLambda(typeof(IJwtManager), typeof(ICartManager)).Compile())).ToList();
-var shippingInterfaces = GetServices(false, Assembly.GetAssembly(typeof(IShippingService)), "Ecommerce.Shipping").ToList();
 new DependencyRegisterer(builder, typeof(DefaultDbContext), blValidators, blEntities, blImpls, blInterfaces,
     nameof(AuthorizationFilter)).Register();
-new DependencyRegisterer(builder,typeof(ShippingContext) ,[], shippingEntities, shippingImpls, shippingInterfaces).Register();
+//register Shipping
+builder.Services.AddSingleton<GeliverClient>(sp =>
+    new GeliverClient(builder.Configuration.GetSection("Shipping")["ApiKey"] ?? throw new ArgumentException("Missing shipping API key"))
+);
+builder.Services.AddScoped<IShippingService, GeliverService>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(NotificationService));
 builder.Services.AddScoped<IRepository<Notification>>(sp => RepositoryFactory.Create<Notification>(
     sp.GetRequiredKeyedService<DbContext>(nameof(NotificationService))));
@@ -118,9 +122,20 @@ builder.Services.AddAuthentication(options =>
         };
         options.TokenValidationParameters = tokenValidationParameters;
     });
-builder.Services.AddSingleton<Dictionary<uint,Category>>(sp => {
-    var d = sp.GetKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Category>().AsNoTracking()
-        .ToDictionary(c => c.Id, c => c);
+object lockobj = new();
+builder.Services.AddSingleton<StaffBag>(sp => {
+    lock (lockobj){
+        return new StaffBag(sp
+            .GetRequiredKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Staff>().AsNoTracking()
+            .Include(s => s.PermissionClaims).ToArray());    
+    }
+});
+builder.Services.AddSingleton<IDictionary<uint,Category>>(sp => {
+    IDictionary<uint, Category> d;
+    lock (lockobj){
+        d = new ConcurrentDictionary<uint, Category>( sp.GetKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Category>().AsNoTracking()
+            .Include(c=>c.CategoryProperties).ToDictionary(c => c.Id, c => c));
+    }
     foreach (var category in d.Values){
         if (category.ParentId != null){
             var p = d[category.ParentId.Value];
@@ -135,8 +150,9 @@ builder.Services.AddSingleton<IMailService, SMTPService>(_ => new SMTPService(ma
     int.Parse(mailConfig["Port"] ?? throw new ArgumentNullException()), mailConfig["Username"] ?? throw new ArgumentNullException(), mailConfig["Password"] ?? throw new ArgumentNullException()));
 builder.Services.AddAuthorization(options => {
     options.AddPolicy(nameof(Seller), policy => policy.RequireRole(nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
-    options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer),nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(Staff), policy=> policy.RequireRole(nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(User), p=>p.RequireAssertion(f=>f.User.HasClaim(c=>c.Type == ClaimTypes.Role)));
     options.DefaultPolicy = //anonymous
         new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
             .RequireAuthenticatedUser().Build();

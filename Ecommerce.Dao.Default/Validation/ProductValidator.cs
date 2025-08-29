@@ -13,8 +13,7 @@ public class ProductValidator : IValidator<Product>
     }
 
     public ValidationResult Validate(Product entity) {
-        var category = entity.Category ?? _categoryRepository.First(c => c.Id == entity.CategoryId, includes:[[nameof(Category.CategoryProperties)]]);
-        if(category == null) return new ValidationResult("Product must be associated with a valid category.");
+        var category = entity.Category ?? _categoryRepository.First(c => c.Id == entity.CategoryId, includes:[[nameof(Category.CategoryProperties)]], nonTracking:true);
         if(entity.CategoryProperties==null && category.CategoryProperties.Any(p=>p.IsRequired)) return new ValidationResult("Category Properties cannot be null.");
         foreach (var catProp in category.CategoryProperties){
             object? val;

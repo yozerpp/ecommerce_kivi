@@ -31,6 +31,10 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         return _context.Set<TEntity>().Where(predicate).Count();
     }
 
+    public void Clear() {
+        _context.ChangeTracker.Clear();
+    }
+
     public int CountProjected<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate) {
         return _context.Set<TEntity>().Select(select).Where(predicate).Count();
     }
@@ -40,12 +44,12 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
 
     public  List<TEntity> Where(Expression<Func<TEntity, bool>> predicate,int offset=0, int limit = 20, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null, string[][]? includes=null)
     {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).Where(predicate).Skip(offset).Take(limit).ToList();
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).Where(predicate).Take(limit).Skip(offset).ToList();
     }
 
     public List<TP> Where<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate, int offset = 0, int limit = 20, (Expression<Func<TP, object>>, bool)[]? orderBy = null,
         string[][]? includes = null) {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy).Skip(offset).Take(limit).ToList();
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy).Skip(offset).Take(limit-offset).ToList();
     }
 
     public TEntity Attach(TEntity entity) {
@@ -53,9 +57,9 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     }
 
     public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, int offset = 0, int limit = 20,
-        (Expression<Func<TEntity, object>>, bool)[]? orderBy = null, string[][]? includes = null) {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes), orderBy).Where(predicate)
-            .Skip(offset).Take(limit)
+        ICollection<(Expression<Func<TEntity, object>>, bool)>? orderBy = null, string[][]? includes = null, bool nonTracking = false) {
+        return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes), orderBy).Where(predicate)
+            .Skip(offset).Take(limit - offset)
             .Select(select)
             .ToList();
     }
@@ -94,9 +98,9 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
             return false;
         }
     }
-    public  TEntity? First(Expression<Func<TEntity, bool>> predicate, string[][]? includes=null, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null)
+    public  TEntity? First(Expression<Func<TEntity, bool>> predicate, string[][]? includes=null, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null, bool nonTracking = false)
     {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).FirstOrDefault(predicate);
+        return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes),orderBy).FirstOrDefault(predicate);
     }
 
     public TP? FirstP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate,
@@ -104,8 +108,8 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes), orderBy).Where(predicate).Select(select)
             .FirstOrDefault();
     }
-    public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null) {
-            return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select),orderBy).FirstOrDefault(predicate);
+    public TP? First<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate,string[][]? includes=null,(Expression<Func<TP, object>>, bool)[]? orderBy=null, bool nonTracking = false) {
+            return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes).Select(select),orderBy).FirstOrDefault(predicate);
     }
 
     public bool Exists(Expression<Func<TEntity, bool>> predicate,string[][]? includes=null)
@@ -171,29 +175,41 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
             }
     }
 
-    public TEntity Update(TEntity entity, bool ignoreNull, params string[] updateProperties) {
+    public TEntity UpdateInclude(TEntity entity, params string[] updateProperties) {
         if (updateProperties.Length > 0){
-            var entry = _context.Attach(entity);
+            _context.ChangeTracker.Entries<TEntity>().Where(e=>e.Entity.Equals(entity)).ToList().ForEach(e=>e.State = EntityState.Detached);
+            var entry = _context.Entry(entity);
+            entry.State= EntityState.Unchanged;
             foreach (var entryComplexProperty in entry.ComplexProperties){
                 var b = entryComplexProperty.IsModified = updateProperties.Contains(entryComplexProperty.Metadata.Name);
-                entryComplexProperty.EntityEntry.State = b?EntityState.Modified:EntityState.Unchanged;
+                entryComplexProperty.EntityEntry.State = b ? EntityState.Modified : EntityState.Unchanged;
             }
-            foreach (var member in entry.Members){
+
+            foreach (var member in entry.Members.Where(m => !((m as PropertyEntry)?.Metadata.IsKey() ?? false))){
                 member.IsModified = updateProperties.Contains(member.Metadata.Name);
             }
-            return entry.Entity;
-        } 
-        if (ignoreNull){
-            var entry =_context.Attach(entity);
-            foreach (var memberEntry in entry.Members.Where(m=>!m.Metadata.ClrType.IsDefaultValue(m.CurrentValue))){
-                memberEntry.IsModified = true;
-            }
+
             return entry.Entity;
         }
-        return Update(entity);
+        return entity;
     }
+
+    public TEntity UpdateIgnore(TEntity entity, bool ignoreNull, params string[] ignoreProperties) {
+        var e = _context.Entry(entity);
+        e.State = EntityState.Modified;
+        
+        if(ignoreProperties is{ Length: > 0 })
+            foreach (var memberEntry in e.Members) 
+                memberEntry.IsModified = !ignoreProperties.Contains(memberEntry.Metadata.Name);
+        if (ignoreNull){
+            foreach (var memberEntry in e.Members.Where(m=> m.Metadata.ClrType.IsDefaultValue(m.CurrentValue))){
+                memberEntry.IsModified = false;
+            }
+        }
+        return e.Entity;
+    }
+
     public TEntity Update(TEntity entity) {
-        Detach(entity);
         return _context.Set<TEntity>().Update(entity).Entity;
     }
 
@@ -210,12 +226,16 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         var param = Expression.Parameter(typeof(SetPropertyCalls<TEntity>), "setters");
         Expression left = param;
         foreach (var propertyAction in memberAccessorAndValues){
+            MemberExpression m = propertyAction.Item1.Body as MemberExpression;
+            m??= (MemberExpression)((UnaryExpression)propertyAction.Item1.Body).Operand;
+            var t= ((PropertyInfo)m.Member).PropertyType;
+            var p = m.Expression as ParameterExpression;
             left = Expression.Call(left, 
                 typeof(SetPropertyCalls<TEntity>).GetMethods().First(m=>m.Name.Equals("SetProperty")&&
                     m.GetParameters().Length==2 && 
-                    m.GetParameters()[1].ParameterType.IsGenericParameter).MakeGenericMethod(typeof(object)),
-                propertyAction.Item1, 
-                Expression.Convert(Expression.Constant(propertyAction.Item2, typeof(object)), typeof(object)));
+                    m.GetParameters()[1].ParameterType.IsGenericParameter).MakeGenericMethod(t),
+                Expression.Lambda(Expression.Property(p, m.Member as PropertyInfo),p), 
+                Expression.Constant(propertyAction.Item2, t));
         }
         return q.ExecuteUpdate(Expression.Lambda<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>>(left, param));
     }
@@ -256,9 +276,9 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     public TEntity Merge(TEntity entity) {
         throw new NotImplementedException();
     }
-    private IQueryable<T> doOrderBy<T>(IQueryable<T> p,(Expression<Func<T, object>>, bool)[]? orderings) {
+    private IQueryable<T> doOrderBy<T>(IQueryable<T> p,ICollection<(Expression<Func<T, object>>, bool)>? orderings) {
         
-        if (orderings == null || orderings.Length== 0){
+        if (orderings == null || orderings.Count== 0){
             // return p;
             var param = Expression.Parameter(typeof(T), "t");
             return doOrderBy(p, _idProperties.Select(p =>

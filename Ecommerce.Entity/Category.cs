@@ -15,19 +15,7 @@ public class Category
     public ISet<Category> Children { get; set; } = new HashSet<Category>();
     public ICollection<Product> Products { get; set; } = new List<Product>();
     public ICollection<CategoryProperty> CategoryProperties { get; set; } = new List<CategoryProperty>();
-    public class CategoryProperty
-    {
-        public const string EnumValuesSeparator = "|";
-        public int Id { get; set; } // Primary key for CategoryProperty
-        public uint? CategoryId { get; set; } // Foreign key to Category
-        public Category? Category { get; set; } // Navigation property to Category
-        public string PropertyName { get; set; }
-        public string? EnumValues { get; set; }
-        public bool IsRequired { get; set; }
-        public bool IsNumber { get; set; }
-        public decimal? MaxValue { get; set; }
-        public decimal? MinValue { get; set; }
-    }
+
     public override bool Equals(object? obj)
     {
         if (obj is Category other)

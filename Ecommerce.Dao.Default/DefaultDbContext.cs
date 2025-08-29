@@ -39,9 +39,6 @@ public class DefaultDbContext : DbContext
         userBuilder.HasOne<Image>(u => u.ProfilePicture).WithOne()
             .HasForeignKey<User>(u => u.ProfilePictureId).HasPrincipalKey<Image>(p => p.Id).IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict).Metadata.IsUnique=false;
-        userBuilder.HasMany<ReviewCommentNotification>(u => u.ReviewCommentNotifications).WithOne(n => n.User)
-            .HasForeignKey(n => n.UserId).HasPrincipalKey(u => u.Id)
-            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         userBuilder.ComplexProperty<PhoneNumber>(u => u.PhoneNumber, c => {
             c.IsRequired();
             c.Property(p => p.CountryCode).IsRequired();
@@ -73,14 +70,6 @@ public class DefaultDbContext : DbContext
         var opt = new JsonSerializerOptions(){ WriteIndented = false, };
         customerBuilder.Property<IList<Address>>(c => c.Addresses).HasConversion<string>(
             a => JsonSerializer.Serialize(a, opt), s => JsonSerializer.Deserialize<List<Address>>(s, opt)).IsUnicode();
-        customerBuilder.HasMany<CouponNotification>(c => c.CouponNotifications).WithOne(n => n.Customer)
-            .HasForeignKey(n => n.UserId).HasPrincipalKey(c => c.Id)
-            .IsRequired().OnDelete(DeleteBehavior.Cascade);
-        customerBuilder.HasMany<DiscountNotification>(c => c.DiscountNotifications).WithOne(n => n.Customer)
-            .HasForeignKey(n => n.UserId).HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
-        customerBuilder.HasMany<VoteNotification>(c => c.VoteNotifications).WithOne(v => v.Customer)
-            .HasForeignKey(v => v.UserId).HasPrincipalKey(c => c.Id)
-            .IsRequired().OnDelete(DeleteBehavior.Cascade);
         customerBuilder.HasMany<RefundRequest>(c => c.RefundRequests).WithOne();
         customerBuilder.HasMany<CancellationRequest>(c => c.CancellationRequests).WithOne(c => c.Customer)
             .HasForeignKey(c => c.RequesterId).HasPrincipalKey(c => c.Id)
@@ -129,13 +118,6 @@ public class DefaultDbContext : DbContext
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
         sellerBuilder.HasMany<Coupon>(s => s.Coupons).WithOne(c => c.Seller).HasForeignKey(c => c.SellerId)
             .HasPrincipalKey(s => s.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
-        sellerBuilder.HasMany<OrderNotification>(s => s.OrderNotifications).WithOne(o => o.Seller)
-            .HasForeignKey(n => n.UserId).HasPrincipalKey(s => s.Id)
-            .IsRequired().OnDelete(DeleteBehavior.Cascade);
-        sellerBuilder.HasMany<ReviewNotification>(s => s.ReviewNotifications).WithOne(r => r.Seller)
-            .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
-        sellerBuilder.HasMany<RefundRequest>(s => s.RefundRequests).WithOne().HasForeignKey(r => r.UserId)
-            .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         sellerBuilder.OwnsOne<SellerOrderStats>(s => s.OrderStats, os => {
             var nav = os.WithOwner().HasForeignKey(s => s.SellerId).HasPrincipalKey(s => s.Id).Metadata;
             nav.IsUnique = true;
@@ -268,7 +250,7 @@ public class DefaultDbContext : DbContext
         sessionBuilder.HasOne<User>(s => s.User).WithOne(u => u.Session).HasForeignKey<User>(u => u.SessionId)
             .HasPrincipalKey<Session>(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         sessionBuilder.HasOne(s => s.Cart).WithOne(c => c.Session).HasForeignKey<Session>(s => s.CartId)
-            .HasPrincipalKey<Cart>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict).Metadata.DependentToPrincipal.SetIsEagerLoaded(true);
+            .HasPrincipalKey<Cart>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict).Metadata.DependentToPrincipal.SetIsEagerLoaded(false);
         sessionBuilder.HasMany<Category>(s=>s.VisitedCategories).WithMany().UsingEntity<SessionVisitedCategory>(
                 r=>r.HasOne<Category>(v=>v.Category).WithMany().HasForeignKey(v=>v.CategoryId).HasPrincipalKey(c=>c.Id),
                 l=>l.HasOne<Session>(v=>v.Session).WithMany().HasForeignKey(c=>c.SessionId).HasPrincipalKey(c=>c.Id),
@@ -628,7 +610,7 @@ public class DefaultDbContext : DbContext
             .IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         var refundRequestBuilder = modelBuilder.Entity<RefundRequest>(entity => {
             entity.HasBaseType<Request>();
-            entity.HasOne<OrderItem>(r => r.Item).WithOne()
+            entity.HasOne<OrderItem>(r => r.Item).WithOne(o=>o.RefundRequest)
                 .HasForeignKey<RefundRequest>(r => new{ r.OrderId, r.UserId, r.ProductId }).HasPrincipalKey<OrderItem>(o=>new {o.OrderId, o.SellerId, o.ProductId})
                 .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
             entity.HasOne<Customer>(e => e.Customer).WithMany(c => c.RefundRequests).HasForeignKey(r=>r.RequesterId).HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
@@ -642,7 +624,7 @@ public class DefaultDbContext : DbContext
         permissionRequestBuilder.HasBaseType<Request>();
         permissionRequestBuilder.HasOne<Permission>(p => p.Permission).WithMany().HasForeignKey(r => r.PermissionId)
             .HasPrincipalKey(p => p.Id)
-            .IsRequired().OnDelete(DeleteBehavior.Cascade);
+            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         permissionRequestBuilder.HasOne<Staff>(p => p.Requester).WithMany(p => p.SentPermissionRequests)
             .HasForeignKey(p => p.RequesterId).HasPrincipalKey(s => s.Id)
             .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
@@ -655,14 +637,22 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         couponNotificationBuilder.HasOne<Seller>(c => c.Seller).WithMany().HasForeignKey(c => c.SellerId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        couponNotificationBuilder.HasOne<Customer>(c => c.Customer).WithMany(c => c.CouponNotifications)
+            .HasForeignKey(c => c.UserId).HasPrincipalKey(u => u.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         var voteNotificationBuilder = modelBuilder.Entity<VoteNotification>();
         voteNotificationBuilder.HasBaseType<Notification>();
         voteNotificationBuilder.HasOne<ProductReview>(n => n.Review).WithMany().HasForeignKey(n => n.ReviewId).HasPrincipalKey(v => v.Id)
             .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
         voteNotificationBuilder.HasOne<ReviewComment>(n=>n.Comment).WithMany().HasForeignKey(n=>n.CommentId).HasPrincipalKey(c=>c.Id)
             .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+        voteNotificationBuilder.HasOne<Customer>(v => v.Customer).WithMany(v => v.VoteNotifications)
+            .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired()
+            .OnDelete(DeleteBehavior.ClientCascade);
         var reviewNotificationBuilder = modelBuilder.Entity<ReviewNotification>();
         reviewNotificationBuilder.HasBaseType<Notification>();
+        reviewNotificationBuilder.HasOne<Seller>(r => r.Seller).WithMany(s => s.ReviewNotifications)
+            .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired()
+            .OnDelete(DeleteBehavior.ClientCascade);
         reviewNotificationBuilder.HasOne<ProductReview>(n => n.Review).WithOne().HasForeignKey<ReviewNotification>(n => n.ReviewId)
             .HasPrincipalKey<ProductReview>(r => r.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
         var rcnBuilder = modelBuilder.Entity<ReviewCommentNotification>();
@@ -672,9 +662,11 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey<ReviewComment>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
         var orderNotificationBuilder = modelBuilder.Entity<OrderNotification>();
         orderNotificationBuilder.HasBaseType<Notification>();
+        orderNotificationBuilder.HasOne<Seller>(o => o.Seller).WithMany().HasForeignKey(o => o.UserId)
+            .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         orderNotificationBuilder.HasOne<OrderItem>(n => n.Item).WithOne()
             .HasForeignKey<OrderNotification>(n => new{ n.OrderId, n.UserId, n.ProductId })
-            .HasPrincipalKey<OrderItem>(o => new{ o.OrderId, o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            .HasPrincipalKey<OrderItem>(o => new{ o.OrderId, o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var discountNotificationBuilder = modelBuilder.Entity<DiscountNotification>();
         discountNotificationBuilder.HasBaseType<Notification>();
         discountNotificationBuilder.Property(d => d.DiscountAmount).HasPrecision(10, 2);
@@ -683,11 +675,10 @@ public class DefaultDbContext : DbContext
             .HasForeignKey(n => new{ n.SellerId, n.ProductId })
             .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var orderCompletionNotificationBuilder = modelBuilder.Entity<OrderCompletionNotification>();
-        orderCompletionNotificationBuilder.HasBaseType<Notification>();
-        orderCompletionNotificationBuilder.HasOne<Order>().WithMany().HasForeignKey(n => n.OrderId)
-            .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        orderCompletionNotificationBuilder.HasBaseType<OrderNotification>();
         
         var cancellationRequestBuilder = modelBuilder.Entity<CancellationRequest>();
+        cancellationRequestBuilder.HasBaseType<Request>();
         cancellationRequestBuilder.HasOne<Order>(c => c.Order).WithOne(o => o.CancellationRequest)
             .HasForeignKey<CancellationRequest>(c => c.OrderId).HasPrincipalKey<Order>(o => o.Id).IsRequired()
             .OnDelete(DeleteBehavior.ClientCascade);

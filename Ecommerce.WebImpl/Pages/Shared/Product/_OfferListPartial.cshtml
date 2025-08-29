@@ -1,6 +1,6 @@
 ﻿@using Ecommerce.Entity.Views
 @model Ecommerce.WebImpl.Pages.Shared.Product._OfferListPartial
-<ul class="list-group row flex-grow-0 overflow-auto partial-parent">
+<ul class="list-group partial-parent">
     <script>
         ((s) => {
             document.addEventListener("DOMContentLoaded", load);
@@ -11,39 +11,46 @@
                     e.stopPropagation();
                 }
                 const parent = s.parentElement;
-                parent._selectedSellerId = null;
-                
+                document.addEventListener(CartChangedEvent.NAME, ev=>{
+                   if(!parent._selected) return;
+                   parent._selected.dataset.quantity=  ev.detail.newQuantity;
+                });
+                parent._selected=null;
                 parent.querySelectorAll('.offer-item').forEach(item => {
                     item.addEventListener('click', function(event) {
                         // Remove previous selection
-                        parent.querySelector('.bg-light')?.classList?.remove('bg-light');
-                        
-                        // Add selection to current item
-                        event.currentTarget.classList.add('bg-light');
-                        
-                        // Update selected seller ID
+                        parent._selected=item;
+                        if(parent._selectedSellerId===parseInt(event.currentTarget.dataset.sellerid))return;
+                        parent.querySelector('.bg-secondary-subtle')?.classList?.remove('bg-secondary-subtle');
+                        event.currentTarget.classList.add('bg-secondary-subtle');
                         const sellerId = parseInt(event.currentTarget.dataset.sellerid);
                         parent._selectedSellerId = sellerId;
-                        
+                        const quantity = parent._selectedQuantity = event.currentTarget.dataset.quantity ? parseInt(event.currentTarget.dataset.quantity) : null;
                         // Dispatch custom event for external listeners
                         parent.dispatchEvent(new CustomEvent('sellerSelected', {
-                            detail: { sellerId: sellerId },
+                            detail: { sellerId: sellerId,quantity:quantity},
                             bubbles: true
                         }));
                     });
                 });
-                
+                const selected = parent.querySelector('.offer-item[data-quantity]');
+                if(selected){
+                    selected.dispatchEvent( new Event('click', {bubbles:false, cancelable:true}));
+                }else {
+                    parent._selectedSellerId = null;
+                    parent._selectedQuantity = null;
+                }
                 console.log('loaded @(nameof(_OfferListPartial)) from ' + e.type);
             }
         })(document.currentScript)
         //# sourceURL=OfferListPartial.js
     </script>
     @{ var iii = 0; }
-    @foreach (var offer in Model.Offers){
+    @foreach (var (existingQuantity, offer) in Model.Offers){
         var editable = Model.ViewingSellerId == offer.SellerId;
         @* if(iii!=0){<div class="separator"></div>} *@
-        <li class="offer-item hover-darken list-group-item d-flex" style="cursor: pointer;" data-sellerid="@(offer.SellerId)">
-            <ul class="list-unstyled row g-1 d-flex">
+        <li class="offer-item hover-darken  list-group-item" style="cursor: pointer;" @Html.Raw(existingQuantity.HasValue?$"data-quantity=\"{existingQuantity.Value}\"":"") data-sellerid="@(offer.SellerId)">
+            <ul class="list-unstyled row g-1">
                 <li class="col-4 justify-content-start overflow-x-hidden align-content-center">
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-truncate fw-medium">@(offer.Seller.ShopName)</span>
@@ -52,21 +59,16 @@
                         </a>
                     </div>
                 </li>
-                <li class="col-3  align-content-center">
-                    <div class="row px-2 overflow-x-hidden">
-                        <p id="stockValue@(offer.SellerId)" class="col-auto" style="font-size: small">@(offer.Stock)</p>
-                        <p class="col-auto text-wrap" style="font-size: small; word-wrap: break-word">Ürün Stokta</p>
+                <li class="col-2  align-content-center">
+                    <div class="px-2 overflow-x-hidden gap-1">
+                        <p id="stockValue@(offer.SellerId)" style="font-size: small">@(offer.Stock)</p>
+                        <p class="text-wrap" style="font-size: small; word-wrap: break-word">Ürün Stokta</p>
                     </div>
                 </li>
                 <li class="col-3 align-content-center">
                     <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = offer.Stats.ReviewAverage.Value, RatingCount = (int?)offer.Stats.ReviewCount }"/>
                 </li>
-                @* @if (offer.Stats.RefundCount > 0){ *@
-                @*     <li class="col-3 align-content-center"> *@
-                @*         <p class="mx-2" style="font-size: small">@(offer.Stats.RefundCount) Kere İade Edildi</p> *@
-                @*     </li>    *@
-                @* } *@
-                <li class="col-2 align-content-center align-self-end">
+                <li class="col-3 align-content-center align-self-end">
                     @await Html.PartialAsync("Shared/_ItemPricePartial", new CartItemAggregates(){
                         BasePrice = offer.Price,
                         DiscountedPrice = offer.Price * offer.Discount,

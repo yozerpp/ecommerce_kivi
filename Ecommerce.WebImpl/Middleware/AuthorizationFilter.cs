@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace Ecommerce.WebImpl.Middleware;
 
-public class AuthorizationFilter : IAuthorizationFilter, IAsyncAuthorizationFilter
+public class AuthorizationFilter : IAuthorizationFilter
 {
     private readonly ICartManager _cartManager;
     private readonly IJwtManager _jwtManager;

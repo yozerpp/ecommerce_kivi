@@ -8,8 +8,9 @@ public class _PromptablePartial
     public required string Url { get; init; }
     public string? SwitchText { get; init; }
     public required InputModel[] Inputs { get; init; }
-    public string Target { get; init; } = "popupResult";
+    public string Target { get; init; } = "#popupResult";
     public string Color { get; init; }= "darkorange";
     public string Classes { get; init; }= "btn btn-primary";
     public string? FormClasses { get; init; }
+    public string? Description { get; init; }
 }

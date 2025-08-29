@@ -1,0 +1,26 @@
+﻿@model Ecommerce.WebImpl.Pages.Shared.SearchBar._DimensionsPartial
+
+<!--
+Type:
+_width;
+_height;
+_depth;
+_weight;
+-->
+<div class="@Model.ClassNames">
+    <div class="d-inline-flex gap-2">
+        <label class="d-inline-flex fw-bold">Ağırlık</label>
+        <p data-dimtype="w" class="fs-6">@(Model.Dimensions.Weight)</p>    
+    </div>
+    <div class="d-inline-flex gap-2">
+        <label class="d-inline-flex fw-bold">Boyutlar <small>(WxHxD)</small></label>
+        <span class="fs-6"><p data-dimtype="wi">@(Model.Dimensions.Width)</p>x<p data-dimtype="h">@(Model.Dimensions.Height)</p>x<p data-type="d">@(Model.Dimensions.Depth)</p></span>
+    </div>
+    @if (Model.Editable){
+        <div data-editing="false">
+            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                OnClick = "const p = event.currentTarget.parentElement;if(p.dataset.editing==='false')p.querySelector('p[data-dimtype]').forEach(el=>el.setAttribute('contenteditable', 'true');p.querySelector('p[data-dimtype]'))"
+            })    
+        </div>
+    }
+</div>

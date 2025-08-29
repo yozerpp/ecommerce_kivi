@@ -6,23 +6,12 @@ namespace Ecommerce.Shipping;
 
 public interface IShippingService
 {
-    public List<ShippingOffer> GetOffers(IEnumerable<Dimensions> dimensions, Address shipmentAddress,
-        Address recipientAddress);
-
-    public Shipment? GetShipment(ulong id);
-    public List<Shipment> AcceptOffer(ICollection<ShipmentCreateOptions> offerIds);
-    public void UpdateAddress(ulong shipmentId, Address address);
-    public void UpdatePhoneNumber(ulong shipmentId, PhoneNumber phoneNumber);
-    public void Cancel(ulong shipmentId);
-    public void Deliver(ulong shipmentId);
-    public class ShipmentCreateOptions
-    {
-        public ulong OfferId { get; set; }
-        public string RecepientNane { get; set; }
-        public string SenderEmail { get; set; }
-        public string RecepientEmail { get; set; }
-        public PhoneNumber SenderPhoneNumber { get; set; }
-        public PhoneNumber RecepientPhoneNumber { get; set; }
-    }
-
+    public Task<ICollection<ShippingOffer>> GetOffers(GetOfferOptions options);
+    public Task<Shipment> AcceptOffer(AcceptOfferOptions options);
+    public Task<Shipment> GetStatus(string id);
+    public Task CancelShipment(string id);
+    public Task<Shipment> Refund(string shipmentId, int count);
+    public Task<ICollection<Shipment>> AcceptOfferBatch(ICollection<AcceptOfferOptions> options);
+    /// <exception cref="NotImplementedException">Not Implemented</exception>
+    public Task ChangeAddress(ChangeAddressOptions options);
 }

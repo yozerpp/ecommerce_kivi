@@ -4,7 +4,7 @@
 @using Ecommerce.WebImpl.Pages.Shared
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Html
-@using Customer = Ecommerce.WebImpl.Pages.Customer
+@using Customer = Ecommerce.WebImpl.Pages.User
 @model Ecommerce.WebImpl.Pages.Account._ProfilePartial
 @{ var editable = Model.Editable;
     var customer = Model.User as Entity.Customer;
@@ -37,10 +37,10 @@
     })
     
     function assignProfileInputs(){
-        document.getElementById('p_@(nameof(Model.User.FirstName))Input').value = document.getElementById('p_@(nameof(Model.User.FirstName))').innerText;
-        document.getElementById('p_@(nameof(Model.User.LastName))Input').value = document.getElementById('p_@(nameof(Model.User.LastName))').innerText;
-        document.getElementById('p_@(nameof(Model.User.PhoneNumber.CountryCode))Input').value = document.getElementById('p_phoneCC').innerText;
-        document.getElementById('p_@(Model.User.PhoneNumber.Number)Input').value = document.getElementById('p_phoneNum').innerText;
+        document.getElementById('p_@(nameof(Model.User.FirstName))Input').value = document.getElementById('p_@(nameof(Model.User.FirstName))').innerHTML;
+        document.getElementById('p_@(nameof(Model.User.LastName))Input').value = document.getElementById('p_@(nameof(Model.User.LastName))').innerHTML;
+        document.getElementById('p_@(nameof(Model.User.PhoneNumber.CountryCode))Input').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML;
+        document.getElementById('p_@(Model.User.PhoneNumber.Number)Input').value = document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML;
     }
     let _p_editedImage@(Model.User.Id) = false;
 </script>
@@ -93,7 +93,7 @@
     @if (customer!=null && editable){
         <li class="card">
             @SectionHeader("Adresler", "fs-3 bi bi-building text-dark b-white")
-            @await Html.PartialAsync("CustomerPartials/_CustomerAddressPartial", new _CustomerAddressPartial(){
+            @await Html.PartialAsync("Customer/_CustomerAddressPartial", new _CustomerAddressPartial(){
                 CustomerId = Model.User.Id, Editable = Model.IsOwner, Updateable = false, Addresses = customer.Addresses
             })
         </li>
@@ -107,37 +107,30 @@
                     : num;
             }
             <div class="border-2 container-fluid d-flex justify-content-end align-content-center align-items-center mt-3 border-black border-1 gap-3 rounded-2">
-                <div class="rounded border-black d-inline-flex rounded p-0 gap-2">
-                    <p id="p_phoneCC" class="bg-secondary rounded-2 rounded-end-0 d-block bg-secondary-subtle">@Model.User.PhoneNumber.CountryCode</p>
-                    <p id="p_phoneNum" class="bg-white rounded-2 rounded-start-0 shadow-sm">@num</p>
-                    @if (editable){
-                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                            Target = "p_phoneNum,p_phoneCC"
-                        })
-                    }    
-                </div>
-                
+                @await Html.PartialAsync("Shared/_PhoneNumberPartial", new _PhoneNumberPartial(){
+                    Editable = true, PhoneNumber = Model.User.PhoneNumber
+                })
             </div>
     </li>
     <li class="d-none">
-        <form id="profil@(Model.User.Id)Form" hx-post="/@(Model.User switch{Entity.Customer=>"Customer", Seller=>"Seller", Staff=>"Staff", _=>throw new ArgumentOutOfRangeException()})?handler=update" hx-trigger="submit" hx-target="#popupResult" hx-swap="innerHTML">
+        <form id="profil@(Model.User.Id)Form" hx-post="/@nameof(Pages.User)?handler=update" hx-trigger="submit" hx-target="#popupResult" hx-swap="innerHTML">
             @Html.AntiForgeryToken()
-            <input id="p_@(nameof(Model.User.Id))" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Id))" value="@(Model.User.Id)"/>
-            <input id="p_@(nameof(Model.User.NormalizedEmail))" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.NormalizedEmail))" value="@Model.User.NormalizedEmail"/>
-            <input id="p_@(nameof(Model.User.FirstName))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.FirstName))" value="@(Model.User.FirstName)"/>
-            <input id="p_@(nameof(Model.User.LastName))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.LastName))" value="@(Model.User.LastName)"/>
-            <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))"/>
-            <input id="p_@(nameof(Model.User.PhoneNumber.CountryCode))Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))" value="@(Model.User.PhoneNumber.CountryCode)"/>
-            <input id="p_@(Model.User.PhoneNumber.Number)Input" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))" value="@(Model.User.PhoneNumber.Number)"/>
+            <input id="p_@(nameof(Model.User.Id))" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Id))" value="@(Model.User.Id)"/>
+            <input id="p_@(nameof(Model.User.NormalizedEmail))" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.NormalizedEmail))" value="@Model.User.NormalizedEmail"/>
+            <input id="p_@(nameof(Model.User.FirstName))Input" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Model.User.FirstName))" value="@(Model.User.FirstName)"/>
+            <input id="p_@(nameof(Model.User.LastName))Input" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Model.User.LastName))" value="@(Model.User.LastName)"/>
+            <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))"/>
+            <input id="p_@(nameof(Model.User.PhoneNumber.CountryCode))Input" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))" value="@(Model.User.PhoneNumber.CountryCode)"/>
+            <input id="p_@(Model.User.PhoneNumber.Number)Input" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))" value="@(Model.User.PhoneNumber.Number)"/>
             <input id="p_editedImage" name="@(nameof(Customer.IsImageEdited))" type="hidden"/>
             @if (customer!=null){
                 for (int i = 0; i < customer.Addresses.Count; i++){
-                    <input id="address@(i)_@(nameof(Address.City))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.City))" value="@customer.Addresses[i].City"/>
-                    <input id="address@(i)_@(nameof(Address.Country))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Country))" value="@customer.Addresses[i].Country"/>
-                    <input id="address@(i)_@(nameof(Address.District))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.District))" value="@customer.Addresses[i].District"/>
-                    <input id="address@(i)_@(nameof(Address.Line1))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line1))" value="@customer.Addresses[i].Line1"/>
-                    <input id="address@(i)_@(nameof(Address.Line2))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line2))" value="@customer.Addresses[i].Line2"/>
-                    <input id="address@(i)_@(nameof(Address.ZipCode))" type="hidden" name="@(nameof(Customer.ViewedCustomer)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.ZipCode))" value="@customer.Addresses[i].ZipCode"/>
+                    <input id="address@(i)_@(nameof(Address.City))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.City))" value="@customer.Addresses[i].City"/>
+                    <input id="address@(i)_@(nameof(Address.Country))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Country))" value="@customer.Addresses[i].Country"/>
+                    <input id="address@(i)_@(nameof(Address.District))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.District))" value="@customer.Addresses[i].District"/>
+                    <input id="address@(i)_@(nameof(Address.Line1))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line1))" value="@customer.Addresses[i].Line1"/>
+                    <input id="address@(i)_@(nameof(Address.Line2))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.Line2))" value="@customer.Addresses[i].Line2"/>
+                    <input id="address@(i)_@(nameof(Address.ZipCode))" type="hidden" name="@(nameof(Customer.ViewedUser)).@(nameof(Entity.Customer.Addresses))[@i].@(nameof(Address.ZipCode))" value="@customer.Addresses[i].ZipCode"/>
                 }
             }
             @* <button type="submit" onclick="event.preventDefault();assignProfileInputs();assignAddressInputs();event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))"></button> *@

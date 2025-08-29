@@ -1,0 +1,287 @@
+﻿@using System.Drawing
+@using System.Drawing
+@using System.Text.Json
+@model Ecommerce.WebImpl.Pages.Shared.Dashboard._SellerStatistics
+@functions{
+    string ToHex(Color c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
+}
+
+<div class="container-fluid">
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Toplam Satış</h6>
+                            <h4 class="mb-0">@Model.TotalRevenue.ToString("C",
+System.Globalization.CultureInfo.GetCultureInfo("tr-TR"))</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-currency-exchange fs-2"></i>
+                        </div>
+                    </div>
+                    <small class="opacity-75">@Model.TotalOrdersCount sipariş</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Ortalama Sipariş</h6>
+                            <h4 class="mb-0">@Model.AverageOrderValue.ToString("C",
+System.Globalization.CultureInfo.GetCultureInfo("tr-TR"))</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-graph-up fs-2"></i>
+                        </div>
+                    </div>
+                    <small class="opacity-75">Sipariş başına</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Ortalama Puan</h6>
+                            <h4 class="mb-0">@Model.AverageRating.ToString("F1") <small>/ 5.0</small></h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-star-fill fs-2"></i>
+                        </div>
+                    </div>
+                    <small class="opacity-75">@Model.TotalReviewsCount değerlendirme</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Memnuniyet</h6>
+                            <h4 class="mb-0">%@Model.ReviewSatisfactionRate.ToString("F1")</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-emoji-smile fs-2"></i>
+                        </div>
+                    </div>
+                    <small class="opacity-75">4+ yıldız oranı</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Sales Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Satış Performansı
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="salesChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rating Distribution -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-star me-2"></i>Puan Dağılımı
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="ratingChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Trends -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-chat-square-text me-2"></i>Değerlendirme Trendleri
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="reviewTrendChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Sales Performance Chart
+    const salesChart = echarts.init(document.getElementById('salesChart'));
+    @{
+        var orderedOrders = Model.Orders.OrderBy(o => o.Date).ToArray();
+        var format = Model.Orders.GroupBy(o => o.Date.Month).Count() > 3 ? "yyyy-MM" : "yyyy-MM-dd";
+        var groupedOrders = orderedOrders.GroupBy(o => o.Date.ToString(format))
+            .OrderBy(g => g.Key)
+            .Select(g => new {
+                Date = g.Key,
+                Count = g.Count(),
+                Revenue = g.Sum(o => o.Aggregates.CouponDiscountedPrice),
+                Discount = g.Sum(o => o.Aggregates.TotalDiscountAmount)
+            }).ToArray();
+    }
+
+    salesChart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: {
+            data: ['Sipariş Sayısı', 'Gelir (₺)', 'Verilen İndirim (₺)']
+        },
+        xAxis: {
+            type: 'category',
+            data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Date)))
+        },
+        yAxis: [
+            {
+                type: 'value',
+                name: 'Sipariş Sayısı',
+                position: 'left'
+            },
+            {
+                type: 'value',
+                name: 'Tutar (₺)',
+                position: 'right'
+            }
+        ],
+        series: [
+            {
+                name: 'Sipariş Sayısı',
+                type: 'bar',
+                color: '#@ToHex(Color.DodgerBlue)',
+                data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Count)))
+            },
+            {
+                name: 'Gelir (₺)',
+                type: 'line',
+                yAxisIndex: 1,
+                smooth: true,
+                color: '#@ToHex(Color.ForestGreen)',
+                data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Revenue)))
+            },
+            {
+                name: 'Verilen İndirim (₺)',
+                type: 'line',
+                yAxisIndex: 1,
+                smooth: true,
+                color: '#@ToHex(Color.Orange)',
+                data: @Html.Raw(JsonSerializer.Serialize(groupedOrders.Select(g => g.Discount)))
+            }
+        ]
+    });
+
+    // Rating Distribution Chart
+    const ratingChart = echarts.init(document.getElementById('ratingChart'));
+    ratingChart.setOption({
+        tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        series: [{
+            name: 'Puan Dağılımı',
+            type: 'pie',
+            radius: '70%',
+            data: [
+                { value: @Model.FiveStarReviews, name: '5 Yıldız', itemStyle: { color: '#@ToHex(Color.Gold)' } },
+                { value: @Model.FourStarReviews, name: '4 Yıldız', itemStyle: { color: '#@ToHex(Color.LimeGreen)' } },
+                { value: @Model.ThreeStarReviews, name: '3 Yıldız', itemStyle: { color: '#@ToHex(Color.Orange)' } },
+                { value: @Model.TwoStarReviews, name: '2 Yıldız', itemStyle: { color: '#@ToHex(Color.OrangeRed)' } },
+                { value: @Model.OneStarReviews, name: '1 Yıldız', itemStyle: { color: '#@ToHex(Color.Red)' } }
+            ],
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            }
+        }]
+    });
+
+    // Review Trends Chart
+    const reviewTrendChart = echarts.init(document.getElementById('reviewTrendChart'));
+    @{
+        var orderedReviews = Model.Reviews.OrderBy(r => r.Created).ToArray();
+        var reviewFormat = orderedReviews.GroupBy(r => r.Created.Month).Count() > 3 ? "yyyy-MM" : "yyyy-MM-dd";
+        var groupedReviews = orderedReviews.GroupBy(r => r.Created.ToString(reviewFormat))
+            .OrderBy(g => g.Key)
+            .Select(g => new {
+                Date = g.Key,
+                Count = g.Count(),
+                AverageRating = g.Average(r => r.Rating)
+            }).ToArray();
+    }
+
+    reviewTrendChart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: {
+            data: ['Değerlendirme Sayısı', 'Ortalama Puan']
+        },
+        xAxis: {
+            type: 'category',
+            data: @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.Date)))
+        },
+        yAxis: [
+            {
+                type: 'value',
+                name: 'Değerlendirme Sayısı',
+                position: 'left'
+            },
+            {
+                type: 'value',
+                name: 'Ortalama Puan',
+                position: 'right',
+                min: 0,
+                max: 5,
+                interval: 1
+            }
+        ],
+        series: [
+            {
+                name: 'Değerlendirme Sayısı',
+                type: 'bar',
+                color: '#@ToHex(Color.SkyBlue)',
+                data: @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.Count)))
+            },
+            {
+                name: 'Ortalama Puan',
+                type: 'line',
+                yAxisIndex: 1,
+                smooth: true,
+                color: '#@ToHex(Color.Gold)',
+                data: @Html.Raw(JsonSerializer.Serialize(groupedReviews.Select(g => g.AverageRating)))
+            }
+        ]
+    });
+
+    // Make charts responsive
+    window.addEventListener('resize', function() {
+        salesChart.resize();
+        ratingChart.resize();
+        reviewTrendChart.resize();
+    });
+});
+</script>

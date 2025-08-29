@@ -11,18 +11,15 @@
             ((s) => {
                 document.addEventListener("DOMContentLoaded", load);
                 s.parentElement.addEventListener("htmx:load", load);
-                
                 function load(e) {
                     if (e.type === 'htmx:load') {
                         e.stopPropagation();
                     }
                     const parent = s.parentElement;
-                    
                     // Trigger htmx:load on child comment partials
-                    parent.querySelectorAll('.comment-partial').forEach(commentPartial => {
+                    s.nextElementSibling.querySelectorAll('.comment-partial').forEach(commentPartial => {
                         commentPartial.dispatchEvent(new Event('htmx:load', {bubbles: false}));
                     });
-                    
                     console.log('loaded @(nameof(_CommentsPartial)) from ' + e.type);
                 }
             })(document.currentScript)
@@ -30,7 +27,7 @@
         </script>
         <div class="list-group flex-column gap-2">
             @foreach (var comment in Model.Comments){
-                <div class="list-group-item flex-column gap-2 comment-partial">
+                <div class="list-group-item flex-column gap-2 ">
                     @if (Model.IsStaff || Model.CurrentUserId!=null && Model.CurrentUserId == comment.ReviewComment.UserId){
                         <div class="d-flex justify-content-end align-items-center">
                             <form hx-post="/@(nameof(Reviews))?handler=delete" hx-target="#popupResult" hx-swap="innerHTML">
@@ -47,7 +44,7 @@
         </div>
         <br>
         @if (Model.Comments.Count == 10){
-            <a href="#" hx-trigger="click" id="comments@(threadId)_@(curPage)" class="mt-2" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@(reviewId)&CommentId=@(commentId)&NestLevel=@(Model.NestLevel)&CommentsPage=@(Model.NextPage)" hx-target="#comments@(threadId)_@(curPage)" hx-swap="outerHTML">Daha fazla yükle</a>
+            <a href="#" hx-trigger="click" class="mt-2" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove()" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@(reviewId)&CommentId=@(commentId)&NestLevel=@(Model.NestLevel)&CommentsPage=@(Model.NextPage)" hx-target="closest .partial-parent" hx-swap="afterend">Daha fazla yükle</a>
         }
     </div>
 }

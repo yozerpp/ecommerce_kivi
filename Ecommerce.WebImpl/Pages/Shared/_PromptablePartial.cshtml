@@ -1,15 +1,29 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared._PromptablePartial
-    <form class="gap-2 d-flex text-center align-middle flex-column " hx-post="@Model.Url" hx-trigger="submit" hx-target="@Model.Target" hx-swap="innerHTML">
+    <form class="gap-2 d-flex text-center align-middle flex-column promptable card partial-parent" hx-post="@Model.Url" hx-trigger="submit" hx-target="@Model.Target" hx-swap="innerHTML">
         @Html.AntiForgeryToken()
-        <div class="d-none">
+        <div class="d-none card-body">
             @foreach (var input in Model.Inputs){
-                <input @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @(input.DefaultValue!=null?"value=" + input.DefaultValue :"") placeholder="@(input.PlaceHolder??"")"/>
+                if (input.InputType.Equals("select")){
+                    <select class="form-select-sm">
+                        @foreach (var option in input.Options){
+                            <option value="@option.value">@option.display</option>
+                        }
+                    </select>                    
+                }
+                else{
+                <input class="form-control" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @(input.DefaultValue!=null?"value=" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
+                }
+            }
+            @if (Model.Description != null){
+            <p class="mb-0 text-muted">@Model.Description</p>
             }
         </div>
         <script>
-            (()=>{
-                const currentScript = document.currentScript;
-                document.addEventListener("DOMContentLoaded", function(){
+            ((currentScript)=>{
+                document.addEventListener("DOMContentLoaded", load);
+                currentScript.parentElement.addEventListener('htmx:load',load);
+                function load(e){
+                    if(e.type === 'htmx:load') e.stopPropagation();
                     const inpts = currentScript.previousElementSibling;
                     inpts._inputs = Array.from(inpts.querySelectorAll('input:not([type="hidden"])'))
                     const btn = currentScript.nextElementSibling;
@@ -23,16 +37,18 @@
                         btn._clicked = !btn._clicked
                         btn.innerHTML =btn._displayTexts[btn._textIdx++%2];
                     }
-                })
-            })()           
+                    console.log('initialized @(nameof(_PromptablePartial)) from ' + e.type);
+                }
+            })(document.currentScript)      
+            //# sourceURL=PromptablePartial.js
         </script>
-        <button type="button" class="@Model.Classes" style="background-color: @Model.Color"
+        <button class="btn btn-outline-primary" type="button" class="@Model.Classes" style="background-color: @Model.Color"
                 onclick="
                         if(event.currentTarget._clicked)
                             event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))
                         event.currentTarget._toggle();
                         event.currentTarget.parentElement.querySelector('input:not([type=hidden])').focus();
                         ">
-            @(Model.DisplayText)
+            @Html.Raw(Model.DisplayText)
         </button>
     </form>

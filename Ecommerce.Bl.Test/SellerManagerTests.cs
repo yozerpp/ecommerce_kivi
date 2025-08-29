@@ -153,7 +153,7 @@ public class SellerManagerTests
         TestContext._cartManager.Add(_user.Session.Cart,offerForSale, 2); // Add 2 units of the product
         TestContext._cartRepository.Flush();
 
-        var payment = new Payment { TransactionId = "SALE_TEST_" + Guid.NewGuid().ToString(), Amount = offerForSale.Price * 2, PaymentMethod = PaymentMethod.CARD };
+        var payment = new Payment { TransactionId = "SALE_TEST_" + Guid.NewGuid().ToString(), Amount = offerForSale.Price * 2, PaymentMethod = PaymentMethod.Card };
         payment = TestContext._paymentRepository.Add(payment);
         TestContext._orderManager.CreateOrder(_user.Session, out _, _user);
         TestContext._orderRepository.Flush();

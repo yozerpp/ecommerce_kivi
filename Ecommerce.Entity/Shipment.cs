@@ -10,6 +10,7 @@ public class Shipment
  public string? ApiId { get; set; }
  public string? TrackingNumber { get; set; }
  public string? Provider { get; set; }
+ public decimal Cost { get; set; }
  public ShipmentStatus Status { get; set; }
  public ICollection<OrderItem> OrderItems { get; set; }
  protected bool Equals(Shipment other) {

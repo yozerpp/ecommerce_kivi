@@ -1,22 +1,30 @@
 ﻿@using Ecommerce.Entity
 @model _CommentPartial
-
-<div class="partial-parent comment-partial border-start border-2 border-light ps-2 mb-2">
+@{
+    var editable = Model.CommentUserView.ReviewComment.UserId != null && Model.CommentUserView.ReviewComment.UserId.Value == (Context.Items[nameof(Entity.User)] as User)?.Id || 
+    Model.CommentUserView.ReviewComment.CommenterId == (Context.Items[nameof(Entity.Session)] as Session)?.Id;
+}
+<div class="partial-parent comment-partial border-start border-2 border-light ps-2 pt-2 mb-2">
     <div class="d-flex w-100 justify-content-between align-items-start">
-        <div class="flex-shrink-0">
-            <h5 class="mb-1 text-primary fw-semibold fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
+        <h5 class="mb-1 text-primary fw-semibold fs-6">@(Model.CommentUserView.ReviewComment.User?.FullName?? (Model.CommentUserView.ReviewComment.Name ?? ""))</h5>
+        <p class="mb-0 flex-grow-1 text-center ms-3 text-dark">@Model.CommentUserView.ReviewComment.Comment</p>
+        <div class="d-inline-flex gap-2">
+            @if(editable){
+                <form  hx-trigger="submit" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteComment">
+                     @Html.AntiForgeryToken()
+                    <input type="hidden" name="commentId" value="@Model.CommentUserView.ReviewComment.Id"/>
+                    <button type="submit" class="btn border-1 rounded-2 border-secondary-subtle bg-light text-decoration-none p-0"><i class="bi bi-trash-fill text-danger"></i></button>
+                </form>
+            }
             @{var t = Utils.GetRelativeTime(Model.CommentUserView.ReviewComment.Created);}
-            <small class="text-muted">@(t!=null?$"{t} Önce":"Şimdi")</small>
+            <small class="text-muted">@(t != null ? $"{t} Önce" : "Şimdi")</small>    
         </div>
-        <p class="mb-1 flex-grow-1 ms-3 text-dark">@Model.CommentUserView.ReviewComment.Comment</p>
-        <div class="flex-shrink-0">
-            
-        </div>
+        
     </div>
     <div class="small d-flex container-fluid align-items-center justify-content-end mt-2">
         <div class="d-inline-flex gap-3 align-items-center">
             <span class="d-inline-flex align-items-center text-muted">
-                <button data-bs-placement="left" title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 hover-grow" style="background-color: transparent;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
+                <button data-bs-placement="left" @Html.Raw(Model.CommentUserView.ReviewComment.Stats.ReplyCount?.Equals(0)??true?"disabled":"")) title="Cevapları Görüntüle" id="commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 hover-grow" style="background-color: transparent;" hx-trigger="click" hx-target="#commentReplies@(Model.CommentUserView.ReviewComment.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ParentId=@(Model.CommentUserView.ReviewComment.Id)&ReviewId=@(Model.CommentUserView.ReviewComment.ReviewId)&NestLevel=@(Model.NestLevel + 1)">
                     <i class="bi bi-chat-dots"></i>
                 </button> 
                 <span class="badge bg-light text-dark">@Model.CommentUserView.ReviewComment.Stats.ReplyCount</span>
@@ -56,7 +64,7 @@
                         if(btn && !btn.disabled) {
                             btn.dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
                         }
-                        s.parentElement.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                        s.parentElement.previousElementSibling.querySelector('a[aria-controls="replyComment@(Model.CommentUserView.ReviewComment.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
                     });
                 }
             })(document.currentScript)
@@ -75,8 +83,8 @@
                     </div>
                 </div>
             </form>
-            <div class="mt-2" hx-on::after-swap="setTimeout(()=>this.innerHTML='', 3000)" id="commentReplyResult@(Model.CommentUserView.ReviewComment.Id)"></div>
+            <div class="mt-2" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" id="commentReplyResult@(Model.CommentUserView.ReviewComment.Id)"></div>
         </div>
     </div>
-    <div class="ms-2 mt-1" hx-on::after-swap="const b = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');b.disabled=true;b.removeAttribute('hx-get');b.classList.remove('hover-grow');" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
+    <div class="ms-2 mt-1" hx-on::after-swap="if(event.detail.xhr.status!==204) return;const b = document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)');b.disabled=true;b.removeAttribute('hx-get');b.classList.remove('hover-grow');" id="commentReplies@(Model.CommentUserView.ReviewComment.Id)"></div>
 </div>

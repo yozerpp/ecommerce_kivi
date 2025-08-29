@@ -78,7 +78,7 @@ public static class TestContext
         _cartManager = new CartManager(_userBaseRepository,_sessionRepository, _couponRepository, _cartRepository, _cartItemRepository);
         _orderManager = new OrderManager(_cartManager,_orderRepository);
         _userManager = new UserManager(_jwtmanager,_customerRepository ,_staffRepository, _userBaseRepository, _sellerRepository, s => s, _cartManager);
-        _sellerManager = new SellerManager(_categoryRepository,_couponRepository,_productRepository,_sellerRepository, _offerRepository);
+        _sellerManager = new SellerManager(_couponRepository,_productRepository,_sellerRepository, _offerRepository);
         _reviewManager = new ReviewManager(_reviewRepository, _reviewCommentRepository, _reviewVoteRepository,
             _orderItemRepository);
     }

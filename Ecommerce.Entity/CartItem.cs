@@ -9,13 +9,13 @@ public class CartItem : IItem
     public uint SellerId { get; set; }
     public uint ProductId { get; set; }
     public uint CartId { get; set; }
-    public int Quantity { get; set; }
+    public uint Quantity { get; set; }
     public ProductOffer ProductOffer { get; set; }
     public Cart Cart { get; set; }
     public string? CouponId { get; set; }
     public Coupon? Coupon { get; set; }
     public CartItemAggregates Aggregates { get; set; }
-
+    public ICollection<ProductOption> SelectedOptions { get; set; }=[];
     public CartItem() { }
 
     public CartItem(CartItem item) {

@@ -2,15 +2,8 @@
 
 namespace Ecommerce.WebImpl.Pages.Shared.Review;
 
-public class _CommentPartial : ReviewComment
+public class _CommentPartial(CommentUserView comment)
 {
-    public int NestLevel { get; set; } = 0;
-    private _CommentPartial(ReviewComment comment) {
-        foreach (var property in typeof(ReviewComment).GetProperties()){
-            property.SetValue(this, property.GetValue(comment));
-        }
-    }
-    public _CommentPartial(ReviewComment comment, int nestLevel): this(comment) {
-        NestLevel = nestLevel;
-    }
+    public CommentUserView CommentUserView{get; init; } = comment;
+    public required int NestLevel { get; init; } = 0;
 }

@@ -8,6 +8,6 @@ namespace Ecommerce.WebImpl.Pages.Shared.Dashboard;
 public class _ReviewStatistics
 {
     public ICollection<ProductReview> Reviews { get; init; } = new List<ProductReview>();
-    public User.UserRole ViewerRole { get; init; } = User.UserRole.Customer;
+    public Entity.User.UserRole ViewerRole { get; init; } = Entity.User.UserRole.Customer;
     
 }

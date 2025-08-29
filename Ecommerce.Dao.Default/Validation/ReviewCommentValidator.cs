@@ -7,7 +7,7 @@ namespace Ecommerce.Dao.Default.Validation;
 public class ReviewCommentValidator : IValidator<ReviewComment>
 {
     public ValidationResult Validate(ReviewComment entity) {
-        if(entity.Name==null && entity.User==default)
+        if(entity.Name==null && entity.User==default && entity.UserId == default)
             return new ValidationResult("You must enter a name to comment anonymously.");
         return new ValidationResult(null);
     }

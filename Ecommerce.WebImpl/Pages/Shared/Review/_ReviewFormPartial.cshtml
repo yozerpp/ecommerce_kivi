@@ -1,22 +1,39 @@
 ﻿@using Ecommerce.Entity
 @model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
-<div class="mb-4 partial-parent" >
+<!--Type:
+_setSellerId: function(int)
+-->
+<div class="mb-4 review-form partial-parent justify-content-center align-content-center align-items-center d-flex flex-column container-fluid " >
     <script>
         ((s) => {
             document.addEventListener("DOMContentLoaded", load);
             s.parentElement.addEventListener("htmx:load", load);
-            
+            s.parentElement._setSellerId = function (sellerId) {
+                const sidInput = this.querySelector('input[name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.SellerId))"]');
+                sidInput.value = sellerId;
+            };
             function load(e) {
+                if(e.type === 'htmx:load') {
+                    e.stopPropagation();
+                }
                 const parent = s.parentElement;
                 const stars = parent.querySelectorAll('.star-rating');
                 const ratingInput = parent.querySelector('.rating-input');
-                const card = parent.querySelector('.card');
-
+                const collapseBtn= parent.querySelector('button[data-bs-toggle="collapse"]');
+                const commentInput = parent.querySelector('textarea[name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Comment))"]');
+                const collapse = new bootstrap.Collapse(collapseBtn.parentElement.nextElementSibling,{
+                    toggle:false,
+                });
+                parent.addEventListener('htmx:afterRequest', e=>{
+                    collapseBtn.dispatchEvent(new Event('click', {bubbles: false, cancelable:true}));
+                });
+                collapseBtn.addEventListener('click',()=>{
+                    e.stopPropagation();e.preventDefault();collapse.toggle();
+                });
                 stars.forEach((star, index) => {
                     star.addEventListener('click', function() {
                         const rating = index + 1;
                         ratingInput.value = rating;
-
                         stars.forEach((s, i) => {
                             if (i < rating) {
                                 s.style.color = '#ffc107';
@@ -29,7 +46,6 @@
                             }
                         });
                     });
-
                     star.addEventListener('mouseenter', function() {
                         const rating = index + 1;
                         stars.forEach((s, i) => {
@@ -41,37 +57,21 @@
                         });
                     });
                 });
-
-                if (card) {
-                    card.addEventListener('mouseleave', function() {
-                        const currentRating = parseInt(ratingInput.value);
-                        stars.forEach((s, i) => {
-                            if (i < currentRating) {
-                                s.style.color = '#ffc107';
-                                s.classList.remove('bi-star');
-                                s.classList.add('bi-star-fill');
-                            } else {
-                                s.style.color = '#ddd';
-                                s.classList.remove('bi-star-fill');
-                                s.classList.add('bi-star');
-                            }
-                        });
-                    });
-                }
-                
                 console.log('loaded @(nameof(_ReviewFormPartial)) with ' + e.type);
             }
         })(document.currentScript)
         //# sourceURL=ReviewFormPartial.js
     </script>
-    <button class="btn btn-outline-primary d-flex align-items-center justify-content-start ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormCollapse" aria-expanded="false" aria-controls="reviewFormCollapse">
-        <i class="bi bi-pencil-square me-2"></i>Değerlendirme Yaz
-    </button>
-
-    <div class="collapse mt-3">
+    <div>
+        <button class="btn  btn-outline-secondary ms-3" style="background-color: darkorange;" type="button" data-bs-toggle="collapse" aria-expanded="false">
+            <i class="bi bi-pencil-square me-2"></i>Değerlendirme Yaz
+        </button>
+    </div>
+    <div class="collapse w-100 mt-3">
         <div class="card">
             <div class="card-body">
                 <form hx-post="/@nameof(Reviews)" hx-target="#popupResult" hx-swap="innerHTML">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.ProductId))" value="@Model.ProductId"/>
                     <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.SellerId))"/>
                     <div class="mb-3">
@@ -85,7 +85,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="reviewContent" class="form-label">Yorumunuz</label>
+                        <label class="form-label">Yorumunuz</label>
                         <textarea class="form-control" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Comment))" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000"></textarea>
                     </div>
 

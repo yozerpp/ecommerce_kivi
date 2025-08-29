@@ -1,13 +1,14 @@
 ﻿@using Ecommerce.Bl.Interface
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Views
+@using Ecommerce.WebImpl.Pages.Shared.Product
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
 @using Index = System.Index
 @using Product = Ecommerce.WebImpl.Pages.Product
 @model Ecommerce.WebImpl.Pages.Shared._SearchBarPartial
 
 @{
-    var formId = (Model.Target?.ToLowerInvariant() ?? "searchBar") +"Form";
+    var formId = (Model.Target?.ToLowerInvariant().Replace("#","").Replace("-","_") ?? "searchBar") +"Form";
 }
 <div id="@(formId)">
     <script>
@@ -22,6 +23,8 @@
             });
             (()=>{
                document.getElementById('@(formId)Submit').addEventListener('click', e=>{
+                   if(Array.from(document.getElementById('filters').querySelectorAll('input')).map(i=>i.reportValidity()).some(b=>!b))
+                       return;
                    let params=[];
                    // Add Product Name
                    const searchNameInput = document.getElementById('@(formId)Search');
@@ -47,13 +50,13 @@
                         const qs = ar.map(e=>{
                             const [k,v] = e;
                             let q = 
-                                `&(@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperties.CategoryPropertyId))=${k},`;
+                                `&(@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperty.CategoryPropertyId))=${k},`;
                             if(v.hasOwnProperty('min')){
-                                q += `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperties.Value))>=${v.min},`+
-                                `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperties.Value))<=${v.max})`;
+                                q += `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperty.Value))>=${v.min},`+
+                                `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperty.Value))<=${v.max})`;
                             } else if(v.hasOwnProperty('enumValue')){
-                                q+=`@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperties.Value))=${v.enumValue}`
-                            } else q += `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperties.Value))=${v}`;
+                                q+=`@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperty.Value))=${v.enumValue}`
+                            } else q += `@(nameof(Entity.Product.CategoryProperties))_@(nameof(ProductCategoryProperty.Value))=${v}`;
                             return q + ')';
                         });
                         if(ar.length > 0)
@@ -62,7 +65,8 @@
                    }
                    let orderings = [];
                    const orderList = document.getElementById('order').firstElementChild;
-                   orderList._orders.forEach((k,v)=>{
+                   orderList._orders.entries().forEach(e=>{
+                       [k,v] = e;
                        if(v.selected){
                            orderings.push({property:k, value: v.ascending?'ASC': 'DESC'})
                        }
@@ -75,7 +79,7 @@
                         querystringparam ='@(nameof(HomepageModel.QueryString))=' + encodeURIComponent('&(' + params.join(',') + ')');
                     } 
                     if(orderings.length > 0){
-                        orderstringparam = '@(nameof(HomepageModel.OrderString))=' + encodeURIComponent(params.map(p=>`${p.property},${p.value}`).join('&&'))
+                        orderstringparam = '@(nameof(HomepageModel.OrderString))=' + encodeURIComponent(orderings.map(p=>`${p.property};${p.value}`).join('&&'))
                     }
                     let url;
                     if(orderings.length ===0 && params.length === 0){
@@ -88,7 +92,8 @@
                    }
                    else{
                     <text>
-                        htmx.ajax('GET', url, {
+                   console.log('Target element exists:', document.querySelector('@(Model.Target)'));
+                        htmx.ajax('GET', url + (orderings.length ===0 && params.length ===0?'?':'&')+"@(nameof(HomepageModel.ViewType))=@(Model.ViewType)", {
                             target: '@(Model.Target)',
                             swap: 'innerHTML',
                         });
@@ -114,19 +119,21 @@
                                 const picker = s.nextElementSibling;
                                 picker.addEventListener('change', e=>{
                                     s.parentElement.previousElementSibling.innerHTML = picker.dataset.name;
-                                    document.getElementById('categoryProperties').setAttribute('hx-vals', JSON.stringify({"categoryId": picker.dataset.id}));
+                                    document.getElementById('categoryIdInput').value = picker.dataset.id === '0'?null:picker.dataset.id;
+                                    if(picker.dataset.id==='0') return;
+                                    document.getElementById('categoryProperties').setAttribute('hx-vals', JSON.stringify({@Html.Raw("\"categoryId\""): picker.dataset.id}));
                                     htmx.trigger(document.getElementById('categoryProperties'), 'fire')
-                                    document.getElementById('categoryIdInput').value = picker.dataset.id == '0'?null:picker.dataset.id;
-                            })});
+                                });
+                            });
                         })(document.currentScript)
                     </script>
-                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories, rootElementId:"categoryPicker1"))
+                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories, rootElementId:Model.Target==null?"searchBarCategoryPicker":Model.Target?.Replace("#","") + "_categoryPicker"))
                 </div>
             </div>
             <input id="@(formId)Search" class="rounded-1 rounded-start-0 form-control" type="text" @Html.Raw(Model.Target!=null?$"onchange=\"document.getElementById('{formId}Submit').dispatchEvent(new Event('click', {{cancelable: true, bubbles: true}}))\"":"") value="@null" name="@(nameof(HomepageModel.SearchName))" />
         </div>
         <div class="btn-group justify-content-center mx-1 align-items-center gap-2">
-            <button type="button" class="dropdown-toggle btn btn-outline-info" onclick="filterDropdown@(formId).toggle();event.stopImmediatePropagation();">
+            <button type="button" class="dropdown-toggle btn btn-outline-info"  onclick="filterDropdown@(formId).toggle();event.stopImmediatePropagation();">
                 Filtreler
             </button>
             <div class="dropdown">
@@ -140,10 +147,10 @@
     </div>
     <div class="dropdown">
         <button type="button" id="filtersButton" role="button" class="dropdown-toggle" data-bs-toggle="dropdown" hidden aria-expanded="false"></button>
-        <div id="filters" class="dropdown-menu border-top-0 rounded-2" >
+        <div id="filters" class="dropdown-menu border-top-0 rounded-2">
             <ul class="list-unstyled gap-3 g-3">
-                <li hx-on::after-settle="event.detail.elt.firstElementChild.dispatchEvent(new Event('init', {bubbles:false}));"
-                    id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
+                <li hx-on::after-settle="console.log(event.detail.elt.firstElementChild);event.detail.elt.firstElementChild.dispatchEvent(new Event('init', {bubbles:false}));"
+                    id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&Type=@(nameof(_CategoryPropertiesPartial.DisplayMode.Filter))&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
                 </li>
                 <li id="ranges" class="row row-cols-6 g-2 d-flex ps-2">
                     <h4 class="fw-bold col-12 fs-5">İstatistik Özellikleri</h4>

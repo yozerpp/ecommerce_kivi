@@ -13,8 +13,10 @@ public class ProductOffer
     public Product? Product { get; set; }
     public decimal Price { get; set; }
     public decimal Discount { get; set; }
+    public decimal DiscountedPrice => Price * Discount;
     public uint Stock { get; set; }
-    public OfferStats Stats { get; set; }
+    public OfferStats? Stats { get; set; }
+    public ICollection<ProductOption> Options { get; set; } = new List<ProductOption>();
     public ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
     public ICollection<OrderItem> BoughtItems { get; set; } = new List<OrderItem>();
     public ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();

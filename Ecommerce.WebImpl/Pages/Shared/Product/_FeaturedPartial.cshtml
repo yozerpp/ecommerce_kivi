@@ -2,36 +2,52 @@
 @model Ecommerce.WebImpl.Pages._FeaturedPartial
 
 <div class="container-fluid h-100">
+    <script>
+        ((s)=> {
+            const parent= s.parentElement;
+            document.addEventListener('DOMContentLoaded', load);
+            parent.addEventListener('htmx:load', load);
+            function load(e){
+                if (e.type === 'htmx:load') e.stopPropagation();
+                const list = parent.querySelector(':scope > ul');
+                list.querySelectorAll('li').forEach(el=>{
+                    el.firstElementChild?.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}));
+                })
+                list.setAttribute('hx-vals', '@(Html.Raw(JsonSerializer.Serialize(new{ PageIndex = Model.PageIndex.ToString() }, JsonSerializerOptions.Web)))');
+                list.addEventListener('scroll', event => {
+                    if(list.dataset.stop === '1' ||list.dataset.loading==='1'||list.scrollLeft < (list.scrollWidth - list.offsetWidth * 1.25)) return;
+                    const page = parseInt(list.dataset.page) +1;
+                    list.dataset.page = page.toString();
+                    list.setAttribute('hx-vals', JSON.stringify({PageIndex: page.toString()}));
+                    htmx.trigger(list,'loadMore');
+                })
+                list.addEventListener('htmx:beforeRequest', event =>event.detail.elt.dataset.loading = '1');
+                list.addEventListener('htmx:afterRequest', event=>{
+                    list.dataset.loading='0';
+                    if(event.detail.xhr.status===204){
+                        list.dataset.stop='1';
+                    }
+                })
+                console.log("initialized @nameof(_FeaturedPartial) from " + e.type);
+            }
+        })(document.currentScript)
+        //# sourceURL=@(nameof(_FeaturedPartial)).js
+    </script>
     <p class="fs-3 text-secondary">
         @Html.Raw(Model.Type switch{
-            HomepageModel.RecommendationType.Category=>"Ziyaret Ettiğiniz Ürünlere Benzer Ürünler",
-            HomepageModel.RecommendationType.Seller=>"Sepetinizdeki Satıcılar Bu Ürünleri de Satıyor",
-            null=>"",
-            _=> throw new ArgumentOutOfRangeException()
+            HomepageModel.RecommendationType.Category => "Ziyaret Ettiğiniz Ürünlere Benzer Ürünler",
+            HomepageModel.RecommendationType.Seller => "Sepetinizdeki Satıcılar Bu Ürünleri de Satıyor",
+            null => "",
+            _ => throw new ArgumentOutOfRangeException()
         })
     </p>
     <ul class="list-unstyled d-flex flex-row g-3 gap-3 overflow-x-scroll card-group flex-nowrap"
         style="min-height: 1px;"
         data-loading="0"
         data-page="@(Model.PageIndex)"
-        hx-get="/Index@(Model.Type!=null?"?handler=recommended&"+nameof(Model.Type)+"="+Model.Type:"")" hx-trigger="loadMore"
+        hx-get="/Index@(Model.Type != null ? "?handler=recommended&" + nameof(Model.Type) + "=" + Model.Type : "")" hx-trigger="loadMore"
         hx-swap="beforeend" hx-target="this"
-        data-empty="true"
-        hx-select="ul>li"
-        hx-vals="@Html.Raw(JsonSerializer.Serialize(new{ PageIndex = Model.PageIndex.ToString() }, JsonSerializerOptions.Web))"
-        onscroll="if(event.currentTarget.dataset.loading=='1'||event.currentTarget.scrollLeft < (event.currentTarget.scrollWidth - event.currentTarget.offsetWidth * 1.25)) return; 
-        const _p = Number.parseInt(event.currentTarget.getAttribute('data-page')) +1;
-        event.currentTarget.setAttribute('data-page', _p.toString());
-        event.currentTarget.setAttribute('hx-vals', JSON.stringify({PageIndex: _p.toString()}));
-        htmx.trigger(event.currentTarget,'loadMore');"
-        hx-on::before-request="event.detail.elt.dataset.loading='1';"
-        hx-on::after-request="event.detail.elt.dataset.loading='0';
-        if(event.detail.xhr.status==204){
-            event.detail.target.removeAttribute('hx-get');
-            if(event.detail.target.getAttribute('data-empty')=='true') event.detail.target.parentElement.remove();
-        }else{
-            event.detail.target.setAttribute('data-empty', 'false');
-        }">
+        hx-select="ul>li">
         @await Html.PartialAsync("Shared/Product/" + nameof(_FeaturedItemsPartial), new _FeaturedItemsPartial(){ Items = Model.Products, Categories = Model.Categories, PageIndex = Model.PageIndex })
     </ul>
 </div>

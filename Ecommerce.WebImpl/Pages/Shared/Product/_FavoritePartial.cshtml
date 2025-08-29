@@ -1,18 +1,20 @@
 ﻿@using Product = Ecommerce.WebImpl.Pages.Product
 @model (bool, ProductWithAggregatesCustomerView)
 
-@if (Model.Item1){
-    <form data-favored="@(Model.Item2.CurrentFavored??false?"1":"0")" hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" hx-on::after-request="if(!event.detail.successful)return;const f = event.detail.elt.querySelector('#favor@(Model.Item2.Product.Id)');">
+@if (Model.Item2.CurrentFavored!=null){
+    <form data-favored="@(Model.Item2.CurrentFavored.Value?"1":"0")" hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" 
+          hx-on::after-request="if(!event.detail.successful)return; const f = event.detail.elt.querySelector('#favor@(Model.Item2.Product.Id)');
+            f.classList.toggle('bi-heart');f.classList.toggle('bi-heart-fill')">
         @Html.AntiForgeryToken()
         <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.Item2.Product.Id"/>
         <button type="button" class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0" onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));">
-            <i id="favor@(Model.Item2.Product.Id)" class="hover-grow text-danger bi @(Model.Item2.CurrentFavored??false?"bi-heart-fill":"bi-heart") bi-border-all small me-1"></i>
+            <i id="favor@(Model.Item2.Product.Id)" class="hover-grow text-danger bi @(Model.Item2.CurrentFavored.Value?"bi-heart-fill":"bi-heart") bi-border-all small me-1"></i>
         </button>
     </form>
 }
 else{
-    <button disabled class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0">
+    <button title="Favorilere Eklemek için Giriş Yapın" disabled class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0">
         <i class="bi bi-heart text-danger small me-1"></i>
     </button>
 }
-<p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item2.Product.Stats.FavorCount??0)</p>
+<p class="small fs-6 my-0" style="font-size: smaller">@(Model.Item2.Product.Stats.FavorCount)</p>

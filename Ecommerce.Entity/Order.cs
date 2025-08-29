@@ -16,6 +16,7 @@ public class Order
     public DateTime Date { get; set; }
     public OrderStatus Status { get; set; }
     public Address ShippingAddress { get; set; }
+    public decimal? ShippingCost { get; set; }
     public AnonymousUser? AnonymousUser { get; set; }
     public OrderAggregates Aggregates { get; set; }
     public Session Session { get; set; }
@@ -34,5 +35,10 @@ public class Order
     {
         if (Id == default) return base.GetHashCode();
         return Id.GetHashCode();
+    }
+
+    public enum PaymentMethod
+    {
+        
     }
 }
