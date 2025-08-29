@@ -6,6 +6,7 @@ using Ecommerce.Entity;
 using Ecommerce.Entity.Views;
 using LinqKit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -16,11 +17,13 @@ public class CartManager : ICartManager
     private readonly IRepository<CartItem> _cartItemRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IRepository<Product> _productRepository;
-    public CartManager(IRepository<User> userRepository, IRepository<Product> productRepository,IRepository<Session> sessionRepository, IRepository<Coupon> couponRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository) {
+    private readonly DbContext _dbContext;
+    public CartManager(IRepository<User> userRepository, IRepository<Product> productRepository,IRepository<Session> sessionRepository, IRepository<Coupon> couponRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
         _productRepository = productRepository;
         _userRepository = userRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
+        _dbContext = dbContext;
         _sessionRepository = sessionRepository;
     }
 
@@ -76,11 +79,15 @@ public class CartManager : ICartManager
         return session;
     }
 
+    public void Clear(uint cartId) {
+        _cartItemRepository.Delete(i=>i.CartId == cartId);
+    }
+
     public void AddCoupon(Cart cart, ProductOffer offer, string couponId) {
-        _cartItemRepository.Update(new CartItem(){
+        _cartItemRepository.UpdateInclude(new CartItem(){
             CartId = cart.Id, CouponId = couponId, ProductId = offer.ProductId,
             SellerId = offer.SellerId
-        },false, nameof(CartItem.CouponId));
+        }, nameof(CartItem.CouponId));
         _cartItemRepository.Flush();
         // var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
         // var c = _cartItemRepository.UpdateExpr([
@@ -117,23 +124,44 @@ public class CartManager : ICartManager
     {
         return Add(new CartItem()
         {
-            CartId = cart.Id, Cart = cart.Id==0?cart:null!, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null!:offer,SellerId = offer.SellerId, Quantity = amount
+            CartId = cart.Id, Cart = cart.Id==0?cart:null!, ProductId = offer.ProductId, ProductOffer = offer.ProductId!=0?null!:offer,SellerId = offer.SellerId
         }, amount);
     }
     public CartItem Add(CartItem item, int amount = 1) {
         var cartId = item.Cart?.Id??item.CartId;
-
-        CartItem? existing;
         CartItem ret;
-        if ((existing = _cartItemRepository.First(ci=>ci.CartId == cartId && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId))!=null){
-            existing.Quantity += amount;
-            ret = _cartItemRepository.Update(existing);
+        CartItem? existing = _cartItemRepository.First(ci=>ci.CartId == cartId && ci.ProductId == item.ProductId && ci.SellerId == item.SellerId, [[nameof(CartItem.SelectedOptions)]]);
+        if (existing!=null && existing.Equals(item) ){
+            var c = ((int)existing.Quantity)  + amount;
+            if (c <= 0){
+                _cartItemRepository.Delete(i => i.ProductId == item.ProductId && i.SellerId == item.SellerId && i.CartId == item.CartId);
+                return new CartItem(){ProductId = item.ProductId, SellerId = item.SellerId, Quantity = 0, CartId = item.CartId, CouponId = item.CouponId};
+            }
+            ret = existing;
+            if (item.SelectedOptions != null && item.SelectedOptions.Count > 0){
+                var ope = _dbContext.Entry(existing).Collection(s => s.SelectedOptions);
+                var oldOptions= (ICollection<ProductOption>)ope.CurrentValue;
+                var oldCpy = oldOptions.ToArray();
+                oldOptions.Clear();
+                _dbContext.SaveChanges();
+                oldCpy.ForEach(old => _dbContext.Entry(old).State = EntityState.Detached);
+                item.SelectedOptions.ForEach(o =>o.SellerId = item.SellerId);
+            _dbContext.AttachRange(item.SelectedOptions);
+            _dbContext.Entry(existing).Collection(i=>i.SelectedOptions).CurrentValue = item.SelectedOptions;
+            }
+            existing.Quantity = (uint)c;
         }
         else{
-            if (item.Quantity<=0){
-                throw new ArgumentException("Quantity must be greater than 0.");
+            if (amount<=0){
+                throw new ArgumentOutOfRangeException(nameof(amount), amount,"Miktar 0'dan büyük olmalıdır.");
             }
-            ret = _cartItemRepository.Add(item);
+            var options = item.SelectedOptions;
+            if (options == null || options.Count == 0){
+                options = item.SelectedOptions = _dbContext.Set<ProductOption>().Where(p=>p.ProductId == item.ProductId && p.SellerId == item.SellerId).OrderBy(o=>o.CategoryPropertyId).GroupBy(o=>o.CategoryPropertyId).Select(g=>g.First()).ToList();
+            } else _dbContext.AttachRange(options);
+            item.Quantity = (uint)amount;
+            _dbContext.Entry(item).State = EntityState.Added;
+            ret = item;
         }
         _cartItemRepository.Flush();
         // _cartItemRepository.Detach(ret);
@@ -150,7 +178,7 @@ public class CartManager : ICartManager
 
     public CartItem? Decrement(CartItem item, uint amount = 1)
     {
-        item.Quantity= (int)(item.Quantity - amount);
+        item.Quantity= (item.Quantity - amount);
         if (item.Quantity <= 0)
         {
             Remove(item);
@@ -175,7 +203,17 @@ public class CartManager : ICartManager
         _cartItemRepository.Detach(item);
         _cartItemRepository.Flush();
     }
-
+    public static Expression<Func<Session, Session>> SessionWithCartItems = s => new Session(){
+        Cart = new Cart(){
+            Id = s.CartId,
+            Aggregates = new CartAggregates(){
+                ItemCount = s.Cart.Aggregates.ItemCount,
+            }
+        },
+        CartId = s.CartId,
+        Id = s.Id,
+        UserId = s.UserId,
+    };
     private static readonly Expression<Func<Product, Product>> ProductProjection = p => new Product(){
         Id = p.Id,
         Active = p.Active,
@@ -255,6 +293,7 @@ public class CartManager : ICartManager
             ProductOffer = ProductOfferProjection.Invoke(i.ProductOffer),
             Coupon = i.Coupon,
             SellerId = i.SellerId,
+            SelectedOptions = i.SelectedOptions,
             Aggregates = CartItemAggregatesProjection.Invoke(i.Aggregates),
         }).ToArray(),
     })).Expand();
