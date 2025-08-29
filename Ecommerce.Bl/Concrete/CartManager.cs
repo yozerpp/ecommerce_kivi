@@ -248,23 +248,23 @@ public class CartManager : ICartManager
         Aggregates = null,
     })).Expand();
     private static readonly Expression<Func<CartAggregates, CartAggregates?>> CartAggregatesProjection = ca => (CartAggregates?) new CartAggregates(){
-        BasePrice = ca.BasePrice ?? 0m,
-        DiscountedPrice = ca.DiscountedPrice ?? 0m,
-        CouponDiscountedPrice = ca.CouponDiscountedPrice ?? 0m,
-        CouponDiscountAmount = ca.CouponDiscountAmount ?? 0m,
-        DiscountAmount = ca.DiscountAmount ?? 0m,
-        TotalDiscountPercentage = ca.TotalDiscountPercentage ?? 0m,
-        ItemCount = ca.ItemCount ?? 0,
-        CartId = ca.CartId ?? 0,
+        BasePrice = ca.BasePrice,
+        DiscountedPrice = ca.DiscountedPrice,
+        CouponDiscountedPrice = ca.CouponDiscountedPrice,
+        CouponDiscountAmount = ca.CouponDiscountAmount,
+        DiscountAmount = ca.DiscountAmount,
+        TotalDiscountPercentage = ca.TotalDiscountPercentage,
+        ItemCount = ca.ItemCount,
+        CartId = ca.CartId,
     }??null;
     private static readonly Expression<Func<CartItemAggregates, CartItemAggregates?>> CartItemAggregatesProjection = cia => (CartItemAggregates?) new CartItemAggregates(){
-        BasePrice = cia.BasePrice ?? 0m,
-        DiscountedPrice = cia.DiscountedPrice ?? 0m,
-        CouponDiscountedPrice = cia.CouponDiscountedPrice ?? 0m,
-        TotalDiscountPercentage = cia.TotalDiscountPercentage ?? 0m,
-        CartId = cia.CartId ?? 0,
-        ProductId = cia.ProductId ?? 0,
-        SellerId = cia.SellerId ?? 0,
+        BasePrice = cia.BasePrice,
+        DiscountedPrice = cia.DiscountedPrice,
+        CouponDiscountedPrice = cia.CouponDiscountedPrice,
+        TotalDiscountPercentage = cia.TotalDiscountPercentage,
+        CartId = cia.CartId,
+        ProductId = cia.ProductId,
+        SellerId = cia.SellerId,
     }??null;
     public static readonly Expression<Func<Cart, Cart>> WithoutItemAggregates = ((Expression<Func<Cart,Cart>>)(c => new Cart{
         Session = c.Session,
