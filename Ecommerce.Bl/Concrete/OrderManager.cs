@@ -5,6 +5,8 @@ using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Views;
 using LinqKit;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -13,44 +15,53 @@ public class OrderManager : IOrderManager
     private readonly IRepository<Order> _orderRepository;
     private readonly ICartManager _cartManager;
     private readonly IRepository<Shipment> _shipmentRepository;
-    public OrderManager(ICartManager cartManager,IRepository<Order> orderRepository, IRepository<Shipment> shipmentRepository) {
+    private readonly IRepository<OrderItem> _orderItemRepository;
+    private readonly DbContext _dbContext; 
+    public OrderManager(ICartManager cartManager,IRepository<Order> orderRepository, IRepository<Shipment> shipmentRepository, IRepository<OrderItem> orderItemRepository, DbContext dbContext) {
         _cartManager = cartManager;
         _orderRepository = orderRepository;
         _shipmentRepository = shipmentRepository;
+        _orderItemRepository = orderItemRepository;
+        _dbContext = dbContext;
     }
 
-    public Order CreateOrder(Session session, ICollection<Shipment> shipments, ICollection<CartItem> cartItems, Customer? user=null, AnonymousUser? anonymousUser = null, Address? shippingAddress = null) {
+    public Order CreateOrder(Session session, ICollection<CartItem> cartItems, Customer? user=null, AnonymousUser? anonymousUser = null, Address? shippingAddress = null, string? name=null) {
+        var p = new CardPayment(){
+            Status = PaymentStatus.Preparing,
+            Method = PaymentMethod.Card,
+            PayerName = name ?? user?.FullName ??
+                throw new ArgumentException("You need to specify name for anonymous orders", nameof(name)),
+            PaymentDate = DateTimeOffset.Now.LocalDateTime,
+        };
         var o = new Order{
-            Date = DateTime.Now, 
+            Date = DateTimeOffset.Now.LocalDateTime, 
             // PaymentId = payment.Id, Payment = payment.Id == 0 ? payment : null,
-            Email = user!=null?null:anonymousUser?.Email,
-            ShippingAddress =  shippingAddress ?? user?.PrimaryAddress??throw new ArgumentNullException("You need to specify shipping address for anonymous orders"),
-            Status = OrderStatus.WaitingConfirmation, 
+            Email = user!=null?null:anonymousUser?.Email??throw new ArgumentException("You need to specify email for anonymous orders",nameof(anonymousUser)),
+            ShippingAddress =  shippingAddress ?? user?.PrimaryAddress??throw new ArgumentException("You need to specify shipping address for anonymous orders",nameof(shippingAddress)),
+            Status = OrderStatus.WaitingPayment,
             UserId = user?.Id,
             User = user?.Id == 0 ? (Customer?)user : null,
             SessionId = session.Id, 
-            Session = session.Id!=0?null!:session
+            Session = session.Id!=0?null!:session,
+            Payment = p,
         };
         if(cartItems.Count==0) throw new ArgumentException("Cart is empty.");
-        var items = cartItems.OrderBy(s => s.SellerId.GetHashCode()).ToArray(); //Shipments are ordered by the sellerId, we are aligning the cartItems with them.
-        for(int i = 0; i < items.Length;i++){
-            var item = new OrderItem(items[i]){
-                SentShipment = shipments.ElementAt(i)
-            };
-            o.Items.Add(item);
+        var items = cartItems.OrderBy(s => s.SellerId).ToArray(); //Shipments are ordered by the sellerId, we are aligning the cartItems with them.
+        _dbContext.AttachRange(items.SelectMany(i=>i.SelectedOptions).Distinct());
+        foreach (var item in items){
+            var i = new OrderItem(item);
+            i.ProductOffer = null;
+            i.SelectedOptions = null;
+            o.Items.Add(_orderItemRepository.Add(i));
+            i.SelectedOptions = item.SelectedOptions;
         }
-        _orderRepository.Add(o);
+        _dbContext.Attach(o).State = EntityState.Added;
         _orderRepository.Flush();
-        // for (int i = 0; i < items.Length; i++){
-        //     var p =o.Items.ElementAt(i);
-        //     p.ProductOffer = items[i].ProductOffer;
-        //     p.Coupon = items[i].Coupon;
-        // }
         return o;
     }
 
     public Order? GetOrder(uint orderId, bool includeItems = true, bool includeAggregates = false) {
-        return _orderRepository.FirstP(GetProjection(includeItems, includeAggregates), o=>o.Id == orderId);
+        return _orderRepository.FirstP(GetProjection(includeItems, includeAggregates), o=>o.Id == orderId, includes:includeItems?[[nameof(Order.Items),nameof(OrderItem.SelectedOptions), nameof(ProductOption.Property), nameof(ProductCategoryProperty.CategoryProperty)]]:[]);
     }
     private static Expression<Func<Order, Order>> GetProjection(bool includeItems, bool includeAggregates) 
     {
@@ -66,47 +77,90 @@ public class OrderManager : IOrderManager
         if(r==null) return null;
         return (r.Aggregates, r.Items);
     }
+
+    public void ChangeOrderStatus(Order order, OrderStatus status, bool propogateToItems=true) {
+        var oid = order.Id;
+        if(order.ShippingAddress==null)
+            order.ShippingAddress =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == oid, nonTracking: true);
+        order.Status = status;
+        _orderRepository.UpdateInclude(order,nameof(Order.Status));
+        _orderRepository.Flush();
+        if (propogateToItems){
+            if (order.Items != null && order.Items.Count > 0)
+                order.Items.ForEach(i => i.Status = status);
+            _orderItemRepository.UpdateExpr([
+                (ıtem => ıtem.Status,
+                    status
+                )
+            ], ıtem => ıtem.OrderId == oid);
+        }
+    }
+
     public void CancelOrder(uint orderId) {
         var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
-        _orderRepository.Update(new Order(){ Id = orderId, Status = OrderStatus.Cancelled, ShippingAddress = addr}, false, nameof(Order.Status));
+        _orderRepository.UpdateInclude(new Order(){ Id = orderId, 
+            Status = OrderStatus.Cancelled, 
+            // Status = OrderStatus.CancellationRequested,
+            ShippingAddress = addr},nameof(Order.Status));
         _orderRepository.Flush();
+        _orderItemRepository.UpdateExpr([
+            (ıtem => ıtem.Status,
+                OrderStatus.Cancelled//OrderStatus.CancellationRequested
+            )
+        ], ıtem => ıtem.OrderId == orderId);
     }
-    public void Complete(uint orderId) {
-        var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
-        _orderRepository.Update(new Order(){
-            Id = orderId, Status = OrderStatus.Complete, ShippingAddress = addr
-        },false, nameof(Order.Status));
+    private OrderStatus? UpdateStatus(uint orderId) {
+        var itemStatuses = _orderItemRepository.WhereP(i => i.Status, i => i.OrderId == orderId, nonTracking: true);
+        OrderStatus? newStatus = null;
+        var orderStatus = _orderRepository.FirstP(o => o.Status, o => o.Id == orderId,nonTracking:true);
+        if (itemStatuses.All(s=>orderStatus != s)) newStatus = itemStatuses.OrderByDescending(s=>(int)s).FirstOrDefault();
+        if (newStatus != null)
+            _orderRepository.UpdateExpr([(order => order.Status, newStatus.Value)], o => o.Id == orderId);
+        return newStatus;
     }
-
-    public void Refund(uint orderId)
-    {
-        var addr =  _orderRepository.FirstP(o => o.ShippingAddress, o => o.Id == orderId, nonTracking: true);
-        _orderRepository.Update(new Order()
-        {
-            Id = orderId, Status = OrderStatus.Returned,
-            ShippingAddress = addr
-        }, false ,nameof(Order.Status));
-        _orderRepository.Flush();
-    }
-
-    public void UpdateAddress(Address address, uint orderId) {
-        var c = _orderRepository.UpdateExpr([
-        (o=>o.ShippingAddress.City, address.City),
-        (o=>o.ShippingAddress.District, address.District),
-        (o=>o.ShippingAddress.Country, address.Country),
-        (o=>o.ShippingAddress.Line1, address.Line1),
-        (o=>o.ShippingAddress.Line2, address.Line2),
-        (o=>o.ShippingAddress.ZipCode, address.ZipCode),
-        ],o=>o.Id == orderId);
-        if(c==0) throw new UnauthorizedAccessException("Sipariş Yok.");
+    public void ChangeItemStatus(ICollection<OrderItem> items) {
+        if(items.Count==0) return;
+        foreach (var orderItem in items){
+            _orderItemRepository.UpdateInclude(orderItem, nameof(OrderItem.Status));
+        }
+        _orderItemRepository.Flush();
+        UpdateStatus(items.First().OrderId);
+        
     }
 
+    public ICollection<OrderItem> GetOrderItemsBySellerIdOrderId(uint orderId, uint sellerId, string[][]? includes = null) {
+        var v = _orderItemRepository.Where(o => o.OrderId == orderId && o.SellerId == sellerId, includes:includes);
+        if(v.Count == 0) throw new ArgumentException("Siparişte ürününüz yok.");
+        return v;
+    }
+
+    public void ChangeStatusBySellerIdOrderId(uint orderId, uint sellerId, OrderStatus status) {
+        var v = _orderItemRepository.Where(o => o.OrderId == orderId && o.SellerId == sellerId);
+        if(v.Count == 0) throw new ArgumentException("Siparişte ürününüz yok.");
+        v.ForEach(i => {
+            i.Status = status;
+            _orderItemRepository.UpdateInclude(i, nameof(OrderItem.Status));
+        });
+        _orderItemRepository.Flush();
+    }
+
+    public void ChangeAddress(Address address, uint orderId, bool onlyNonComplete = true) {
+        var c = _orderItemRepository.UpdateExpr([
+        (o=>o.SentShipment.RecepientAddress.City, address.City),
+        (o=>o.SentShipment.RecepientAddress.District, address.District),
+        (o=>o.SentShipment.RecepientAddress.Country, address.Country),
+        (o=>o.SentShipment.RecepientAddress.Line1, address.Line1),
+        (o=>o.SentShipment.RecepientAddress.Line2, address.Line2),
+        (o=>o.SentShipment.RecepientAddress.ZipCode, address.ZipCode),
+        ],o=>o.OrderId == orderId && (!onlyNonComplete || o.Status < OrderStatus.Returned));
+        if(c==0) throw new UnauthorizedAccessException("Sipariş yok veya değitirmenize izin verilmiyor.");
+    }
     public void AssociateWithAnonymousUser( string email,Order? order=null,uint?orderId=null) {
         if (orderId == null && order == null){
             throw new ArgumentException(nameof(orderId));
         }
         if (order == null){
-            _orderRepository.Update(new Order(){Id = orderId!.Value, Email = email}, true);
+            _orderRepository.UpdateIgnore(new Order(){Id = orderId!.Value, Email = email}, true);
         }
         else{
             order.Email = email;
@@ -146,13 +200,31 @@ public class OrderManager : IOrderManager
     }
 
     public List<Order> GetAllOrdersFromAnonymousUser(string email, bool includeItemAggregates = false, int page = 1, int pageSize = 10) {
-        return _orderRepository.WhereP(GetProjection(true, includeItemAggregates), o => o.Email == email,
-            offset: (page - 1) * pageSize, limit: page * pageSize);
+        return GetWithAggregates(o => o.Email == email, page, pageSize,
+            [[nameof(Order.Items), nameof(OrderItem.Aggregates)]]);
     }
-
+    private List<Order> GetWithAggregates(Expression<Func<Order,bool>> predicates, int page, int pageSize, string[][]? includes=null) {
+        var orders = _orderRepository.WhereP(OrderWithoutAggregatesWithItemsProjection, predicates, offset: (page - 1) * pageSize,
+            page * pageSize, includes: includes);
+        var ids = orders.Select(o => o.Id).ToArray();
+        var aggregates =_orderRepository.WhereP(OnlyOrderAggregatesProjection, o => ids.Contains(o.Id), nonTracking: true).Where(o=>o.OrderId!=0).ToDictionary(o=>o.OrderId, o=>o);
+        orders.ForEach(o=>o.Aggregates = aggregates.GetValueOrDefault(o.Id)??new OrderAggregates());
+        return orders;
+    }
+    private static Expression<Func<OrderItemAggregates, OrderItemAggregates>> OrderItemAggregatesProjection = i => new OrderItemAggregates
+    {
+        OrderId = (uint?)i.OrderId??0,
+        ProductId = (uint?)i.ProductId??0,
+        SellerId = (uint?)i.SellerId ?? 0,
+        BasePrice = (uint?)i.BasePrice ?? 0,
+        DiscountedPrice = (uint?)i.DiscountedPrice ?? 0,
+        CouponDiscountedPrice = (uint?)i.CouponDiscountedPrice ?? 0,
+        TotalDiscountPercentage = (uint?) i.TotalDiscountPercentage ?? 0,
+        
+    };
     private static Expression<Func<OrderAggregates,OrderAggregates>> OrderAggregatesProjection = o => new OrderAggregates
     {
-        OrderId = o.OrderId,
+        OrderId = o.OrderId ?? 0,
         BasePrice = o.BasePrice ?? 0,
         DiscountedPrice = o.DiscountedPrice ?? 0,
         CouponDiscountedPrice = o.CouponDiscountedPrice ?? 0,
@@ -162,16 +234,8 @@ public class OrderManager : IOrderManager
         ItemCount = o.ItemCount ?? 0,
         TotalDiscountAmount = o.TotalDiscountAmount ?? 0
     };
-    private static Expression<Func<OrderItemAggregates, OrderItemAggregates>> OrderItemAggregatesProjection = i => new OrderItemAggregates
-    {
-        OrderId = i.OrderId,
-        ProductId = i.ProductId,
-        SellerId = i.SellerId,
-        BasePrice = i.BasePrice ?? 0,
-        DiscountedPrice = i.DiscountedPrice ?? 0,
-        CouponDiscountedPrice = i.CouponDiscountedPrice ?? 0,
-        TotalDiscountPercentage = i.TotalDiscountPercentage ?? 0,
-    };
+    private static Expression<Func<Order, OrderAggregates>> OnlyOrderAggregatesProjection =
+        ((Expression<Func<Order,OrderAggregates>>)(o => OrderAggregatesProjection.Invoke(o.Aggregates))).Expand();
     private static Expression<Func<OrderItem, OrderItem>> OrderItemProjection = i => new OrderItem
     {
         OrderId = i.OrderId,
@@ -179,7 +243,9 @@ public class OrderManager : IOrderManager
         ProductId = i.ProductId,
         Aggregates = OrderItemAggregatesProjection.Invoke(i.Aggregates),
         Coupon = i.Coupon,
+        Status = i.Status,
         CouponId = i.CouponId,
+        SelectedOptions = i.SelectedOptions,
         ProductOffer = CartManager.ProductOfferProjection.Invoke(i.ProductOffer),
         Quantity = i.Quantity,
         ShipmentId = i.ShipmentId,
@@ -211,7 +277,21 @@ public class OrderManager : IOrderManager
         }
     };
 
-    public static readonly Expression<Func<Order, Order>> OrderWithoutItemAggregatesProjection = o => new Order{
+    public static readonly Expression<Func<Order, Order>> OrderWithoutAggregatesWithItemsProjection =
+        ((Expression<Func<Order, Order>>)(o => new Order(){
+            Id = o.Id,
+            PaymentId = o.PaymentId,
+            UserId = o.UserId,
+            Date = o.Date,
+            ShippingAddress = o.ShippingAddress,
+            Status = o.Status,
+            Payment = o.Payment,
+            User = o.User,
+            Email = o.Email,
+            Aggregates = null,
+            Items = o.Items.Select(i =>OrderItemProjection.Invoke(i)).ToArray(),
+        })).Expand();
+    public static readonly Expression<Func<Order, Order>> OrderWithoutItemAggregatesProjection = ((Expression<Func<Order,Order>>)(o => new Order{
         Id = o.Id,
         PaymentId = o.PaymentId,
         UserId = o.UserId,
@@ -221,31 +301,21 @@ public class OrderManager : IOrderManager
         Payment = o.Payment,
         User = o.User,
         Email = o.Email,
-        Items = o.Items.Select(i=>new OrderItem{
+        Items = o.Items.Select(i => new OrderItem{
             OrderId = i.OrderId,
             SellerId = i.SellerId,
             ProductId = i.ProductId,
             Aggregates = null,
             Coupon = i.Coupon,
+            Status = i.Status,
             CouponId = i.CouponId,
             ProductOffer = i.ProductOffer,
             Quantity = i.Quantity,
             ShipmentId = i.ShipmentId,
             RefundShipmentId = i.RefundShipmentId,
         }).ToArray(),
-        Aggregates = new OrderAggregates(){
-            OrderId = o.Aggregates.OrderId,
-            BasePrice = o.Aggregates.BasePrice??0,
-            DiscountedPrice = o.Aggregates.DiscountedPrice??0,
-            CouponDiscountedPrice = o.Aggregates.CouponDiscountedPrice??0,
-            CouponDiscountAmount = o.Aggregates.CouponDiscountAmount??0,
-            DiscountAmount = o.Aggregates.DiscountAmount??0,
-            TotalDiscountPercentage = o.Aggregates.TotalDiscountPercentage??0,
-            ItemCount = o.Aggregates.ItemCount??0,
-            TotalDiscountAmount = o.Aggregates.TotalDiscountAmount??0,
-        }
-
-    };
+        Aggregates = OrderAggregatesProjection.Invoke(o.Aggregates),
+    })).Expand();
     public static readonly Expression<Func<Order, Order>> OrderWithItemsAggregateProjection = ((Expression<Func<Order, Order>>)(o =>
         new Order{
             Id = o.Id,
