@@ -9,7 +9,8 @@
                 else if (Model.Target == "next"){ <text>event.currentTarget.nextElementSibling;</text> }
                 else{ <text>document.getElementById('@(target)');</text> }
                 _t.setAttribute('contenteditable',true);
-                _t.onkeydown=(e)=>{if(e.keyCode == '13')e.currentTarget.blur();}
+                _t.classList.remove('d-none');
+                _t.onkeydown=(e)=>{if(e.keyCode === 13)e.currentTarget.blur();}
                 if(document.activeElement === _t)
                     return;
                 _t.focus();
