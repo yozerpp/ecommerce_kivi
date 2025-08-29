@@ -75,14 +75,14 @@ public static class ViewMigrations
     private static void _Cart(MigrationBuilder migrationBuilder) {
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}] WITH SCHEMABINDING AS
-            SELECT o.Id as {nameof(CartAggregates.CartId)},
-            SUM(oa.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Price)}) as {nameof(CartAggregates.BasePrice)},
-            SUM(oa.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Price)} * po.{nameof(ProductOffer.Discount)}) as {nameof(CartAggregates.DiscountedPrice)},
+            SELECT c.Id as {nameof(CartAggregates.CartId)},
+            SUM(ci.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Price)}) as {nameof(CartAggregates.BasePrice)},
+            SUM(ci.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Price)} * po.{nameof(ProductOffer.Discount)}) as {nameof(CartAggregates.DiscountedPrice)},
             COUNT_BIG(*) as {nameof(CartAggregates.ItemCount)}
-            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] o
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oa ON oa.{nameof(CartItem.CartId)} = o.{nameof(Cart.Id)}
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON po.{nameof(ProductOffer.ProductId)} = oa.{nameof(CartItem.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = oa.{nameof(CartItem.SellerId)}
-            GROUP BY o.Id
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] c
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] ci ON ci.{nameof(CartItem.CartId)} = c.{nameof(Cart.Id)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON po.{nameof(ProductOffer.ProductId)} = ci.{nameof(CartItem.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = ci.{nameof(CartItem.SellerId)}
+            GROUP BY c.Id
         ");
         migrationBuilder.CreateIndex($"IX_{nameof(CartAggregates)}", nameof(CartAggregates), nameof(CartAggregates.CartId),
                 DefaultDbContext.DefaultSchema, true)
@@ -90,24 +90,27 @@ public static class ViewMigrations
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}] WITH SCHEMABINDING AS
             SELECT 
-                o.{nameof(Cart.Id)} as {nameof(CartAggregates.CartId)},
-                SUM(oi.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) as {nameof(CartAggregates.CouponDiscountedPrice)}
-            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] o
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] oi ON oi.{nameof(CartItemAggregates.CartId)} = o.{nameof(Cart.Id)}
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oii ON oii.{nameof(CartItem.CartId)} = o.{nameof(Cart.Id)} AND oii.{nameof(CartItem.ProductId)} = oi.{nameof(CartItemAggregates.ProductId)} AND oii.{nameof(CartItem.SellerId)} = oi.{nameof(CartItemAggregates.SellerId)}
-            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oii.{nameof(CartItem.CouponId)} = c.{nameof(Coupon.Id)}
-            GROUP BY o.{nameof(Cart.Id)}
+                c.{nameof(Cart.Id)} as {nameof(CartAggregates.CartId)},
+                SUM(ci.{nameof(CartItemAggregates.CouponDiscountedPrice)}) as {nameof(CartAggregates.CouponDiscountedPrice)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] c
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] ci ON ci.{nameof(CartItemAggregates.CartId)} = c.{nameof(Cart.Id)} 
+            GROUP BY c.{nameof(Cart.Id)}
         ");
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(CartAggregates)}] WITH SCHEMABINDING AS
             SELECT
-                o.{nameof(Cart.Id)} as {nameof(CartAggregates.CartId)},
-                oa.{nameof(CartAggregates.BasePrice)} - oa.{nameof(CartAggregates.DiscountedPrice)} as {nameof(CartAggregates.DiscountAmount)},
-                oa.{nameof(CartAggregates.DiscountedPrice)} - oac.{nameof(CartAggregates.CouponDiscountedPrice)} as {nameof(CartAggregates.CouponDiscountAmount)},
-                COALESCE((oa.{nameof(CartAggregates.BasePrice)} - oac.{nameof(CartAggregates.CouponDiscountedPrice)})/NULLIF(oa.{nameof(CartAggregates.BasePrice)}, 0),0)*100 as  {nameof(CartAggregates.TotalDiscountPercentage)}
-            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] o
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}] oa ON oa.{nameof(CartAggregates.CartId)}=o.{nameof(Cart.Id)}
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}] oac ON oac.{nameof(CartAggregates.CartId)}=o.{nameof(Cart.Id)}
+                c.{nameof(Cart.Id)} as {nameof(CartAggregates.CartId)},
+                COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) as {nameof(CartAggregates.BasePrice)},
+                COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.DiscountedPrice)},
+                COALESCE(SUM(ci.{nameof(CartItemAggregates.CouponDiscountedPrice)}),SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.CouponDiscountedPrice)},
+                COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) - COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.DiscountAmount)},
+                COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) - COALESCE(SUM(cac.{nameof(CartAggregates.CouponDiscountedPrice)}),0.0) as {nameof(CartAggregates.CouponDiscountAmount)},
+                COALESCE((COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) - COALESCE(SUM(cac.{nameof(CartAggregates.CouponDiscountedPrice)}), SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0))/NULLIF(SUM(ca.{nameof(CartAggregates.BasePrice)}), 0),0)*100 as  {nameof(CartAggregates.TotalDiscountPercentage)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] c
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}] ca ON ca.{nameof(CartAggregates.CartId)}=c.{nameof(Cart.Id)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] ci ON ci.{nameof(CartItemAggregates.CartId)} = c.{nameof(Cart.Id)} 
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}] cac ON cac.{nameof(CartAggregates.CartId)}=c.{nameof(Cart.Id)}
+            GROUP BY c.{nameof(Cart.Id)}
         ");
     }
     private static void _OfferStats(MigrationBuilder migrationBuilder) {
