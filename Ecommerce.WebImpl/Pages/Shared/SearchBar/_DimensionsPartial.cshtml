@@ -5,14 +5,14 @@
         <div class="col-md-6">
             <div class="d-flex align-items-center gap-2">
                 <label class="fw-bold text-muted small">Ağırlık:</label>
-                <span id="weight-display" class="fs-6 editable-field" data-dimtype="weight">@(Model.Dimensions.Weight) kg</span>
+                <span id="weight-display" class="fs-6 editable-field badge bg-light text-dark" data-dimtype="weight">@(Model.Dimensions.Weight) kg</span>
             </div>
         </div>
         <div class="col-md-6">
             <div class="d-flex align-items-center gap-2">
                 <label class="fw-bold text-muted small">Boyutlar (G×Y×D):</label>
                 <span class="fs-6 dimensions-display">
-                    <span id="width-display" class="editable-field" data-dimtype="width">@(Model.Dimensions.Width)</span>×<span id="height-display" class="editable-field" data-dimtype="height">@(Model.Dimensions.Height)</span>×<span id="depth-display" class="editable-field" data-dimtype="depth">@(Model.Dimensions.Depth)</span> cm
+                    <span id="width-display" class="editable-field badge bg-light text-dark" data-dimtype="width">@(Model.Dimensions.Width)</span>×<span id="height-display" class="editable-field badge bg-light text-dark" data-dimtype="height">@(Model.Dimensions.Height)</span>×<span id="depth-display" class="editable-field badge bg-light text-dark" data-dimtype="depth">@(Model.Dimensions.Depth)</span> cm
                 </span>
             </div>
         </div>
@@ -20,7 +20,7 @@
     
     @if (Model.Editable)
     {
-        <div class="mt-2">
+        <div class="mt-2 d-flex justify-content-end">
             @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
                 Target = "weight-display,width-display,height-display,depth-display",
                 OnClick = "document.querySelector('.dimensions-container').dataset.editing = 'true';"
