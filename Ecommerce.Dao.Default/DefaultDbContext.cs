@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace Ecommerce.Dao.Default
@@ -21,6 +22,7 @@ public class DefaultDbContext : DbContext
     public DefaultDbContext(DbContextOptions<DefaultDbContext> options) : base(options) { }
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.HasDefaultSchema(DefaultSchema);
+        modelBuilder.Owned<Address>();
         var userBuilder = modelBuilder.Entity<User>().UseTphMappingStrategy();
         userBuilder.HasDiscriminator<User.UserRole>(nameof(User.Role))
             .HasValue<Customer>(User.UserRole.Customer).HasValue<Seller>(User.UserRole.Seller)
@@ -67,9 +69,10 @@ public class DefaultDbContext : DbContext
                         .IsRequired().OnDelete(DeleteBehavior.ClientCascade),
                 e=>e.HasKey(e=>new {e.CustomerId, e.ProductId})
             );
-        customerBuilder.Property(c=>c.Addresses).HasConversion(a=>JsonSerializer.Serialize(a, new JsonSerializerOptions { WriteIndented = false }),
-            a => JsonSerializer.Deserialize<IList<Address>>(a, new JsonSerializerOptions{WriteIndented = false}) ?? new List<Address>());
         customerBuilder.Ignore(c => c.PrimaryAddress);
+        var opt = new JsonSerializerOptions(){ WriteIndented = false, };
+        customerBuilder.Property<IList<Address>>(c => c.Addresses).HasConversion<string>(
+            a => JsonSerializer.Serialize(a, opt), s => JsonSerializer.Deserialize<List<Address>>(s, opt)).IsUnicode();
         customerBuilder.HasMany<CouponNotification>(c => c.CouponNotifications).WithOne(n => n.Customer)
             .HasForeignKey(n => n.UserId).HasPrincipalKey(c => c.Id)
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
@@ -110,7 +113,15 @@ public class DefaultDbContext : DbContext
         });
         var sellerBuilder = modelBuilder.Entity<Seller>();
         sellerBuilder.HasBaseType<User>();
-        sellerBuilder.ComplexProperty<Address>(s => s.Address).IsRequired();
+        sellerBuilder.ComplexProperty<Address>(s => s.Address, a => {
+            a.Property(a => a.City).IsRequired();
+            a.Property(a => a.Country).IsRequired().HasDefaultValue("Türkiye");
+            a.Property(a => a.District).IsRequired();
+            a.Property(a => a.Line1).IsRequired();
+            a.Property(a => a.ZipCode).IsRequired();
+            a.Property(a => a.Line2).IsRequired(false);
+            a.Property(a => a.ApiId).IsRequired(false);
+        });
         // sellerBuilder.HasKey(s => s.Id);
         sellerBuilder.Property<string>(s => s.ShopName).HasMaxLength(ShopNameMaxLength).IsRequired();
         // sellerBuilder.ComplexProperty<Address>(s => s.ShippingAddress, nameof(Seller.ShippingAddress)).IsRequired();
@@ -125,6 +136,20 @@ public class DefaultDbContext : DbContext
             .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         sellerBuilder.HasMany<RefundRequest>(s => s.RefundRequests).WithOne().HasForeignKey(r => r.UserId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        sellerBuilder.OwnsOne<SellerOrderStats>(s => s.OrderStats, os => {
+            var nav = os.WithOwner().HasForeignKey(s => s.SellerId).HasPrincipalKey(s => s.Id).Metadata;
+            nav.IsUnique = true;
+            nav.GetNavigation(false).SetIsEagerLoaded(false);
+            os.ToView($"{nameof(SellerOrderStats)}", DefaultSchema, vb => {
+                vb.Property(s => s.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
+                vb.Property(s => s.TotalComplete).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.CountComplete).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.TotalCanceled).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.CountCanceled).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.TotalInProgress).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                vb.Property(s => s.CountInProgress).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            });
+        });
         sellerBuilder.OwnsOne<SellerStats>(s => s.Stats, ss => {
             ss.HasKey(s => s.SellerId);
             ss.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
@@ -149,6 +174,7 @@ public class DefaultDbContext : DbContext
                 .IsRequired().OnDelete(DeleteBehavior.Cascade),
             entity => {
                 entity.HasKey(o => new{ o.SellerId, o.ProductId }).IsClustered(false);
+                entity.HasMany<ProductOption>(e => e.Options);
                 entity.HasMany<ProductReview>(o => o.Reviews).WithOne(r => r.Offer).HasForeignKey(nameof(ProductReview.SellerId),nameof(ProductReview.ProductId))
                     .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Cascade);
                 entity.HasMany<OrderItem>(p=>p.BoughtItems).WithOne(o=>o.ProductOffer).HasForeignKey(nameof(OrderItem.SellerId),nameof(OrderItem.ProductId))
@@ -158,23 +184,19 @@ public class DefaultDbContext : DbContext
                 entity.Property<uint>(p => p.Stock).HasAnnotation(nameof(Annotations.Validation_Positive), true).HasAnnotation(nameof(Annotations.Validation_MaxValue), 10000).IsRequired().ValueGeneratedNever();
                 entity.HasIndex(o => o.ProductId).IsClustered();
                 entity.HasIndex(o => o.SellerId).IsClustered(false);
+                entity.Ignore(o => o.DiscountedPrice);
                 entity.OwnsOne<OfferStats>(o => o.Stats, e => {
-                    e.HasKey(os => new{ os.SellerId, os.ProductId });
                     e.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
                     e.Ignore(o => o.ReviewAverage);
                     e.WithOwner().HasForeignKey(os => new{ os.SellerId, os.ProductId })
                         .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).Metadata.IsUnique = true;
-                    e.ToView($"{nameof(OfferStats)}_{nameof(ProductReview)}", DefaultSchema, vb => {
+                    e.ToView($"{nameof(OfferStats)}", DefaultSchema, vb => {
                         vb.Property(os => os.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.ReviewCount).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
                         vb.Property(os => os.RatingTotal).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
-                    });
-                    e.SplitToView($"{nameof(OfferStats)}_{nameof(RefundRequest)}", DefaultSchema, vb => {
-                        vb.Property(os => os.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                        vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.RefundCount).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
                     });
@@ -204,6 +226,7 @@ public class DefaultDbContext : DbContext
         var permissionClaimBuilder = modelBuilder.Entity<PermissionClaim>();
         permissionClaimBuilder.HasKey(p => p.Id);
         permissionClaimBuilder.Property(c => c.Id).ValueGeneratedOnAdd();
+        permissionClaimBuilder.Ignore(p => p.NotExpired);
         permissionClaimBuilder.HasOne<Staff>(p => p.Grantee).WithMany(s => s.PermissionClaims)
             .HasForeignKey(p => p.GranteeId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
         permissionClaimBuilder.HasOne<Staff>(p => p.Granter).WithMany(s => s.PermissionGrants).HasForeignKey(p => p.GranterId).HasPrincipalKey(s => s.Id)
@@ -217,7 +240,7 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Cart>(ci => ci.Cart).WithMany(c => c.Items).HasForeignKey(ci=>ci.CartId).HasPrincipalKey(c=>c.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Coupon>(ci => ci.Coupon).WithMany().HasForeignKey(ci => ci.CouponId).HasPrincipalKey(c => c.Id)
                 .IsRequired(false).OnDelete(DeleteBehavior.Restrict);
-            entity.Property<int>(ci => ci.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true)
+            entity.Property<uint>(ci => ci.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true)
                 .HasAnnotation(nameof(Annotations.Validation_MaxValue), 100).IsRequired().ValueGeneratedNever();
             entity.HasIndex(e => new { e.CartId })
                 .IsClustered(true);
@@ -232,17 +255,12 @@ public class DefaultDbContext : DbContext
                     v.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     v.Property(a => a.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     v.Property(a => a.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(CartItemAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
-                    vb.Property(a => a.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
-                        ValueGenerated.OnAddOrUpdate;
-                    vb.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                    v.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                    v.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                         ValueGenerated.OnAddOrUpdate;
                 });
             });
+            entity.HasMany<ProductOption>(c=>c.SelectedOptions).WithMany().LeftNavigation.SetIsEagerLoaded(false);
         });
         var sessionBuilder = modelBuilder.Entity<Session>();
         sessionBuilder.HasKey(s => s.Id);
@@ -262,26 +280,21 @@ public class DefaultDbContext : DbContext
             .HasPrincipalKey<Cart>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         cartBuilder.OwnsOne<CartAggregates>(o => o.Aggregates, c => {
             c.HasKey(v => v.CartId);
-            c.Metadata.GetNavigation(false).SetIsEagerLoaded(false);            
+            c.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
             c.WithOwner().HasForeignKey(v => v.CartId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
-            c.ToView($"{nameof(CartAggregates)}", DefaultSchema, v => {
+            c.ToView($"{nameof(CartAggregates)}_{nameof(CartAggregates)}", DefaultSchema, v => {
                 v.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            }).SplitToView($"{nameof(CartAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
-                vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                v.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                    v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated =
+                        ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-            }).SplitToView($"{nameof(CartAggregates)}_{nameof(CartAggregates)}", DefaultSchema, vb => {
-                vb.Property(os => os.CartId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
+                v.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                v.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
-
             });
         });
         var anonymousUserBuilder = modelBuilder.Entity<AnonymousUser>();
@@ -291,6 +304,9 @@ public class DefaultDbContext : DbContext
         var shipmentBuilder = modelBuilder.Entity<Shipment>();
         shipmentBuilder.HasKey(s => s.Id);
         shipmentBuilder.Property(s => s.Id).ValueGeneratedOnAdd();
+        shipmentBuilder.HasMany<OrderItem>(s => s.OrderItems).WithOne(o => o.SentShipment)
+            .HasForeignKey(o => o.ShipmentId).HasPrincipalKey(s => s.Id).IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
         shipmentBuilder.ComplexProperty<Address>(s => s.RecepientAddress).IsRequired();
         shipmentBuilder.ComplexProperty<Address>(s => s.SenderAddress).IsRequired();
         var orderBuilder = modelBuilder.Entity<Order>();
@@ -304,26 +320,17 @@ public class DefaultDbContext : DbContext
             c.HasKey(v => v.OrderId);
             c.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
             c.WithOwner().HasForeignKey(v => v.OrderId).HasPrincipalKey(o => o.Id).Metadata.IsUnique = true;
-            c.ToView($"{nameof(OrderAggregates)}", DefaultSchema, v => {
+            c.ToView($"{nameof(OrderAggregates)}_{nameof(OrderAggregates)}", DefaultSchema, v => {
                 v.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                 v.Property(os => os.ItemCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 v.Property(os => os.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-            });
-            c.SplitToView($"{nameof(OrderAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
-                vb.Property(os => os.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                v.Property(os => os.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
-            });
-            c.SplitToView($"{nameof(OrderAggregates)}_{nameof(OrderAggregates)}", DefaultSchema, vb => {
-                vb.Property(s => s.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                vb.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.TotalDiscountAmount).Overrides.Property.ValueGenerated =
-                    ValueGenerated.OnAddOrUpdate;
-                vb.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                v.Property(os => os.DiscountAmount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.CouponDiscountAmount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.TotalDiscountAmount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+                v.Property(os => os.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                     ValueGenerated.OnAddOrUpdate;
             });
         });
@@ -332,14 +339,43 @@ public class DefaultDbContext : DbContext
         orderBuilder.HasOne<Customer>(o => o.User).WithMany(u => u.Orders).HasForeignKey(o => o.UserId)
             .HasPrincipalKey(u => u.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
         orderBuilder.HasOne<Payment>(o => o.Payment).WithOne(p => p.Order).HasForeignKey<Order>(o => o.PaymentId)
-            .HasPrincipalKey<Payment>(p => p.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
+            .HasPrincipalKey<Payment>(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict);
         orderBuilder.ComplexProperty(o => o.ShippingAddress).IsRequired();
         orderBuilder.Property(o => o.Date).IsRequired();
-        var paymentBuilder = modelBuilder.Entity<Payment>();
-        paymentBuilder.HasKey(p => p.Id);
-        paymentBuilder.Property(p=>p.Id).ValueGeneratedOnAdd();
-        paymentBuilder.HasOne(p => p.Order).WithOne(o => o.Payment).HasForeignKey<Order>(o => o.PaymentId)
-            .HasPrincipalKey<Payment>(p => p.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<Payment>(paymentBuilder => {
+            paymentBuilder.UseTphMappingStrategy();
+            paymentBuilder.HasKey(p => p.Id).IsClustered(true);
+            paymentBuilder.Property(p=>p.Id).ValueGeneratedOnAdd();
+            paymentBuilder.HasOne(p => p.Order).WithOne(o => o.Payment).HasForeignKey<Order>(o => o.PaymentId)
+                .HasPrincipalKey<Payment>(p => p.Id).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
+            paymentBuilder.HasDiscriminator<PaymentMethod>(p=>p.Method).HasValue<CardPayment>(PaymentMethod.Card).HasValue<CashPayment>(PaymentMethod.Cash).IsComplete();
+        });
+        modelBuilder.Entity<CardPayment>(cardPaymentBuilder => {
+            cardPaymentBuilder.HasBaseType<Payment>();
+            cardPaymentBuilder.Property(c => c.ApiId).IsRequired(true);
+        });
+        modelBuilder.Entity<CashPayment>(cashPaymentBuilder => {
+            cashPaymentBuilder.HasBaseType<Payment>();
+        });
+        var productCategoryPropertyBuilder = modelBuilder.Entity<ProductCategoryProperty>(b => {
+            b.HasKey(c => new{ c.CategoryPropertyId, c.ProductId }).IsClustered(false);
+            // b.WithOwner(p => p.Product).HasForeignKey(p => p.ProductId).HasPrincipalKey(p => p.Id)
+            //     .Metadata.GetNavigation(false).SetIsEagerLoaded(false);
+            b.HasIndex(c => c.ProductId).IsClustered();
+            b.HasOne<CategoryProperty>(p => p.CategoryProperty).WithMany()
+                .HasForeignKey(p => p.CategoryPropertyId).HasPrincipalKey(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict)
+                .Metadata.GetNavigation(true).SetIsEagerLoaded(true);
+        });
+        var productOptionBuilder = modelBuilder.Entity<ProductOption>(c => {
+            c.HasKey(o => new{ o.Id });
+            c.Property(o => o.Id).ValueGeneratedOnAdd();
+            c.HasOne<ProductOffer>(o => o.ProductOffer).WithMany(o=>o.Options).HasForeignKey(o => new{ o.SellerId, o.ProductId })
+                .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).IsRequired(true).OnDelete(DeleteBehavior.ClientCascade);
+            c.HasOne<ProductCategoryProperty>(o => o.Property).WithMany()
+                .HasForeignKey(o => new{ o.CategoryPropertyId, o.ProductId })
+                .HasPrincipalKey(c => new{ c.CategoryPropertyId, c.ProductId }).IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         var productBuilder = modelBuilder.Entity<Product>(entity => {
             entity.HasKey(p => p.Id);
             entity.Ignore(p => p.MainImage);
@@ -404,15 +440,7 @@ public class DefaultDbContext : DbContext
             entity.HasOne<Category>(p => p.Category).WithMany(c=>c.Products).HasForeignKey(p => p.CategoryId)
                 .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
             entity.HasMany<Customer>(p => p.FavoredCustomers).WithMany(c => c.FavoriteProducts);
-            entity.OwnsMany<ProductCategoryProperties>(p => p.CategoryProperties, b => {
-                b.HasKey(c => new{ c.CategoryPropertyId, c.ProductId }).IsClustered(false);
-                b.WithOwner(p => p.Product).HasForeignKey(p => p.ProductId).HasPrincipalKey(p => p.Id)
-                    .Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-                b.HasIndex(c => c.ProductId).IsClustered(true);
-                b.HasOne<CategoryProperty>(p => p.CategoryProperty).WithMany()
-                    .HasForeignKey(p => p.CategoryPropertyId).HasPrincipalKey(p => p.Id).IsRequired(true).OnDelete(DeleteBehavior.Restrict)
-                    .Metadata.GetNavigation(true).SetIsEagerLoaded(true);
-            });
+            entity.HasMany<ProductCategoryProperty>(p => p.CategoryProperties).WithOne(p=>p.Product).HasForeignKey(p=>p.ProductId).HasPrincipalKey(p=>p.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
             entity.Property(p => p.Active).HasDefaultValue(true);
             entity.HasMany<ImageProduct>(e => e.Images).WithOne(i => i.Product).HasForeignKey(i => i.ProductId)
                 .HasPrincipalKey(i => i.Id).OnDelete(DeleteBehavior.Cascade).IsRequired();
@@ -458,19 +486,18 @@ public class DefaultDbContext : DbContext
             entity.Property<string>(c => c.Id).HasMaxLength(28).ValueGeneratedNever(); //extra space for discount amount
             entity.Property(c => c.DiscountRate).HasPrecision(2, 2).HasAnnotation(nameof(Annotations.Validation_Positive),true).IsRequired().ValueGeneratedNever();
         });
-        //borderitem
-        modelBuilder.Entity<OrderItem>(entity => {
+        var orderItemBuilder = modelBuilder.Entity<OrderItem>(entity => {
             entity.HasKey(o=>new {o.OrderId, o.SellerId, o.ProductId}).IsClustered(false);
             entity.HasOne<Order>(oi => oi.Order).WithMany(o => o.Items).HasForeignKey(o => o.OrderId)
                 .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Shipment>(o => o.SentShipment).WithMany(s=>s.OrderItems).HasForeignKey(o => o.ShipmentId)
-                .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
+                .HasPrincipalKey(s => s.Id).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Shipment>(o => o.RefundShipment).WithOne()
                 .HasForeignKey<OrderItem>(o => o.RefundShipmentId).HasPrincipalKey<Shipment>(s => s.Id).IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ProductOffer>(o=>o.ProductOffer).WithMany(of=>of.BoughtItems).HasForeignKey(nameof(OrderItem.SellerId),nameof(OrderItem.ProductId))
                 .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.Restrict);
-            entity.Property<int>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).HasAnnotation(nameof(Annotations.Validation_MaxValue), 100).IsRequired().ValueGeneratedNever();
+            entity.Property<uint>(o => o.Quantity).HasAnnotation(nameof(Annotations.Validation_Positive), true).HasAnnotation(nameof(Annotations.Validation_MaxValue), 100).IsRequired().ValueGeneratedNever();
             entity.HasIndex(e => e.ProductId)
                 .IsClustered(false)
                 .IncludeProperties(e => e.Quantity);
@@ -489,17 +516,13 @@ public class DefaultDbContext : DbContext
                     v.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     v.Property(a => a.BasePrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                     v.Property(a => a.DiscountedPrice).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                e.SplitToView($"{nameof(OrderItemAggregates)}_{nameof(Coupon)}", DefaultSchema, vb => {
-                    vb.Property(a => a.OrderId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
-                    vb.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
+                    v.Property(a => a.CouponDiscountedPrice).Overrides.Property.ValueGenerated =
                         ValueGenerated.OnAddOrUpdate;
-                    vb.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
+                    v.Property(a => a.TotalDiscountPercentage).Overrides.Property.ValueGenerated =
                         ValueGenerated.OnAddOrUpdate;
                 });
             });
+            entity.HasMany<ProductOption>(o => o.SelectedOptions).WithMany().LeftNavigation.SetIsEagerLoaded(false);
         });
         var reviewBuilder = modelBuilder.Entity<ProductReview>(entity => {
             entity.HasKey(r => r.Id).IsClustered(false);
@@ -573,9 +596,9 @@ public class DefaultDbContext : DbContext
         voteBuilder.HasKey(v=>v.Id);
         voteBuilder.Property(v => v.Id).ValueGeneratedOnAdd();
         voteBuilder.HasOne<ProductReview>(r=>r.ProductReview).WithMany(r=>r.Votes).HasForeignKey(v=>v.ReviewId)
-            .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+            .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         voteBuilder.HasOne<ReviewComment>(r=>r.ReviewComment).WithMany(r=>r.Votes).HasForeignKey(v=>v.CommentId)
-            .HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+            .HasPrincipalKey(c=>c.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         voteBuilder.HasOne<Session>(v=>v.Voter).WithMany().HasForeignKey(v => v.VoterId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
         //notficatinos
         var notificationBuilder = modelBuilder.Entity<Notification>(e => {
@@ -591,16 +614,16 @@ public class DefaultDbContext : DbContext
         var requestBuilder = modelBuilder.Entity<Request>().UseTpcMappingStrategy();
         requestBuilder.HasBaseType<Notification>();
         requestBuilder.Property(r => r.Id).ValueGeneratedOnAdd();
-        requestBuilder.HasOne<User>(r => r.Requester).WithMany(u => u.Requests).HasForeignKey(u => u.RequesterId).HasPrincipalKey(r => r.Id)
-            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        requestBuilder.HasOne<User>(r => r.Requester).WithMany().HasForeignKey(u => u.RequesterId).HasPrincipalKey(r => r.Id)
+            .IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         var refundRequestBuilder = modelBuilder.Entity<RefundRequest>(entity => {
             entity.HasBaseType<Request>();
             entity.HasOne<OrderItem>(r => r.Item).WithOne()
                 .HasForeignKey<RefundRequest>(r => new{ r.OrderId, r.UserId, r.ProductId }).HasPrincipalKey<OrderItem>(o=>new {o.OrderId, o.SellerId, o.ProductId})
                 .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
-            entity.HasOne<Customer>(e => e.Customer).WithMany(c => c.RefundRequests).HasForeignKey(r=>r.RequesterId).HasPrincipalKey(r=>r.Id);
+            entity.HasOne<Customer>(e => e.Customer).WithMany(c => c.RefundRequests).HasForeignKey(r=>r.RequesterId).HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
             entity.HasOne<Seller>(r => r.Seller).WithMany(r => r.RefundRequests).HasForeignKey(r => r.UserId)
-                .HasPrincipalKey(r => r.Id);
+                .HasPrincipalKey(r => r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
             entity.HasIndex(e => new { e.ProductId, e.UserId })
                 .IsClustered(false)
                 .IncludeProperties(e => e.IsApproved);
@@ -610,6 +633,12 @@ public class DefaultDbContext : DbContext
         permissionRequestBuilder.HasOne<Permission>(p => p.Permission).WithMany().HasForeignKey(r => r.PermissionId)
             .HasPrincipalKey(p => p.Id)
             .IsRequired().OnDelete(DeleteBehavior.Cascade);
+        permissionRequestBuilder.HasOne<Staff>(p => p.Requester).WithMany(p => p.SentPermissionRequests)
+            .HasForeignKey(p => p.RequesterId).HasPrincipalKey(s => s.Id)
+            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        permissionRequestBuilder.HasOne<Staff>(p => p.Requestee).WithMany(p => p.ReceivedPermissionRequests)
+            .HasForeignKey(p => p.UserId).HasPrincipalKey(s => s.Id)
+            .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var couponNotificationBuilder = modelBuilder.Entity<CouponNotification>();
         couponNotificationBuilder.HasBaseType<Notification>();
         couponNotificationBuilder.HasOne<Coupon>(c => c.Coupon).WithMany().HasForeignKey(c => c.CouponId)

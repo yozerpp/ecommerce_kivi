@@ -12,11 +12,10 @@ public abstract class Notification
     }
 
     public override bool Equals(object? obj) {
-        return ReferenceEquals(this, obj) || Id!=default&& UserId!=default && obj is Notification other && Equals(other);
+        return ReferenceEquals(this, obj) || Id!=default&& obj is Notification other && Equals(other);
     }
 
     public override int GetHashCode() {
-        if (Id == default && UserId == default) return base.GetHashCode();
-        return HashCode.Combine(Id, UserId);
+        return Id == default ? base.GetHashCode() : HashCode.Combine(Id, UserId);
     }
 }
