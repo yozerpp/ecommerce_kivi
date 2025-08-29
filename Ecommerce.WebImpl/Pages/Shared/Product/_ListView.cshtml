@@ -1,76 +1,99 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Product._ListView
 
-<ul class="list-group bg-light">
+<ul class="list-group partial-parent">
     <script>
-        ((s)=>{
-            const parent= s.parentElement;
-            document.addEventListener('DOMContentLoaded', load);
-            parent.addEventListener('htmx:load', load);
-            function load(){
-                const pList = s.nextElementSibling.nextElementSibling;
-                pList.querySelectorAll('li').forEach((element)=>{
-                    element.addEventListener('click',()=>{
-                        console.log('clicked ' + element.dataset.id)
-                        parent._selected?.classList.remove('bg-secondary-subtle');
-                        parent._selected?.classList.add('bg-white')
-                        element.classList.add('bg-secondary-subtle');
-                        element.classList.remove('bg-white');
-                        parent._selected = event.currentTarget
-                        parent.dataset.selected=element.dataset.id;
-                        parent.dispatchEvent(new Event('change'));
-                    })
-                })
+        ((s) => {
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener("htmx:load", load);
+            
+            function load(e) {
+                if (e.type === 'htmx:load') {
+                    e.stopPropagation();
+                }
+                const parent = s.parentElement;
+                parent._selected = null;
+                parent.querySelectorAll('.product-item').forEach(item => {
+                    item.addEventListener('click', function(event) {
+                        // Remove previous selection
+                        parent.querySelector('.bg-secondary-subtle')?.classList?.remove('bg-secondary-subtle');
+                        event.currentTarget.classList.add('bg-secondary-subtle');
+                        
+                        const productId = parseInt(event.currentTarget.dataset.id);
+                        parent._selectedProductId = productId;
+                        parent._selected = item;
+                        
+                        // Dispatch custom event for external listeners
+                        parent.dispatchEvent(new CustomEvent('productSelected', {
+                            detail: { productId: productId },
+                            bubbles: true
+                        }));
+                        
+                        console.log('clicked product ' + productId);
+                    });
+                });
+                console.log('loaded @(nameof(_ListView)) from ' + e.type);
             }
         })(document.currentScript)
+        //# sourceURL=ListView.js
     </script>
-    <li class="list-group-item py-2 px-0 bg-primary text-white">
-        <ul class="list-group-horizontal row p-0">
-            <li class="col-3 list-group-item d-flex p-0 px-0 align-items-center justify-content-center bg-primary text-white border-0">
+    
+    <!-- Header -->
+    <li class="list-group-item py-2 px-3 bg-primary text-white">
+        <div class="row g-1">
+            <div class="col-3 d-flex align-items-center justify-content-center">
                 <p class="fs-6 fw-bold mb-0">Resim</p>
-            </li>
-            <li class="d-flex list-group-item justify-content-center col-2 p-0 align-items-center bg-primary text-white border-0">
+            </div>
+            <div class="col-3 d-flex align-items-center justify-content-center">
                 <p class="fs-6 fw-bold mb-0">Ürün Adı</p>
-            </li>
-            <li class="col-2 d-flex position-relative align-items-center align-content-center justify-content-center text-center list-group-item bg-primary text-white border-0">
+            </div>
+            <div class="col-2 d-flex align-items-center justify-content-center">
                 <p class="fs-6 fw-bold mb-0">Kategori</p>
-            </li>
-            <li class="col-2 list-group-item position-relative bg-primary text-white border-0">
+            </div>
+            <div class="col-2 d-flex align-items-center justify-content-center">
                 <p class="fs-6 fw-bold mb-0">Satış Sayısı</p>
-            </li>
-            <li class="col-3 text-center position-relative d-inline-flex flex-column align-items-center justify-content-center align-content-center list-group-item bg-primary text-white border-0">
+            </div>
+            <div class="col-2 d-flex align-items-center justify-content-center">
                 <p class="fs-6 fw-bold mb-0">Değerlendirme</p>
-            </li>
-        </ul>
+            </div>
+        </div>
     </li>
-    <ul>
-        @foreach (var Product in Model.Products){
-            <li data-id="@Product.Id" style="cursor: pointer;"  class="hover-darken list-group-item py-0 px-0">
-                <ul class="list-group-horizontal row p-0">
-                    <li class="col-3 list-group-item d-flex p-0 px-0 align-items-center-center justify-content-center">
-                        @{
-                            var data = Product.MainImage?.Data;
-                            data = !string.IsNullOrEmpty(data) ? (data.StartsWith("data:") ? data : ("data:image/jpeg;base64," + data)) : "/default.jpg";
-                        }
-                        <img src="@(Utils.GetImageUrlOrDefault(Product.MainImage?.Data))" class="img-fluid rounded-0 flex-fill" style="max-height: 7em;" alt="Image of @Product.Name"/>
-                    </li>
-                    <li class="d-flex list-group-item justify-content-center col-2 p-0 align-items-center">
-                        <p class="fs-4 fw-bold">@(Product.Name)</p>
-                    </li>
-                    <li style="text-wrap: wrap; word-wrap: break-word;" class="col-2 d-flex position-relative align-items-center align-content-center justify-content-center text-center list-group-item text-wrap">
-                        <p class="fs-5">@Model.Categories[Product.CategoryId]?.Name</p>
-                    </li>
-                    <li class="col-2 list-group-item position-relative">
-                        <p class="fs-6">@(Product.Stats.OrderCount) Kez Satıldı</p>
-                    </li>
-                    <li style="text-wrap: wrap; word-wrap: break-word" class="col-3 text-center position-relative d-inline-flex flex-column align-items-center justify-content-center align-content-center overflow-x-hidden list-group-item text-nowrap">
+    
+    <!-- Product Items -->
+    @foreach (var Product in Model.Products)
+    {
+        <li class="product-item hover-darken list-group-item" style="cursor: pointer;" data-id="@Product.Id">
+            <ul class="list-unstyled row g-1">
+                <li class="col-3 d-flex align-items-center justify-content-center">
+                    <img src="@(Utils.GetImageUrlOrDefault(Product.MainImage?.Data))" 
+                         class="img-fluid rounded" 
+                         style="max-height: 5em; max-width: 5em; object-fit: cover;" 
+                         alt="Image of @Product.Name"/>
+                </li>
+                <li class="col-3 d-flex align-items-center">
+                    <div class="text-truncate">
+                        <p class="fs-5 fw-medium mb-0 text-truncate">@Product.Name</p>
+                    </div>
+                </li>
+                <li class="col-2 d-flex align-items-center justify-content-center">
+                    <div class="text-center">
+                        <p class="fs-6 mb-0 text-truncate">@Model.Categories[Product.CategoryId]?.Name</p>
+                    </div>
+                </li>
+                <li class="col-2 d-flex align-items-center justify-content-center">
+                    <div class="text-center">
+                        <p class="fs-6 mb-0">@Product.Stats.OrderCount</p>
+                        <p class="text-muted small mb-0">Kez Satıldı</p>
+                    </div>
+                </li>
+                <li class="col-2 d-flex align-items-center justify-content-center">
+                    <div class="text-center">
                         @await Html.PartialAsync("Shared/_ReviewStarPartial", new _ReviewStarPartial(){
                             Rating = Product.Stats.RatingAverage,
                             RatingCount = (int)Product.Stats.ReviewCount
                         })
-                    </li>
-                </ul>
-            </li>
-        }
-    </ul>
-
+                    </div>
+                </li>
+            </ul>
+        </li>
+    }
 </ul>
