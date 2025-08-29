@@ -23,38 +23,54 @@ public static class ViewMigrations
     }
 
     private static void _CartItem(MigrationBuilder migrationBuilder) {
-                migrationBuilder.Sql($@"
-            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] WITH SCHEMABINDING AS
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(ProductOffer)}] WITH SCHEMABINDING AS
             SELECT 
-                oi.{nameof(CartItem.CartId)},
-                oi.{nameof(CartItem.ProductId)},
-                oi.{nameof(CartItem.SellerId)},
-                (po.{nameof(ProductOffer.Price)} * oi.{nameof(CartItem.Quantity)}) AS {nameof(CartItemAggregates.BasePrice)},
-                (po.{nameof(ProductOffer.Price)} * oi.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(CartItemAggregates.DiscountedPrice)}
-            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oi
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON oi.{nameof(CartItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND oi.{nameof(CartItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
+                ci.{nameof(CartItem.CartId)},
+                ci.{nameof(CartItem.ProductId)},
+                ci.{nameof(CartItem.SellerId)},
+                (po.{nameof(ProductOffer.Price)} * ci.{nameof(CartItem.Quantity)}) AS {nameof(CartItemAggregates.BasePrice)},
+                (po.{nameof(ProductOffer.Price)} * ci.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Discount)}) AS {nameof(CartItemAggregates.DiscountedPrice)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] ci
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON ci.{nameof(CartItem.ProductId)} = po.{nameof(ProductOffer.ProductId)} AND ci.{nameof(CartItem.SellerId)} = po.{nameof(ProductOffer.SellerId)}
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] c ON ci.{nameof(CartItem.CartId)} = c.{nameof(Cart.Id)}
         ");
-        migrationBuilder.CreateIndex($"IX_{nameof(CartItemAggregates)}", nameof(CartItemAggregates), new[] { nameof(CartItemAggregates.CartId), nameof(CartItemAggregates.SellerId), nameof(CartItemAggregates.ProductId) },
+        migrationBuilder.CreateIndex($"IX_{nameof(CartItemAggregates)}_{nameof(ProductOffer)}", nameof(CartItemAggregates)+'_' + nameof(ProductOffer),
+                [nameof(CartItemAggregates.CartId), nameof(CartItemAggregates.SellerId), nameof(CartItemAggregates.ProductId)],
                 DefaultDbContext.DefaultSchema, true)
             .Annotation(SqlServerAnnotationNames.Clustered, true);
         migrationBuilder.Sql($@"
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(Coupon)}] WITH SCHEMABINDING AS
             SELECT 
-                oi.{nameof(CartItem.CartId)},
-                oi.{nameof(CartItem.ProductId)},
-                oi.{nameof(CartItem.SellerId)},
-                (oa.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)) AS {nameof(CartItemAggregates.CouponDiscountedPrice)},
-                COALESCE((oa.{nameof(CartItemAggregates.BasePrice)} - (oa.{nameof(CartItemAggregates.DiscountedPrice)} * COALESCE(c.{nameof(Coupon.DiscountRate)}, 1)))*100/NULLIF(oa.{nameof(CartItemAggregates.BasePrice)},0),0) AS {nameof(CartItemAggregates.TotalDiscountPercentage)}
-            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] oi
-            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] oa on oa.{nameof(CartItemAggregates.CartId)} = oi.{nameof(CartItem.CartId)} AND oa.{nameof(CartItemAggregates.ProductId)} = oi.{nameof(CartItem.ProductId)} AND oa.{nameof(CartItemAggregates.SellerId)} = oi.{nameof(CartItem.SellerId)}
-            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON oi.{nameof(CartItem.CouponId)} = c.{nameof(Coupon.Id)}
+                ci.{nameof(CartItem.CartId)},
+                ci.{nameof(CartItem.ProductId)},
+                ci.{nameof(CartItem.SellerId)},
+                po.{nameof(ProductOffer.Price)} * ci.{nameof(CartItem.Quantity)} * po.{nameof(ProductOffer.Discount)} * c.{nameof(Coupon.DiscountRate)} AS {nameof(CartItemAggregates.CouponDiscountedPrice)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] ci
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] po ON po.{nameof(ProductOffer.ProductId)} = ci.{nameof(CartItem.ProductId)} AND po.{nameof(ProductOffer.SellerId)} = ci.{nameof(CartItem.SellerId)} 
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(Coupon)}] c ON ci.{nameof(CartItem.CouponId)} = c.{nameof(Coupon.Id)}
         ");
-        // migrationBuilder.CreateIndex($"IX_{nameof(CartItemAggregates)}_{nameof(Coupon)}",
-        //     $"{nameof(CartItemAggregates)}_{nameof(Coupon)}",
-        //     new[]{
-        //         nameof(CartItemAggregates.CartId),nameof(CartItemAggregates.SellerId), nameof(CartItemAggregates.ProductId)
-        //     },
-        //     DefaultDbContext.DefaultSchema, true);
+        migrationBuilder.CreateIndex($"IX_{nameof(CartItemAggregates)}_{nameof(Coupon)}",
+            $"{nameof(CartItemAggregates)}_{nameof(Coupon)}",
+            new[]{
+                nameof(CartItemAggregates.CartId),nameof(CartItemAggregates.SellerId), nameof(CartItemAggregates.ProductId)
+            },
+            DefaultDbContext.DefaultSchema, true).Annotation(SqlServerAnnotationNames.Clustered, true);
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] WITH SCHEMABINDING AS
+            SELECT 
+                ci.{nameof(CartItem.CartId)},
+                ci.{nameof(CartItem.ProductId)},
+                ci.{nameof(CartItem.SellerId)},
+                SUM(cif.{nameof(CartItemAggregates.BasePrice)}) as {nameof(CartItemAggregates.BasePrice)},
+                SUM(cif.{nameof(CartItemAggregates.DiscountedPrice)}) as {nameof(CartItemAggregates.DiscountedPrice)},
+                COALESCE(SUM(cic.{nameof(CartItemAggregates.CouponDiscountedPrice)}),SUM(cif.{nameof(CartItemAggregates.DiscountedPrice)})) as {nameof(CartItemAggregates.CouponDiscountedPrice)},
+                COALESCE((SUM(cif.{nameof(CartItemAggregates.BasePrice)}) - COALESCE(SUM(cic.{nameof(CartItemAggregates.CouponDiscountedPrice)}),SUM(cif.{nameof(CartItemAggregates.BasePrice)})))/NULLIF(SUM(cif.{nameof(CartItemAggregates.BasePrice)}), 0.0) *100,0.0) AS {nameof(CartItemAggregates.TotalDiscountPercentage)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(CartItem)}] ci
+            INNER JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(ProductOffer)}] cif ON cif.{nameof(CartItemAggregates.SellerId)} = ci.{nameof(CartItem.SellerId)} AND cif.{nameof(CartItemAggregates.CartId)} = ci.{nameof(CartItem.CartId)} AND cif.{nameof(CartItemAggregates.ProductId)} = ci.{nameof(CartItem.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(Coupon)}] cic ON cic.{nameof(CartItemAggregates.SellerId)} = cif.{nameof(CartItemAggregates.SellerId)} AND cic.{nameof(CartItemAggregates.CartId)} = cif.{nameof(CartItemAggregates.CartId)} AND cic.{nameof(CartItemAggregates.ProductId)} = cif.{nameof(CartItemAggregates.ProductId)}
+            GROUP BY ci.{nameof(CartItem.CartId)}, ci.{nameof(CartItem.ProductId)}, ci.{nameof(CartItem.SellerId)}
+        ");
     }
     private static void _Cart(MigrationBuilder migrationBuilder) {
         migrationBuilder.Sql($@"
@@ -901,8 +917,9 @@ public static class ViewMigrations
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(CartAggregates)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}]");
-        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(Coupon)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(Coupon)}]");
+        migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}_{nameof(ProductOffer)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(OrderAggregates)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(Coupon)}]");
         migrationBuilder.Sql($"DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}]");
