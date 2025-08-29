@@ -603,17 +603,27 @@ public class DefaultDbContext : DbContext
         //notficatinos
         var notificationBuilder = modelBuilder.Entity<Notification>(e => {
             e.HasKey(n => n.Id).IsClustered(false);
-            e.UseTpcMappingStrategy();
-            e.HasNoDiscriminator();
+            e.UseTphMappingStrategy();
+            e.HasDiscriminator<Notification.NotificationType>(n => n.Type)
+                .HasValue<CouponNotification>(Notification.NotificationType.Coupon)
+                .HasValue<ReviewNotification>(Notification.NotificationType.Review)
+                .HasValue<VoteNotification>(Notification.NotificationType.Vote)
+                .HasValue<DiscountNotification>(Notification.NotificationType.Discount)
+                .HasValue<OrderNotification>(Notification.NotificationType.Order)
+                .HasValue<ReviewCommentNotification>(Notification.NotificationType.ReviewComment)
+                .HasValue<OrderCompletionNotification>(Notification.NotificationType.OrderCompletion)
+                .HasValue<RefundRequest>(Notification.NotificationType.RefundRequest)
+                .HasValue<PermissionRequest>(Notification.NotificationType.PermissionRequest)
+                .HasValue<CancellationRequest>(Notification.NotificationType.CancellationRequest)
+                .IsComplete();
             e.Property(n => n.Id).ValueGeneratedOnAdd();
             e.HasOne<User>(n => n.User).WithMany(u => u.Notifications).HasForeignKey(n => n.UserId)
                 .HasPrincipalKey(u => u.Id)
                 .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
             e.Property<DateTime>(n=>n.Time).HasDefaultValueSql("DATEADD(HOUR, 3, GETUTCDATE())");
         });
-        var requestBuilder = modelBuilder.Entity<Request>().UseTpcMappingStrategy();
+        var requestBuilder = modelBuilder.Entity<Request>();
         requestBuilder.HasBaseType<Notification>();
-        requestBuilder.Property(r => r.Id).ValueGeneratedOnAdd();
         requestBuilder.HasOne<User>(r => r.Requester).WithMany().HasForeignKey(u => u.RequesterId).HasPrincipalKey(r => r.Id)
             .IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
         var refundRequestBuilder = modelBuilder.Entity<RefundRequest>(entity => {
@@ -672,6 +682,11 @@ public class DefaultDbContext : DbContext
         discountNotificationBuilder.HasOne<ProductOffer>(d => d.ProductOffer).WithMany()
             .HasForeignKey(n => new{ n.SellerId, n.ProductId })
             .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        var orderCompletionNotificationBuilder = modelBuilder.Entity<OrderCompletionNotification>();
+        orderCompletionNotificationBuilder.HasBaseType<Notification>();
+        orderCompletionNotificationBuilder.HasOne<Order>().WithMany().HasForeignKey(n => n.OrderId)
+            .HasPrincipalKey(o => o.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+        
         var cancellationRequestBuilder = modelBuilder.Entity<CancellationRequest>();
         cancellationRequestBuilder.HasOne<Order>(c => c.Order).WithOne(o => o.CancellationRequest)
             .HasForeignKey<CancellationRequest>(c => c.OrderId).HasPrincipalKey<Order>(o => o.Id).IsRequired()
