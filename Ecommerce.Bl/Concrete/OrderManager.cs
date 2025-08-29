@@ -213,26 +213,26 @@ public class OrderManager : IOrderManager
     }
     private static Expression<Func<OrderItemAggregates, OrderItemAggregates>> OrderItemAggregatesProjection = i => new OrderItemAggregates
     {
-        OrderId = (uint?)i.OrderId??0,
-        ProductId = (uint?)i.ProductId??0,
-        SellerId = (uint?)i.SellerId ?? 0,
-        BasePrice = (uint?)i.BasePrice ?? 0,
-        DiscountedPrice = (uint?)i.DiscountedPrice ?? 0,
-        CouponDiscountedPrice = (uint?)i.CouponDiscountedPrice ?? 0,
-        TotalDiscountPercentage = (uint?) i.TotalDiscountPercentage ?? 0,
+        OrderId = i.OrderId,
+        ProductId = i.ProductId,
+        SellerId = i.SellerId,
+        BasePrice = i.BasePrice,
+        DiscountedPrice = i.DiscountedPrice,
+        CouponDiscountedPrice = i.CouponDiscountedPrice,
+        TotalDiscountPercentage = i.TotalDiscountPercentage,
         
     };
     private static Expression<Func<OrderAggregates,OrderAggregates>> OrderAggregatesProjection = o => new OrderAggregates
     {
-        OrderId = o.OrderId ?? 0,
-        BasePrice = o.BasePrice ?? 0,
-        DiscountedPrice = o.DiscountedPrice ?? 0,
-        CouponDiscountedPrice = o.CouponDiscountedPrice ?? 0,
-        CouponDiscountAmount = o.CouponDiscountAmount ?? 0,
-        DiscountAmount = o.DiscountAmount ?? 0,
-        TotalDiscountPercentage = o.TotalDiscountPercentage ?? 0,
-        ItemCount = o.ItemCount ?? 0,
-        TotalDiscountAmount = o.TotalDiscountAmount ?? 0
+        OrderId = o.OrderId,
+        BasePrice = o.BasePrice,
+        DiscountedPrice = o.DiscountedPrice,
+        CouponDiscountedPrice = o.CouponDiscountedPrice,
+        CouponDiscountAmount = o.CouponDiscountAmount,
+        DiscountAmount = o.DiscountAmount,
+        TotalDiscountPercentage = o.TotalDiscountPercentage,
+        ItemCount = o.ItemCount,
+        TotalDiscountAmount = o.TotalDiscountAmount
     };
     private static Expression<Func<Order, OrderAggregates>> OnlyOrderAggregatesProjection =
         ((Expression<Func<Order,OrderAggregates>>)(o => OrderAggregatesProjection.Invoke(o.Aggregates))).Expand();
@@ -266,14 +266,14 @@ public class OrderManager : IOrderManager
         User = o.User,
         Aggregates = new OrderAggregates(){
                 OrderId = o.Aggregates.OrderId,
-                BasePrice = o.Aggregates.BasePrice??0,
-                DiscountedPrice = o.Aggregates.DiscountedPrice??0,
-                CouponDiscountedPrice = o.Aggregates.CouponDiscountedPrice??0,
-                CouponDiscountAmount = o.Aggregates.CouponDiscountAmount??0,
-                DiscountAmount = o.Aggregates.DiscountAmount??0,
-                TotalDiscountPercentage = o.Aggregates.TotalDiscountPercentage??0,
-                ItemCount = o.Aggregates.ItemCount??0,
-                TotalDiscountAmount = o.Aggregates.TotalDiscountAmount??0,
+                BasePrice = o.Aggregates.BasePrice,
+                DiscountedPrice = o.Aggregates.DiscountedPrice,
+                CouponDiscountedPrice = o.Aggregates.CouponDiscountedPrice,
+                CouponDiscountAmount = o.Aggregates.CouponDiscountAmount,
+                DiscountAmount = o.Aggregates.DiscountAmount,
+                TotalDiscountPercentage = o.Aggregates.TotalDiscountPercentage,
+                ItemCount = o.Aggregates.ItemCount,
+                TotalDiscountAmount = o.Aggregates.TotalDiscountAmount,
         }
     };
 
