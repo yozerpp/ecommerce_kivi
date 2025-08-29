@@ -41,8 +41,6 @@
             </ul>
         </li>
         @foreach (var offer in Model.ProductOffers){
-            var src = offer.Product.MainImage?.Data ?? "/default.jpg";
-            src = !src.Equals("/default.jpg") ? "data:image/jpeg;base64, " + src : src;
             <li data-id="@offer.Product.Id" onclick="event.currentTarget.parentElement._selected?.classList.remove('bg-secondary-subtle');event.currentTarget.classList.add('bg-secondary-subtle');event.currentTarget.parentElement._selected = event.currentTarget" class="hover-darken-2 list-group-item py-0 px-0">
                 <a asp-page="/Product" asp-route-ProductId="@(offer.Product.Id)" class="text-decoration-none text-dark">
                     <ul class="list-group-horizontal row p-0">
