@@ -1,165 +1,258 @@
 ﻿@model _CartItemsPartial
 
 <div class="col-12 row border-bottom pb-5 mt-3">
-    <div class="col-12 col-lg-9 ">
-        <p class="fs-3 fw-bold ms-3 text-start">Ürünler</p>
-        <ul class="list-group">
-            <li class="list-group-item py-0 px-0 mx-0 container-fluid">
-                <ul class="list-group-horizontal rounded-1 row p-0">
-                    <li class="col-2 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Resim</p>
-                    </li>
-                    <li class="col-2 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Başlık</p></li>
-                    <li class="col-1 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Satıcı</p></li>
-                    <li class="col-1 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Kupon</p></li>
-                    <li class="col-2 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Fiyat</p></li>
-                    <li class="col-1 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Miktar</p></li>
-                    <li class="col-2 d-flex justify-content-center align-items-center list-group-item">
-                        <p>Toplam</p></li>
-                    <li class="col-1"><span class="container-fluid"></span></li>
-                </ul>
-            </li>
+    <style>
+        .cart-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        .cart-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid #dee2e6;
+        }
+        .cart-item-row {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .cart-item-row:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .discount-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .product-discount {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .coupon-discount {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .cart-summary {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        .option-tag {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin: 1px;
+            display: inline-block;
+        }
+    </style>
+    <div class="col-12 col-lg-9">
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="bi bi-cart3 text-primary fs-4"></i>
+            </div>
+            <div>
+                <h3 class="fw-bold mb-1">Sepetiniz</h3>
+                <p class="text-muted mb-0">@(Model.ViewedCart.Aggregates.ItemCount) ürün</p>
+            </div>
+        </div>
+        
+        <div class="cart-table">
+            <div class="cart-header">
+                <div class="row p-3 fw-semibold text-muted">
+                    <div class="col-2 text-center">Ürün</div>
+                    <div class="col-2 text-center">Başlık</div>
+                    <div class="col-1 text-center">Satıcı</div>
+                    <div class="col-1 text-center">Seçenekler</div>
+                    <div class="col-1 text-center">Kupon</div>
+                    <div class="col-2 text-center">Fiyat</div>
+                    <div class="col-1 text-center">Miktar</div>
+                    <div class="col-1 text-center">Toplam</div>
+                    <div class="col-1 text-center">İşlem</div>
+                </div>
+            </div>
             @if (Model.ViewedCart.Aggregates.ItemCount > 0){
                 foreach (var item in Model.ViewedCart.Items){
-                    <li class="list-group-item py-0 px-0 card">
-                        <ul class="list-group-horizontal row p-0">
-                            <li class="col-2 list-group-item d-flex p-0 px-0 align-items-center-center justify-content-center">
+                    <div class="cart-item-row">
+                        <div class="row p-3 align-items-center">
+                            <div class="col-2 text-center">
                                 @{
                                     var data = item.ProductOffer.Product.MainImage?.Data;
                                     data = !string.IsNullOrEmpty(data) ? (data.StartsWith("data:") ? data : ("data:image/jpeg;base64," + data)) : "/default.jpg";
                                 }
-                                <img src="@(data)" class="img-fluid rounded-0 flex-fill" style="max-height: 7em;" alt="Image of @item.ProductOffer.Product.Name"/>
-                            </li>
-                            <li class="d-flex list-group-item justify-content-center col-2 p-0 align-items-center">
-                                <p>@(item.ProductOffer.Product.Name)</p>
-                            </li>
-                            <li style="text-wrap: wrap; word-wrap: break-word;" class="col-1 d-flex position-relative align-items-center align-content-center justify-content-center text-center list-group-item text-wrap">
-                                <p class="fs-6">@item.ProductOffer.Seller.ShopName</p>
-                            </li>
-                            <li style="text-wrap: wrap; word-wrap: break-word" class="col-1 text-center position-relative d-inline-flex flex-column align-items-center justify-content-center align-content-center overflow-x-hidden list-group-item text-nowrap">
+                                <img src="@(data)" class="img-fluid rounded-3" style="max-height: 80px; max-width: 80px; object-fit: cover;" alt="Image of @item.ProductOffer.Product.Name"/>
+                            </div>
+                            <div class="col-2 text-center">
+                                <h6 class="mb-0 fw-semibold">@(item.ProductOffer.Product.Name)</h6>
+                            </div>
+                            <div class="col-1 text-center">
+                                <small class="text-muted">@item.ProductOffer.Seller.ShopName</small>
+                            </div>
+                            <div class="col-1 text-center">
+                                @if (item.SelectedOptions != null && item.SelectedOptions.Any()){
+                                    <div class="d-flex flex-wrap justify-content-center">
+                                        @foreach (var option in item.SelectedOptions){
+                                            <span class="option-tag">@option.ProductOption.Name: @option.Value</span>
+                                        }
+                                    </div>
+                                }
+                                else{
+                                    <small class="text-muted">-</small>
+                                }
+                            </div>
+                            <div class="col-1 text-center">
                                 @if (item.CouponId != null){
-                                    <p >@(item.CouponId)</p>
-                                    <form hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="productId" value="@item.ProductId"/>
-                                        <input type="hidden" name="sellerId" value="@item.SellerId"/>
-                                        <button type="button" onclick="htmx.trigger(event.currentTarget.parentElement, 'submit');" class="bi btn p-0 bi-trash-fill text-danger-emphasis bg-white shadow-sm"></button>
-                                    </form>
+                                    <div class="d-flex flex-column align-items-center">
+                                        <span class="badge bg-warning text-dark mb-1">@(item.CouponId)</span>
+                                        <form hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="productId" value="@item.ProductId"/>
+                                            <input type="hidden" name="sellerId" value="@item.SellerId"/>
+                                            <button type="button" onclick="htmx.trigger(event.currentTarget.parentElement, 'submit');" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 }
                                 else{
                                     @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){
                                         DisplayText = "Kupon Ekle",
                                         Inputs = [new("productId", "hidden", item.ProductId.ToString()), new("sellerId", "hidden", item.SellerId.ToString()), new(nameof(Cart.CouponId)){PlaceHolder = "Kupon Kodu"}], 
-                                        Url = $"/{nameof(Cart)}?handler=coupon",Target = "#" + Model.ContainerId, Classes = "btn btn-primary text-light-emphasis container-fluid px-0", FormClasses = "container-fluid"
+                                        Url = $"/{nameof(Cart)}?handler=coupon",Target = "#" + Model.ContainerId, Classes = "btn btn-sm btn-outline-primary", FormClasses = "d-inline"
                                     })
                                 }
-                            </li>
-                            <li class="col-2 list-group-item position-relative">
-                                <div class="h-100  align-content-center justify-content-center">
+                            </div>
+                            <div class="col-2 text-center">
+                                <div class="d-flex flex-column align-items-center">
                                     @if (item.ProductOffer.Discount != 1m){
-                                        <div class="d-flex container-fluid justify-content-center align-content-center">
-                                            <del class="small fw-bold">@(decimal.Round(item.ProductOffer.Price, 2).ToString("C"))</del>
-                                            <p style="font-size: x-small" class="float ms-1 fw-bold text-success">%@(decimal.Round((1m - item.ProductOffer.Discount) * 100m, 1).ToString("F1"))</p>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <del class="small text-muted me-2">@(decimal.Round(item.ProductOffer.Price, 2).ToString("C"))</del>
+                                            <span class="discount-badge product-discount">
+                                                <i class="bi bi-tag-fill me-1"></i>%@(decimal.Round((1m - item.ProductOffer.Discount) * 100m, 1).ToString("F1"))
+                                            </span>
                                         </div>
                                     }
-                                    <div class="container-fluid d-flex align-content-center justify-content-center">
-                                        <p style="font-size: large">@(decimal.Round(item.ProductOffer.Price * item.ProductOffer.Discount, 2).ToString("C"))</p>
-                                    </div>
+                                    <div class="fw-bold text-primary">@(decimal.Round(item.ProductOffer.Price * item.ProductOffer.Discount, 2).ToString("C"))</div>
                                 </div>
-                            </li>
-                            <li style="padding-left: 3em;" class="col-1 d-flex justify-content-center align-items-center list-group-item">
-                                <div>
-                                    <p>@item.Quantity</p>
-                                </div>
-                                <div>
-                                    <div class="mx-4 g-5">
-                                        <form  hx-target="#@(Model.ContainerId)" hx-post="/Cart?FromCart=true">
+                            </div>
+                            <div class="col-1 text-center">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="fw-semibold mb-2">@item.Quantity</span>
+                                    <div class="btn-group-vertical" role="group">
+                                        <form hx-target="#@(Model.ContainerId)" hx-post="/Cart?FromCart=true" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="productId" value="@(item.ProductId)"/>
                                             <input type="hidden" name="sellerId" value="@(item.SellerId)"/>
                                             <input type="hidden" name="quantity" value="1"/>
-                                            <button type="submit" class="btn-link border-0 p-0 bg-white text-success">
-                                                <i class="bi bi-plus-circle-fill fs-5"></i>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-plus"></i>
                                             </button>
                                         </form>
-                                        <form  hx-target="#@(Model.ContainerId)" hx-post="/Cart?FromCart=true">
+                                        <form hx-target="#@(Model.ContainerId)" hx-post="/Cart?FromCart=true" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="productId" value="@(item.ProductId)"/>
                                             <input type="hidden" name="sellerId" value="@(item.SellerId)"/>
                                             <input type="hidden" name="quantity" value="-1"/>
-                                            <button type="submit" class="btn-link p-0 border-0 text-warning bg-white">
-                                                <i class="bi bi-file-minus-fill fs-5"></i>
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                <i class="bi bi-dash"></i>
                                             </button>
                                         </form>
                                     </div>
                                 </div>
-                            </li>
-                            <li class="col-2 list-group-item px-0 mx-0 container-fluid d-flex flex-column justify-content-center align-items-center text-center">
+                            </div>
+                            <div class="col-1 text-center">
                                 <partial name="Shared/_ItemPricePartial" model="item.Aggregates"/>
-                            </li>
-                            <li class="col-1 list-group-item align-content-center align-items-center justify-content-center">
+                            </div>
+                            <div class="col-1 text-center">
                                 <form method="post" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML" hx-post="/Cart?handler=delete&FromCart=true">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="sellerId" value="@item.SellerId"/>
                                     <input type="hidden" name="productId" value="@item.ProductId"/>
-                                    <button class="text-decoration-none btn-link p-0 border-0 bg-white text-danger" href="javascript:void(0);">
-                                        <i class="bi bi-x-circle-fill fs-5"></i>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
-                            </li>
-                        </ul>
-                    </li>
-                }
-            }
-            else{
-                <li class="list-group-item d-flex align-items-center justify-content-center">
-                    <p>Sepetiniz Boş</p>
-                </li>
-            }
-        </ul>
-    </div>
-    <div class="card col-12 col-lg-3 justify-content-end">
-        <div class="mx-2 align-content-center flex-column">
-            @if (Model.ViewedCart.Aggregates.ItemCount > 0){
-                if (Model.ViewedCart.Aggregates.BasePrice > Model.ViewedCart.Aggregates.DiscountedPrice){
-                    <div class="d-flex justify-content-between">
-                        <div class="d-inline-flex gap-1">
-                            <del class="small mx-0 fw-bold">@(decimal.Round(Model.ViewedCart.Aggregates.BasePrice, 2).ToString("C"))</del>
-                            <p style="font-size: x-small" class="mx-0 text-success float-end">%@(decimal.Round(((Model.ViewedCart.Aggregates.DiscountAmount / Model.ViewedCart.Aggregates.BasePrice) )*100m,2).ToString("F1"))</p>
+                            </div>
                         </div>
-                        <p>İndirimsiz Fiyat</p>
                     </div>
                 }
-                if (Model.ViewedCart.Aggregates.DiscountedPrice > Model.ViewedCart.Aggregates.CouponDiscountedPrice){
-                    <div class="d-flex justify-content-between">
-                        <div class="d-inline-flex gap-1">
-                            <del class="small col-auto fw-bold">@(decimal.Round(Model.ViewedCart.Aggregates.DiscountedPrice, 2).ToString("C"))</del>
-                            <p style="font-size: x-small" class="small text-secondary col-auto float-end">%@(decimal.Round(((Model.ViewedCart.Aggregates.DiscountedPrice - Model.ViewedCart.Aggregates.CouponDiscountedPrice) / Model.ViewedCart.Aggregates.DiscountedPrice)*100m,2).ToString("F1"))</p>
-                        </div>
-                        <p class="text-success">İndirimli Fiyat</p>
-                    </div> 
-                }
-                <div class="d-flex justify-content-between">
-                    <p class="fs-5">@(decimal.Round(Model.ViewedCart.Aggregates.CouponDiscountedPrice, 2).ToString("C"))</p>
-                    <p class="fw-bold">Toplam Fiyat</p>
-                </div>
-                <div class="d-flex container-fluid px-0  justify-content-end align-content-center">
-                    <form class="form-check-inline" asp-page="/@(nameof(Checkout))" method="get">
-                        <button style="height: 3em;" class="my-4 align-self-end col-auto btn btn-success">Sepeti Onayla</button>
-                    </form>
-                </div>
             }
             else{
-                <button style="height: 3em;" class="my-4 disabled btn-light align-self-end col-auto btn btn-primary">Sepeti Onayla</button>
+                <div class="text-center py-5">
+                    <i class="bi bi-cart-x text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">Sepetiniz Boş</h5>
+                    <p class="text-muted">Alışverişe başlamak için ürün ekleyin</p>
+                </div>
             }
         </div>
     </div>
-    <div class="container-fluid ps-3 mt-2 justify-content-between">
-        <button hx-post="/@(nameof(Cart))?handler=clear&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML" class="btn  btn-outline-secondary bg-white text-secondary">Sepeti Temizle</button>
+    <div class="col-12 col-lg-3">
+        <div class="cart-summary p-4">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="bi bi-calculator text-success"></i>
+                </div>
+                <h5 class="fw-bold mb-0">Sipariş Özeti</h5>
+            </div>
+            
+            @if (Model.ViewedCart.Aggregates.ItemCount > 0){
+                <div class="border-bottom pb-3 mb-3">
+                    @if (Model.ViewedCart.Aggregates.BasePrice > Model.ViewedCart.Aggregates.DiscountedPrice){
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Ara Toplam</span>
+                            <span class="fw-semibold">@(decimal.Round(Model.ViewedCart.Aggregates.BasePrice, 2).ToString("C"))</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-tag text-success me-1"></i>
+                                <span class="text-success">Ürün İndirimleri</span>
+                            </span>
+                            <span class="text-success fw-semibold">
+                                -@(decimal.Round(Model.ViewedCart.Aggregates.DiscountAmount, 2).ToString("C"))
+                                <small class="ms-1">(%@(decimal.Round(((Model.ViewedCart.Aggregates.DiscountAmount / Model.ViewedCart.Aggregates.BasePrice) )*100m,2).ToString("F1")))</small>
+                            </span>
+                        </div>
+                    }
+                    @if (Model.ViewedCart.Aggregates.DiscountedPrice > Model.ViewedCart.Aggregates.CouponDiscountedPrice){
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-ticket-perforated text-warning me-1"></i>
+                                <span class="text-warning">Kupon İndirimleri</span>
+                            </span>
+                            <span class="text-warning fw-semibold">
+                                -@(decimal.Round(Model.ViewedCart.Aggregates.DiscountedPrice - Model.ViewedCart.Aggregates.CouponDiscountedPrice, 2).ToString("C"))
+                                <small class="ms-1">(%@(decimal.Round(((Model.ViewedCart.Aggregates.DiscountedPrice - Model.ViewedCart.Aggregates.CouponDiscountedPrice) / Model.ViewedCart.Aggregates.DiscountedPrice)*100m,2).ToString("F1")))</small>
+                            </span>
+                        </div>
+                    }
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fs-5 fw-bold">Toplam</span>
+                    <span class="fs-4 fw-bold text-primary">@(decimal.Round(Model.ViewedCart.Aggregates.CouponDiscountedPrice, 2).ToString("C"))</span>
+                </div>
+                <form asp-page="/@(nameof(Checkout))" method="get" class="d-grid">
+                    <button class="btn btn-success btn-lg rounded-pill">
+                        <i class="bi bi-check-circle me-2"></i>Sepeti Onayla
+                    </button>
+                </form>
+            }
+            else{
+                <div class="text-center">
+                    <button class="btn btn-secondary btn-lg rounded-pill disabled">
+                        <i class="bi bi-cart-x me-2"></i>Sepeti Onayla
+                    </button>
+                </div>
+            }
+            
+            <div class="mt-3 text-center">
+                <button hx-post="/@(nameof(Cart))?handler=clear&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-trash me-1"></i>Sepeti Temizle
+                </button>
+            </div>
+        </div>
     </div>
 </div>
