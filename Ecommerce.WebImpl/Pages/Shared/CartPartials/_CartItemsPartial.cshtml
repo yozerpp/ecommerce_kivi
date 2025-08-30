@@ -96,7 +96,7 @@
                                 @if (item.SelectedOptions != null && item.SelectedOptions.Any()){
                                     <div class="d-flex flex-wrap justify-content-center">
                                         @foreach (var option in item.SelectedOptions){
-                                            <span class="option-tag">@option.ProductOption.Name: @option.Value</span>
+                                            <span class="option-tag">@option.Property.CategoryProperty.PropertyName: @option.Value</span>
                                         }
                                     </div>
                                 }
