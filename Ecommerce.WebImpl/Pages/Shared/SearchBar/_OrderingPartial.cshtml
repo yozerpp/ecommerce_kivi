@@ -2,104 +2,141 @@
 @using Ecommerce.Entity.Views
 @model Ecommerce.WebImpl.Pages.Shared.SearchBar._OrderingPartial
 
-<ul class="overflow-y-scroll rounded-end-2" style="max-height: 300px;">
+<div class="p-3 bg-light rounded-3 shadow-sm" style="max-height: 400px; overflow-y: auto;">
+    <style>
+        .sort-item {
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            margin-bottom: 0.5rem;
+        }
+        .sort-item:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        .sort-toggle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            min-width: 80px;
+            font-weight: 500;
+        }
+        .sort-toggle:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .sort-toggle.ascending {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        .sort-toggle.descending {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+        .sort-toggle.unselected {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        .property-label {
+            font-weight: 600;
+            color: #495057;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem 0 0 0.375rem;
+        }
+    </style>
+    
     <script>
         ((s) => {
             function initializeOrdering() {
-                const orderList = s.parentElement; // The ul element itself
-                // Map to store selected orders: {propertyName: {selected: bool, ascending: bool}}
+                const orderList = s.parentElement;
                 orderList._orders = new Map();
 
-                orderList.querySelectorAll('li.dropdown-item').forEach(liElement => {
-                    const selectedInput = liElement.querySelector('input[name="@nameof(HomepageModel.OrderInput.Selected)"]');
-                    const ascInput = liElement.querySelector('input[value="true"]'); // Select by value as name is dynamic
-                    const descInput = liElement.querySelector('input[value="false"]'); // Select by value as name is dynamic
-                    const orderOptionsDiv = liElement.querySelector('.order-options'); // Use a specific class for clarity
-
-                    // Extract property name from the checkbox's ID
+                orderList.querySelectorAll('.sort-item').forEach(item => {
+                    const selectedInput = item.querySelector('input[name="@nameof(HomepageModel.OrderInput.Selected)"]');
+                    const ascInput = item.querySelector('input[value="true"]');
+                    const descInput = item.querySelector('input[value="false"]');
+                    const toggleButton = item.querySelector('.sort-toggle');
+                    
                     const propertyName = selectedInput.dataset.propname;
-
-                    // Initialize the state for each property based on current checkbox/radio states
-                    orderList._orders.set(propertyName, {
-                        selected: selectedInput.checked,
-                        ascending: ascInput.checked
-                    });
-                    // Set initial visibility of radio buttons
+                    
+                    // Initialize state
+                    let state = 'unselected'; // unselected, ascending, descending
                     if (selectedInput.checked) {
-                        orderOptionsDiv.classList.remove('d-none');
-                    } else {
-                        orderOptionsDiv.classList.add('d-none');
+                        state = ascInput.checked ? 'ascending' : 'descending';
                     }
-
-                    // Event listener for the checkbox (select/deselect property for ordering)
-                    selectedInput.addEventListener('change', (event) => {
-                        const isChecked = event.currentTarget.checked;
-                        if (isChecked) {
-                            orderOptionsDiv.classList.remove('d-none');
-                            // If selected, ensure one radio is checked, default to ascending if none
-                            if (!ascInput.checked && !descInput.checked) {
-                                ascInput.checked = true;
-                            }
+                    
+                    function updateState(newState) {
+                        state = newState;
+                        
+                        // Update hidden inputs
+                        selectedInput.checked = state !== 'unselected';
+                        if (state !== 'unselected') {
+                            ascInput.checked = state === 'ascending';
+                            descInput.checked = state === 'descending';
                         } else {
-                            orderOptionsDiv.classList.add('d-none');
-                            // Uncheck radios when the property is deselected
                             ascInput.checked = false;
                             descInput.checked = false;
                         }
-                        // Update the internal state map
+                        
+                        // Update button appearance and text
+                        toggleButton.className = `btn sort-toggle ${state}`;
+                        switch(state) {
+                            case 'ascending':
+                                toggleButton.innerHTML = '<i class="fas fa-sort-up me-1"></i>Artan';
+                                break;
+                            case 'descending':
+                                toggleButton.innerHTML = '<i class="fas fa-sort-down me-1"></i>Azalan';
+                                break;
+                            default:
+                                toggleButton.innerHTML = '<i class="fas fa-sort me-1"></i>Sırala';
+                        }
+                        
+                        // Update internal state map
                         orderList._orders.set(propertyName, {
-                            selected: isChecked,
-                            ascending: ascInput.checked
+                            selected: state !== 'unselected',
+                            ascending: state === 'ascending'
                         });
-                        // Dispatch a custom change event to notify parent components
+                        
+                        // Dispatch change event
                         orderList.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    
+                    // Set initial state
+                    updateState(state);
+                    
+                    // Click handler for cycling through states
+                    toggleButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const nextState = {
+                            'unselected': 'ascending',
+                            'ascending': 'descending',
+                            'descending': 'unselected'
+                        };
+                        updateState(nextState[state]);
                     });
-
-                    // Event listener for radio buttons (ascending/descending)
-                    const radioChangeHandler = () => {
-                        // Update the internal state map
-                        orderList._orders.set(propertyName, {
-                            selected: selectedInput.checked,
-                            ascending: ascInput.checked
-                        });
-                        // Dispatch a custom change event
-                        orderList.dispatchEvent(new Event('change', { bubbles: true }));
-                    };
-                    ascInput.addEventListener('change', radioChangeHandler);
-                    descInput.addEventListener('change', radioChangeHandler);
                 });
             }
 
-            // Attach initialization function to DOMContentLoaded and a custom 'init' event
             document.addEventListener('DOMContentLoaded', initializeOrdering);
             s.parentElement.addEventListener('init', initializeOrdering);
         })(document.currentScript);
     </script>
+    
     @foreach (var prop in typeof(ProductStats).GetProperties().Where(p => !p.Name.Equals(nameof(ProductStats.ProductId))))
     {
-        <li class="dropdown-item row g-0 rounded-0 align-items-center" onclick="event.stopPropagation();">
-            <div class="col-8"> @* Adjusted column width for label and checkbox *@
-                <div class="input-group">
-                    <label class="form-control btn-outline-secondary bg-secondary-subtle" for="@(prop.Name)Order">@(prop.Name)</label>
-                    <div class="input-group-text">
-                        <input data-propname="@(nameof(Product.Stats))_@prop.Name" id="@(prop.Name)Order" type="checkbox" name="@nameof(HomepageModel.OrderInput.Selected)"/>
-                    </div>
-                </div>
+        <div class="sort-item d-flex align-items-center rounded-2 p-2">
+            <div class="flex-grow-1">
+                <label class="property-label form-control border-end-0 mb-0">@(prop.Name)</label>
             </div>
-            <div class="col-4 order-options d-none"> @* Added specific class and adjusted column width *@
-                <div class="input-group mb-1"> @* Added margin-bottom for spacing *@
-                    <label class="form-control" for="@(prop.Name)Asc">Artan</label>
-                    <div class="input-group-text">
-                        <input id="@(prop.Name)Asc" type="radio" name="@(prop.Name)Ascending" value="true"/>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label class="form-control" for="@(prop.Name)Desc">Azalan</label>
-                    <div class="input-group-text">
-                        <input id="@(prop.Name)Desc" type="radio" name="@(prop.Name)Ascending" value="false"/>
-                    </div>
-                </div>
+            <div class="ms-2">
+                <button type="button" class="sort-toggle btn">
+                    <i class="fas fa-sort me-1"></i>Sırala
+                </button>
             </div>
-        </li>
+            
+            <!-- Hidden inputs to maintain form compatibility -->
+            <input type="hidden" data-propname="@(nameof(Product.Stats))_@prop.Name" name="@nameof(HomepageModel.OrderInput.Selected)" />
+            <input type="hidden" name="@(prop.Name)Ascending" value="true" />
+            <input type="hidden" name="@(prop.Name)Ascending" value="false" />
+        </div>
     }
-</ul>
+</div>
