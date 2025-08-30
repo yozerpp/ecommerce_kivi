@@ -1,6 +1,9 @@
-﻿@using Product = Ecommerce.WebImpl.Pages.Product
+﻿@using Customer = Ecommerce.WebImpl.Pages.Customer
+@using Product = Ecommerce.WebImpl.Pages.Product
 @model (ProductWithAggregatesCustomerView, IDictionary<uint, Ecommerce.Entity.Category>)
-
+@{
+    var isBuyer = ViewContext.ViewData[nameof(Entity.User)] is Customer or null;
+}
 <div class="card m-1 w-100 h-100 rounded-2 shadow-sm hover-grow-small hover-shadow justify-content-between">
     <script>((s)=>{
         const parent = s.parentElement;
@@ -8,7 +11,11 @@
         parent.addEventListener('htmx:load', load);
         function  load(e){
             if(e.type === 'htmx:load') e.stopPropagation();
-            parent.querySelector('.add-to-cart-btn').dispatchEvent(new Event('htmx:load', {cancelable: true, bubbles:false}));
+            @if (isBuyer){
+            <text>
+                parent.querySelector('.add-to-cart-btn').dispatchEvent(new Event('htmx:load', {cancelable: true, bubbles:false}));             
+           </text>
+            }
         }
         })(document.currentScript)</script>
     <div onclick="window.location='/@nameof(Product)?ProductId=@Model.Item1.Product.Id'" class="text-decoration-none text-dark">
@@ -58,7 +65,11 @@
                 </div>
             }
         </div>
-        <partial name="Shared/Product/_AddToCartButtonPartial" model="new _AddToCartButtonPartial(){ ProductId = Model.Item1.Product.Id }"/>
+        @if(isBuyer){
+            @await Html.PartialAsync("Shared/Product/_AddToCartButtonPartial", new _AddToCartButtonPartial(){
+                ProductId = Model.Item1.Product.Id
+            })
+        }
     </div>
 
 </div>
