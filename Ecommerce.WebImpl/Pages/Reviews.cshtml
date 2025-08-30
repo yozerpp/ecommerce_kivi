@@ -1,19 +1,17 @@
 ﻿@page
+@using Ecommerce.WebImpl.Pages.Shared.Review
 @model Ecommerce.WebImpl.Pages.Reviews
 
-@{
-    Layout = null;
+@if (Model.Comments.Count > 0){
+    @await Html.PartialAsync("Shared/Review/_CommentsPartial", new _CommentsPartial(){
+        Comments = Model.Comments,
+        CurrentUserId = Model.CurrentUser?.Id,
+        IsStaff = Model.CurrentStaff!=null,
+    })
+} else if (Model.GottenReviews.Count > 0){
+    @await Html.PartialAsync( "Shared/Review/_ReviewsPartial", new _ReviewsPartial(){
+        Reviews = Model.GottenReviews,
+        CurrentUserId = Model.CurrentUser?.Id,
+        IsStaff = Model.CurrentStaff!=null,
+    })
 }
-
-<!DOCTYPE html>
-
-<html>
-<head>
-    <title></title>
-</head>
-<body>
-<div>
-    
-</div>
-</body>
-</html>
