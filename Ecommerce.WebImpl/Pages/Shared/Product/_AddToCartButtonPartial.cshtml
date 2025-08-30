@@ -1,6 +1,56 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared.Product._AddToCartButtonPartial
 
-<form class="container-fluid add-to-cart-btn" hx-post="/Cart" hx-target="#popupResult" hx-swap="innerHTML">
+<form class="add-to-cart-btn" hx-post="/Cart" hx-target="#popupResult" hx-swap="innerHTML">
+    <style>
+        .add-to-cart-btn {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .add-to-cart-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .add-to-cart-form {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .quantity-input {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 14px;
+            width: 80px;
+        }
+        .quantity-input:focus {
+            outline: none;
+            border-color: #ff8c00;
+            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.2);
+        }
+        .add-cart-btn {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff7700 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        .add-cart-btn:hover {
+            background: linear-gradient(135deg, #ff7700 0%, #ff6600 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 140, 0, 0.3);
+        }
+    </style>
+    
     <script>
         ((s)=>{
             const parent = s.parentElement;
@@ -13,28 +63,27 @@
                     if(!e.detail.successful) return;
                     document.dispatchEvent(new CartChangedEvent(parseInt(i.value),null,@Model.ProductId, true))
                 })
-                // parent.querySelector('div.row > div:first-child > button[type="button"]:first-child').addEventListener('click', e=>{
-                //     i.value = i.value?parseInt(i.value) + 1:1;
-                // })
-                // parent.querySelector('div.row > div:first-child > button[type="button"]:last-child').addEventListener('click', e=>{
-                //     i.value = i.value>1?parseInt(i.value)-1:null;
-                // });
             }
         })(document.currentScript)
         //# sourceURL=Index/@(nameof(_AddToCartButtonPartial)).js
-
     </script>
+    
     @Html.AntiForgeryToken()
     <input type="hidden" name="productId" value="@Model.ProductId"/>
     <input type="hidden" name="sellerId" value="null"/>
-    <div class=" row" onmouseenter="event.currentTarget.lastElementChild.classList.add('col-lg-10');event.currentTarget.firstElementChild.style.maxHeight = event.currentTarget.lastElementChild.offsetHeight + 'px';
-        event.currentTarget.firstElementChild.classList.remove('d-none');"
-         onmouseleave="event.currentTarget.lastElementChild.classList.remove('col-lg-10');event.currentTarget.firstElementChild.classList.add('d-none')">
-        <div class="text-center h-100 d-none p-0 m-0 gap-0 col-lg-2 col-12 overflow-hidden">
-            @* <button type="button" class="p-0 m-0 hover-grow-small w-100 border-0" style="background-color: inherit"><i class="bi bi-plus-circle-fill text-success p-0 m-0" style="font-size: x-small"></i></button> *@
-            <input type="number" class="m-0  align-self-center text-center w-100 rounded-start-2 border-light-subtle border-opacity-50 border-1 small" min="1" name="quantity" step="1" placeholder="Miktar"/>
-            @* <button type="button" class=" p-0 m-0 hover-grow-small w-100 border-0" style="background-color: inherit"><i class="bi bi-file-minus-fill rounded-circle text-danger p-0 m-0" style="font-size: x-small"></i></button> *@
+    
+    <div class="add-to-cart-form">
+        <div class="d-flex align-items-center gap-3">
+            <input type="number" 
+                   class="quantity-input" 
+                   min="1" 
+                   name="quantity" 
+                   step="1" 
+                   value="1"
+                   placeholder="1"/>
+            <button type="submit" class="add-cart-btn">
+                Sepete Ekle
+            </button>
         </div>
-        <button type="submit" class="col-12 btn rounded-1 btn-primary" style="background-color: darkorange">Sepete Ekle</button>
     </div>
 </form>
