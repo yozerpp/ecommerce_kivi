@@ -4,7 +4,29 @@
 @{
     var isBuyer = ViewContext.ViewData[nameof(Entity.User)] is Customer or null;
 }
-<div class="card m-1 w-100 h-100 rounded-2 shadow-sm hover-grow-small hover-shadow justify-content-between">
+<div class="product-main-card card m-1 w-100 h-100 rounded-2 shadow-sm hover-grow-small hover-shadow justify-content-between">
+    <style>
+        .product-main-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-main-card:hover .add-to-cart-btn {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .product-image {
+            transition: transform 0.3s ease;
+        }
+        .product-main-card:hover .product-image {
+            transform: scale(1.05);
+        }
+        .card-content {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
     <script>((s)=>{
         const parent = s.parentElement;
         document.addEventListener('DOMContentLoaded', load);
@@ -18,32 +40,32 @@
             }
         }
         })(document.currentScript)</script>
-    <div onclick="window.location='/@nameof(Product)?ProductId=@Model.Item1.Product.Id'" class="text-decoration-none text-dark">
+    <div onclick="window.location='/@nameof(Product)?ProductId=@Model.Item1.Product.Id'" class="text-decoration-none text-dark card-content">
         <div class="d-flex flex-column align-items-start align-content-start">
-            <div class="mb-1">
-                <img src="@Utils.GetImageUrlOrDefault(Model.Item1.Product.MainImage?.Data)" style="aspect-ratio: 3/2; min-height: 200px;" class="card-img-top" alt="Resim mevcut değil.">
+            <div class="mb-1 overflow-hidden rounded-top">
+                <img src="@Utils.GetImageUrlOrDefault(Model.Item1.Product.MainImage?.Data)" style="aspect-ratio: 3/2; min-height: 200px;" class="card-img-top product-image" alt="Resim mevcut değil.">
             </div>
-            <div class="card-body gap-2 flex-column d-flex justify-content-center container-fluid pt-1">
+            <div class="card-body gap-2 flex-column d-flex justify-content-center container-fluid pt-2">
                 <div class="flex-column container-fluid d-flex justify-content-center mb-0 p-0 align-content-center align-items-center">
                     <partial name="Shared/Product/_CategoryHierarchyPartial" model="(Model.Item1.Product.CategoryId, Model.Item2)"/>
-                    <div class="card-title d-flex justify-content-center mt-1 p-0">
-                        <h5 class="fs-4">@Model.Item1.Product.Name</h5>
+                    <div class="card-title d-flex justify-content-center mt-2 p-0">
+                        <h5 class="fs-4 fw-semibold text-center">@Model.Item1.Product.Name</h5>
                     </div>
                 </div>
-                <div class="flex-column d-flex mx-0 mt-1 p-0">
-                    <div class="small">
+                <div class="flex-column d-flex mx-0 mt-2 p-0">
+                    <div class="small mb-2">
                         @await Html.PartialAsync($"Shared/{nameof(_ReviewStarPartial)}", new _ReviewStarPartial(){ Rating = Model.Item1.Product.Stats.RatingAverage , RatingCount = (int)(Model.Item1.Product.Stats.ReviewCount) })
                     </div>
-                    <div class="d-flex container-fluid justify-content-between align-content-center">
-                        <p class="fw-bold my-0" style="font-size: x-small">@(Model.Item1.Product.Stats.SaleCount) Kere Satıldı</p>
-                        <div class="d-flex align-items-center justify-content-center gap-2 align-content-center text-center align-items-center">
+                    <div class="d-flex container-fluid justify-content-between align-items-center">
+                        <p class="fw-bold my-0 text-muted" style="font-size: x-small">@(Model.Item1.Product.Stats.SaleCount) Kere Satıldı</p>
+                        <div class="d-flex align-items-center justify-content-center gap-2">
                             @await Html.PartialAsync("Shared/Product/_FavoritePartial", (false, Model.Item1))
                         </div>
                     </div>
                 </div>
                 @if (Model.Item1.Product.Description != null!){
                     <div class="container-fluid text-center m-0 p-0 overflow-hidden">
-                        <p class="m-0 p-0 ">
+                        <p class="m-0 p-0 text-muted small line-clamp-2">
                             @Model.Item1.Product.Description
                         </p>
                     </div>
@@ -51,24 +73,26 @@
             </div>
         </div>
     </div>
-    <div>
-        <div class="card-text mx-2 g-1 d-flex">
+    <div class="card-footer bg-white border-0 pt-0">
+        <div class="card-text mx-2 mb-3 d-flex align-items-center">
             @if (Model.Item1.Product.Stats.MinPrice != null){
-                <p class="text-nowrap">Fiyat Aralığı:</p>
-                <div class="container-fluid flex-column text-wrap">
-                    <p class="fs-5 fw-bold text-wrap">@(decimal.Round(Model.Item1.Product.Stats.MinPrice, 2).ToString("C")) - @(decimal.Round(Model.Item1.Product.Stats.MaxPrice!, 2).ToString("C"))</p>
+                <div class="d-flex flex-column w-100">
+                    <p class="text-muted small mb-1">Fiyat Aralığı:</p>
+                    <p class="fs-5 fw-bold text-primary mb-0">@(decimal.Round(Model.Item1.Product.Stats.MinPrice, 2).ToString("C")) - @(decimal.Round(Model.Item1.Product.Stats.MaxPrice!, 2).ToString("C"))</p>
                 </div>
             }
             else{
-                <div class="container-fluid flex-column text-wrap">
-                    <p class="text-nowrap">Teklif Yok</p>
+                <div class="d-flex flex-column w-100">
+                    <p class="text-muted mb-0">Teklif Yok</p>
                 </div>
             }
         </div>
         @if(isBuyer){
-            @await Html.PartialAsync("Shared/Product/_AddToCartButtonPartial", new _AddToCartButtonPartial(){
-                ProductId = Model.Item1.Product.Id
-            })
+            <div class="position-relative">
+                @await Html.PartialAsync("Shared/Product/_AddToCartButtonPartial", new _AddToCartButtonPartial(){
+                    ProductId = Model.Item1.Product.Id
+                })
+            </div>
         }
     </div>
 
