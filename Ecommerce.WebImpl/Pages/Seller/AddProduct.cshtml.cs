@@ -3,6 +3,7 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Entity.Views;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using Microsoft.AspNetCore.Authorization;
@@ -18,7 +19,7 @@ public class AddProduct : BaseModel
     private readonly ISellerManager _sellerManager;
     public readonly IDictionary<uint,Category> Categories;
     public readonly IRepository<Category> _categoryRepository;
-    public AddProduct(IProductManager productManager, ISellerManager sellerManager, IDictionary<uint,Category> categories, IRepository<Category> categoryRepository) {
+    public AddProduct(INotificationService notificationService, IProductManager productManager, ISellerManager sellerManager, IDictionary<uint,Category> categories, IRepository<Category> categoryRepository): base(notificationService) {
         _sellerManager = sellerManager;
         Categories = categories;
         _categoryRepository = categoryRepository;

@@ -11,6 +11,7 @@ public interface IOrderManager
         AnonymousUser? anonymousUser = null, Address? shippingAddress = null, string? name = null);
     public Order? GetOrder(uint orderId, bool includeItems = true , bool includeAggregates= false);
     public (OrderAggregates, ICollection<OrderItemAggregates>)? GetAggregates(uint orderId);
+    public OrderStatus? RefreshOrderStatus(uint orderId);
     public void ChangeOrderStatus(Order order, OrderStatus status, bool propogateToItems=true);
     public void ChangeItemStatus(ICollection<OrderItem> items);
     public void ChangeStatusBySellerIdOrderId(uint orderId, uint sellerId, OrderStatus status);

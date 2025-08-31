@@ -186,11 +186,14 @@
                                 <div class="border-bottom my-3 border-secondary-subtle my-3 border-1"></div>
                             }
                             <div class="mb-3 gap-2">
-                                <h2 class="align-self-start mx-3">Teslimat Adresini @(Model.CurrentCustomer == null ? "Gir" : "Onayla")</h2>
+                                <h2 class="align-self-start mx-3 mb-3">Teslimat Adresini @(Model.CurrentCustomer == null ? "Gir" : "Onayla")</h2>
                                 <div id="address" class="mx-3">
                                     @if (Model.CurrentCustomer == null || Model.CurrentCustomer.Addresses.Count==0){
-                                        <h3 class="fs-5 mb-0">Kayıtlı Adresleriniz</h3>
-                                        <p class="fs-5 mb-0 ms-5">Kayıtsız adres ile işlem yapmak için düzenleyin.</p>
+                                        if (Model.CurrentSeller!=null){
+                                            <h3 class="fs-5 mb-0 ms-3">Kayıtlı Adresleriniz</h3>
+                                            <p class="fs-6 text-muted mb-0 mt-1 ms-5">Kayıtsız adres ile işlem yapmak için düzenleyin.</p>
+                                            
+                                        }
                                         <partial name="Shared/_AddressPartial"
                                                  model="new _AddressPartial(){ Address = Model.CurrentCustomer?.PrimaryAddress ?? new Address(), Editable = true, AsInput=Model.CurrentCustomer==null }"/>
                                     }else {
@@ -256,19 +259,26 @@
                         <h3 class="fw-bold fs-4">Ürün Paketleri</h3>
                         @foreach (var itemGroup in Model.CartItemsGrouped){
                             <div onclick="selectGroup(event, @(itemGroup.Key.Id))" style="cursor: pointer" id="group-@itemGroup.Key.Id" class="card border-start rounded">
-                                <div class="mb-4 card-header bg-light">
-                                    <p class="fw-bold card-title fs-6">@itemGroup.Key.ShopName Satıcısının Ürünleri</p>
+                                <div class="mb-0 card-header bg-light py-1 d-inline-flex align-items-start align-content-start justify-content-between">
+                                    <p class="fw-bold card-title mb-0 mt-1 fs-6">@itemGroup.Key.ShopName Satıcısının Ürünleri</p>
+                                    <p class="text-muted fs-6 mb-0">@itemGroup.Key.Address.ToString()</p>
                                 </div>
-                                <ul class="card-body pt-1">
+                                <ul class="card-body my-0 py-1">
                                     @foreach (var item in itemGroup.OrderBy(i => i.ProductId.GetHashCode())){
-                                        <li class=" my-3 d-flex flex-row justify-content-start text-center align-content-center align-items-center border-secondary-subtle hover-darken row">
-                                            <div class="col-3 d-inline-flex justify-content-center align-content-center align-items-center p-0">
+                                        <li class=" mb-1 d-flex flex-row justify-content-start text-center align-content-center align-items-center border-secondary-subtle hover-darken row">
+                                            <div class="col-3  d-inline-flex justify-content-center align-content-center align-items-center p-0">
                                                 <img class="img-fluid rounded-1" alt="@item.ProductOffer.Product.Name Resmi" src="@(Utils.GetImageUrlOrDefault(item.ProductOffer.Product.MainImage?.Data))"/>
                                             </div>
                                             <div class="col-2 d-inline-flex justify-content-center align-content-center align-items-center">
                                                 <p class="fs-5">@(item.ProductOffer.Product.Name)</p>
                                             </div>
                                             <div class="col-3"></div>
+                                            <div class="col-2">
+                                                <p class="mb-0 fw-bold fs-6">@decimal.Round(item.ProductOffer.Product.Dimensions.Weight,1).ToString("F1") kg</p>
+                                                <p class="mb-0 fw-bold fs-6">@decimal.Round(item.ProductOffer.Product.Dimensions.Width, 1).ToString("F1")x
+                                                    @decimal.Round(item.ProductOffer.Product.Dimensions.Height, 1).ToString("F1")x
+                                                    @decimal.Round(item.ProductOffer.Product.Dimensions.Depth,1).ToString("F1") cm<span class="float-end text-start ms-0  mt-0 p-0" style="font-size: x-small">3</span></p>
+                                            </div>
                                         </li>
                                     }
                                 </ul>
@@ -417,7 +427,7 @@
     </div>
           <!--Controls-->
         <div class="container-fluid mt-4">
-            <div class="d-flex justify-content-@(Model.SelectedTab > 1?"between":"end") align-items-center">
+            <div class="d-flex ms-5 justify-content-@(Model.SelectedTab > 1?"between":"end") align-items-center">
                 @if (Model.SelectedTab > 1){
                     <button class="btn d-none btn-outline-secondary" onclick="window.history.back()">Geri</button>
                 }
@@ -441,7 +451,7 @@
                             <input type="hidden" id="group-@(itemGroup.Key.Id)-input" name="@(nameof(Checkout.SelectedShippingOffers))[@(itemGroup.Key.Id)]" value="@(itemGroup.First().Id)"/>
                         }    
                         }
-                        <button class="btn btn-success btn-lg" type="submit">@(Model.SelectedTab switch{1=>"Bilgilerini Onayla", 2=>"Seçimleri Onayla",_=>throw new ArgumentOutOfRangeException()})</button>
+                        <button class="btn  btn-success btn-lg" type="submit">@(Model.SelectedTab switch{1=>"Bilgilerini Onayla", 2=>"Seçimleri Onayla",_=>throw new ArgumentOutOfRangeException()})</button>
                     </form>
                 } 
             </div>

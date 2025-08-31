@@ -11,7 +11,7 @@
                 </div>
                 <div class="d-flex">
                     @if(editable){
-                        <form hx-trigger="submit" hx-target="#commentResult@(Model.Review.Id)" hx-on::after-request="document.getElementById('commentRepliesBtn@(Model.Review.Id)').dispatchEvent(new Event('click',{bubbles:false,cancelable:true}));" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteReview">
+                        <form hx-trigger="submit" hx-target="#commentResult@(Model.Review.Id)" hx-on::after-request="if(event.detail.successful)event.currentTarget.closest('.partial-parent').remove();" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteReview">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="reviewId" value="@Model.Review.Id"/>
                             <button type="submit" class="btn border-1 rounded-2 border-secondary-subtle bg-light text-decoration-none p-0"><i class="bi bi-trash-fill text-danger"></i></button>

@@ -236,7 +236,7 @@
                             <div class="card border-0 bg-light rounded-3">
                                 <div class="card-body p-4">
                                     @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
-                                        Editable = editable, User = Model.ViewedUser, IsOwner = isOwner
+                                        Editable = editable, User = Model.ViewedUser,PostUrl = "/" + nameof(Pages.User)+"?handler=update"
                                     })
                                 </div>
                             </div>

@@ -3,7 +3,9 @@ using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Bl.Concrete;
@@ -20,7 +22,8 @@ public class UserManager :IUserManager
     private readonly IRepository<Staff> _staffRepository;
     private readonly IRepository<AnonymousUser> _anonymousUserRepository;
     private readonly IRepository<Image>  _imageRepository;
-    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager, IRepository<Image> imageRepository) {
+    private readonly DbContext _dbContext;
+    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager, IRepository<Image> imageRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
         this._jwtManager = manager;
         _anonymousUserRepository = anonymousUserRepository;
         _userRepository = userRepository;
@@ -29,6 +32,7 @@ public class UserManager :IUserManager
         this._hashFunction = hashFunction;
         this._cartManager = cartManager;
         _imageRepository = imageRepository;
+        _dbContext = dbContext;
         _sellerRepository = sellerRepository;
     }
     public Customer? LoginCustomer(string email, string password, bool rememberMe, out string? token)
@@ -68,6 +72,18 @@ public class UserManager :IUserManager
         token = _jwtManager.Serialize(_jwtManager.CreateToken(user.Session!, rememberMe));
         return user;
     }
+
+    public object Register(User.UserRole type, object newUser) {
+        switch (type){
+            case User.UserRole.Customer:
+                return Register<Customer>((Customer)newUser);
+            case User.UserRole.Seller:
+                return Register<Seller>((Seller)newUser);
+            case User.UserRole.Staff:
+                break;
+        }
+        return Register<Staff>((Staff)newUser);
+    }
     public T Register<T>(T newUser) where T :User
     {
         _cartManager.newSession(newUser);
@@ -97,6 +113,7 @@ public class UserManager :IUserManager
     }
 
     public void Update(User user, bool updateImage) {
+        var ignoreList =new List<string>([nameof(User.PasswordHash), nameof(User.Session), nameof(User.Active), nameof(User.SessionId), nameof(User.GoogleId), nameof(User.Email)]);
         if (updateImage){
             user.ProfilePicture = _imageRepository.Add(new Image(){
                 Data = user.ProfilePicture.Data,
@@ -105,8 +122,10 @@ public class UserManager :IUserManager
         else{
             user.ProfilePictureId = null;
             user.ProfilePicture = null;
+            ignoreList.Add(nameof(User.ProfilePictureId));
+            ignoreList.Add(nameof(User.ProfilePicture));
         }
-        
+        _userRepository.UpdateIgnore(user, true, ignoreList.ToArray());
         _userRepository.Flush();
     }
 

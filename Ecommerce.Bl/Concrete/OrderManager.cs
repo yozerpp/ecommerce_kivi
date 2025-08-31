@@ -109,7 +109,7 @@ public class OrderManager : IOrderManager
             )
         ], ıtem => ıtem.OrderId == orderId);
     }
-    private OrderStatus? UpdateStatus(uint orderId) {
+    public OrderStatus? RefreshOrderStatus(uint orderId) {
         var itemStatuses = _orderItemRepository.WhereP(i => i.Status, i => i.OrderId == orderId, nonTracking: true);
         OrderStatus? newStatus = null;
         var orderStatus = _orderRepository.FirstP(o => o.Status, o => o.Id == orderId,nonTracking:true);
@@ -124,7 +124,7 @@ public class OrderManager : IOrderManager
             _orderItemRepository.UpdateInclude(orderItem, nameof(OrderItem.Status));
         }
         _orderItemRepository.Flush();
-        UpdateStatus(items.First().OrderId);
+        RefreshOrderStatus(items.First().OrderId);
         
     }
 

@@ -5,6 +5,8 @@ using System.Security.Claims;
 using System.Text;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
+using Ecommerce.Entity.Events;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +15,14 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages.Shared;
 
-public class BaseModel: PageModel
+public  abstract class BaseModel: PageModel
 {
+    protected readonly INotificationService NotificationService;
+
+    public BaseModel(INotificationService notificationService) {
+        NotificationService = notificationService;
+    }
+
     public Ecommerce.Entity.Seller? CurrentSeller { get; private set; } 
     public Entity.Customer? CurrentCustomer { get; private set; }
     public Staff? CurrentStaff { get; private set; }
@@ -41,8 +49,12 @@ public class BaseModel: PageModel
         CurrentSeller = context.HttpContext.Items[nameof(Entity.User)] as Ecommerce.Entity.Seller;
         CurrentStaff = context.HttpContext.Items[nameof(Entity.User)] as Staff;
         CurrentUser = (CurrentStaff as Entity.User ?? CurrentSeller) ?? CurrentCustomer;
-        if(CurrentUser!=null)
+        CurrentSession.Cart = new Entity.Cart(){ Id = CurrentSession.CartId, };
+        if (CurrentUser != null){
             ViewData[nameof(Entity.User)] = CurrentUser;
+            ViewData[nameof(Notification)] = NotificationService.Get(CurrentUser.Id, false);
+        }
+        
     }
     public override void OnPageHandlerExecuting(PageHandlerExecutingContext context) {
         AssignProps(context);

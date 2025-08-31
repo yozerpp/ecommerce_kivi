@@ -10,6 +10,8 @@ using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
+using LinqKit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -22,19 +24,18 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Ecommerce.WebImpl.Pages;
 
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Product : BaseModel
 {
     private readonly IProductManager _productManager;
     private readonly ISellerManager _sellerManager;
     private readonly IRepository<ProductOffer> _offerRepository;
-    private readonly INotificationService _notificationService;
     public readonly IDictionary<uint,Category> Categories;
     private readonly IRepository<ImageProduct> _imageProductRepository;
     private readonly DbContext _dbContext;
     private readonly IRepository<ProductOption> _optionRepository;
-    public Product(IProductManager productManager, INotificationService notificationService, ISellerManager sellerManager, ICartManager cartManager, IDictionary<uint,Category> categories, IRepository<ProductOffer> offerRepository, IRepository<Image> productRepository, IRepository<Entity.Product> productRepository1, IRepository<ImageProduct> imageProductRepository,[FromKeyedServices(nameof(DefaultDbContext))] DbContext dbContext, IRepository<ProductOption> optionRepository) {
+    public Product(INotificationService notificationService, IProductManager productManager, ISellerManager sellerManager, ICartManager cartManager, IDictionary<uint,Category> categories, IRepository<ProductOffer> offerRepository, IRepository<Image> productRepository, IRepository<Entity.Product> productRepository1, IRepository<ImageProduct> imageProductRepository,[FromKeyedServices(nameof(DefaultDbContext))] DbContext dbContext, IRepository<ProductOption> optionRepository) : base(notificationService){
         _productManager = productManager;
-        _notificationService = notificationService;
         _sellerManager = sellerManager;
         Categories = categories;
         _offerRepository = offerRepository;
@@ -69,7 +70,7 @@ public class Product : BaseModel
     }
     public PartialViewResult OnGetOffers([FromQuery] string sortColumn = nameof(ProductOffer.Stats.ReviewAverage), [FromQuery]bool sortDesc = true) {
         var offers = _productManager.GetOffers(ProductId, null, includeAggregates: true);
-        var existingitems = _dbContext.Set<CartItem>().AsNoTracking().Where(i=>i.CartId == CurrentSession.CartId && i.ProductId == ProductId).Select(i=>new {i.SellerId, i.Quantity}).ToDictionary(i=>i.SellerId, i=>(uint?)i.Quantity);
+        var existingitems = _dbContext.Set<CartItem>().AsNoTracking().Where(i=>i.CartId == CurrentSession.CartId && i.ProductId == ProductId).Select(i=>new {i.SellerId, i.Quantity}).ToArray().ToDictionary(i=>i.SellerId, i=>(uint?)i.Quantity);
         Func<ProductOffer, decimal?> orderByExpression = sortColumn switch {
             nameof(ProductOffer.Price) => o => o.Price * o.Discount,
             nameof(ProductOffer.Stats.ReviewAverage) => o => o.Stats.ReviewAverage,
@@ -100,8 +101,9 @@ public class Product : BaseModel
          var cid = CurrentSession.CartId;
          var selectedOptions = _dbContext.Set<CartItem>().AsNoTracking().Where(i=>i.CartId==cid && i.ProductId == ProductId && i.SellerId == SellerId).Select(i=>i.SelectedOptions).FirstOrDefault();
          var editable = CurrentSeller?.Id == SellerId;
+         var oids = opts.Select(o => o.CategoryPropertyId).Where(o=>o!=null).Cast<uint>().ToArray();
          return Partial("Shared/Product/"+nameof(_ProductOptionsPartial), new _ProductOptionsPartial{
-             Options = opts.Select(o=>ValueTuple.Create(selectedOptions?.Any(o1=>o1.Equals(o)) ??false, o)).ToArray(), Editable = editable,PropertyCandidates = editable&&categoryId.HasValue?Categories[categoryId.Value].CategoryProperties:[]
+             Options = opts.Select(o=>ValueTuple.Create(selectedOptions?.Any(o1=>o1.Equals(o)) ??false, o)).ToArray(), Editable = editable,PropertyCandidates = editable&&categoryId.HasValue?Categories[categoryId.Value].CategoryProperties.Where(c=>!oids.Contains(c.Id)).ToArray():[]
          });
     }
 
@@ -187,12 +189,13 @@ public class Product : BaseModel
             DiscountAmount = oldNet - newNet,
             DiscountRate = (oldNet - newNet) / oldNet
         }).ToArray();
-        _notificationService.SendBatchAsync(ns).Wait();
+        NotificationService.SendBatchAsync(ns).Wait();
     }
     [HasRole(nameof(Staff), nameof(Entity.Seller))]
     public IActionResult OnPostEdit() {
          var EditedProduct = EditedOffer.Product;
-        EditedOffer.Discount = (100m - Math.Round(EditedOffer.Discount,2,MidpointRounding.AwayFromZero)) / 100m;
+         var ballsacks = EditedOffer;
+        EditedOffer.Discount = (100m - Math.Round(EditedOffer.Discount,2,MidpointRounding.AwayFromZero))/ 100;
         if (!IsProductEdited){
             EditedOffer.Product = null;
             _sellerManager.updateOffer(CurrentSeller, EditedOffer, EditedOffer.ProductId);
@@ -244,7 +247,12 @@ public class Product : BaseModel
                 });
             }
         }
-        _dbContext.Set<ProductOffer>().Add(EditedOffer);
+        EditedOffer.Options.ForEach(o => {
+                _dbContext.Entry(o).State = o.Id==0?EntityState.Added:EntityState.Unchanged;
+        });
+        _dbContext.Set<ProductOffer>().Entry(EditedOffer).State = EntityState.Added;
+        _dbContext.Set<Entity.Product>().Entry(EditedProduct).State = EntityState.Added;
+        EditedProduct.CategoryProperties.ForEach(p=>_dbContext.Entry(p).State = EntityState.Added);
         _dbContext.SaveChanges();
         if(IsOfferEdited && !IsProductEdited)NotifyFavorers();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){

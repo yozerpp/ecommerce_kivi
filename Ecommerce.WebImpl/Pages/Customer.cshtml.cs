@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
@@ -13,7 +14,7 @@ namespace Ecommerce.WebImpl.Pages;
 public class Customer : BaseModel
 {
     private ICustomerManager _customerManager;
-    public Customer(ICustomerManager customerManager) {
+    public Customer(INotificationService notificationService, ICustomerManager customerManager) : base(notificationService){
         _customerManager = customerManager;
     }
     [BindProperty(SupportsGet = true)]

@@ -5,21 +5,25 @@ using System.Text.RegularExpressions;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Views;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
 
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class HomepageModel : BaseModel
 {
     private readonly ILogger<HomepageModel> _logger;
     private readonly IProductManager _productManager;
     private readonly ICartManager _cartManager;
     public readonly IDictionary<uint,Category> Categories;
-    public HomepageModel(ILogger<HomepageModel> logger, IProductManager productManager, ICartManager cartManager, IDictionary<uint,Category> categories) {
+    public HomepageModel(INotificationService notificationService,ILogger<HomepageModel> logger, IProductManager productManager, ICartManager cartManager, IDictionary<uint,Category> categories) : base(notificationService) {
         _logger = logger;
         _cartManager = cartManager;
         _productManager = productManager;

@@ -30,6 +30,12 @@ public class NotificationService : INotificationService
         }
     }
 
+    public Task MarkAsync(bool state,params ICollection<ulong> notificationIds) {
+        if (notificationIds == null || notificationIds.Count == 0) return Task.CompletedTask;
+        _notificationRepository.UpdateExpr([(n => n.IsRead, state)], n => notificationIds.Contains(n.Id));
+        return Task.CompletedTask;
+    }
+
     public async Task BroadcastDiscountAsync(DiscountNotification notification) {
         var n = (DiscountNotification)await _notificationRepository.SaveAsync(notification);
         await _notificationHub.Clients.Groups(NotificationHub.ProductFavorGroup + notification.ProductOffer.ProductId)
@@ -41,6 +47,6 @@ public class NotificationService : INotificationService
     }
     public ICollection<Notification> Get(uint userId, bool onlyUnread = false, int page = 1, int pageSize = 20) {
         return _notificationRepository.Where(n => n.UserId == userId && (!onlyUnread || onlyUnread && !n.IsRead), offset:
-            (page - 1) * pageSize, limit: page * pageSize);
+            (page - 1) * pageSize, limit: page * pageSize, orderBy:[(n=>n.Time, false)]);
     }
 }

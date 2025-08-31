@@ -1,23 +1,22 @@
-﻿using Ecommerce.Entity.Events;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace Ecommerce.WebImpl.Pages.Shared;
+namespace Ecommerce.WebImpl.Pages.Notifications;
 
 public class _NotificationPartialModel : ComponentBase
 {
     private HubConnection? hubConnection;
-    [BindProperty] public List<Notification> Notifications { get; set; } = new();
+    [Parameter]
+    [BindProperty] public ICollection<Entity.Events.Notification> Notifications { get; set; }
     [Inject]
     public NavigationManager NavigationManager { get; set; }
     [BindProperty]
-    public Notification? LastNotification { get; set; }
+    public Entity.Events.Notification? LastNotification { get; set; }
     protected override async Task OnInitializedAsync() {
         hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/notifications"))
             .Build();
-        hubConnection.On("ReceiveNotification", (Notification notification) => {
+        hubConnection.On("ReceiveNotification", (Entity.Events.Notification notification) => {
             Notifications.Add(notification);
             LastNotification = notification;
             InvokeAsync(StateHasChanged);

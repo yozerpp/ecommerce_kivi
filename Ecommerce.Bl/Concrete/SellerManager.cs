@@ -7,6 +7,7 @@ using Ecommerce.Entity;
 using Ecommerce.Entity.Views;
 using LinqKit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -17,13 +18,14 @@ public class SellerManager : ISellerManager
     private readonly IRepository<ProductOffer> _productOfferRepository;
     private readonly IRepository<Coupon> _couponRepository;
     private readonly IRepository<Order> _orderRepository;
-
-    public SellerManager(IRepository<Coupon> couponRepository,IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository, IRepository<Order> orderRepository) {
+    private readonly DbContext _dbContext;
+    public SellerManager(IRepository<Coupon> couponRepository,IRepository<Product> productRepository, IRepository<Seller> sellerRepository, IRepository<ProductOffer> productOfferRepository, IRepository<Order> orderRepository, [FromKeyedServices("DefaultDbContext")]DbContext dbContext) {
         _productRepository = productRepository;
         _couponRepository = couponRepository;
         _sellerRepository = sellerRepository;
         _productOfferRepository = productOfferRepository;
         _orderRepository = orderRepository;
+        _dbContext = dbContext;
     }
     public Seller? GetSeller(uint sellerId, bool includeOffers, bool includeReviews, bool includeAggregates, bool includeCoupons = false) {
         var s =  _sellerRepository.FirstP(includeAggregates?WithAggregates:WithoutAggregates,s=>s.Id == sellerId,
@@ -44,17 +46,8 @@ public class SellerManager : ISellerManager
     }
     public ICollection<ProductOffer> GetOffers(uint sellerId, int page = 1, int pageSize = 20) {
         page = page == -1 ? _productOfferRepository.Count(p => p.SellerId == sellerId) / pageSize + 1 : page;
-        var offersDict= _productOfferRepository.WhereP(OfferStaltessWithProduct,p => p.SellerId == sellerId, includes:[[nameof(ProductOffer.Product), nameof(Product.Images)],[nameof(ProductOffer.Product), nameof(Product.Category)]], offset: (page-1) * pageSize, limit: pageSize*page,nonTracking:true).ToDictionary(o=>ValueTuple.Create(o.SellerId, o.ProductId), o=>o);
-        var stats = _productOfferRepository.WhereP(o => new OfferStats(){
-            ProductId = (uint?)o.Stats.ProductId ?? 0,
-            SellerId = (uint?)o.Stats.SellerId ?? 0,
-            ReviewAverage = (decimal?)o.Stats.ReviewAverage?? 0m,
-            ReviewCount = (uint?)o.Stats.ReviewCount?? 0,
-            RatingTotal = (decimal?)o.Stats.RatingTotal ?? 0m,
-            RefundCount = (uint?)o.Stats.RefundCount ?? 0,
-        },p=>p.SellerId == sellerId && p.Stats !=null, nonTracking:true);
-        stats.ForEach(o=>offersDict[(o.SellerId.Value, o.ProductId.Value)].Stats=o);
-        return offersDict.Values;
+        return _productOfferRepository.Where(o => o.SellerId == sellerId, offset: (page - 1) * pageSize,
+            limit: page * pageSize, includes:[[nameof(ProductOffer.Stats)],[nameof(ProductOffer.Product), nameof(Product.Images)]]);
     }
  
     //@param Seller should contain user information as well.
@@ -105,19 +98,21 @@ public class SellerManager : ISellerManager
         }
     }
     public ProductOffer updateOffer(Seller seller, ProductOffer offer, uint productId) {
-        // throw new Exception();
         if (offer.Product!=null && _productRepository.Exists(p=>p.Id==offer.ProductId))
         {
             offer.Product.Id = 0;
             offer.Product = _productRepository.Add(offer.Product);
             offer.ProductId = offer.Product.Id;
-            var ret1 =  _productOfferRepository.Add(offer);
+            var ret1 =  _dbContext.Entry(offer);
+            ret1.State = EntityState.Added;
             _productOfferRepository.Flush();
-            return ret1;
+            return ret1.Entity;
         }
-        var ret = _productOfferRepository.Update(offer);
+        var ret = _dbContext.Entry(offer);
+        ret.State = EntityState.Modified;
+        offer.Options.ForEach(o=>_dbContext.Entry(o).State = EntityState.Unchanged);
         _productOfferRepository.Flush();
-        return ret;
+        return ret.Entity;
     }
     public void UnlistOffer(Seller seller, ProductOffer offer)
     {

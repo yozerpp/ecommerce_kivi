@@ -29,20 +29,34 @@
                         b.classList.remove('bg-light');
                         parent.dispatchEvent(new Event('change', {bubbles:true, cancelable:true}));
                     })
+                    @if (Model.Editable){
+                        <text>
+                    b.nextElementSibling.addEventListener('click', e=>{
+                        e.stopPropagation();
+                        parent.dispatchEvent(new Event('editOffer', {bubbles:true, cancelable:true}));
+                       parent.dispatchEvent(new CustomEvent('optionDeleted', {bubbles:true, cancelable:true, 
+                           detail:{
+                            optionId: parseInt(b.dataset.option),
+                           }
+                       }));
+                       event.target.parentElement.remove();
+                    });
+                        </text>
+                    }
                 })
-                parent.querySelectorAll('i').forEach(i=>{
-                    i.addEventListener('click', ev=>{
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        htmx.ajax('POST', '/@(nameof(Product))?handler=deleteOption&OptionId=' + event.currentTarget.dataset.optionid, {
-                            target: '#popupResult',
-                            swap: 'innerHTML',
-                            values: {
-                                __RequestVerificationToken: s.nextElementSibling.value,
-                            }, headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-                        });
-                    })
-                })
+                // parent.querySelectorAll('i').forEach(i=>{
+                //     i.addEventListener('click', ev=>{
+                //         ev.preventDefault();
+                //         ev.stopPropagation();
+                //         htmx.ajax('POST', '/@(nameof(Product))?handler=deleteOption&OptionId=' + event.currentTarget.dataset.optionid, {
+                //             target: '#popupResult',
+                //             swap: 'innerHTML',
+                //             values: {
+                //                 __RequestVerificationToken: s.nextElementSibling.value,
+                //             }, headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                //         });
+                //     })
+                // })
             }
         })(document.currentScript)
         //# sourceURL=/ProductOptions/@(nameof(_ProductOptionPartial)).js
@@ -57,7 +71,7 @@
                         <p class="fs-5 text-center text-muted">@option.option.Value</p>
                     </button>
                     @if (Model.Editable){
-                        <i data-optionid="@option.option.Id" class="bi float-end bi-trash-fill text-danger fs-5 hover-grow" style="cursor:pointer;"></i>
+                        <i data-optionid="@option.option.Id" class="bi float-end bi-trash-fill edit-control text-danger fs-5 hover-grow" style="cursor:pointer;"></i>
                     }    
                 </div>
             }    

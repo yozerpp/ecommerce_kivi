@@ -4,6 +4,7 @@ using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.Mail;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
@@ -25,7 +26,7 @@ public class User : BaseModel
     private readonly IRepository<Entity.User> _userRepository;
     private readonly UserManager.HashFunction _hashFunction;
     private readonly IUserManager _userManager;
-    public User(IRepository<Entity.Customer> customersRepository, ICustomerManager customerManager, IJwtManager jwtManager, IMailService mailService, IRepository<Entity.User> userRepository, UserManager.HashFunction hashFunction, IUserManager userManager) {
+    public User(INotificationService notificationService,IRepository<Entity.Customer> customersRepository, ICustomerManager customerManager, IJwtManager jwtManager, IMailService mailService, IRepository<Entity.User> userRepository, UserManager.HashFunction hashFunction, IUserManager userManager) :base(notificationService){
         _customerManager = customerManager;
         _jwtManager = jwtManager;
         _mailService = mailService;
@@ -33,8 +34,11 @@ public class User : BaseModel
         _hashFunction = hashFunction;
         _userManager = userManager;
     }
-    [BindProperty]
     public Entity.User ViewedUser { get; set; }
+    [BindProperty]
+    public Entity.Customer RegisteredCustomer { get; set; }
+    [BindProperty]
+    public Entity.Seller RegisteredSeller { get; set; }
     [BindProperty]
     public ICollection<Address> Addresses { get; set; }
     [BindProperty(SupportsGet = true)]
@@ -44,10 +48,21 @@ public class User : BaseModel
         if (ViewedUser== null) return NotFound($"Müşteri numarası {UserId} ile müşteri Bulunamadı");
         return Page();
     }
+
+
+    public bool Registering { get; set; }
+    public IActionResult OnGetOauth() {
+        Registering = true;
+        return Page();
+    }
+    [BindProperty(SupportsGet = true)]
+    public Entity.User.UserRole Role { get; set; }
     [BindProperty]
     public bool IsImageEdited { get; set; }
     public IActionResult OnPostUpdate() {
-        _userManager.Update(ViewedUser, IsImageEdited);
+        _userManager.Update(Role switch{
+            Entity.User.UserRole.Seller
+        =>RegisteredSeller, Entity.User.UserRole.Customer => RegisteredCustomer,_=> throw new ArgumentOutOfRangeException(nameof(Role), Role.ToString(), "Satıcı kaydı yapılamıyor.")}, IsImageEdited);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Profiliniz Güncellendi",
             Title = "İşlem Başarılı", Redirect ="refresh"

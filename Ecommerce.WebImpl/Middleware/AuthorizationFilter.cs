@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -17,6 +18,9 @@ public class AuthorizationFilter : IAuthorizationFilter
         _jwtManager = jwtManager;
     }
     public void OnAuthorization(AuthorizationFilterContext context) {
+        var auth = context.HttpContext.Features.Get<IAuthenticateResultFeature>();
+        var schmee = auth?.AuthenticateResult?.Ticket?.AuthenticationScheme;
+        if(schmee != null && schmee!= JwtBearerDefaults.AuthenticationScheme) return;
         if (context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value==null){ //if no id is present.
             var s = _cartManager.newSession(null, true);
             var tok = _jwtManager.CreateToken(s, true);
@@ -25,7 +29,7 @@ public class AuthorizationFilter : IAuthorizationFilter
             });
             var redirectUrl = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
             context.Result =
-                new RedirectResult(redirectUrl);
+                new RedirectResult(redirectUrl,false);
             return;
         }
         _jwtManager.ParsePrincipal(out var user, out var session, context.HttpContext.User);
@@ -41,6 +45,7 @@ public class AuthorizationFilter : IAuthorizationFilter
         }
         else 
             context.HttpContext.Items[nameof(Session)] = session;
+
     }
 
     public Task OnAuthorizationAsync(AuthorizationFilterContext context) {

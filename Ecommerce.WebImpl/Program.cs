@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
@@ -21,8 +22,11 @@ using Ecommerce.WebImpl.Data;
 using Ecommerce.WebImpl.Data.Identity;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
@@ -32,6 +36,7 @@ using Product = Ecommerce.Entity.Product;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = DefaultDbContext.DefaultConnectionString;
+
 builder.Services.AddDbContext<DefaultDbContext>(options =>
     options.UseSqlServer(connectionString,
             c=> {
@@ -52,13 +57,22 @@ razorPageOptions.Services.AddScoped<AuthorizationFilter>(sp =>
         sp.GetRequiredKeyedService<IJwtManager>(nameof(AuthorizationFilter))));
 razorPageOptions.AddMvcOptions(o=>o.Filters.AddService<AuthorizationFilter>());
 builder.Services.AddScoped<DbContext, DefaultDbContext>();
-builder.Services.AddKeyedSingleton<DbContext, DefaultDbContext>(nameof(DefaultDbContext));
-builder.Services.AddKeyedSingleton<DbContext, ShippingContext>(nameof(ShippingContext));
-builder.Services.AddSingleton<UserManager.HashFunction>(s => s);
+builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(DefaultDbContext));
+builder.Services.AddKeyedScoped<DbContext, ShippingContext>(nameof(ShippingContext));
+builder.Services.AddKeyedScoped<IModel>(nameof(DefaultDbContext),
+    (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
+builder.Services.AddKeyedScoped<IModel>(nameof(ShippingContext),
+    (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
+var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>().UseSqlServer(connectionString,
+        c=> {
+            c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+            c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
+        }).EnableDetailedErrors()
+    .EnableServiceProviderCaching().Options);
 
+builder.Services.AddSingleton<UserManager.HashFunction>(s => s);
 builder.Services.AddSingleton(BuildLocalizer);
-builder.Services.AddSingleton<EntityMapper.Factory>(sp=>new EntityMapper.Factory(sp.GetKeyedService<IModel>(nameof(DefaultDbContext)), sp.GetRequiredService<Localizer>()));
-builder.Services.AddSingleton<EntityMapper>(sp => sp.GetRequiredService<EntityMapper.Factory>().Create());
+
 //register BL
 var blEntities = GetEntityTypes(Assembly.GetAssembly(typeof(Cart)), "Ecommerce.Entity").ToList();
 var blValidators = Assembly.GetAssembly(typeof(CartItemValidator)).GetTypes()
@@ -106,12 +120,30 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton(tokenValidationParameters);
 builder.Services.AddKeyedSingleton( nameof(IJwtManager), tokenValidationParameters);
 builder.Services.AddKeyedSingleton(nameof(IJwtManager), creds);
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+builder.Services.AddAuthentication(options => {
+        options.DefaultScheme = "Cookie";
+        options.DefaultChallengeScheme = "Cookie";
+        options.DefaultSignInScheme = "Cookie";
+        options.DefaultAuthenticateScheme ="Cookie";
+    }).AddCookie("Cookie", options => {
+        options.Cookie.SameSite = SameSiteMode.Lax; // Not Strict!
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // For dev
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Login?handler=logout";
+        options.Events.OnRedirectToReturnUrl = f => {
+            Console.WriteLine("Cookie redirects to return url: " + f.RedirectUri);
+            return Task.CompletedTask;
+        };
+        options.Events.OnSigningIn = c => {
+            Console.WriteLine("Signing in Cookie auth" + c.Principal?.Identity?.Name);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToLogin = f => {
+            Debug.WriteLine("Cookie redirects to login: " + f.RedirectUri);
+            return Task.CompletedTask;
+        };
     })
-    .AddJwtBearer(options => {
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,options => {
         options.Events = new JwtBearerEvents(){
             OnMessageReceived = context => {
                 if (!context.Request.Cookies.TryGetValue(JwtBearerDefaults.AuthenticationScheme, out var cookie))
@@ -120,31 +152,38 @@ builder.Services.AddAuthentication(options =>
                 return Task.CompletedTask;
             },
         };
+        options.ForwardSignIn = "Cookie";
         options.TokenValidationParameters = tokenValidationParameters;
+    })
+    .AddGoogle(nameof(Google), cb => {
+        var googleConf = builder.Configuration.GetSection("Oauth").GetSection("Google");
+        cb.ClientId = googleConf["ClientId"] ?? throw new ArgumentException("Missing client ID");
+        cb.ClientSecret = googleConf["ClientSecret"] ?? throw new ArgumentException("Missing client secret");
+        cb.CallbackPath = "/Account/Oauth/Google";
+        cb.AccessType = "online";
+        // cb.Events.OnRedirectToAuthorizationEndpoint = f => {
+        //     Debug.WriteLine("Google redirects: " + f.RedirectUri);
+        //     return Task.CompletedTask;
+        // };
+        cb.Events.OnCreatingTicket = f=> {
+            Debug.WriteLine("Google ticket created: " + f.Identity?.Name);
+            return Task.CompletedTask;
+        };
+        cb.AccessDeniedPath = "/Account/Unauthorized";
+        cb.ClaimActions.MapJsonKey("urn:google:picture", "picture", "url");
+        cb.ClaimActions.MapJsonKey(ClaimTypes.Name, "name", "string" );
+        cb.ClaimActions.MapJsonKey(ClaimTypes.Email, "email", "string" );
+        cb.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "sub", "string");
+        cb.Scope.Add("openid");
+        cb.Scope.Add("https://www.googleapis.com/auth/userinfo.email");
+        cb.Scope.Add("https://www.googleapis.com/auth/userinfo.profile");
+        cb.SaveTokens = true;
     });
+var sKey = builder.Configuration.GetSection("Oauth").GetSection("Google")["StateKey"] ?? throw new ArgumentException("Missing state encryption key");
+builder.Services.AddKeyedSingleton<string>("GoogleStateKey", sKey);
 object lockobj = new();
-builder.Services.AddSingleton<StaffBag>(sp => {
-    lock (lockobj){
-        return new StaffBag(sp
-            .GetRequiredKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Staff>().AsNoTracking()
-            .Include(s => s.PermissionClaims).ToArray());    
-    }
-});
-builder.Services.AddSingleton<IDictionary<uint,Category>>(sp => {
-    IDictionary<uint, Category> d;
-    lock (lockobj){
-        d = new ConcurrentDictionary<uint, Category>( sp.GetKeyedService<DbContext>(nameof(DefaultDbContext)).Set<Category>().AsNoTracking()
-            .Include(c=>c.CategoryProperties).ToDictionary(c => c.Id, c => c));
-    }
-    foreach (var category in d.Values){
-        if (category.ParentId != null){
-            var p = d[category.ParentId.Value];
-            p.Children.Add(category);
-            category.Parent = p;
-        }
-    }
-    return d;
-});
+builder.Services.AddSingleton<StaffBag>(GetStaves());
+builder.Services.AddSingleton<IDictionary<uint,Category>>( GetCategories());
 var mailConfig = builder.Configuration.GetSection("Mail");
 builder.Services.AddSingleton<IMailService, SMTPService>(_ => new SMTPService(mailConfig["Server"] ?? throw new ArgumentNullException(),
     int.Parse(mailConfig["Port"] ?? throw new ArgumentNullException()), mailConfig["Username"] ?? throw new ArgumentNullException(), mailConfig["Password"] ?? throw new ArgumentNullException()));
@@ -153,13 +192,14 @@ builder.Services.AddAuthorization(options => {
     options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(Staff), policy=> policy.RequireRole(nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(User), p=>p.RequireAssertion(f=>f.User.HasClaim(c=>c.Type == ClaimTypes.Role)));
-    options.DefaultPolicy = //anonymous
-        new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-            .RequireAuthenticatedUser().Build();
+    // options.DefaultPolicy = //anonymous
+    //     new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+    //         .RequireAuthenticatedUser().Build();
 });
 StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"] ?? throw new KeyNotFoundException("Stripe Secret Key not found in configuration.");
 // builder.Services.AddScoped<SessionMiddleware>();
 Environment.SetEnvironmentVariable("STRIPE_PK",builder.Configuration.GetSection("Stripe")["PublishableKey"]?? throw new KeyNotFoundException("Stripe Publishable Key not found in configuration."));
+blContext.Dispose();
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.MapHub<NotificationHub>("/notifications", options => {
@@ -194,6 +234,30 @@ app.MapRazorPages()
 app.UseMiddleware<GlobalExceptionHandler>();
 // app.UseMiddleware<SessionMiddleware>();
 app.Run();
+return;
+
+StaffBag GetStaves() {
+    lock (lockobj){
+        return new StaffBag(blContext.Set<Staff>().AsNoTracking()
+            .Include(s => s.PermissionClaims).ToArray());
+    }
+}
+
+IDictionary<uint, Category> GetCategories() {
+    IDictionary<uint, Category> d;
+    lock (lockobj){
+        d = new ConcurrentDictionary<uint, Category>( blContext.Set<Category>().AsNoTracking()
+            .Include(c=>c.CategoryProperties).ToDictionary(c => c.Id, c => c));
+    }
+    foreach (var category in d.Values){
+        if (category.ParentId != null){
+            var p = d[category.ParentId.Value];
+            p.Children.Add(category);
+            category.Parent = p;
+        }
+    }
+    return d;
+}
 
 Localizer BuildLocalizer(IServiceProvider sp) {
     return new Localizer.Builder()
@@ -256,8 +320,6 @@ public class DependencyRegisterer(
     private void CreateManagerDeps(string serviceKey) {
         builder.Services.AddKeyedScoped(typeof(DbContext),serviceKey, contextType);
         builder.Services.AddScoped(typeof(DbContext), contextType);
-        builder.Services.AddKeyedSingleton<IModel>(contextType.Name, (sp, k) =>
-            sp.GetRequiredKeyedService<DbContext>(k).Model);
         builder.Services.AddSingleton<IModel>(sp => ((DbContext)sp.GetRequiredService(contextType)).Model);
         //Validators
         foreach (var validatorType in validators){

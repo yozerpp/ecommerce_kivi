@@ -12,6 +12,8 @@ public interface IReviewManager
         Session? session = null,
         bool includeComments = false, bool includeSeller = true);
 
+    public ReviewComment? GetCommentTree(ulong commentId, bool includeChildren, bool includeParent,
+        bool includeAggregates = true);
     public Dictionary<ulong, int> GetUserVotesBatch(Session session, User? customer, ICollection<ulong>? reviewIds,
         ICollection<ulong>? commentIds);
     ProductReview LeaveReview( Session session, ProductReview review);

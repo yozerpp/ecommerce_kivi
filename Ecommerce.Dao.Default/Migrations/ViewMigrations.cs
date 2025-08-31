@@ -103,13 +103,12 @@ public static class ViewMigrations
                 COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) as {nameof(CartAggregates.BasePrice)},
                 COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.DiscountedPrice)},
                 COALESCE(SUM(ca.{nameof(CartAggregates.ItemCount)}), 0) as {nameof(CartAggregates.ItemCount)},
-                COALESCE(SUM(ci.{nameof(CartItemAggregates.CouponDiscountedPrice)}),SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.CouponDiscountedPrice)},
+                COALESCE(SUM(cac.{nameof(CartAggregates.CouponDiscountedPrice)}),SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.CouponDiscountedPrice)},
                 COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) - COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) as {nameof(CartAggregates.DiscountAmount)},
                 COALESCE(SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0) - COALESCE(SUM(cac.{nameof(CartAggregates.CouponDiscountedPrice)}),0.0) as {nameof(CartAggregates.CouponDiscountAmount)},
                 COALESCE((COALESCE(SUM(ca.{nameof(CartAggregates.BasePrice)}),0.0) - COALESCE(SUM(cac.{nameof(CartAggregates.CouponDiscountedPrice)}), SUM(ca.{nameof(CartAggregates.DiscountedPrice)}),0.0))/NULLIF(SUM(ca.{nameof(CartAggregates.BasePrice)}), 0),0)*100 as  {nameof(CartAggregates.TotalDiscountPercentage)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Cart)}] c
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}] ca ON ca.{nameof(CartAggregates.CartId)}=c.{nameof(Cart.Id)}
-            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartItemAggregates)}] ci ON ci.{nameof(CartItemAggregates.CartId)} = c.{nameof(Cart.Id)} 
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(CartAggregates)}_{nameof(Coupon)}] cac ON cac.{nameof(CartAggregates.CartId)}=c.{nameof(Cart.Id)}
             GROUP BY c.{nameof(Cart.Id)}
         ");
@@ -146,9 +145,9 @@ public static class ViewMigrations
             SELECT 
                 o.{nameof(ProductOffer.ProductId)},
                 o.{nameof(ProductOffer.SellerId)},
-                COALESCE(SUM(orev.{nameof(OfferStats.RatingTotal)}) / NULLIF(SUM(orev.{nameof(OfferStats.ReviewCount)}), 0),0.0) AS {nameof(OfferStats.ReviewAverage)},
                 COALESCE(SUM(orev.{nameof(OfferStats.ReviewCount)}), 0) AS {nameof(OfferStats.ReviewCount)},
                 COALESCE(SUM(orev.{nameof(OfferStats.RatingTotal)}), 0.0) AS {nameof(OfferStats.RatingTotal)},
+                COALESCE(SUM(orev.{nameof(OfferStats.RatingTotal)}) / NULLIF(SUM(orev.{nameof(OfferStats.ReviewCount)}),0),0.0) AS {nameof(OfferStats.ReviewAverage)},
                 COALESCE(SUM(oref.{nameof(OfferStats.RefundCount)}), 0) AS {nameof(OfferStats.RefundCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(ProductOffer)}] o
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OfferStats)}_{nameof(ProductReview)}] orev ON orev.{nameof(OfferStats.ProductId)} = o.{nameof(ProductOffer.ProductId)} AND orev.{nameof(OfferStats.SellerId)} = o.{nameof(ProductOffer.SellerId)}
@@ -270,6 +269,26 @@ public static class ViewMigrations
         DoProductRatingStats(migrationBuilder,2,nameof(ProductRatingStats.TwoStarCount));
         DoProductRatingStats(migrationBuilder,1,nameof(ProductRatingStats.OneStarCount));
         DoProductRatingStats(migrationBuilder,0,nameof(ProductRatingStats.ZeroStarCount));
+        migrationBuilder.Sql($@"
+            CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}] WITH SCHEMABINDING AS
+            SELECT 
+                p.Id as {nameof(ProductRatingStats.ProductId)},
+                COUNT_BIG(*) as {nameof(ProductRatingStats.ReviewCount)},
+                COALESCE(SUM(pr5s.{nameof(ProductRatingStats.FiveStarCount)}),0) as {nameof(ProductRatingStats.FiveStarCount)},
+                COALESCE(SUM(pr4s.{nameof(ProductRatingStats.FourStarCount)}),0) as {nameof(ProductRatingStats.FourStarCount)},
+                COALESCE(SUM(pr3s.{nameof(ProductRatingStats.ThreeStarCount)}),0) as {nameof(ProductRatingStats.ThreeStarCount)},
+                COALESCE(SUM(pr2s.{nameof(ProductRatingStats.TwoStarCount)}),0) as {nameof(ProductRatingStats.TwoStarCount)},
+                COALESCE(SUM(pr1s.{nameof(ProductRatingStats.OneStarCount)}),0) as {nameof(ProductRatingStats.OneStarCount)},
+                COALESCE(SUM(pr0s.{nameof(ProductRatingStats.ZeroStarCount)}),0) as {nameof(ProductRatingStats.ZeroStarCount)}
+            FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Product)}] p
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FiveStarCount)}] pr5s ON p.Id = pr5s.{nameof(ProductRatingStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FourStarCount)}] pr4s ON p.Id = pr4s.{nameof(ProductRatingStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ThreeStarCount)}] pr3s ON p.Id = pr3s.{nameof(ProductRatingStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.TwoStarCount)}] pr2s ON p.Id = pr2s.{nameof(ProductRatingStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.OneStarCount)}] pr1s ON p.Id = pr1s.{nameof(ProductRatingStats.ProductId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ZeroStarCount)}] pr0s ON p.Id = pr0s.{nameof(ProductRatingStats.ProductId)}
+            GROUP BY p.Id
+        ");
     }
 
     private static void DoProductRatingStats(MigrationBuilder migrationBuilder,int cond, string name) {
@@ -318,14 +337,14 @@ public static class ViewMigrations
                 COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) as {nameof(OrderAggregates.BasePrice)},
                 COALESCE(SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.DiscountedPrice)},
                 COALESCE(SUM(oa.{nameof(OrderAggregates.ItemCount)}), 0) as {nameof(OrderAggregates.ItemCount)},
-                COALESCE(SUM(oi.{nameof(OrderItemAggregates.CouponDiscountedPrice)}),SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.CouponDiscountedPrice)},
+                COALESCE(SUM(oac.{nameof(OrderItemAggregates.CouponDiscountedPrice)}),SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.CouponDiscountedPrice)},
                 COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) - COALESCE(SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.DiscountAmount)},
-                COALESCE(SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) - COALESCE(SUM(oi.{nameof(OrderAggregates.CouponDiscountedPrice)}),0.0) as {nameof(OrderAggregates.CouponDiscountAmount)},
-                COALESCE((COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) - COALESCE(SUM(oi.{nameof(OrderAggregates.CouponDiscountedPrice)}), SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0))/NULLIF(SUM(oa.{nameof(OrderAggregates.BasePrice)}), 0),0)*100 as  {nameof(OrderAggregates.TotalDiscountPercentage)},
-                COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) - COALESCE(SUM(oi.{nameof(OrderAggregates.CouponDiscountedPrice)}), SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.TotalDiscountAmount)}
+                COALESCE(SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) - COALESCE(SUM(oac.{nameof(OrderAggregates.CouponDiscountedPrice)}),0.0) as {nameof(OrderAggregates.CouponDiscountAmount)},
+                COALESCE((COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) - COALESCE(SUM(oac.{nameof(OrderAggregates.CouponDiscountedPrice)}), SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0))/NULLIF(SUM(oa.{nameof(OrderAggregates.BasePrice)}), 0),0)*100 as  {nameof(OrderAggregates.TotalDiscountPercentage)},
+                COALESCE(SUM(oa.{nameof(OrderAggregates.BasePrice)}),0.0) - COALESCE(SUM(oac.{nameof(OrderAggregates.CouponDiscountedPrice)}), SUM(oa.{nameof(OrderAggregates.DiscountedPrice)}),0.0) as {nameof(OrderAggregates.TotalDiscountAmount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(Order)}] o
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}] oa ON oa.{nameof(OrderAggregates.OrderId)}=o.{nameof(Order.Id)}
-            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderItemAggregates)}] oi ON oi.{nameof(OrderItemAggregates.OrderId)} = o.{nameof(Order.Id)} 
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(OrderAggregates)}_{nameof(Coupon)}] oac ON oac.{nameof(OrderAggregates.OrderId)}=o.{nameof(Order.Id)}
             GROUP BY o.{nameof(Order.Id)}
         ");
     }
@@ -786,6 +805,9 @@ public static class ViewMigrations
         migrationBuilder.Sql($@"
             DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductStats)}_{nameof(ProductOffer)}]
         ");
+        migrationBuilder.Sql($@"
+            DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}]
+        ");
         dropProductRatingStatsView(nameof(ProductRatingStats.FiveStarCount));
         dropProductRatingStatsView(nameof(ProductRatingStats.FourStarCount));
         dropProductRatingStatsView(nameof(ProductRatingStats.ThreeStarCount));
@@ -799,6 +821,7 @@ public static class ViewMigrations
                 DROP VIEW IF EXISTS [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}_{name}]
             ");
         }
+        
         // Order Aggregates
         migrationBuilder.DropIndex(
             name: $"IX_{nameof(OrderAggregates)}",

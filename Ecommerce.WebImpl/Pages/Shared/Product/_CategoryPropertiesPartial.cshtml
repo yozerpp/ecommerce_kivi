@@ -21,6 +21,8 @@
                         const i = el.lastElementChild;
                         i.addEventListener('change', _ => {
                             let val;
+                            @if(Model.Mode==_CategoryPropertiesPartial.DisplayMode.Create){
+                            <text>
                             switch (el.dataset.proptype) {
                                 case "slider":
                                     val = {min: i._min, max: i._max};
@@ -31,6 +33,8 @@
                                 default:
                                     val = i.value;
                             }
+                            </text>
+                            } else {<text>val=i.value;</text>}
                             parent._props.set(parseInt(el.dataset.propertyid), val);
                         });
                     })
@@ -41,32 +45,51 @@
                     </text>
                     }
                     }
+                    parent.querySelectorAll('input').forEach(i=>{
+                        i.addEventListener('change', e=>{
+                            if(!i.reportValidity()){
+                                e.preventDefault();
+                                e.stopImmediatePropagation();
+                                i.classList.add('is-invalid');
+                                i.value = i._oldValue ??null;
+                            }
+                            else {
+                                i._oldValue=i.value;
+                                i.classList.remove('is-invalid');
+                            }
+                        })
+                    })
                     console.log('loaded @(nameof(_CategoryPropertiesPartial)) from ' + e.type);
                 }
             })(document.currentScript)
             //# sourceURL=CategoryPropertiesPartial.js
         </script>
     <div class="row-cols-4">
+        @if (Model.Properties.Count == 0){
+            <div class="alert alert-light">
+                <h3 class="fs-6 mt-1 fw-bold">@(Model.Mode==_CategoryPropertiesPartial.DisplayMode.Filter?"Bu kategoriye ait özellik bulunmamaktadır.":"Bu ürünün kategorisi için özellik belirtilmemiş.")</h3>
+            </div>
+        }
         @foreach (var property in Model.Properties){
-        var metadata = property.CategoryProperty;
-        <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-flex justify-content-between align-items-center py-2 px-3 mb-2 bg-light rounded border":"col g-2")">
-            <label class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"fs-6 fw-semibold text-muted mb-0":"fs-5 fw-bold")">@metadata.PropertyName: </label>
-            @if (metadata.IsNumber){
+            var metadata = property.CategoryProperty;
+            <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-flex justify-content-between align-items-center py-2 px-3 mb-2 bg-light rounded border" : "col g-2")">
+                <label class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "fs-6 fw-semibold text-muted mb-0" : "fs-5 fw-bold")">@metadata.PropertyName: </label>
+                @if (metadata.IsNumber){
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary fs-6">@(property.Value)</span>
-                        @if (Model.Editable){
-                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                Target="next"
-                            })
-                            <div data-proptype="number" data-propertyid="@metadata.Id" class="col-auto propertyInput d-none">
-                                <input type="number" min="@(metadata.MinValue??-100000)" max="@(metadata.MaxValue??1000000)"/>
-                            </div>
+                            @if (Model.Editable){
+                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                    Target = "next"
+                                })
+                                <div data-proptype="number" data-propertyid="@metadata.Id" class="col-auto propertyInput d-none">
+                                    <input type="number" min="@(metadata.MinValue ?? -100000)" max="@(metadata.MaxValue ?? 1000000)"/>
+                                </div>
                             }
                         </div>
                     }
                     else{
-                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-none":"")">
+                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
                             <script>
                         ((s)=>{
                             const parent=  s.closest('.partial-parent');
@@ -85,52 +108,52 @@
                     </script>
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = metadata.MaxValue ?? 100000000m, MinValue = metadata.MinValue ?? 0m
-                            })    
-                        </div>    
+                            })
+                        </div>
                     }
-                }else if (metadata.EnumValues != null){
+                }
+                else if (metadata.EnumValues != null){
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-success fs-6">@(property.Value)</span>
-                        @if(Model.Editable){ 
-                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){ 
-                                Target = "next" ,
-                                OnClick = "event.currentTarget.nextElementSibling.classList.toggle('d-none');return;"
+                            @if (Model.Editable){
+                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                    Target = "next",
 
-                            })
-                            <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
-                                <select>
-                                    <option selected>Seçiniz</option>
-                                    @{ 
-                                        var vals = metadata.EnumValues.Split('|');
-                                        if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter)
-                                            vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
-                                        var i = 0;
-                                    }
-                                    @foreach (var val in vals){
-                                        <option value="@val">@val</option>
-                                    }
-                                </select>
-                            </div>
+                                })
+                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
+                                    <select style="min-width: 0;" class="form-select-sm">
+                                        <option selected>Seçiniz</option>
+                                        @{
+                                            var vals = metadata.EnumValues.Split('|');
+                                            if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter)
+                                                vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
+                                            var i = 0;
+                                        }
+                                        @foreach (var val in vals){
+                                            <option value="@val">@val</option>
+                                        }
+                                    </select>
+                                </div>
                             }
                         </div>
-                    }   
-                }else{
-                    if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-info text-dark fs-6">@property.Value</span>
-                        @if (Model.Editable){
-                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                Target = "next",
-                                OnClick = "event.currentTarget.nextElementSibling.classList.toggle('d-none');return;"
-                            })
-                        }
-                        </div>
                     }
-                    <div data-proptype="text" data-propertyid="@metadata.Id" class="propertyInput col-auto @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View?"d-none":"")">
-                        <input id="@(Model.InputNamePrefix)-@(metadata.PropertyName)" 
-                               name="@(Model.InputNamePrefix)[@metadata.PropertyName]" 
-                               type="@(metadata.IsNumber ? $"number" : $"text")"/>
+                }
+                else{
+                    <div class="d-flex align-items-center gap-2">
+                        @if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
+                            <span class="badge bg-info text-dark fs-6">@property.Value</span>
+                            if (Model.Editable){
+                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                    Target = "next",
+                                })
+                            }
+                        }
+                        <div data-proptype="text" data-propertyid="@metadata.Id" class="propertyInput col-auto @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
+                            <input class="form-control-sm" style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
+                                   name="@(Model.InputNamePrefix)[@metadata.PropertyName]"
+                                   type="@(metadata.IsNumber ? $"number" : $"text")"/>
+                        </div>
                     </div>
                 }
             </div>

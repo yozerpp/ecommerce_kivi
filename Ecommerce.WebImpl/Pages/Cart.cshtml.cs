@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Pages.Seller;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.CartPartials;
@@ -14,7 +15,7 @@ public class Cart : BaseModel
 {
     private readonly ICartManager _cartManager;
     private readonly IProductManager _productManager;
-    public Cart(ICartManager cartManager, IProductManager productManager) {
+    public Cart(INotificationService notificationService, ICartManager cartManager, IProductManager productManager): base(notificationService) {
         _cartManager = cartManager;
         _productManager = productManager;
     }
@@ -67,7 +68,7 @@ public class Cart : BaseModel
             Partial("Shared/CartPartials/"+nameof(_CartItemsPartial), new _CartItemsPartial(){ViewedCart= GetCart()})
             :Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Ürüne kupon eklendi", Title = "İşlem Başarılı",
-            Redirect = "/Cart", TimeOut = 1500
+            Redirect = "refresh", TimeOut = 1500
         });
     }
 
@@ -85,8 +86,9 @@ public class Cart : BaseModel
     public IActionResult OnGetPartial() {
         return Partial("Shared/CartPartials/"+nameof(_CartItemsPartial), new _CartItemsPartial(){ViewedCart= GetCart()});
     }
-    public PartialViewResult OnGetCoupon() {
+    public IActionResult OnGetCoupon() {
         var coupons= _cartManager.GetAvailableCoupons(CurrentSession);
+        if (coupons.Count == 0) return new NoContentResult();
         return Partial("Shared/"+nameof(_CouponsPartial), new _CouponsPartial(){Coupons = coupons, Editable = false, ShowSeller = true});
     }
     public IActionResult OnPost() {

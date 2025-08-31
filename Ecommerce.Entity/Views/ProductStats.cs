@@ -15,12 +15,12 @@ public class ProductStats
 }
 public class ProductRatingStats
 {
-    public uint? ProductId { get; set; }
-    public uint? ReviewCount { get; set; }
-    public uint? FiveStarCount { get; set; }
-    public uint? FourStarCount { get; set; }
-    public uint? ThreeStarCount { get; set; }
-    public uint? TwoStarCount { get; set; }
-    public uint? OneStarCount { get; set; }
-    public uint? ZeroStarCount { get; set; }
+    public uint ProductId { get; set; }
+    public uint ReviewCount { get; set; }
+    public uint FiveStarCount { get; set; }
+    public uint FourStarCount { get; set; }
+    public uint ThreeStarCount { get; set; }
+    public uint TwoStarCount { get; set; }
+    public uint OneStarCount { get; set; }
+    public uint ZeroStarCount { get; set; }
 }

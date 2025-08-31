@@ -1,22 +1,21 @@
 ﻿@model _EditablePartial
 <a class="col-auto hover-grow hover-darken edit-control text-decoration-none text-secondary mx-3" href="javascript:void(0);" onclick="
-    @foreach (var target in Model.Target.Split(',')){
-        <text>
+    @foreach (var target in Model.Target.Split(',')){ <text>
             {
-                @(Model.OnClick??"");
+                @(Model.OnClick ?? "");
                 const _t= 
-                @if (Model.Target == "previous"){ <text>event.currentTarget.previousElementSibling;</text> }
-                else if (Model.Target == "next"){ <text>event.currentTarget.nextElementSibling;</text> }
-                else{ <text>document.getElementById('@(target)');</text> }
+                @if (Model.Target == "previous"){ <text>event.currentTarget.previousElementSibling;</text> }else if (Model.Target == "next"){ <text>event.currentTarget.nextElementSibling;</text> }else if (Model.Target.StartsWith("closest:")){ <text>event.currentTarget.closest('@(Model.Target.Split(":", StringSplitOptions.RemoveEmptyEntries).Last().Trim())');</text> }else{ <text>document.getElementById('@(target)');</text> }
                 _t.setAttribute('contenteditable',true);
+                _t.dispatchEvent(new Event('editChanged', {bubbles:false, cancelable:true}));
                 _t.classList.remove('d-none');
+                if(_t.classList.contains('editable-container')) return;
                 _t.onkeydown=(e)=>{if(e.keyCode === 13)e.currentTarget.blur();}
                 if(document.activeElement === _t)
                     return;
                 _t.focus();
             }
-        </text>
-    }
+        </text> }
     ">
+    <script>((s)=>{document.addEventListener('editControl',e=>s.parentElement.classList.toggle('edit-control'))})(document.currentScript)</script>
     <i class="bi bi-pencil-fill"></i>
 </a>

@@ -18,7 +18,7 @@
 }
 @await Html.PartialAsync("Shared/Product/_ProductMainPartial", new _ProductMainPartial(){
     Categories = Model.Categories,
-    Editable = editable, Favorites = Model.Favorites, SellerOffer = sellersOffer, ViewedProduct = Model.ViewedProduct,
+    Editable = editable, Favorites = Model.Favorites, SellerOffer = sellersOffer, ViewedProduct = Model.ViewedProduct,ViewingSellerId = Model.CurrentSeller?.Id
 })
 @section Scripts{
 

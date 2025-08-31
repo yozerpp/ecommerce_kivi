@@ -3,6 +3,24 @@
 
 @if (Model.Coupons.Count > 0){
     <ul class="d-flex list-unstyled gap-2 overflow-x-scroll">
+        <script>((s)=>{
+            document.addEventListener('DOMContentLoaded', load);
+            s.parentElement.addEventListener('htmx:load', load);
+            function load(e){
+                if(e.type === 'htmx:load') e.stopPropagation();
+                const parent = s.parentElement;
+                parent.querySelectorAll('button.btn-link').forEach(t=>{
+                    const tt = new bootstrap.Tooltip(t, {trigger: 'manual' , title: 'Panoya Kopyalandı', placement: 'top'});
+                    t.addEventListener('click',event=>{
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                        navigator.clipboard.writeText(event.currentTarget.previousElementSibling.innerText);
+                        tt.show();
+                        setTimeout(()=>tt.hide(), 4000);
+                    })
+                })
+            }
+        })(document.currentScript)</script>
         @foreach (var coupon in Model.Coupons){
             <li class="px-2 py-3">
                 <div class="card">
@@ -10,7 +28,7 @@
                         <div class="d-flex gap-3">
                             <div class="d-inline-flex gap-2">
                                 <p class="fw-bold card-title fs-5 text-wrap">@coupon.Id</p>
-                                <button onclick="navigator.clipboard.writeText(event.currentTarget.previousElementSibling.innerText);" data-bs-toggle="tooltip" data-bs-placement="top" title="Panoya Kopyala" class="btn btn-link text-decoration-none p-0 align-items-center justify-content-center">
+                                <button  data-bs-toggle="tooltip" data-bs-placement="top" class="btn btn-link text-decoration-none p-0 align-items-center justify-content-center">
                                     <i class="bi m-0 bi-clipboard text-black bg-light"></i>
                                 </button>    
                             </div>

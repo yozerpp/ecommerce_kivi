@@ -10,7 +10,7 @@ public static class Utils
     
     public static string GetImageUrlOrDefault(string? imageUrl, bool isProductImage=true, string mimeType = "image/jpeg") {
         return !string.IsNullOrEmpty(imageUrl)
-            ? (!imageUrl.StartsWith("data:") ? "data:" + mimeType + ";base64," + imageUrl : imageUrl)
+            ? (!imageUrl.StartsWith("data:") && !imageUrl.StartsWith("http:") && !imageUrl.StartsWith("https:") ? "data:" + mimeType + ";base64," + imageUrl : imageUrl)
             : (isProductImage?"/default.jpg":"/user-icon.svg");
     }
     public static string? GetRelativeTime(DateTime dateTime) {

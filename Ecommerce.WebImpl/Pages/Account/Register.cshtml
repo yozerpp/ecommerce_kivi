@@ -1,44 +1,15 @@
 ﻿@page
-@using Ecommerce.Entity
-@using Ecommerce.WebImpl.Pages.Shared
-@model Register
-@inject EntityMapper EntityMapper
-@{
-    ViewData["Title"] = "Kaydol";
-}
+@model Ecommerce.WebImpl.Pages.Account.Register
 
-<!DOCTYPE html>
 
-<html lang="tr">
-<head>
-    <title>Kayıt Ol</title>
-</head>
-<body>
-<div class="container text-center">
-    <div>
-        <h2>Kullanıcı Hesabı Aç</h2>
-        <div class="tab-content mt-2" id="formsContent">
-            @{ var first = true;}
-            @foreach(var userType in new[]{typeof(Customer), typeof(Entity.Seller), typeof(Staff)}){
-                <div class="tab-pane fade show @(first?"active":"")" id="@(userType.Name + "Form")" role="tabpanel">
-                    <form asp-page="/Account/Register" asp-page-handler=@userType.Name class="m-3">
-                        @(EntityMapper.GetFormInputs("Form"+userType.Name, userType, ["Email"], ["Active","FavoredCustomers","FavoriteSellers", "FavoriteProducts"]))
-                        <button type="submit" class="btn-primary">Kayıt Ol</button>
-                    </form>
-                </div>
-                first = false;
-            }
+
+<div class="container">
+    <div class="card card-body flex-grow-1 shadow border-0 rounded-4">
+        @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
+            Editable = true, PostUrl = "/Account/Register", User = Model.RegisteringUser,Registering = true,
+        })
+        <div class="card-footer d-flex justify-content-center align-items-center">
+            <button class="text-success">Kaydol</button>
         </div>
-        <ul class="nav nav-tabs" id="forms" role="tablist">
-            @{ first = true;}
-            @foreach (var userType in new[]{ typeof(Customer), typeof(Entity.Seller), typeof(Staff) }){
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link @(first ? "active" : "")" id="tab@(userType.Name)-tab" data-bs-toggle="tab" data-bs-target="#@(userType.Name + "Form")" type="button" role="tab">@userType.Name Hesabı Aç</button>
-                </li>
-                first = false;
-            }
-        </ul>
     </div>
 </div>
-</body>
-</html>

@@ -9,7 +9,7 @@
         cur = Model.Item2.TryGetValue(cur.ParentId??0,out var val)?val:null;
     }
 }
-<div class="d-flex flex-wrap justify-content-center gap-1">
+<div class="d-flex flex-nowrap w-100 justify-content-center gap-1">
     @if (hierarchy.Count > 3){
         hierarchy = hierarchy.Take(3).Reverse().ToList();
         <div class="d-flex">

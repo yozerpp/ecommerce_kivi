@@ -1,59 +1,67 @@
 @model _DimensionsPartial
-<div class="d-flex gap-3 my-2 dimensions-container" 
+<div class="d-flex gap-3 dimensions editable-container my-2 partial-parent" 
      data-weight="@Model.Dimensions.Weight" 
      data-width="@Model.Dimensions.Width" 
      data-height="@Model.Dimensions.Height" 
      data-depth="@Model.Dimensions.Depth">
-    
+    <script>
+    ((script) => {
+        const parent = script.parentElement;
+        document.addEventListener("DOMContentLoaded", load)
+        parent.addEventListener('htmx:load', load);
+        function load(e){
+            if(e.type==='htmx:load') {
+                e.stopPropagation();
+                parent.lastElementChild.dispatchEvent(new Event("htmx:load", {bubbles:false, cancelable: true}));
+            } 
+            const fields = parent.querySelectorAll('span[data-field]');
+            parent.addEventListener('contentChanged', (e) => {
+                if (e.target.classList.contains('editable-field')) {
+                    const field = e.target.dataset.field;
+                    const value = parseFloat(e.target.textContent.replace(/[^\d.]/g, ''));
+
+                    if (!isNaN(value)) {
+                        parent[field] = value;
+                        parent.dataset[field] = value;
+
+                        // Update display with proper formatting
+                        if (field === 'weight') {
+                            e.target.textContent = value + ' kg';
+                        } else {
+                            e.target.textContent = value;
+                        }
+                    }
+                }
+            });
+            parent.addEventListener('editChanged', e=>{
+                fields.forEach(f=>f.setAttribute('contenteditable', (!(f.getAttribute('contenteditable') ==='true')).toString()))
+            })    
+            console.log("initialized dimensions partial form " + e.type );
+        }
+        //# sourceURL=@(nameof(_DimensionsPartial)).js
+    })(document.currentScript);
+</script>
+
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">Ağırlık:</span>
-        <span class="badge bg-light text-dark editable-field" data-field="weight">@Model.Dimensions.Weight kg</span>
+        <div class="d-inline-flex gap-0">
+            <span class="badge bg-light text-dark editable-field" data-field="weight">@Model.Dimensions.Weight</span>
+            <span class="badge bg-light text-dark">kg</span>    
+        </div>
+        
     </div>
     
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">Boyutlar:</span>
-        <span class="badge bg-light text-dark editable-field" data-field="width">@Model.Dimensions.Width</span>×<span class="badge bg-light text-dark editable-field" data-field="height">@Model.Dimensions.Height</span>×<span class="badge bg-light text-dark editable-field" data-field="depth">@Model.Dimensions.Depth</span>
+        <span class="badge bg-light text-dark " data-field="width">@Model.Dimensions.Width</span>×<span class="badge bg-light text-dark " data-field="height">@Model.Dimensions.Height</span>×<span class="badge bg-light text-dark" data-field="depth">@Model.Dimensions.Depth</span>
         <span class="text-muted small">cm</span>
     </div>
     
     @if (Model.Editable)
     {
         @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-            Target = "dimensions-container",
-            OnClick = ""
+            Target = "closest:.partial-parent",
         })
     }
 </div>
 
-<script>
-    ((script) => {
-        const container = script.previousElementSibling;
-        
-        // Export current values to parent element
-        container.weight = parseFloat(container.dataset.weight);
-        container.width = parseFloat(container.dataset.width);
-        container.height = parseFloat(container.dataset.height);
-        container.depth = parseFloat(container.dataset.depth);
-        
-        // Handle content changes
-        container.addEventListener('contentChanged', (e) => {
-            if (e.target.classList.contains('editable-field')) {
-                const field = e.target.dataset.field;
-                const value = parseFloat(e.target.textContent.replace(/[^\d.]/g, ''));
-                
-                if (!isNaN(value)) {
-                    container[field] = value;
-                    container.dataset[field] = value;
-                    
-                    // Update display with proper formatting
-                    if (field === 'weight') {
-                        e.target.textContent = value + ' kg';
-                    } else {
-                        e.target.textContent = value;
-                    }
-                }
-            }
-        });
-        
-    })(document.currentScript);
-</script>

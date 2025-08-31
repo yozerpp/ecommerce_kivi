@@ -17,10 +17,11 @@ public abstract class User
     public string Email { get; set; }
     [EmailAddress]
     public string NormalizedEmail { get; set; }
-    public string PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
     public uint? ProfilePictureId { get; set; }
     public Image? ProfilePicture { get; set; }
     public PhoneNumber PhoneNumber { get; set; }
+    public string? GoogleId { get; set; }
     public bool Active { get; set; }
     // public ICollection<Request> Requests { get; set; }
     public ICollection<Notification> Notifications { get; set; }

@@ -39,6 +39,28 @@
                 function getImagePrefix(i){
                     return '@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Images))['+ i + ']';
                 }
+                let _i=0;
+                const _f = document.getElementById('editForm');
+                const _opts =document.getElementById('offerOptions').firstElementChild;
+                if(_opts?._newOptions) {
+                    for (let [k, v] of _opts._newOptions) {
+                        const pfx = '@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Options))[' + _i++ + '].';
+                        const idInput = createInput(
+                            pfx + (isNaN(parseInt(k)) ? '@(nameof(ProductOption.Key))' : '@(nameof(ProductOption.CategoryPropertyId))'),
+                            k, "hidden");
+                        const valueInput = createInput(pfx + '@(nameof(ProductOption.Value))', v, "hidden");
+                        _f.insertBefore(valueInput, null);
+                        _f.insertBefore(idInput, valueInput);
+                    }
+                }
+                if(_opts?._allOptions){
+                for (let oid of _opts._allOptions){
+                    const pfx = '@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Options))[' + _i++ + '].';
+                    const inp = createInput(pfx + '@(nameof(ProductOption.Id))', oid, "hidden");
+                    _f.insertBefore(inp, null);
+                }
+                }
+
                 if(slide._edited) {
                     parent._edited = true;
                     slide._editedImages.entries().forEach((i, idx) => {
@@ -68,34 +90,24 @@
                 document.getElementById('sentImagesInput').value = slide._addedImages.length > 0 ? slide._addedImages.join(';;') : null;
                 document.getElementById('editedInput').value = parent._productEdited.toString();
                 document.getElementById('offerEditedInput').value = parent._offerEdited.toString();
-                document.getElementById('priceInput').value = document.getElementById('priceValue').value;
+                document.getElementById('priceInput').value = document.getElementById('priceValue').value.replaceAll('.',',');
                 document.getElementById('stockInput').value = document.getElementById('stockValue').value;
-                document.getElementById('discountInput').value = document.getElementById('discountValue').value;
+                document.getElementById('discountInput').value = document.getElementById('discountValue').value.replaceAll('.', ',');
                 const dims = document.getElementById('properties').firstElementChild;
-                document.getElementById('weightInput').value = dims._weight;
-                document.getElementById('depthInput').value = dims._depth;
-                document.getElementById('heightInput').value = dims._height;
-                document.getElementById('widthInput').value = dims._width;
+                document.getElementById('weightInput').value = dims.dataset.weight;
+                document.getElementById('depthInput').value = dims.dataset.depth;
+                document.getElementById('heightInput').value = dims.dataset.height;
+                document.getElementById('widthInput').value = dims.dataset.width;
             }
             function load (e) {
                 if(e.type==='htmx:load')
                     e.stopPropagation();
                 parent._offerEdited = false;
                 parent._productEdited = false;
-                parent._editControls =  document.querySelectorAll('.edit-control');
-                document.getElementById('carousels').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
-                
                 @if (Model.Creating){
-                <text>
-                    parent._editControls.forEach(e=>e.classList.remove('edit-control'));
-                </text>
+                    <text>document.dispatchEvent(new Event('editControl', {bubbles:false, cancelable:false}));
+                    </text>
                 }
-                parent.addEventListener('editControl', e=>{
-                    e.preventDefault();parent._editControls.forEach(e=>e.classList.toggle('edit-control'));
-                })
-                parent.addEventListener('edit', e=>{
-                    e.stopPropagation();parent._productEdited=true;
-                })
                 @if (editable){
                 <text>
                     const saveButton = s.nextElementSibling.firstElementChild.firstElementChild.querySelector('button.save-button');
@@ -103,17 +115,34 @@
                         assignInputs();
                         htmx.trigger(document.getElementById('editForm'), 'submit', {bubbles:false, cancelable:true});
                     })
+                    document.addEventListener('editControl', e=>{
+                        document.getElementById('carousels').lastElementChild.classList.toggle('edit-control');
+                    })
+                    parent.addEventListener('edit', e=>{
+                        e.stopPropagation();parent._productEdited=true;
+                    })
+                    parent.addEventListener('editOffer', e=>{
+                        e.stopPropagation(); parent._offerEdited = true;
+                    })
                 </text>
                 }
-                parent.addEventListener('editOffer', e=>{
-                    e.stopPropagation(); parent._offerEdited = true;
-                })
                 if(e.type === 'htmx:load'){
+                    document.getElementById('carousels').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
+                    document.getElementById('properties').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                     document.getElementById('properties').lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                     document.getElementById('offerOptions').firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false}));
                 }
+                @if (!Model.Creating && Model.ViewingSellerId == null){
+                    <text>
                 document.getElementById('addToCartForm').addEventListener('submit', e=>{
                     e.preventDefault();
+                    const offerListErrorToolTip = new bootstrap.Tooltip(document.getElementById('offerList'), {toggle:false, trigger:'manual',customClass:'bg-danger', title:'Lütfen ürünü satın almak istediğiniz satıcıyı seçiniz.',});
+                    
+                    if(!document.getElementById('sellerIdInput').value) {
+                        e.stopImmediatePropagation();
+                        offerListErrorToolTip.show();
+                        setTimeout(()=>offerListErrorToolTip.hide(), 3000);
+                    }
                     let body ={};
                     const incr = e.currentTarget.querySelector('input[name="incr"]');
                     const q = e.currentTarget.querySelector('input[name="quantity"]');
@@ -154,8 +183,9 @@
                             document.dispatchEvent(new CartChangedEvent(q, parseInt(elt.querySelector('#sellerIdInput').value), @Model.ViewedProduct.Id));
                         }
                     })
-                    
                 })
+                </text>
+                }
                 console.log("loaded @(nameof(_ProductMainPartial)) from " + e.type)
             }
         })(document.currentScript)
@@ -166,9 +196,9 @@
             <li class="d-flex my-2 container-fluid justify-content-center">
                 <div class="row g-3">
                     @if (!Model.Creating){
-                        <button data-titles="Düzenle,İptal" data-colors="bg-danger,bg-primary" data-idx="1" onclick="const b = event.currentTarget;b.innerHTML = b.dataset.titles.split(',').at(parseInt(b.dataset.idx));b.dataset.idx = ((parseInt(b.dataset.idx) + 1) %2).toString();event.currentTarget.dispatchEvent(new Event('editControl', {cancelable:true, bubbles:true}))" class="btn btn-primary col-auto">Düzenle</button>
+                        <button data-titles="Düzenle,İptal" data-colors="bg-danger,bg-primary" data-idx="1" onclick="const b = event.currentTarget;b.nextElementSibling.classList.toggle('d-none');b.innerHTML = b.dataset.titles.split(',').at(parseInt(b.dataset.idx));b.dataset.idx = ((parseInt(b.dataset.idx) + 1) %2).toString();document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}))" class="btn btn-primary col-auto">Düzenle</button>
                     }
-                    <button type="button"  class="btn save-button btn-success edit-control col-auto" style="@(Model.Creating?"background-color: darkorange":"")">@(!Model.Creating?"Düzenlemeyi Kaydet":"İlan Ver")</button>
+                    <button type="button" class="ms-2 btn save-button btn-success @(!Model.Creating?"d-none":"") col-auto" style="@(Model.Creating?"background-color: darkorange":"")">@(!Model.Creating?"Düzenlemeyi Kaydet":"İlan Ver")</button>
                     @if (editable && Model.StaffVisiting){
                         <formF hx-post="/Product?handler=delete" method="post" hx-swap="innerHTML" hx-target="#popupResult" class="col-auto">
                             <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.ViewedProduct.Id"/>
@@ -188,20 +218,20 @@
                         FetchUrl = "/" + nameof(Product) + $"?handler=images&{nameof(Product.ProductId)}={Model.ViewedProduct.Id}&json=true"
                     })
                     @if (editable){
-                        <div class="container-fluid d-flex edit-control justify-content-center card-group gap-2">
-                    <div class="input-group">
-                        <label class="input-group-text">Stok</label>
-                        <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched ==='false'){event.currentTarget.dataset.dispatched='true';event.currentTarget.dispatchEvent(new Event('editOffer',{cancelable:true,bubbles:true}));}" class="edit-control form-control rounded-2 small" placeholder="Stok" min="0" id="stockValue" type="number" name="@(nameof(Product.EditedOffer.Stock))" value="@(Model.SellerOffer?.Stock)"/>
+                    <div class="container-fluid d-flex edit-control justify-content-center card-group gap-2">
+                        <div class="input-group">
+                            <label class="input-group-text">Stok</label>
+                            <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched ==='false'){event.currentTarget.dataset.dispatched='true';event.currentTarget.dispatchEvent(new Event('editOffer',{cancelable:true,bubbles:true}));}" class="form-control rounded-2 small" placeholder="Stok" min="0" id="stockValue" type="number" name="@(nameof(Product.EditedOffer.Stock))" value="@(Model.SellerOffer?.Stock)"/>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text">Fiyat</label>
+                            <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched === 'false') {event.currentTarget.dataset.dispatched = 'true';event.currentTarget.dispatchEvent(new Event('editOffer', {cancelable:true, bubbles:true}))}" class="form-control rounded-2 small" placeholder="Fiyat" min="0.01" step="0.01" id="priceValue" type="number" name="@(nameof(Product.EditedOffer.Price))" value="@decimal.Round(Model.SellerOffer?.Price ?? 0, 2).ToString("F1", CultureInfo.InvariantCulture)))"/>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text">İndirim</label>
+                            <input onchange="if(event.currentTarget.dataset.dispatched ==='false'){event.currentTarget.dataset.dispatched='true';event.currentTarget.dispatchEvent(new Event('editOffer', {bubbles:true, cancelable:true}))}" class="form-control rounded-2 small" placeholder="İndirim" step="0.01" min="0" id="discountValue" type="number" name="@(nameof(Product.EditedOffer.Discount))" value="@Html.Raw((((1m - Model.SellerOffer?.Discount) * 100m) ?? 0m).ToString("F1", CultureInfo.InvariantCulture))"/>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-group-text">Fiyat</label>
-                        <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched === 'false') {event.currentTarget.dataset.dispatched = 'true';event.currentTarget.dispatchEvent(new Event('editOffer', {cancelable:true, bubbles:true}))}" class="edit-control form-control rounded-2 small" placeholder="Fiyat" min="0.01" step="0.01" id="priceValue" type="number" name="@(nameof(Product.EditedOffer.Price))" value="@decimal.Round(Model.SellerOffer?.Price ?? 0, 2).ToString("F", CultureInfo.InvariantCulture)"/>
-                    </div>
-                    <div class="input-group">
-                        <label class="input-group-text">İndirim</label>
-                        <input onchange="if(event.currentTarget.dataset.dispatched ==='false'){event.currentTarget.dataset.dispatched='true';event.currentTarget.dispatchEvent(new Event('editOffer', {bubbles:true, cancelable:true}))}" class="edit-control form-control rounded-2 small" placeholder="İndirim" step="0.1" min="0" id="discountValue" type="number" name="@(nameof(Product.EditedOffer.Discount))" value="@Html.Raw((((1m - Model.SellerOffer?.Discount) * 100m) ?? 0m).ToString("F1", CultureInfo.InvariantCulture))"/>
-                    </div>
-    </div>
                     }
                 </div>
             </div>
@@ -233,7 +263,7 @@
                 @if (Model.Creating){
                     <li id="offerOptions">
                         @await Html.PartialAsync("Shared/Product/_ProductOptionsPartial", new _ProductOptionsPartial(){
-                            Editable = true, Options = [], PropertyCandidates = Model.Categories[Model.ViewedProduct.CategoryId].CategoryProperties
+                            Editable = true, Creating=true, Options = [], PropertyCandidates = Model.Categories[Model.ViewedProduct.CategoryId].CategoryProperties
                         })
                     </li>
                 }
@@ -247,6 +277,15 @@
                             s.closest('.partial-parent').addEventListener('htmx:load', load);
                             document.addEventListener('DOMContentLoaded', load);
                             function load(e){
+                                const b= document.getElementById('addToCartForm').querySelector('button[type="submit"]');
+                                const bTooltip = new bootstrap.Tooltip(b, {toggle:false,title: 'Stokta yok', customClass:'bg-secondary-subtle'});
+                                bTooltip.disable();
+                                const quantityInput = document.getElementById('addToCartForm').querySelector('input[name="quantity"]');
+                                quantityInput.addEventListener('change', _=>{
+                                    if(parseInt(quantityInput.value) <= parseInt(quantityInput.max))
+                                        quantityInput._oldVal = quantityInput.value;
+                                    else quantityInput.value = quantityInput.max ?? null;
+                                });
                                 document.getElementById('offerList').addEventListener('htmx:afterSwap', e=>{
                                     e.detail.elt.firstElementChild.style.maxHeight = (document.getElementById('carousels').offsetHeight - s.parentElement.offsetTop +s.parentElement.parentElement.offsetTop) + "px";
                                     e.detail.elt.firstElementChild.addEventListener('sellerSelected', e=>{
@@ -254,25 +293,41 @@
                                         var opts = document.getElementById('offerOptions');
                                         opts.setAttribute('hx-vals', JSON.stringify({SellerId: e.detail.sellerId}));
                                         opts.dispatchEvent(new Event('fire', {bubbles:false, cancelable:true}));
-                                        document.getElementById('sellerIdInput').value = e.detail.sellerId;
+                                        @if (!Model.Creating && Model.ViewingSellerId == null){
+                                            <text>
+                                            document.getElementById('sellerIdInput').value = e.detail.sellerId;
                                         if(e.detail.quantity){
-                                            document.getElementById('addToCartForm').querySelector('input[name="quantity"]').value = e.detail.quantity;
+                                            quantityInput.value = e.detail.quantity;
                                             document.getElementById('addToCartForm').querySelectorAll('button.existing-item').forEach(i=>i.classList.remove('d-none'));
                                         } else {
-                                            document.getElementById('addToCartForm').querySelector('input[name="quantity"]').value = null;
+                                            quantityInput.value = null;
                                             document.getElementById('addToCartForm').querySelectorAll('button.existing-item').forEach(i => i.classList.add('d-none'));
                                         }
                                         document.getElementById('nav-reviews').querySelector('.review-form')._setSellerId(e.detail.sellerId);
+                                        if(e.detail.stock === 0){
+                                            b.disabled = true;
+                                            bTooltip.enable();
+                                        }else {
+                                            quantityInput.max= e.detail.stock;
+                                            b.disabled =false;
+                                            bTooltip.disable();
+                                        }
+
+                                        </text>
+                                        }
                                     });
-                                })    
-                                const offerListErrorToolTip = new bootstrap.Tooltip(document.getElementById('offerList'), {toggle:false, trigger:'manual',customClass:'bg-danger', title:'Lütfen ürünü satın almak istediğiniz satıcıyı seçiniz.',});
-                                document.getElementById('addToCartForm').addEventListener('submit', e=>{
-                                    if(document.getElementById('sellerIdInput').value) return;
-                                    e.preventDefault();
-                                    e.stopImmediatePropagation();
-                                    offerListErrorToolTip.show();
-                                    setTimeout(()=>offerListErrorToolTip.hide(), 3000);
                                 })
+                                @if (Model.ViewingSellerId!=null){
+                                <text>
+                                document.getElementById('offerList').addEventListener('htmx:afterSettle', e=>{
+                                    e.detail.elt.firstElementChild.querySelectorAll(':scope>li').forEach(o=>{
+                                        if(o.dataset.sellerid==='@(Model.ViewingSellerId)'){
+                                            o.dispatchEvent(new Event('click', {bubbles:true, cancelable:true}));
+                                        }
+                                    })    
+                                })
+                                </text>
+                                }
                             }
                         })(document.currentScript)
                         function fetchOffers(){
@@ -311,8 +366,8 @@
                             <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryId))" value="@Model.ViewedProduct.CategoryId"/>
-                                <input type="hidden" name="@(nameof(Product.EditedOffer)).ProductId" value="@Model.ViewedProduct.Id"/>
-                                <input type="hidden" name="@(nameof(Product.EditedOffer)).@nameof(ProductOffer.SellerId)" value="@Model.ViewingSellerId)"/>
+                                <input type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))" value="@Model.ViewedProduct.Id"/>
+                                <input type="hidden" name="@(nameof(Product.EditedOffer)).@nameof(ProductOffer.SellerId)" value="@Model.ViewingSellerId"/>
                                 <input id="editedInput" type="hidden" name="@(nameof(Product.IsProductEdited))" value="false"/>
                                 <input id="offerEditedInput" type="hidden" name="@nameof(Product.IsOfferEdited)" value="false"/>
                                 <input id="nameInput" type="hidden" name="@(nameof(Product.EditedOffer)).Product.Name" value="@(Model.ViewedProduct.Name)"/>
@@ -328,7 +383,7 @@
                             </form>
                         </div>
                     }
-                    @if (!Model.Creating){
+                    @if (!Model.Creating && Model.ViewingSellerId==null){
                         <div class="col-6 ms-auto me-4">
                             <form id="addToCartForm">
                                 @Html.AntiForgeryToken()
@@ -371,7 +426,7 @@
                     <div class="container-fluid my-2">
                         <ul id="properties" class="mx-3 container-fluid list-group">
                             @await Html.PartialAsync("Shared/_DimensionsPartial", new _DimensionsPartial(){
-                                Dimensions = Model.ViewedProduct.Dimensions, Editable = Model.Editable
+                                Dimensions = Model.ViewedProduct.Dimensions, Editable = Model.Editable || Model.Creating
                             })
                             @await Html.PartialAsync("Shared/Product/_CategoryPropertiesPartial", new _CategoryPropertiesPartial(){
                                 Mode = _CategoryPropertiesPartial.DisplayMode.View, Editable = editable, Properties = Model.ViewedProduct.CategoryProperties,
@@ -410,7 +465,8 @@
                         </div>
                     </div>
                     <div class="container-fluid my-2 d-flex justify-content-center">
-                        <script>
+                        @if (!Model.Creating && Model.ViewingSellerId == null){
+                            <script>
                             ((s)=>{
                                 s.closest('.partial-parent').addEventListener('htmx:load', load);
                                 document.addEventListener("DOMContentLoaded", load);
@@ -425,9 +481,12 @@
                             })(document.currentScript)
                             //# sourceURL=ProductMainReviewForm.js
                         </script>
+                        }
+                        @if (!Model.Creating && Model.ViewingSellerId == null){
                         @await Html.PartialAsync("Shared/Review/_ReviewFormPartial", new _ReviewFormPartial(){ ProductId = Model.ViewedProduct.Id })
+                        }
                     </div>
-                    <div class="my-3" hx-trigger="load,fire" hx-target="this" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)" hx-vals='@Html.Raw(JsonSerializer.Serialize(new {sortBy=nameof(ProductReview.Created), sortOrder="desc"}))'>
+                    <div class="my-3" hx-trigger="load,fire" hx-target="this" hx-on::before-swap="if(event.detail.xhr.status===204) event.detail.shouldSwap=true;" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)" hx-vals='@Html.Raw(JsonSerializer.Serialize(new {sortBy=nameof(ProductReview.Created), sortOrder="desc"}))'>
                     </div>
                     }
                 </div>

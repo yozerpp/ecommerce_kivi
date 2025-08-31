@@ -34,7 +34,6 @@ public class Checkout : BaseModel
 {
     private readonly IOrderManager _orderManager;
     private readonly ICartManager _cartManager;
-    private readonly IJwtManager _jwtManager;
     private readonly IRepository<Order> _orderRepository;
     private readonly IShippingService _shippingService;
     private readonly DbContext _dbContext;
@@ -43,19 +42,16 @@ public class Checkout : BaseModel
     private readonly CustomerSessionService _customerSessionService = new();
     private readonly IRepository<Entity.Shipment> _shipmentRepository;
     private readonly IRepository<OrderItem> _orderItemRepository;
-    private readonly INotificationService _notificationService;
     private readonly Aes _encryption;
     private readonly IUserManager _userManager;
     private readonly IRepository<AnonymousUser> _anonymousUserRepository;
     private readonly IMailService _mailService;
-    public Checkout(IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager, IJwtManager jwtManager, INotificationService notificationService, IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository) {
+    public Checkout(INotificationService notificationService, IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager,  IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository): base(notificationService) {
         _orderManager = orderManager;
         _mailService = mailService;
         _userManager = userManager;
         _shippingService = shippingService;
         _cartManager = cartManager;
-        _jwtManager = jwtManager;
-        _notificationService = notificationService;
         _orderRepository = orderRepository;
         _anonymousUserRepository = anonymousUserRepository;
         _shipmentRepository = shipmentRepository;
@@ -110,7 +106,7 @@ public class Checkout : BaseModel
         if (order.Status != OrderStatus.WaitingPayment) return Page();
         _orderManager.ChangeOrderStatus(order, OrderStatus.WaitingConfirmation, true);
         _cartManager.Clear(CurrentSession.CartId);
-        var t = _notificationService.SendBatchAsync(order.Items.DistinctBy(i=>i.SellerId).Select(i =>
+        var t = NotificationService.SendBatchAsync(order.Items.DistinctBy(i=>i.SellerId).Select(i =>
             new OrderNotification(){
                 UserId = i.SellerId,
                 OrderId = order.Id,
@@ -340,7 +336,7 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
 
     public IActionResult OnGet() {
         SelectedTab = 1;
-        Cart = _cartManager.Get(CurrentSession, true, true, true);
+        Cart = _cartManager.Get(CurrentSession, true, true, true, true);
         return Page();
     }
     private string Encrypt(string secret) {

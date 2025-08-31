@@ -109,35 +109,27 @@ public class ProductManager : IProductManager
     }
     public ICollection<ProductOffer> GetOffers(uint? productId = null, uint? sellerId = null, bool includeAggregates = true) {
         if (productId == null && sellerId == null)
-            throw new ArgumentNullException("productId and sellerId cannot be null.");
-
-        return _productOfferRepository.WhereP(includeAggregates?OfferWithStats:OfferWithoutStats,
+            throw new ArgumentException("productId and sellerId cannot be null.");
+        string[][] includes = includeAggregates ? [[nameof(ProductOffer.Seller)], [nameof(ProductOffer.Stats)]] : [[nameof(ProductOffer.Seller)]];
+        return _productOfferRepository.Where(
             o => (productId == null || o.ProductId == productId) && (sellerId == null || o.SellerId == sellerId),
-            includes: [[nameof(ProductOffer.Seller)]]).ToArray();
+            includes: includes).ToArray();
     }
     public Product? GetByIdWithAggregates(uint productId, bool fetchOffer = false, bool fetchReviews = false, bool fetchImage=false) {
-       var pr  =_productRepository.FirstP(MainStatless,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews ,true));
-       pr.Stats = _productRepository.FirstP(p=>new ProductStats(){
-            FavorCount = p.Stats.FavorCount,
-            MinPrice = p.Stats.MinPrice ,
-            MaxPrice = p.Stats.MaxPrice ,
-            ReviewCount = p.Stats.ReviewCount ,
-            RatingAverage = p.Stats.RatingAverage,
-            OrderCount = p.Stats.OrderCount ,
-            SaleCount = p.Stats.SaleCount ,
-            RefundCount = p.Stats.RefundCount ,
-            RatingTotal = p.Stats.RatingTotal,
-            ProductId = p.Stats.ProductId ,
-       }, p => p.Id == pr.Id,nonTracking:true);
-       pr.RatingStats = _productRepository.FirstP(p => new ProductRatingStats(){
-           ReviewCount = p.RatingStats.ReviewCount??0,
-           FiveStarCount = p.RatingStats.FiveStarCount ?? 0,
-           FourStarCount = p.RatingStats.FourStarCount ?? 0,
-           ThreeStarCount = p.RatingStats.ThreeStarCount ?? 0,
-           TwoStarCount = p.RatingStats.TwoStarCount ?? 0,
-           OneStarCount = p.RatingStats.OneStarCount ?? 0,
-           ZeroStarCount = p.RatingStats.ZeroStarCount ?? 0,
-       }, p => p.Id == pr.Id, nonTracking: true);
+       var pr  =_productRepository.FirstP(MainProjection,p => p.Id == productId, GetIncludes(fetchImage, fetchOffer, fetchReviews ,true));
+       // pr.Stats = _productRepository.FirstP(p=>new ProductStats(){
+       //      FavorCount = p.Stats.FavorCount,
+       //      MinPrice = p.Stats.MinPrice ,
+       //      MaxPrice = p.Stats.MaxPrice ,
+       //      ReviewCount = p.Stats.ReviewCount ,
+       //      RatingAverage = p.Stats.RatingAverage,
+       //      OrderCount = p.Stats.OrderCount ,
+       //      SaleCount = p.Stats.SaleCount ,
+       //      RefundCount = p.Stats.RefundCount ,
+       //      RatingTotal = p.Stats.RatingTotal,
+       //      ProductId = p.Stats.ProductId ,
+       // }, p => p.Id == pr.Id,nonTracking:true);
+       
        return pr;
     }
     
@@ -153,12 +145,12 @@ public class ProductManager : IProductManager
     }
 
     public static readonly Expression<Func<OfferStats, OfferStats>> OfferStatsProjection = s => new OfferStats(){
-        ProductId = s.ProductId ?? 0,
-        SellerId = s.SellerId ?? 0,
-        RatingTotal = s.RatingTotal ?? 0m,
-        RefundCount = s.RefundCount ?? 0,
-        ReviewAverage = s.ReviewAverage ?? 0m,
-        ReviewCount = s.ReviewCount ?? 0,
+        ProductId = s.ProductId ,
+        SellerId = s.SellerId ,
+        RatingTotal = s.RatingTotal ,
+        RefundCount = s.RefundCount ,
+        ReviewAverage = s.ReviewAverage ,
+        ReviewCount = s.ReviewCount ,
     };
     public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithStats = o => new ProductOffer(){
         ProductId = o.ProductId,
@@ -166,13 +158,7 @@ public class ProductManager : IProductManager
         Discount = o.Discount,
         Price = o.Price,
         Seller = o.Seller,
-        Stats = new OfferStats(){
-            ProductId = o.Stats.ProductId ??0,
-            SellerId= o.Stats.SellerId ??0,
-            ReviewAverage = (o.Stats.RatingTotal / o.Stats.ReviewCount) ?? 0,
-            RefundCount = o.Stats.RefundCount ?? 0,
-            ReviewCount = o.Stats.ReviewCount ?? 0
-        },
+        Stats =o.Stats,
         Stock = o.Stock,
     };
     public static readonly Expression<Func<ProductOffer, ProductOffer>> OfferWithoutStats = o => new ProductOffer(){
@@ -210,7 +196,8 @@ public class ProductManager : IProductManager
         }).ToArray(),        Name = p.Name,
         Active = p.Active,
         CategoryProperties = p.CategoryProperties,
-        Stats = StatsProjection.Invoke(p.Stats),
+        Stats = p.Stats,
+        RatingStats = p.RatingStats,
     })).Expand();   public static readonly Expression<Func<Product, Product>> MainStatless = ((Expression<Func<Product,Product>>)(p => new Product(){
         Id = p.Id,
         CategoryId = p.CategoryId,

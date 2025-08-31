@@ -2,6 +2,7 @@
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
+using Ecommerce.Notifications;
 using Ecommerce.Shipping;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Seller;
@@ -9,11 +10,14 @@ using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
 using Ecommerce.WebImpl.Pages.Shared.Product;
 using LinqKit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 
 public class SellerModel : BaseModel
 {
@@ -24,7 +28,7 @@ public class SellerModel : BaseModel
     private IShippingService _shippingService;
     private readonly DbContext _dbContext;
 
-    public SellerModel(IProductManager productManager, ISellerManager sellerManager, IReviewManager reviewManager, IRepository<Coupon> couponRepository, IOrderManager orderManager, IRepository<Order> orderRepository, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext) {
+    public SellerModel(INotificationService notificationService,IProductManager productManager, ISellerManager sellerManager, IReviewManager reviewManager, IRepository<Coupon> couponRepository, IOrderManager orderManager, IRepository<Order> orderRepository, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext): base(notificationService){
         _productManager = productManager;
         _couponRepository = couponRepository;
         _orderManager = orderManager;
@@ -111,6 +115,7 @@ public class SellerModel : BaseModel
             SenderAddress = refShipment.Sender.Address,
         };
         _dbContext.SaveChanges();
+        _orderManager.RefreshOrderStatus(OrderId);
         return Partial("Shared/_InfoPartial", new _InfoPartial(){
             Success = true, Message = "İade onaylandı.", Redirect = "refresh"
         });
@@ -127,6 +132,7 @@ public class SellerModel : BaseModel
         r.TimeAnswered = DateTimeOffset.Now.DateTime;
         _dbContext.ChangeTracker.DetectChanges();
         _dbContext.SaveChanges();
+        _orderManager.RefreshOrderStatus(OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "İade reddedildi.", Redirect = "refresh"
         });
@@ -151,12 +157,11 @@ public class SellerModel : BaseModel
     }
 
     public IActionResult OnGetOrder([FromQuery] int page = 1, [FromQuery] int pageSize = 20) {
-        if (Id != CurrentSeller?.Id){
-            throw new UnauthorizedAccessException("Başkasının siparişini göremezsiniz.");
-        }   
+        var orders = _sellerManager.GetOrders(CurrentSeller.Id, orderId: OrderId, true, page: page, pageSize: pageSize);
+        if(orders.Count == 0) throw new UnauthorizedAccessException("Bu siparişi görüntüleme yetkiniz yok.");
         return Partial("Shared/Order/_OrderListPartial", new _OrderListPartial{
             Url = null,
-            Orders = _sellerManager.GetOrders(CurrentSeller.Id, orderId: OrderId, true,page: page, pageSize:pageSize),
+            Orders = orders,
             Collapsable = false,
             ViewedBySeller = true,Editable = true
         });
@@ -186,6 +191,8 @@ public class SellerModel : BaseModel
         var sid = CurrentSeller?.Id;
         if(sid != ViewedSeller.Id) throw new UnauthorizedAccessException("Başkasının Bilgilerini Düzenleyemezsiniz.");
         ViewedSeller.NormalizedEmail = ViewedSeller.Email.ToUpperInvariant();
+        var e = _dbContext.ChangeTracker.Entries<Entity.Seller>().FirstOrDefault(s => s.Entity.Equals(CurrentSeller));
+        if (e != null) e.State = EntityState.Detached;
         _sellerManager.UpdateSeller(ViewedSeller);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Bilgileriniz güncellendi.",Redirect = "refresh"

@@ -16,10 +16,10 @@
         let orderDropdown@(formId);
         document.addEventListener("DOMContentLoaded", ()=> {
             filterDropdown@(formId)= new bootstrap.Dropdown(document.getElementById('filtersButton'), {
-                autoClose: false,reference: document.getElementById('filters')
+                autoClose: 'outside',reference: document.getElementById('filters')
             });
             orderDropdown@(formId) = new bootstrap.Dropdown(document.getElementById('ordersButton'), {
-                autoClose: false,reference: document.getElementById('order')
+                autoClose: 'outside',reference: document.getElementById('order')
             });
             (()=>{
                document.getElementById('@(formId)Submit').addEventListener('click', e=>{
@@ -111,7 +111,7 @@
                 <i class="bi bi-search m-0" style="font-size: large"></i>
             </button>
             <div class="dropdown my-0">
-                <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tümü</button>
+                <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tüm Kategoriler</button>
                 <div id="categoryPicker" class="dropdown-menu rounded-bottom-2 border-1">
                     <script>
                         ((s)=>{
@@ -127,7 +127,7 @@
                             });
                         })(document.currentScript)
                     </script>
-                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories, rootElementId:Model.Target==null?"searchBarCategoryPicker":Model.Target?.Replace("#","") + "_categoryPicker"))
+                    @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Model.Categories, rootElementId:Model.Target==null?"searchBarCategoryPicker":Model.Target?.Replace("#","") + "_categoryPicker"){NonSelectionText = "Tüm Kategoriler"})
                 </div>
             </div>
             <input id="@(formId)Search" class="rounded-1 rounded-start-0 form-control" type="text" @Html.Raw(Model.Target!=null?$"onchange=\"document.getElementById('{formId}Submit').dispatchEvent(new Event('click', {{cancelable: true, bubbles: true}}))\"":"") value="@null" name="@(nameof(HomepageModel.SearchName))" />

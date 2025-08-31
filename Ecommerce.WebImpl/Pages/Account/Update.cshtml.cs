@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
+using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using MailKit;
@@ -14,7 +15,7 @@ public class UpdateModel : BaseModel
     private readonly IUserManager _userManager;
     private readonly IRepository<Entity.User> _userRepository;
     private readonly IJwtManager _jwtManager;
-    public UpdateModel(IMailService mailService, IUserManager userManager, IRepository<Entity.User> userRepository, IJwtManager jwtManager) {
+    public UpdateModel(INotificationService notificationService,IMailService mailService, IUserManager userManager, IRepository<Entity.User> userRepository, IJwtManager jwtManager) : base(notificationService){
         _mailService = mailService;
         _userManager = userManager;
         _userRepository = userRepository;

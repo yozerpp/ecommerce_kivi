@@ -1,4 +1,6 @@
-﻿@model Ecommerce.WebImpl.Pages.Shared.Product._VerticalListPartial
+﻿@using Bogus.DataSets
+@using Product = Ecommerce.WebImpl.Pages.Product
+@model Ecommerce.WebImpl.Pages.Shared.Product._VerticalListPartial
 
 @{ var i = 0;}
 @foreach (var item in Model.Products){
@@ -6,23 +8,22 @@
         <partial name="Shared/Product/_ProductMainCardPartial" model="(item, Model.Categories)"/>
     </div>
     if (i ==7){
-        <div class="col-12 my-2 px-0">
-            @await Html.PartialAsync("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
-                Products = Model.CategoryRecommendations,
-                Type = HomepageModel.RecommendationType.Category,
-                Categories = Model.Categories,
-                PageIndex = Model.PageIndex
-            })
+        <div class="col-12 my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Seller" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
+            <div class="d-flex justify-content-center align-items-center" style="height: 150px;">
+                <div class="spinner-border text-secondary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+
         </div>
             
     } else if (i ==15){
-        <div class="col-12 container-fluid my-2 px-0">
-            @await Html.PartialAsync("Shared/Product/_FeaturedPartial", new _FeaturedPartial(){
-                Products = Model.SellerRecommendations,
-                Type = HomepageModel.RecommendationType.Seller,
-                Categories = Model.Categories,
-                PageIndex = Model.PageIndex
-            })
+        <div class="col-12 container-fluid my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Category" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
+            <div class="d-flex justify-content-center align-items-center" style="height: 150px;">
+                <div class="spinner-border text-secondary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
         </div>
     }
     i++;

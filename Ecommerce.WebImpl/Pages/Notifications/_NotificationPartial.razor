@@ -1,0 +1,371 @@
+﻿@using Ecommerce.Entity.Events
+@using Microsoft.AspNetCore.Html
+@using Microsoft.EntityFrameworkCore
+@inherits _NotificationPartialModel
+
+<div class="notification-dropdown dropdown-center">
+    <script>
+        ((currentScript) => {
+            document.addEventListener('DOMContentLoaded', () => {
+                const dropdownToggle = currentScript.nextElementSibling;
+                const dropdownMenu = dropdownToggle.nextElementSibling;
+                const badge = dropdownToggle.querySelector('.notification-badge');
+                // Initialize Bootstrap dropdown
+                new bootstrap.Dropdown(dropdownToggle, {
+                    autoClose: 'outside',
+                    display: 'static',
+                });
+
+                // Add click handlers for notification actions
+                dropdownMenu.querySelectorAll('li.notification-item').forEach(notification => {
+                    const markReadBtns = notification.querySelectorAll('.mark-read');
+                    const markUnreadBtn = notification.querySelector('.mark-unread');
+                    const notificationId = notification.dataset.id;
+                    markReadBtns.forEach(b=>b.addEventListener('click', (e) => {
+                        markReadBtns.forEach(b=> {
+                            if (b.tagName==='BUTTON' ) b.classList.add('d-none');
+                        });
+                        markUnreadBtn.classList.remove('d-none');
+                        notification.classList.remove('unread');
+                        notification.classList.add('read');
+                        badge.innerHTML = parseInt(badge.innerHTML) -1;
+                        fetch('@((MarkupString)$"/Notifications/{nameof(Pages.Notifications.Notifications)}?handler=markRead&{nameof(Pages.Notifications.Notifications.NotificationId)}=")'  + notificationId, {
+                            method: 'GET'
+                        });
+                    }));
+                    markUnreadBtn?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        notification.classList.remove('read');
+                        notification.classList.add('unread');
+                        markUnreadBtn.classList.add('d-none');
+                        badge.innerHTML = parseInt(badge.innerHTML) + 1;
+                        markReadBtns.forEach(b=>b.classList.remove('d-none'));
+                        
+                        fetch('@((MarkupString)$"/Notifications/{nameof(Pages.Notifications.Notifications)}?handler=markUnRead&{nameof(Pages.Notifications.Notifications.NotificationId)}=")' + notificationId, {
+                            method: 'GET'
+                        });
+                    });
+                });
+                console.log(`Initialized @(nameof(_NotificationPartial)) successfully`);
+            });
+        })(document.currentScript);
+        //# sourceURL=NotificationPartial.js
+    </script>
+
+    <!-- Notification Bell Button -->
+    <button class="notification-bell hover-grow"
+            data-bs-toggle="dropdown"
+            data-bs-target="#notifications"
+            aria-controls="notifications"
+            aria-expanded="false">
+        <i class="bi bi-bell"></i>
+        @{
+        int unreadCount = Notifications.Count(n => !n.IsRead);
+        }
+        @if (unreadCount > 0)
+        {
+        <span class="notification-badge">@unreadCount</span>
+        }
+    </button>
+
+    <!-- Notifications Dropdown Menu -->
+    <ul id="notifications" class="dropdown-menu notification-menu">
+        @if (!Notifications.Any())
+        {
+        <li class="dropdown-item text-center text-muted py-4">
+            <i class="bi bi-bell-slash fs-2 mb-2"></i>
+            <p class="mb-0">Henüz bildirim yok</p>
+        </li>
+        }
+        else
+        {
+        @foreach (var notification in Notifications)
+        {
+        var (iconClass, title, content, link) = GetNotificationDetails(notification);
+
+        <li data-id="@notification.Id"
+            data-type="@notification.Type"
+            class="notification-item @(notification.IsRead ? "read" : "unread")">
+
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="@iconClass"></i>
+                </div>
+
+                <div class="notification-body">
+                    @if (link != null)
+                    {
+                    <a href="@link" class="notification-link mark-read">
+                        @if (!string.IsNullOrWhiteSpace(title))
+                        {
+                        <h6 class="notification-title">@title</h6>
+                        }
+                        <p class="notification-text">@((MarkupString)content)</p>
+                    </a>
+                    }
+                    else
+                    {
+                    @if (!string.IsNullOrWhiteSpace(title))
+                    {
+                    <h6 class="notification-title">@title</h6>
+                    }
+                    <p class="notification-text">@((MarkupString)content)</p>
+                    }
+                </div>
+
+                <div class="notification-actions">
+
+                    <button class="action-btn mark-unread @(notification.IsRead?"":"d-none")" title="Okunmadı olarak işaretle">
+                        <i class="bi bi-envelope"></i>
+                    </button>
+
+                    <button class="action-btn mark-read @(notification.IsRead?"d-none":"")" title="Okundu olarak işaretle">
+                        <i class="bi bi-envelope-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="notification-time">
+                <small class="text-muted">@notification.Time.ToString("dd/MM/yyyy HH:mm")</small>
+            </div>
+        </li>
+        }
+        }
+    </ul>
+</div>
+
+<style>
+    .notification-dropdown {
+        position: relative;
+    }
+
+    .notification-bell {
+        background: none;
+        border: none;
+        position: relative;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        color: #ffc107;
+        font-size: 1.5rem;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background-color: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    .notification-dropdown {
+        position: relative;
+    }
+
+    .notification-dropdown .dropdown-menu {
+        right: 0 !important;
+        left: auto !important;
+        transform: translateX(50%) !important;
+        margin-top: 12px;
+        min-width: 380px;
+    }
+    .notification-menu {
+        width: 380px;
+        max-height: 500px;
+        overflow-y: auto;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border-radius: 12px;
+        padding: 0;
+    }
+
+    .notification-item {
+        border-bottom: 1px solid #f1f3f4;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+
+    .notification-item.unread {
+        background-color: #f8f9ff;
+        border-left: 4px solid #007bff;
+    }
+
+    .notification-item.read {
+        background-color: #f8f9fa;
+    }
+
+    .notification-content {
+        display: flex;
+        align-items: flex-start;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .notification-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+    .notification-icon i {
+        font-size: 1.2rem;
+    }
+
+    .notification-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .notification-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .notification-link:hover {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .notification-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: #2c3e50;
+    }
+
+    .notification-text {
+        font-size: 0.85rem;
+        margin: 0;
+        color: #6c757d;
+        line-height: 1.4;
+    }
+
+    .notification-actions {
+        flex-shrink: 0;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #6c757d;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: #495057;
+    }
+
+    .notification-time {
+        padding: 0 16px 12px 68px;
+    }
+
+    /* Notification type specific colors */
+    .notification-item[data-type="DiscountNotification"] .notification-icon {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+
+    .notification-item[data-type="OrderNotification"] .notification-icon {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+
+    .notification-item[data-type="ReviewNotification"] .notification-icon {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+
+    .notification-item[data-type="CancellationRequest"] .notification-icon {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+</style>
+
+@code {
+    private (string iconClass, string title, string content, string? link) GetNotificationDetails(object notification)
+    {
+        return notification switch
+        {
+            DiscountNotification d => (
+                "bi bi-percent",
+                "Favori Ürününüzün Fiyatı Düştü",
+                "Favorinizdeki bir ürün indirime girdi, ürün sayfasına gitmek için tıklayın",
+                $"/{nameof(Product)}?{nameof(Product.ProductId)}={d.ProductId}"
+            ),
+            CouponNotification => (
+                "bi bi-ticket",
+                "Kupon",
+                "Yeni bir kuponunuz var",
+                null
+            ),
+            OrderNotification o => (
+                "bi bi-clipboard-plus-fill",
+                "Satış!",
+                "Bir ürününüz satıldı, sipariş bilgilerini görmek ve onaylamak için tıklayın.",
+                $"/{nameof(Orders)}?{nameof(Orders.OrderId)}={o.OrderId}"
+            ),
+            ReviewCommentNotification rc => (
+            "bi bi-chat-left-dots",
+            "Yorum Cevabı",
+            "Bir yorumunuza cevap verildi. Yorumu görüntülemek için tıklayın.",
+            $"/{nameof(Reviews)}?handler=comment&commentId={rc.CommentId}"
+            ),
+            VoteNotification v => (
+            "bi bi-arrow-up-square",
+            "Oy Aldınız",
+            $"Bir yorumunuz {v.NumVotes} oya ulaştı. Yorumunuzu görüntülemek için tıklayın",
+            v.CommentId != null
+            ? $"/{nameof(Reviews)}?handler=comment&commentId={v.CommentId.Value}"
+            : $"/{nameof(Reviews)}?handler=comment&reviewId={v.ReviewId.Value}"
+            ),
+            ReviewNotification r => (
+            "bi bi-star-fill",
+            "Yeni Yorum",
+            "Ürününüze yorum yapıldı, yorumu görüntülemek için tıklayın.",
+            $"/{nameof(Reviews)}?handler=review&{nameof(Reviews.ReviewId)}={r.ReviewId}"
+            ),
+            CancellationRequest c => (
+            "bi bi-x-circle-fill",
+            "İptal Talebi",
+            "Ürünüzü içeren bir sipariş iptal edilmek isteniyor, detayları görüntülemek için tıklayın.",
+            $"/{nameof(Orders)}?{nameof(Orders.OrderId)}={c.OrderId}"
+            ),
+            RefundRequest r=>(
+                "bi bi-arrow-counterclockwise",
+                "İade Talebi",
+                "Ürününüze ait bir sipariş için iade talebi oluşturuldu, detayları görüntülemek için tıklayın.",
+                $"/{nameof(Orders)}?{nameof(Orders.OrderId)}={r.OrderId}"
+            ),
+            _ => (
+            "bi bi-bell-fill",
+            "Bildirim",
+            notification.ToString() ?? "",
+            null
+            )
+        };
+    }
+}

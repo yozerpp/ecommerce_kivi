@@ -9,6 +9,7 @@ public interface IUserManager
     Seller? LoginSeller(string Email, string password, bool rememberMe, out string? token);
     Staff? LoginStaff(string email, string password, bool rememberMe, out string? token);
     T Register<T>(T newUser) where T : User;
+    public object Register(User.UserRole type, object newUser);
     void Update(User user, bool updateImage);
     public AnonymousUser? FindAnonymousUser(string? email);
     void ChangePassword(User user,string oldPassword, string newPassword);

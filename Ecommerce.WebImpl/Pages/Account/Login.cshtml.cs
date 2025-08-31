@@ -5,6 +5,7 @@ using Ecommerce.WebImpl.Pages.Account.Oauth;
 using Ecommerce.WebImpl.Pages.Shared;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages.Account;
 
+[AllowAnonymous]
 public class Login : PageModel
 {
     private readonly IUserManager _userManager;
@@ -50,13 +52,13 @@ public class Login : PageModel
 
     public IActionResult OnGetGoogle() {
         return Challenge(new AuthenticationProperties(){
-            IsPersistent = true,
-            RedirectUri = Url.Page("/Account/Oauth/Google"),
+            IsPersistent = false,
+            RedirectUri = "/Account/Register?handler=oauth",
             Items ={
                 {nameof(AuthProperties.Role), UserType},
                 { nameof(AuthProperties.AuthType), nameof(AuthProperties.Type.Register) },
             }
-        });
+        }, nameof(Google));
     }
     public IActionResult OnPostLogout() {
         Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);

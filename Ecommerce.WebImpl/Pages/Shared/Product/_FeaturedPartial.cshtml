@@ -1,7 +1,10 @@
 ﻿@using System.Text.Json
 @model Ecommerce.WebImpl.Pages._FeaturedPartial
 
-<div class="container-fluid h-100">
+@if (Model.Products.Count == 0){
+    return;
+}
+<div class="container-fluid h-100 overflow-y-visible">
     <script>
         ((s)=> {
             const parent= s.parentElement;
@@ -41,8 +44,8 @@
             _ => throw new ArgumentOutOfRangeException()
         })
     </p>
-    <ul class="list-unstyled d-flex flex-row g-3 gap-3 overflow-x-scroll card-group flex-nowrap"
-        style="min-height: 1px;"
+    <ul class="list-unstyled d-flex flex-row g-3 gap-3 card-group flex-nowrap overflow-y-visible overflow-x-scroll"
+        style="min-height: 90%;"
         data-loading="0"
         data-page="@(Model.PageIndex)"
         hx-get="/Index@(Model.Type != null ? "?handler=recommended&" + nameof(Model.Type) + "=" + Model.Type : "")" hx-trigger="loadMore"

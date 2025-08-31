@@ -28,31 +28,19 @@ public class CartManager : ICartManager
     }
 
     public Cart? Get(Session session, bool includeAggregates = false, bool getItems = false, bool includeItemAggregates = false, bool includeSeller =false, bool nonTracking = false) {
-        // var includes = GetIncludes(getItems, includeSeller);
-        var projection = GetProjection(includeAggregates, includeItemAggregates);
+        var includes =  GetIncludes(includeAggregates,getItems, includeItemAggregates, includeSeller);
         var cid = session.CartId;
-        var c = _cartRepository.FirstP(projection,c => c.Id == cid, includes: [], nonTracking:nonTracking);
-        if (c.Items.Count > 0)
-            c.Aggregates = _cartRepository.FirstP(c => c.Aggregates, c => c.Id == cid, nonTracking: true);
-        else
-            c.Aggregates = new CartAggregates(){
-                BasePrice = 0,
-                DiscountedPrice = 0,
-                CouponDiscountedPrice = 0,
-                CouponDiscountAmount = 0,
-                DiscountAmount = 0,
-                TotalDiscountPercentage = 0,
-                ItemCount = 0,
-                CartId = c.Id,
-            };
-        return c;
+        return _cartRepository.First(c => c.Id == cid, includes: includes, nonTracking:nonTracking);
     }
-    private static string[][] GetIncludes(bool items, bool seller) {
+    private static string[][] GetIncludes(bool aggregates,bool items, bool itemAggregates, bool seller) {
         var includes = new List<string[]>();
+        if(aggregates) includes.Add([nameof(Cart.Aggregates)]);
         if (!items) return includes.ToArray();
         includes.Add([nameof(Cart.Items), nameof(CartItem.Coupon)]);
-        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer)]);
+        includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Product)]);
+        includes.Add([nameof(Cart.Items), nameof(CartItem.SelectedOptions), nameof(ProductOption.Property), nameof(ProductCategoryProperty.CategoryProperty)]);
         if (seller) includes.Add([nameof(Cart.Items), nameof(CartItem.ProductOffer), nameof(ProductOffer.Seller)]);
+        if(itemAggregates)includes.Add([nameof(Cart.Items), nameof(CartItem.Aggregates)]);
         return includes.ToArray();
     }
     private static Expression<Func<Cart, Cart>> GetProjection(bool includeAggregates, bool includeItemAggregates) {

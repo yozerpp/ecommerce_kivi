@@ -169,13 +169,14 @@ public class DefaultDbContext : DbContext
                 entity.Ignore(o => o.DiscountedPrice);
                 entity.OwnsOne<OfferStats>(o => o.Stats, e => {
                     e.Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-                    e.Ignore(o => o.ReviewAverage);
                     e.WithOwner().HasForeignKey(os => new{ os.SellerId, os.ProductId })
                         .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).Metadata.IsUnique = true;
                     e.ToView($"{nameof(OfferStats)}", DefaultSchema, vb => {
                         vb.Property(os => os.SellerId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                         vb.Property(os => os.ReviewCount).Overrides.Property.ValueGenerated =
+                            ValueGenerated.OnAddOrUpdate;
+                        vb.Property(os=>os.ReviewAverage).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
                         vb.Property(os => os.RatingTotal).Overrides.Property.ValueGenerated =
                             ValueGenerated.OnAddOrUpdate;
@@ -380,32 +381,14 @@ public class DefaultDbContext : DbContext
             });
             entity.OwnsOne<ProductRatingStats>(s => s.RatingStats, b => {
                 b.WithOwner().HasForeignKey(s => s.ProductId).HasPrincipalKey(s => s.Id).Metadata.GetNavigation(false).SetIsEagerLoaded(false);
-                b.ToView($"{nameof(ProductStats)}_{nameof(ProductReview)}", DefaultSchema, b => {
+                b.ToView($"{nameof(ProductRatingStats)}", DefaultSchema, b => {
                     b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s=>s.ReviewCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FiveStarCount)}", DefaultSchema, b => {
-                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s => s.FiveStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.FourStarCount)}", DefaultSchema, b => {
-                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s => s.FourStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ThreeStarCount)}", DefaultSchema, b => {
-                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s => s.ThreeStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.TwoStarCount)}", DefaultSchema, b => {
-                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s => s.TwoStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.OneStarCount)}", DefaultSchema, b => {
-                    b.Property(s=>s.ProductId).Overrides.Property.ValueGenerated =    ValueGenerated.OnAdd;    
                     b.Property(s => s.OneStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
-                });
-                b.SplitToView($"{nameof(ProductRatingStats)}_{nameof(ProductRatingStats.ZeroStarCount)}", DefaultSchema, b => {
-                    b.Property(s => s.ProductId).Overrides.Property.ValueGenerated = ValueGenerated.OnAdd;
                     b.Property(s => s.ZeroStarCount).Overrides.Property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
                 });
                 });
@@ -515,7 +498,7 @@ public class DefaultDbContext : DbContext
             entity.HasOne<ProductOffer>(r=>r.Offer).WithMany(o=>o.Reviews).HasForeignKey(nameof(ProductReview.SellerId),nameof(ProductReview.ProductId))
                 .HasPrincipalKey(nameof(ProductOffer.SellerId),nameof(ProductOffer.ProductId)).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
             entity.HasMany<ReviewVote>(r=>r.Votes).WithOne(r=>r.ProductReview).HasForeignKey(v=>v.ReviewId)
-                .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+                .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
             entity.Property<decimal>(r => r.Rating).HasPrecision(3, 2).HasAnnotation(nameof(Annotations.Validation_Positive), true)
                 .HasAnnotation(nameof(Annotations.Validation_MaxValue), 5.0m).IsRequired().ValueGeneratedNever();
             entity.HasOne<Customer>(r => r.Reviewer).WithMany(u => u.Reviews).HasForeignKey(r=>r.ReviewerId).HasPrincipalKey(u=>u.Id)

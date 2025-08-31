@@ -3,6 +3,7 @@ using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity.Views;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.Bl.Concrete;
 
@@ -17,11 +18,12 @@ public class ReviewManager : IReviewManager
     private readonly IRepository<ReviewComment> _reviewCommentRepository;
     private readonly IRepository<ReviewVote> _reviewVoteRepository;
     private readonly IRepository<ProductOffer> _productOfferRepository;
-
-    public ReviewManager(IRepository<ProductOffer> productOfferRepository,IRepository<ProductReview> reviewRepository, IRepository<ReviewComment> reviewCommentRepository, IRepository<ReviewVote> reviewVoteRepository, IRepository<OrderItem> orderItemRepository) {
+    private readonly DbContext _context;
+    public ReviewManager(IRepository<ProductOffer> productOfferRepository,IRepository<ProductReview> reviewRepository, IRepository<ReviewComment> reviewCommentRepository, IRepository<ReviewVote> reviewVoteRepository, IRepository<OrderItem> orderItemRepository, [FromKeyedServices("DefaultDbContext")]DbContext context) {
         _reviewRepository = reviewRepository;
         _productOfferRepository = productOfferRepository;
         _orderItemRepository = orderItemRepository;
+        _context = context;
         _reviewCommentRepository = reviewCommentRepository;
         _reviewVoteRepository = reviewVoteRepository;
     }
@@ -39,6 +41,13 @@ public class ReviewManager : IReviewManager
         return ret;
     }
 
+    public ReviewComment? GetCommentTree(ulong commentId, bool includeChildren, bool includeParent,
+        bool includeAggregates = true) {
+        var includes = new List<string[]>();
+        if (includeChildren)includes.Add([nameof(ReviewComment.Replies), nameof(ReviewComment.Stats)]);
+        if(includeParent) includes.Add([nameof(ReviewComment.Parent)]);
+        return _reviewCommentRepository.First(r => r.Id == commentId, includes: includes.ToArray());
+    }
     private static Expression<Func<ProductReview, bool>> GetPredicateOrThrow(uint? productId = null, uint? sellerId = null,
         uint? selectedRating = null) {
         var param  = Expression.Parameter(typeof(ProductReview), "r");
@@ -171,9 +180,14 @@ public class ReviewManager : IReviewManager
     }
 
     public void DeleteReview(Session? session, ProductReview review) {
-        var c = _reviewRepository.Delete(r => r.Id == review.Id);
-        if (c == 0)
-            throw new ArgumentException("Review or offer cannot be found.");
+        using var t = _context.Database.BeginTransaction();
+        _context.Set<ReviewVote>().Where(v => v.ReviewId == review.Id && v.CommentId == null).ExecuteDelete();
+        var c= _context.Set<ProductReview>().Where(r => r.Id == review.Id && (r.SessionId == session.Id || r.ReviewerId == session.UserId)).ExecuteDelete();
+        if (c == 0){
+            t.Rollback();
+            throw new ArgumentException("Değerlendirme bulunamadı ya da size ait değil.");
+        }
+        t.Commit();
     }
 
     public void UpdateComment(Session? session, ReviewComment comment) {
@@ -185,12 +199,14 @@ public class ReviewManager : IReviewManager
     }
 
     public void DeleteComment(Session? session, ReviewComment comment) {
-        var c = _reviewCommentRepository.UpdateExpr([(c=>c.Comment, "[Silindi]"),
-            (c=>c.UserId,null), 
-            (c=>c.Name,"[Silindi]")], 
-            c=>c.Id ==comment.Id); 
-        if (c == 0)
-            throw new ArgumentException("Either your comment or the review cannot be found.");
+        using var t = _context.Database.BeginTransaction();
+        _context.Set<ReviewVote>().Where(v => v.CommentId == comment.Id && v.ReviewId ==comment.ReviewId).ExecuteDelete();
+        var c=_context.Set<ReviewComment>().Where(c=>c.Id == comment.Id && (c.CommenterId == session.Id || c.UserId == session.UserId)).ExecuteDelete();
+        if (c == 0){
+            t.Rollback();
+            throw new ArgumentException("yorum bulunamadı ya da size ait değil.\"");
+        }
+        t.Commit();
     }
 
     public ReviewVote Vote(Session session, ReviewVote vote) {

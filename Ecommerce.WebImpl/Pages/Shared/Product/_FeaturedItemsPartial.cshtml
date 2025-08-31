@@ -3,7 +3,7 @@
 
 @foreach (var product in Model.Items){
     product.Product.Description = null!;
-    <li class="mx-1 list-inline-item"  >
+    <li class="mx-1 list-inline-item overflow-y-visible" style="min-width: 300px;">
         <partial name="Shared/Product/_ProductMainCardPartial" model="(product, Model.Categories)"/>
     </li>
 }

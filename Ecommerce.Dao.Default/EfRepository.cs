@@ -44,12 +44,21 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
 
     public  List<TEntity> Where(Expression<Func<TEntity, bool>> predicate,int offset=0, int limit = 20, (Expression<Func<TEntity, object>>, bool)[]? orderBy=null, string[][]? includes=null)
     {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy).Where(predicate).Take(limit).Skip(offset).ToList();
+        var reverse = IsLastPage(ref offset, ref limit);
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes),orderBy, reverse).Where(predicate).Take(limit).Skip(offset).ToList();
     }
 
     public List<TP> Where<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TP, bool>> predicate, int offset = 0, int limit = 20, (Expression<Func<TP, object>>, bool)[]? orderBy = null,
         string[][]? includes = null) {
-        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy).Skip(offset).Take(limit-offset).ToList();
+        var reverse = IsLastPage(ref offset, ref limit);
+        return doOrderBy(doIncludes(_context.Set<TEntity>(), includes).Select(select).Where(predicate),orderBy, reverse).Skip(offset).Take(limit-offset).ToList();
+    }
+
+    private static bool IsLastPage(ref int offset, ref int limit) {
+        if (offset >= 0) return false;
+        offset*=-1;
+        limit*=-1;
+        return true;
     }
 
     public TEntity Attach(TEntity entity) {
@@ -58,7 +67,8 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
 
     public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, int offset = 0, int limit = 20,
         ICollection<(Expression<Func<TEntity, object>>, bool)>? orderBy = null, string[][]? includes = null, bool nonTracking = false) {
-        return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes), orderBy).Where(predicate)
+        var reverse = IsLastPage(ref offset, ref limit);
+        return doOrderBy(doIncludes(nonTracking?_context.Set<TEntity>().AsNoTracking():_context.Set<TEntity>(), includes), orderBy, reverse).Where(predicate)
             .Skip(offset).Take(limit - offset)
             .Select(select)
             .ToList();
@@ -179,7 +189,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         if (updateProperties.Length > 0){
             _context.ChangeTracker.Entries<TEntity>().Where(e=>e.Entity.Equals(entity)).ToList().ForEach(e=>e.State = EntityState.Detached);
             var entry = _context.Entry(entity);
-            entry.State= EntityState.Unchanged;
+            entry.State= EntityState.Modified;
             foreach (var entryComplexProperty in entry.ComplexProperties){
                 var b = entryComplexProperty.IsModified = updateProperties.Contains(entryComplexProperty.Metadata.Name);
                 entryComplexProperty.EntityEntry.State = b ? EntityState.Modified : EntityState.Unchanged;
@@ -197,12 +207,13 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     public TEntity UpdateIgnore(TEntity entity, bool ignoreNull, params string[] ignoreProperties) {
         var e = _context.Entry(entity);
         e.State = EntityState.Modified;
-        
+        var ms = e.Members.Where(m => (!(m.Metadata as IProperty)?.IsKey() ?? true) &&
+                                      (!e.Metadata.FindDiscriminatorProperty()?.Equals(m as IProperty) ?? true)).ToArray();
         if(ignoreProperties is{ Length: > 0 })
-            foreach (var memberEntry in e.Members) 
+            foreach (var memberEntry in ms) 
                 memberEntry.IsModified = !ignoreProperties.Contains(memberEntry.Metadata.Name);
         if (ignoreNull){
-            foreach (var memberEntry in e.Members.Where(m=> m.Metadata.ClrType.IsDefaultValue(m.CurrentValue))){
+            foreach (var memberEntry in ms.Where(m=> m.Metadata.ClrType.IsDefaultValue(m.CurrentValue))){
                 memberEntry.IsModified = false;
             }
         }
@@ -257,6 +268,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         },cancellationToken);
     }
     public void Flush() {
+        _context.ChangeTracker.DetectChanges();
             _context.SaveChanges();
     }
 
@@ -276,7 +288,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     public TEntity Merge(TEntity entity) {
         throw new NotImplementedException();
     }
-    private IQueryable<T> doOrderBy<T>(IQueryable<T> p,ICollection<(Expression<Func<T, object>>, bool)>? orderings) {
+    private IQueryable<T> doOrderBy<T>(IQueryable<T> p,ICollection<(Expression<Func<T, object>>, bool)>? orderings, bool reverse = false) {
         
         if (orderings == null || orderings.Count== 0){
             // return p;
@@ -287,7 +299,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         // if (orderings == null) return p;
         bool first = true;
         foreach (var order in orderings){
-            string methodName = (first ? "OrderBy" : "ThenBy") + (order.Item2?"" : "Descending");
+            string methodName = (first ? "OrderBy" : "ThenBy") + (order.Item2 &&!reverse?"" : "Descending");
             var method = typeof(Queryable)
                 .GetMethods()
                 .First(m => m.Name == methodName

@@ -26,9 +26,10 @@
                         const sellerId = parseInt(event.currentTarget.dataset.sellerid);
                         parent._selectedSellerId = sellerId;
                         const quantity = parent._selectedQuantity = event.currentTarget.dataset.quantity ? parseInt(event.currentTarget.dataset.quantity) : null;
+                        const stock = parseInt(event.currentTarget.dataset.stock);
                         // Dispatch custom event for external listeners
                         parent.dispatchEvent(new CustomEvent('sellerSelected', {
-                            detail: { sellerId: sellerId,quantity:quantity},
+                            detail: { sellerId: sellerId,quantity:quantity, stock:stock},
                             bubbles: true
                         }));
                     });
@@ -49,7 +50,7 @@
     @foreach (var (existingQuantity, offer) in Model.Offers){
         var editable = Model.ViewingSellerId == offer.SellerId;
         @* if(iii!=0){<div class="separator"></div>} *@
-        <li class="offer-item hover-darken  list-group-item" style="cursor: pointer;" @Html.Raw(existingQuantity.HasValue?$"data-quantity=\"{existingQuantity.Value}\"":"") data-sellerid="@(offer.SellerId)">
+        <li class="offer-item hover-darken  list-group-item" style="cursor: pointer;" data-stock="@offer.Stock" @Html.Raw(existingQuantity.HasValue?$"data-quantity=\"{existingQuantity.Value}\"":"") data-sellerid="@(offer.SellerId)">
             <ul class="list-unstyled row g-1">
                 <li class="col-4 justify-content-start overflow-x-hidden align-content-center">
                     <div class="d-flex align-items-center gap-2">
@@ -66,7 +67,7 @@
                     </div>
                 </li>
                 <li class="col-3 align-content-center">
-                    <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = offer.Stats.ReviewAverage.Value, RatingCount = (int?)offer.Stats.ReviewCount }"/>
+                    <partial name="Shared/_ReviewStarPartial" model="new _ReviewStarPartial(){ Rating = offer.Stats.ReviewAverage, RatingCount = (int?)offer.Stats.ReviewCount }"/>
                 </li>
                 <li class="col-3 align-content-center align-self-end">
                     @await Html.PartialAsync("Shared/_ItemPricePartial", new CartItemAggregates(){
@@ -74,7 +75,7 @@
                         DiscountedPrice = offer.Price * offer.Discount,
                         ProductId = offer.ProductId,
                         SellerId = offer.SellerId,
-                        TotalDiscountPercentage = offer.Price!=0?(offer.Price / (offer.Price * offer.Discount)):0,
+                        TotalDiscountPercentage = offer.Price * offer.Discount!=0?(offer.Price / (offer.Price * offer.Discount)):0,
                         CouponDiscountedPrice = offer.Price * offer.Discount,
                     })
                 </li>

@@ -1,4 +1,5 @@
-﻿using Ecommerce.Bl.Interface;
+﻿using Ecommerce.Bl.Concrete;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
@@ -9,34 +10,36 @@ using Ecommerce.Shipping;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages;
-
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Orders : BaseModel
 {
     private readonly IMailService _mailService;
     private readonly IJwtManager _jwtManager;
     private readonly IOrderManager _orderManager;
     private readonly IRepository<Order> _orderRepository;
-    private readonly INotificationService  _notificationService;
     private readonly IRepository<OrderItem> _orderItemRepository;
+    private readonly ISellerManager _sellerManager;
     private readonly StaffBag _staves;
     private readonly DbContext _dbContext;
     private IShippingService _shippingService;
 
-    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager, IRepository<Order> orderRepository, INotificationService notificationService, IRepository<OrderItem> orderItemRepository, StaffBag staves, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext) {
+    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager, IRepository<Order> orderRepository, INotificationService notificationService, IRepository<OrderItem> orderItemRepository, StaffBag staves, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext, ISellerManager sellerManager) : base(notificationService) {
         _mailService = mailService;
         _jwtManager = jwtManager;
         _orderManager = orderManager;
         _orderRepository = orderRepository;
-        _notificationService = notificationService;
         _orderItemRepository = orderItemRepository;
         _staves = staves;
         _shippingService = shippingService;
         _dbContext = dbContext;
+        _sellerManager = sellerManager;
     }
     public enum ViewType
     {
@@ -65,6 +68,9 @@ public class Orders : BaseModel
             OrderCollection = OrderId != default 
                 ? [_orderManager.GetOrder(OrderId, true, true)] 
                 : _orderManager.GetAllOrdersFromCustomer(CurrentCustomer, true, page, pageSize);
+        }else if (CurrentSeller != null){
+            View = ViewType.Show;
+            OrderCollection = _sellerManager.GetOrders(CurrentSeller.Id, OrderId, true);
         }else if (Token == null){
             View = ViewType.Auth;
             return Page();
@@ -110,7 +116,8 @@ public class Orders : BaseModel
                     "Siparişinizdeki bazı ürünler işleme alındığı için iptal edilemiyor. Ürünleri tek, tek iptal etmeyi deneyin."
             });
         _orderManager.ChangeOrderStatus(new Order(){Id = OrderId}, OrderStatus.CancellationRequested, true);
-        await _notificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
+        _orderManager.RefreshOrderStatus(OrderId);
+        await NotificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
             new CancellationRequest(){
                 UserId = s.Id,
                 RequesterId = CurrentCustomer?.Id,
@@ -129,6 +136,7 @@ public class Orders : BaseModel
         }
         _dbContext.ChangeTracker.DetectChanges();
         _dbContext.SaveChanges();
+        _orderManager.RefreshOrderStatus(OrderId);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,
             Message = "Gönderi durumu güncellendi.",Redirect = "refresh"
@@ -139,12 +147,12 @@ public class Orders : BaseModel
         var oldStatus = _orderItemRepository.FirstP(o=>o.Status, item => item.OrderId == OrderId && item.ProductId==ProductId && item.SellerId == SellerId, nonTracking:true);
         _orderManager.ChangeItemStatus([new OrderItem(){OrderId = OrderId, SellerId = SellerId, ProductId = ProductId, Status = OrderStatus.Cancelled}]);
         if (oldStatus > OrderStatus.WaitingConfirmation){
-            await _notificationService.SendSingleAsync(new CancellationRequest(){
+            await NotificationService.SendSingleAsync(new CancellationRequest(){
                 UserId = SellerId, OrderId = OrderId, RequesterId = CurrentCustomer?.Id
             });
         }
         else{
-            await _notificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
+            await NotificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
                 new CancellationRequest(){
                     UserId = s.Id,
                     OrderId = OrderId,
@@ -167,7 +175,7 @@ public class Orders : BaseModel
     public IActionResult OnPostConfirm() {
         DoAuth();
         _orderManager.ChangeItemStatus([new OrderItem(){OrderId = OrderId, SellerId = SellerId, ProductId = ProductId, Status = OrderStatus.Complete}]);
-        _notificationService.SendSingleAsync(new OrderCompletionNotification(){
+        NotificationService.SendSingleAsync(new OrderCompletionNotification(){
             OrderId = OrderId, UserId = SellerId, ProductId = ProductId
         }).Wait();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
@@ -184,7 +192,8 @@ public class Orders : BaseModel
             OrderId = OrderId, UserId = SellerId, ProductId = ProductId, RequesterId = CurrentCustomer?.Id
         };
         _dbContext.SaveChanges();
-        _notificationService.SendSingleAsync(r);
+        _orderManager.RefreshOrderStatus(OrderId);
+        NotificationService.SendSingleAsync(r);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, TimeOut = 2000, Title = "İade Talebiniz Satıcıya İletildi.", Redirect = "refresh"
         });

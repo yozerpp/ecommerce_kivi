@@ -21,10 +21,6 @@
                     // Event listener for min input changes
                     minInput.addEventListener('change', (e) => {
                         if (!minInput.reportValidity()) {
-                            minInput.value = minInput._lastVal;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
                             return; // Stop if validation fails
                         }
                         // Update max attribute of the other input to prevent invalid ranges
@@ -38,10 +34,6 @@
                     // Event listener for max input changes
                     maxInput.addEventListener('change', () => {
                         if (!maxInput.reportValidity()) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            maxInput.value = maxInput._lastVal;
                             return; // Stop if validation fails
                         }
                         // Update min attribute of the other input to prevent invalid ranges

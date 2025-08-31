@@ -62,11 +62,11 @@
                                 @if (item.CouponId != null){
                                     <div class="d-flex flex-column align-items-center">
                                         <span class="badge bg-warning text-dark mb-1">@(item.CouponId)</span>
-                                        <form hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
+                                        <form hx-trigger="submit" hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="productId" value="@item.ProductId"/>
                                             <input type="hidden" name="sellerId" value="@item.SellerId"/>
-                                            <button type="button" onclick="htmx.trigger(event.currentTarget.parentElement, 'submit');" class="btn btn-sm btn-outline-danger">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -76,7 +76,7 @@
                                     @await Html.PartialAsync("Shared/_PromptablePartial", new _PromptablePartial(){
                                         DisplayText = "Kupon Ekle",
                                         Inputs = [new("productId", "hidden", item.ProductId.ToString()), new("sellerId", "hidden", item.SellerId.ToString()), new(nameof(Cart.CouponId)){PlaceHolder = "Kupon Kodu"}], 
-                                        Url = $"/{nameof(Cart)}?handler=coupon",Target = "#" + Model.ContainerId, Classes = "btn btn-sm btn-outline-primary", FormClasses = "d-inline"
+                                        Url = $"/{nameof(Cart)}?handler=coupon&FromCart=true",Target = "#" + Model.ContainerId, Classes = "btn btn-sm btn-outline-primary", FormClasses = "d-inline"
                                     })
                                 }
                             </div>
@@ -174,14 +174,18 @@
                     <form asp-page="/@(nameof(Checkout))" method="get" class="d-grid mb-2">
                         <button class="btn btn-success">Sepeti Onayla</button>
                     </form>
+                    <form hx-trigger="submit" hx-post="/@(nameof(Cart))?handler=clear&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
+                        @Html.AntiForgeryToken() 
+                        <button type="submit" class="btn btn-outline-secondary btn-sm w-100 mt-2">
+                            Sepeti Temizle
+                        </button>
+                    </form>
                 }
                 else{
                     <button class="btn btn-secondary disabled w-100">Sepeti Onayla</button>
                 }
-                
-                <button hx-post="/@(nameof(Cart))?handler=clear&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML" class="btn btn-outline-secondary btn-sm w-100 mt-2">
-                    Sepeti Temizle
-                </button>
+
+
             </div>
         </div>
     </div>

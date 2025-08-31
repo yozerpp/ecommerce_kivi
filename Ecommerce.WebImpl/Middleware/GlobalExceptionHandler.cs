@@ -17,14 +17,11 @@ public class GlobalExceptionHandler(
     ICompositeViewEngine viewEngine,
     ITempDataProvider tempDataProvider)
 {
-    private readonly RequestDelegate _next = next;
-    private readonly ILogger<GlobalExceptionHandler> _logger = logger;
     private readonly IHostEnvironment _env = env;
-    private readonly ICompositeViewEngine _viewEngine = viewEngine;
-    private readonly ITempDataProvider _tempDataProvider = tempDataProvider;
+
     public async Task InvokeAsync(HttpContext context) {
         try{
-            await _next.Invoke(context);
+            await next.Invoke(context);
         }
         catch (Exception e){
             var ex = e;
@@ -33,7 +30,7 @@ public class GlobalExceptionHandler(
             }
             bool arg;
             if ((arg= ex is ArgumentException or ValidationException or ArgumentNullException or ArgumentOutOfRangeException) || ex is UnauthorizedAccessException){
-                _logger.LogWarning("Caught: " + e);
+                logger.LogWarning("Caught: " + e);
                 context.Response.StatusCode = 200;
                 context.Response.ContentType = "text/html";
                 var view = await RenderPartialViewAsync(context, nameof(_InfoPartial), new _InfoPartial(){
@@ -52,7 +49,7 @@ public class GlobalExceptionHandler(
         var actionContext = new ActionContext(context, new RouteData(), new ActionDescriptor());
         await using var sw = new StringWriter();
 
-        var viewResult = _viewEngine.FindView(actionContext, viewName, isMainPage: false);
+        var viewResult = viewEngine.FindView(actionContext, viewName, isMainPage: false);
 
         if (viewResult.View == null)
         {
@@ -64,7 +61,7 @@ public class GlobalExceptionHandler(
             Model = model
         };
 
-        var tempData = new TempDataDictionary(context, _tempDataProvider);
+        var tempData = new TempDataDictionary(context, tempDataProvider);
 
         var viewContext = new ViewContext(
             actionContext,

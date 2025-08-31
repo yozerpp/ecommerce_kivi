@@ -12,7 +12,7 @@
             }
             document.addEventListener('DOMContentLoaded', initPaging);
             parent.addEventListener('htmx:load', initPaging);
-            function initEditing(){
+            function initEditing(e){
                 parent.dataset.page = '1';
                 parent._editedImages = new Map();
                 parent._addedImages = [];
@@ -57,6 +57,11 @@
                         {primary:'true',data:null}
                     )
                 }
+                document.addEventListener('editControl', _=>{
+                    console.log(s.nextElementSibling);
+                    s.nextElementSibling.classList.toggle('edit-control');
+                    parent.lastElementChild.classList.toggle('edit-control');
+                })
                 s.nextElementSibling.addEventListener('click',()=>{
                     parent._edited=true;
                 });
@@ -64,17 +69,17 @@
                     <text>
                     const changeBtn = s.nextElementSibling.firstElementChild;
                     changeBtn.onclick=()=>promptFile('image/jpeg').then(i=>parent._editImage(i));
-                    changeBtn.nextElementSibling.onclick=()=>parent._deleteImage();
+                    changeBtn.nextElementSibling.onclick= ()=>parent._deleteImage();
                     changeBtn.nextElementSibling.nextElementSibling.onclick=()=>parent._promoteToImage();
                     </text>
                 }
-                
                 parent.lastElementChild.onclick=()=>{
                     parent._edited=true;promptFile('image/jpeg').then(i=>parent._addImage(i));
                 }
+                console.log('initied editing of @(nameof(_CarouselPartial)) from ' + e.type);
             }
 
-            function initPaging(){
+            function initPaging(e){
                 parent._loadNextPage = async function() {
                     if (this._loading || !this._hasMorePages) return;
 
@@ -147,6 +152,7 @@
 
                 // Initial check in case we start near the end
                 setTimeout(() => parent._checkAndLoadMore(), 100);
+                console.log('initied paging of @(nameof(_CarouselPartial)) from ' + e.type);
             }
         })(document.currentScript)
     </script>

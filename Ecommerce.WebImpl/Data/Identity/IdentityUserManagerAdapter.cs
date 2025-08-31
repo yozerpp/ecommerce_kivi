@@ -31,6 +31,10 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
         return _userManager.Register(newUser);
     }
 
+    public object Register(User.UserRole type, object newUser) {
+       return _userManager.Register(type, newUser);
+    }
+
     public void Update(User user, bool updateImage) {
         _userManager.Update(user, updateImage);
     }

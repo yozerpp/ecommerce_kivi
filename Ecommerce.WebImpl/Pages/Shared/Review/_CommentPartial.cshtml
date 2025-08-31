@@ -10,7 +10,7 @@
         <p class="mb-0 flex-grow-1 text-center ms-3 text-dark">@Model.CommentUserView.ReviewComment.Comment</p>
         <div class="d-inline-flex gap-2">
             @if(editable){
-                <form  hx-trigger="submit" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteComment">
+                <form  hx-trigger="submit" hx-target="#commentReplyResult@(Model.CommentUserView.ReviewComment.Id)" hx-on::after-request="if(event.detail.successful) event.detail.elt.closest('.partial-parent').parentElement.remove();" hx-on::before-swap="if(event.detail.xhr.status===200)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteComment">
                      @Html.AntiForgeryToken()
                     <input type="hidden" name="commentId" value="@Model.CommentUserView.ReviewComment.Id"/>
                     <button type="submit" class="btn border-1 rounded-2 border-secondary-subtle bg-light text-decoration-none p-0"><i class="bi bi-trash-fill text-danger"></i></button>
