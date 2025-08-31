@@ -8,8 +8,10 @@
         @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
             Editable = true, PostUrl = "/Account/Register", User = Model.RegisteringUser,Registering = true,
         })
-        <div class="card-footer d-flex justify-content-center align-items-center">
-            <button class="text-success">Kaydol</button>
+        <div class="card-footer d-flex justify-content-center align-items-center p-4">
+            <button type="button" onclick="submitProfile()" class="btn btn-success btn-lg px-5 py-3 rounded-3 shadow-sm">
+                <i class="bi bi-check-circle me-2"></i>Kaydol
+            </button>
         </div>
     </div>
 </div>

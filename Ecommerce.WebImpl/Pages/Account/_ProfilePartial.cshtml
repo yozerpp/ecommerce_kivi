@@ -68,7 +68,7 @@
                     profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Country))'] = addressContainer._country || '';
                     profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.ZipCode))'] = addressContainer._zipCode || '';
                     if (addressContainer._apiId) {
-                        profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' + index + ' ].@(nameof(Address.ApiId))'] = addressContainer._apiId;
+                        profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' + index + '].@(nameof(Address.ApiId))'] = addressContainer._apiId;
                     }
                 }
             });
@@ -121,90 +121,174 @@
     let _p_editedImage@(Model.User.Id) = false;
 </script>
 
-<ul id="profil@(Model.User.Id)" class="list-group gap-5 rounded-0">
-    <li class="card pt-5">
-        @(SectionHeader("Kişisel Bilgiler", "bi-person fs-3 text-dark bg-white"))
-        <div class="container-fluid mt-5 pt-1 mb-5 row g-4">
-            <div class="col-5 pt-2 gap-5 ps-3">
-                <div class="d-flex container-fluid justify-content-between">
-                    <label class="fw-bold fs-5">İsim:</label>
-                    <div class="d-inline-flex">
-                        <p id="p_@(nameof(Model.User.FirstName))" class="fs-5">@(Model.User.FirstName)</p>
-                        @if (editable){
-                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
-                        }
-                    </div>
-                </div>
-                <div class="d-flex container-fluid justify-content-between">
-                    <label class="fw-bold fs-5">Soyisim:</label>
-                    <div class="d-inline-flex">
-                        <p id="p_@(nameof(Model.User.LastName))" class="fs-5">@(Model.User.LastName)</p>
-                        @if (editable){
-                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-1"></div>
-            <div class="col-6 me-0 pe-0 row">
-                <div class="col-8">
-                    <img id="profilePic" class="card-img img-fluid rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
-                         alt="Profil Resmi"/>
-                </div>
-                @if (editable){
-                    <div class="edit-control col-4 gap-3 justify-content-center">
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" class="btn mb-3 btn-secondary p-1 shadow-sm rounded-1 w-100">
-                            Değiştir
-                            @* <i class="col-auto bi bi-pencil-fill bg-white text-secondary"></i> *@
-                        </button>
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-1 rounded-1 w-100 btn btn-danger shadow-sm">
-                            Sil
-                            @* <i class="col-auto bi bi-pencil-fill bg-white text-danger"></i> *@
-                        </button>
-                    </div>
-                }
-            </div>
-        </div>
-    </li>
-    @if (customer!=null && editable){
-        <li class="card" id="customerAddresses">
-            @SectionHeader("Adresler", "fs-3 bi bi-building text-dark b-white")
-            @await Html.PartialAsync("Customer/_CustomerAddressPartial", new _CustomerAddressPartial(){
-                CustomerId = Model.User.Id, Editable = Model.Editable, Updateable = false, Addresses = customer.Addresses
-            })
-        </li>
-    } else if (seller != null && editable){
-        <li class="card" id="sellerAddress">
-            @SectionHeader("Mağaza Adresi", "fs-3 bi bi-shop text-dark bg-white")
-            @await Html.PartialAsync("Shared/_AddressPartial", new _AddressPartial(){
-                Address = seller.Address, Editable = true,
-            })
-        </li>
-    }
-    <li class="card">
-        @SectionHeader("Telefon Numarası", "fs-3 bi bi-telephone-fill text-dark bg-white")
-        @{
-            var num = Model.User.PhoneNumber.Number.Replace("(", "").Replace(")", "");
-            num = !editable
-                ? num.Substring(0, 3) + string.Concat(Enumerable.Range(0, num.Length - 3).Select(_ => '*'))
-                : num;
+<div id="profil@(Model.User.Id)" class="profile-container">
+    <style>
+        .profile-container {
+            transition: all 0.3s ease;
         }
-        <div class="border-2 container-fluid d-flex justify-content-end align-content-center align-items-center mt-3 border-black border-1 gap-3 rounded-2">
-            @await Html.PartialAsync("Shared/_PhoneNumberPartial", new _PhoneNumberPartial(){
-                Editable = true, PhoneNumber = Model.User.PhoneNumber
-            })
-        </div>
-    </li>
-
-    @if (editable) {
-        <li class="card">
-            <div class="card-body text-center">
-                @Html.AntiForgeryToken()
-                <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden"/>
-                <button type="button" onclick="submitProfile()" class="btn btn-primary btn-lg">
-                    <i class="bi bi-check-circle me-2"></i>Değişiklikleri Kaydet
-                </button>
+        .profile-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .profile-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .profile-section-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid #dee2e6;
+        }
+        .profile-info-item {
+            transition: background-color 0.2s ease;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .profile-info-item:hover {
+            background-color: #f8f9fa;
+        }
+        .profile-image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+        .profile-image-container:hover {
+            transform: scale(1.05);
+        }
+        .profile-image {
+            transition: transform 0.3s ease;
+        }
+        .edit-buttons {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .profile-card:hover .edit-buttons {
+            opacity: 1;
+        }
+    </style>
+    
+    <div class="card profile-card mb-4 rounded-3">
+        <div class="card-header profile-section-header border-0 rounded-top-3">
+            <div class="d-flex align-items-center justify-content-between p-3">
+                <h4 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-person-circle me-3 text-primary"></i>
+                    Kişisel Bilgiler
+                </h4>
             </div>
-        </li>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-7">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="profile-info-item d-flex justify-content-between align-items-center">
+                                <label class="fw-semibold text-muted mb-0">İsim:</label>
+                                <div class="d-flex align-items-center">
+                                    <span id="p_@(nameof(Model.User.FirstName))" class="fs-5 fw-medium text-dark me-2">@(Model.User.FirstName)</span>
+                                    @if (editable){
+                                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="profile-info-item d-flex justify-content-between align-items-center">
+                                <label class="fw-semibold text-muted mb-0">Soyisim:</label>
+                                <div class="d-flex align-items-center">
+                                    <span id="p_@(nameof(Model.User.LastName))" class="fs-5 fw-medium text-dark me-2">@(Model.User.LastName)</span>
+                                    @if (editable){
+                                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-center">
+                    <div class="position-relative d-inline-block">
+                        <div class="profile-image-container" style="width: 150px; height: 150px;">
+                            <img id="profilePic" class="profile-image w-100 h-100 object-fit-cover" 
+                                 src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
+                                 alt="Profil Resmi"/>
+                        </div>
+                        @if (editable){
+                            <div class="edit-buttons position-absolute bottom-0 end-0">
+                                <div class="btn-group-vertical shadow-sm">
+                                    <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" 
+                                            class="btn btn-sm btn-primary rounded-circle p-2 mb-1" title="Değiştir">
+                                        <i class="bi bi-camera-fill"></i>
+                                    </button>
+                                    <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" 
+                                            class="btn btn-sm btn-danger rounded-circle p-2" title="Sil">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (customer!=null && editable){
+        <div class="card profile-card mb-4 rounded-3" id="customerAddresses">
+            <div class="card-header profile-section-header border-0 rounded-top-3">
+                <div class="d-flex align-items-center justify-content-between p-3">
+                    <h4 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-geo-alt-fill me-3 text-primary"></i>
+                        Adresler
+                    </h4>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                @await Html.PartialAsync("Customer/_CustomerAddressPartial", new _CustomerAddressPartial(){
+                    CustomerId = Model.User.Id, Editable = Model.Editable, Updateable = false, Addresses = customer.Addresses
+                })
+            </div>
+        </div>
+    } else if (seller != null && editable){
+        <div class="card profile-card mb-4 rounded-3" id="sellerAddress">
+            <div class="card-header profile-section-header border-0 rounded-top-3">
+                <div class="d-flex align-items-center justify-content-between p-3">
+                    <h4 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-shop me-3 text-primary"></i>
+                        Mağaza Adresi
+                    </h4>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                @await Html.PartialAsync("Shared/_AddressPartial", new _AddressPartial(){
+                    Address = seller.Address, Editable = true,
+                })
+            </div>
+        </div>
     }
-</ul>
+    <div class="card profile-card mb-4 rounded-3">
+        <div class="card-header profile-section-header border-0 rounded-top-3">
+            <div class="d-flex align-items-center justify-content-between p-3">
+                <h4 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-telephone-fill me-3 text-primary"></i>
+                    Telefon Numarası
+                </h4>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            @{
+                var num = Model.User.PhoneNumber.Number.Replace("(", "").Replace(")", "");
+                num = !editable
+                    ? num.Substring(0, 3) + string.Concat(Enumerable.Range(0, num.Length - 3).Select(_ => '*'))
+                    : num;
+            }
+            <div class="profile-info-item border rounded-3 p-3">
+                @await Html.PartialAsync("Shared/_PhoneNumberPartial", new _PhoneNumberPartial(){
+                    Editable = true, PhoneNumber = Model.User.PhoneNumber
+                })
+            </div>
+        </div>
+    </div>
+
+    @Html.AntiForgeryToken()
+    <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden"/>
+</div>
