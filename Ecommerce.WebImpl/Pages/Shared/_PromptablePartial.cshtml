@@ -11,7 +11,7 @@
                     </select>                    
                 }
                 else{
-                <input class="form-control" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @(input.DefaultValue!=null?"value=" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
+                <input class="form-control" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @Html.Raw(input.DefaultValue!=null?"value=\"" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
                 }
             }
             @if (Model.Description != null){
