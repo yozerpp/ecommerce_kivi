@@ -1,7 +1,9 @@
 ﻿using System.Text;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Entity;
+using Ecommerce.WebImpl.Pages.Account.Oauth;
 using Ecommerce.WebImpl.Pages.Shared;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -30,7 +32,7 @@ public class Login : PageModel
 
     public IActionResult OnPost() {
         string? jwt = null;
-        
+
         switch (UserType) {
             case "Customer":
                 _userManager.LoginCustomer(LoginCredentials.Email, LoginCredentials.Password, RememberMe, out jwt);
@@ -46,6 +48,15 @@ public class Login : PageModel
         return HandleToken(jwt, RememberMe);
     }
 
+    public IActionResult OnGetGoogle() {
+        return Challenge(new AuthenticationProperties(){
+            IsPersistent = true,
+            RedirectUri = Url.Page("/Account/Oauth/Google"),
+            Items ={
+                { nameof(AuthProperties.AuthType), nameof(AuthProperties.Type.Register) },
+            }
+        });
+    }
     public IActionResult OnPostLogout() {
         Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
