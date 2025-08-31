@@ -24,14 +24,15 @@
         """");
     }
 }
-<script>
+
+<div id="profil@(Model.User.Id)" class="profile-container partial-parent">
+    <script>
     document.addEventListener("DOMContentLoaded", ()=>{
         @if (Model.Registering){
             <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));</text>
         }
     })
-    
-    function submitProfile() {
+    document.currentScript.parentElement.addEventListener('submit', function () {
         console.log('submitting profile');
         
         // Collect profile data
@@ -40,6 +41,7 @@
             '@(prefix).@(nameof(Entity.User.GoogleId))': '@Model.User.GoogleId',
             '@(prefix).@(nameof(Entity.Customer.Id))': '@Model.User.Id',
             '@(prefix).@(nameof(Entity.Customer.NormalizedEmail))': '@Model.User.NormalizedEmail',
+            '@(prefix).@(nameof(Entity.Customer.Email))': '@Model.User.Email',
             '@(prefix).@(nameof(Model.User.FirstName))': document.getElementById('p_@(nameof(Model.User.FirstName))').innerHTML,
             '@(prefix).@(nameof(Model.User.LastName))': document.getElementById('p_@(nameof(Model.User.LastName))').innerHTML,
             '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))': document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML,
@@ -76,6 +78,7 @@
         </text>
         } else if(seller!=null){
         <text>
+        
         const addressContainer = document.getElementById('sellerAddress').querySelector('.address-container');
         profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line1))'] = addressContainer._line1 || '';
         profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line2))'] = addressContainer._line2 || '';
@@ -116,12 +119,11 @@
             console.error('Error submitting profile:', error);
             document.getElementById('popupResult').innerHTML = '<div class="alert alert-danger">Bir hata oluştu. Lütfen tekrar deneyin.</div>';
         });
-    }
+    });
     
-    let _p_editedImage@(Model.User.Id) = false;
+    let _p_editedImage@(Model.User.Id) = @Model.Registering;
 </script>
 
-<div id="profil@(Model.User.Id)" class="profile-container">
     <style>
         .profile-container {
             transition: all 0.3s ease;
@@ -168,7 +170,7 @@
             opacity: 1;
         }
     </style>
-    
+
     <div class="card profile-card mb-4 rounded-3">
         <div class="card-header profile-section-header border-0 rounded-top-3">
             <div class="d-flex align-items-center justify-content-between p-3">
@@ -204,23 +206,34 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="profile-info-item d-flex justify-content-between align-items-center">
+                                <label class="fw-semibold text-muted mb-0">Soyisim:</label>
+                                <div class="d-flex align-items-center">
+                                    <span id="p_@(nameof(Model.User.LastName))" class="fs-5 fw-medium text-dark me-2">@(Model.User.LastName)</span>
+                                    @if (editable){
+                                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                                    }
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-lg-5 text-center">
                     <div class="position-relative d-inline-block">
                         <div class="profile-image-container" style="width: 150px; height: 150px;">
-                            <img id="profilePic" class="profile-image w-100 h-100 object-fit-cover" 
+                            <img id="profilePic" class="profile-image w-100 h-100 object-fit-cover"
                                  src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
                                  alt="Profil Resmi"/>
                         </div>
                         @if (editable){
                             <div class="edit-buttons position-absolute bottom-0 end-0">
                                 <div class="btn-group-vertical shadow-sm">
-                                    <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" 
+                                    <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});"
                                             class="btn btn-sm btn-primary rounded-circle p-2 mb-1" title="Değiştir">
                                         <i class="bi bi-camera-fill"></i>
                                     </button>
-                                    <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" 
+                                    <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'"
                                             class="btn btn-sm btn-danger rounded-circle p-2" title="Sil">
                                         <i class="bi bi-trash-fill"></i>
                                     </button>
@@ -232,7 +245,7 @@
             </div>
         </div>
     </div>
-    @if (customer!=null && editable){
+    @if (customer != null && editable){
         <div class="card profile-card mb-4 rounded-3" id="customerAddresses">
             <div class="card-header profile-section-header border-0 rounded-top-3">
                 <div class="d-flex align-items-center justify-content-between p-3">
@@ -248,7 +261,8 @@
                 })
             </div>
         </div>
-    } else if (seller != null && editable){
+    }
+    else if (seller != null && editable){
         <div class="card profile-card mb-4 rounded-3" id="sellerAddress">
             <div class="card-header profile-section-header border-0 rounded-top-3">
                 <div class="d-flex align-items-center justify-content-between p-3">
@@ -290,5 +304,5 @@
     </div>
 
     @Html.AntiForgeryToken()
-    <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden"/>
+    <input id="p_@(nameof(Model.User.ProfilePicture))" type="hidden" @Html.Raw(Model.Registering && Model.User.ProfilePicture?.Data!=null?@$"value=""{Model.User.ProfilePicture?.Data}""":"")/>
 </div>
