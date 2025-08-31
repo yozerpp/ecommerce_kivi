@@ -1,21 +1,21 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared._PromptablePartial
-    <form class="gap-2 d-flex text-center align-middle flex-column promptable card partial-parent" hx-post="@Model.Url" hx-trigger="submit" hx-target="@Model.Target" hx-swap="innerHTML">
+    <form class="gap-3 d-flex text-center align-items-center flex-column promptable card border-0 shadow-sm partial-parent" hx-post="@Model.Url" hx-trigger="submit" hx-target="@Model.Target" hx-swap="innerHTML">
         @Html.AntiForgeryToken()
-        <div class="d-none card-body">
+        <div class="d-none card-body p-4 bg-light rounded">
             @foreach (var input in Model.Inputs){
                 if (input.InputType.Equals("select")){
-                    <select class="form-select-sm">
+                    <select class="form-select form-select-sm mb-2 border-2 rounded-3">
                         @foreach (var option in input.Options){
                             <option value="@option.value">@option.display</option>
                         }
                     </select>                    
                 }
                 else{
-                <input class="form-control form-control-sm rounded-pill border-2" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @Html.Raw(input.DefaultValue!=null?"value=\"" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
+                <input class="form-control form-control-sm rounded-3 border-2 mb-2 shadow-sm" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @Html.Raw(input.DefaultValue!=null?"value=\"" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
                 }
             }
             @if (Model.Description != null){
-            <p class="mb-0 text-muted">@Model.Description</p>
+            <p class="mb-0 text-muted small fst-italic">@Model.Description</p>
             }
         </div>
         <script>
@@ -42,7 +42,7 @@
             })(document.currentScript)      
             //# sourceURL=PromptablePartial.js
         </script>
-        <button class="btn btn-primary btn-sm rounded-pill shadow-sm hover-grow" type="button" class="@Model.Classes" style="background-color: @Model.Color"
+        <button class="btn btn-primary btn-sm rounded-3 shadow hover-grow fw-semibold px-4 py-2" type="button" class="@Model.Classes" style="background-color: @Model.Color; transition: all 0.2s ease-in-out;"
                 onclick="
                         if(event.currentTarget._clicked)
                             event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))
