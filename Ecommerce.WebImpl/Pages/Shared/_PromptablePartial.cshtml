@@ -11,7 +11,7 @@
                     </select>                    
                 }
                 else{
-                <input class="form-control" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @Html.Raw(input.DefaultValue!=null?"value=\"" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
+                <input class="form-control form-control-sm rounded-pill border-2" @(Html.Raw(input.InputType!="hidden"?"onfocusout=\"const btn=event.currentTarget.parentElement.nextElementSibling.nextElementSibling ;if(event.currentTarget.parentElement._inputs.every(e => event.relatedTarget!==e)&& event.relatedTarget != btn)btn._toggle();\"":"")) type="@input.InputType" name="@input.Name" @Html.Raw(input.DefaultValue!=null?"value=\"" + input.DefaultValue + '\"' :"") placeholder="@(input.PlaceHolder??"")"/>
                 }
             }
             @if (Model.Description != null){
@@ -42,7 +42,7 @@
             })(document.currentScript)      
             //# sourceURL=PromptablePartial.js
         </script>
-        <button class="btn btn-outline-primary" type="button" class="@Model.Classes" style="background-color: @Model.Color"
+        <button class="btn btn-primary btn-sm rounded-pill shadow-sm hover-grow" type="button" class="@Model.Classes" style="background-color: @Model.Color"
                 onclick="
                         if(event.currentTarget._clicked)
                             event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))
