@@ -32,6 +32,10 @@ _selectedIndex: number
                     addressElement.addEventListener('htmx:load', () => {
                         updateDropdown();
                     });
+                    // Listen for address changes
+                    addressElement.addEventListener('addressChanged', () => {
+                        updateDropdown();
+                    });
                 });
                 
                 // Add button functionality
@@ -46,6 +50,11 @@ _selectedIndex: number
                         addressesContainer.insertBefore(newAddressItem, addressesContainer.querySelector('.template'));
                         template.dispatchEvent(new Event('htmx:load', {bubbles: false}));
                         parent._addresses.push(newAddressItem);
+                        
+                        // Listen for address changes on new address
+                        newAddressItem.addEventListener('addressChanged', () => {
+                            updateDropdown();
+                        });
                         
                         // Select the new address
                         selectAddress(parent._addresses.length - 1);
@@ -64,6 +73,28 @@ _selectedIndex: number
                     }
                 }
                 
+                function formatAddress(addressContainer) {
+                    // Format according to Address.cs ToString(): {Line1}\n{Line2} {District}/{City} {Country} {ZipCode}
+                    const line1 = addressContainer._line1 || '';
+                    const line2 = addressContainer._line2 || '';
+                    const district = addressContainer._district || '';
+                    const city = addressContainer._city || '';
+                    const country = addressContainer._country || '';
+                    const zipCode = addressContainer._zipCode || '';
+                    
+                    let formatted = line1;
+                    if (line2) formatted += ' ' + line2;
+                    if (district || city) {
+                        formatted += ' ' + district;
+                        if (district && city) formatted += '/';
+                        formatted += city;
+                    }
+                    if (country) formatted += ' ' + country;
+                    if (zipCode) formatted += ' ' + zipCode;
+                    
+                    return formatted.trim() || 'Yeni Adres';
+                }
+                
                 function updateDropdown() {
                     if(!dropdown || !dropdownMenu) return;
                     
@@ -75,8 +106,7 @@ _selectedIndex: number
                         const selectedAddress = parent._addresses[parent._selectedIndex];
                         const addressContainer = selectedAddress.querySelector('.address-container');
                         if(addressContainer) {
-                            const displayText = `${addressContainer._line1 || ''} ${addressContainer._district || ''} ${addressContainer._city || ''}`.trim() || 'Yeni Adres';
-                            dropdown.innerHTML = displayText;
+                            dropdown.innerHTML = formatAddress(addressContainer);
                         }
                     } else {
                         dropdown.innerHTML = 'Kayıtlı Adres Yok';
@@ -92,7 +122,7 @@ _selectedIndex: number
                             const a = document.createElement('a');
                             a.href = 'javascript:void(0);';
                             a.className = 'text-black p-0 bg-white text-decoration-none';
-                            a.innerHTML = `${addressContainer._line1 || ''} ${addressContainer._district || ''} ${addressContainer._city || ''}`.trim() || 'Yeni Adres';
+                            a.innerHTML = formatAddress(addressContainer);
                             a.addEventListener('click', () => {
                                 selectAddress(index);
                                 updateDropdown();

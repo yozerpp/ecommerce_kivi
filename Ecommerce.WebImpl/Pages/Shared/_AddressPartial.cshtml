@@ -39,34 +39,45 @@ _apiId: string
                 parent._apiId = '@(Model?.Address?.ApiId ?? "")';
                 
                 // Add event listeners for input changes
+                function notifyAddressChange() {
+                    // Dispatch custom event to notify parent CustomerAddressPartial
+                    parent.dispatchEvent(new CustomEvent('addressChanged', { bubbles: true }));
+                }
+                
                 if(line1Input) {
                     line1Input.addEventListener('input', (e) => {
                         parent._line1 = e.target.value;
+                        notifyAddressChange();
                     });
                 }
                 if(line2Input) {
                     line2Input.addEventListener('input', (e) => {
                         parent._line2 = e.target.value;
+                        notifyAddressChange();
                     });
                 }
                 if(districtInput) {
                     districtInput.addEventListener('input', (e) => {
                         parent._district = e.target.value;
+                        notifyAddressChange();
                     });
                 }
                 if(cityInput) {
                     cityInput.addEventListener('input', (e) => {
                         parent._city = e.target.value;
+                        notifyAddressChange();
                     });
                 }
                 if(countryInput) {
                     countryInput.addEventListener('input', (e) => {
                         parent._country = e.target.value;
+                        notifyAddressChange();
                     });
                 }
                 if(zipCodeInput) {
                     zipCodeInput.addEventListener('input', (e) => {
                         parent._zipCode = e.target.value;
+                        notifyAddressChange();
                     });
                 }
             }
