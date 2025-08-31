@@ -53,6 +53,7 @@ public class Login : PageModel
             IsPersistent = true,
             RedirectUri = Url.Page("/Account/Oauth/Google"),
             Items ={
+                {nameof(AuthProperties.Role), UserType},
                 { nameof(AuthProperties.AuthType), nameof(AuthProperties.Type.Register) },
             }
         });
