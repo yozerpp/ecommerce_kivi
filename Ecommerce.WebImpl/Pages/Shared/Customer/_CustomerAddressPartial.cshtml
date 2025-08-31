@@ -1,53 +1,136 @@
 ﻿@using Ecommerce.Entity.Common
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.CustomerPartials._CustomerAddressPartial
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById('customerAddress')._selectedIndex = @(Model.Addresses.Count > 0 ?0:"undefined");
-    });
-</script>
-<div id="customerAddress" class="py-2">
-    <div class="dropdown mx-3 card card-header rounded-1 mb-3">
-        <a href="javascript:void(0);" class="card-title bg-light-subtle rounded-1 border-dark-subtle border-1  card-title dropdown-toggle text-wrap text-decoration-none text-black" data-bs-toggle="dropdown" data-bs-target="#customerAddressDropdown" aria-controls="customerAddressDropdown" aria-expanded="false">@(Model.Addresses.ElementAtOrDefault(0)?.ToString().ReplaceLineEndings(" ")??"Kayıtlı Adres Yok")</a>
-        <ul id="customerAddressDropdown" class="dropdown-menu">
-            @for (int i = 0; i < Model.Addresses.Count; i++){
-                <li class="dropdown-item border-top border-bottom border-secondary-subtle border-2  px-1 py-2">
-                    <a onclick="event.currentTarget.parentElement.parentElement.previousElementSibling.innerHTML='@(Model.Addresses[i].ToString().ReplaceLineEndings(" "))';const ca = document.getElementById('customerAddress');const prevIdx = ca._selectedIndex;ca._selectedIndex = @(i); document.getElementById('_address' + prevIdx.toString()).classList.add('d-none');document.getElementById('_address@(i)').classList.remove('d-none');" 
-                       href="javascript:void(0);"  class="text-black p-0 bg-white text-decoration-none">@(Model.Addresses[i].ToString().ReplaceLineEndings(" "))</a>
-                </li>
+
+<!--
+Type:
+_addresses: List<AddressElement>
+_selectedIndex: number
+-->
+<div id="customerAddress" class="customerAddresses container-fluid d-flex flex-column py-2">
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+            document.addEventListener('DOMContentLoaded', load);
+            document.addEventListener('htmx:load', load);
+            function load(e) {
+                if(e.type==='htmx:load'){
+                    e.stopPropagation();
+                }
+                parent._addresses = [];
+                parent._selectedIndex = @(Model.Addresses.Count > 0 ? 0 : -1);
+                
+                const addressesContainer = parent.querySelector('.addresses');
+                const addBtn = parent.querySelector('.add-address-btn');
+                const dropdown = parent.querySelector('.dropdown-toggle');
+                const dropdownMenu = parent.querySelector('.dropdown-menu');
+                
+                // Initialize existing addresses
+                const existingAddresses = addressesContainer.querySelectorAll('.address-item:not(.template)');
+                existingAddresses.forEach((addressElement, index) => {
+                    parent._addresses.push(addressElement);
+                    addressElement.addEventListener('htmx:load', () => {
+                        updateDropdown();
+                    });
+                });
+                
+                // Add button functionality
+                if(addBtn) {
+                    addBtn.addEventListener('click', (e) => {
+                        e.stopImmediatePropagation();
+                        const template = cloneWithScript(addressesContainer.querySelector('.template .address-container'));
+                        const newAddressItem = document.createElement('li');
+                        newAddressItem.className = 'address-item card border-black border-start rounded-1';
+                        newAddressItem.appendChild(template);
+                        
+                        addressesContainer.insertBefore(newAddressItem, addressesContainer.querySelector('.template'));
+                        template.dispatchEvent(new Event('htmx:load', {bubbles: false}));
+                        parent._addresses.push(newAddressItem);
+                        
+                        // Select the new address
+                        selectAddress(parent._addresses.length - 1);
+                        updateDropdown();
+                    });
+                }
+                
+                function selectAddress(index) {
+                    // Hide all addresses
+                    parent._addresses.forEach(addr => addr.classList.add('d-none'));
+                    
+                    // Show selected address
+                    if(index >= 0 && index < parent._addresses.length) {
+                        parent._addresses[index].classList.remove('d-none');
+                        parent._selectedIndex = index;
+                    }
+                }
+                
+                function updateDropdown() {
+                    if(!dropdown || !dropdownMenu) return;
+                    
+                    // Clear dropdown menu
+                    dropdownMenu.innerHTML = '';
+                    
+                    // Update dropdown text
+                    if(parent._selectedIndex >= 0 && parent._selectedIndex < parent._addresses.length) {
+                        const selectedAddress = parent._addresses[parent._selectedIndex];
+                        const addressContainer = selectedAddress.querySelector('.address-container');
+                        if(addressContainer) {
+                            const displayText = `${addressContainer._line1 || ''} ${addressContainer._district || ''} ${addressContainer._city || ''}`.trim() || 'Yeni Adres';
+                            dropdown.innerHTML = displayText;
+                        }
+                    } else {
+                        dropdown.innerHTML = 'Kayıtlı Adres Yok';
+                    }
+                    
+                    // Populate dropdown menu
+                    parent._addresses.forEach((addressElement, index) => {
+                        const addressContainer = addressElement.querySelector('.address-container');
+                        if(addressContainer) {
+                            const li = document.createElement('li');
+                            li.className = 'dropdown-item border-top border-bottom border-secondary-subtle border-2 px-1 py-2';
+                            
+                            const a = document.createElement('a');
+                            a.href = 'javascript:void(0);';
+                            a.className = 'text-black p-0 bg-white text-decoration-none';
+                            a.innerHTML = `${addressContainer._line1 || ''} ${addressContainer._district || ''} ${addressContainer._city || ''}`.trim() || 'Yeni Adres';
+                            a.addEventListener('click', () => {
+                                selectAddress(index);
+                                updateDropdown();
+                            });
+                            
+                            li.appendChild(a);
+                            dropdownMenu.appendChild(li);
+                        }
+                    });
+                }
+                
+                // Initial selection
+                if(parent._selectedIndex >= 0) {
+                    selectAddress(parent._selectedIndex);
+                }
+                updateDropdown();
             }
+        })(document.currentScript)
+        //# sourceURL=CustomerAddressPartial.js
+    </script>
+    <div class="dropdown mx-3 card card-header rounded-1 mb-3">
+        <a href="javascript:void(0);" class="card-title bg-light-subtle rounded-1 border-dark-subtle border-1 card-title dropdown-toggle text-wrap text-decoration-none text-black" data-bs-toggle="dropdown" data-bs-target="#customerAddressDropdown" aria-controls="customerAddressDropdown" aria-expanded="false">Kayıtlı Adres Yok</a>
+        <ul id="customerAddressDropdown" class="dropdown-menu">
         </ul>
     </div>
-    <ul id="addresses" class="list-unstyled mx-3 card-group">
-        @{
-            bool emptyAddress;
-            if (emptyAddress = (Model.Addresses.Count == 0)){
-                Model.Addresses.Add(Address.Empty);
-            }
-        }
+    <ul class="addresses list-unstyled mx-3 card-group">
         @for (int i = 0; i < Model.Addresses.Count; i++){
-            <li id="_address@(i)" class="card border-black border-start rounded-1 @(i == 0 ? "" : "d-none")">
+            <li class="address-item card border-black border-start rounded-1 @(i == 0 ? "" : "d-none")">
                 @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = Model.Addresses[i], Editable = Model.Editable, Id = "address" + i })
             </li>
         }
+        <li class="template d-none">
+            @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = Address.Empty, Editable = true, AsInput = true })
+        </li>
     </ul>
-</div>
-@if (Model.Updateable){
-    <div class="container-fluid justify-content-end align-content-center d-flex">
-        <script>
-            let editing=false;
-        </script>
-        <input type="hidden" name="@nameof(Pages.User.UserId)" value="@Model.CustomerId"/>
-        @for (int i = 0; i < Model.Addresses.Count; i++){
-            <input id="addr@(i)@nameof(Address.City)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.City))" value="@(Model.Addresses[i].City)"/>
-            <input id="addr@(i)@nameof(Address.District)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.District))" value="@(Model.Addresses[i].District)"/>
-            <input id="addr@(i)@nameof(Address.Country)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Country))" value="@(Model.Addresses[i].Country)"/>
-            <input id="addr@(i)@nameof(Address.Line1)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Line1))" value="@(Model.Addresses[i].Line1)"/>
-            <input id="addr@(i)@nameof(Address.Line2)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.Line2))" value="@(Model.Addresses[i].Line2)"/>
-            <input id="addr@(i)@nameof(Address.ZipCode)" type="hidden" name="@(nameof(Pages.User.Addresses))[i].@(nameof(Address.ZipCode))" value="@(Model.Addresses[i].ZipCode)"/>
-        }
-        <button class="btn btn-secondary" onclick="if(editing){event.currentTarget.innerText='Adresi Düzenle';}else{event.currentTarget.innerText='Değişiklikleri Kaydet';document.getElementById('address').querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control'));}">
-            Adresi Düzenle
+    <div class="mx-3 mt-3">
+        <button type="button" class="add-address-btn btn btn-outline-primary">
+            <i class="bi bi-plus-circle me-2"></i>Yeni Adres Ekle
         </button>
     </div>
-}
+</div>

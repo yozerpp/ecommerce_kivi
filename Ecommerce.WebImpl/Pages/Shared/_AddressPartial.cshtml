@@ -11,31 +11,31 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Adres Satırı 1</label>
-                        <input id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))" placeholder="Sokak, cadde, mahalle"/>
+                        <input id="@(nameof(Address.Line1)+ '_' + (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line1))" placeholder="Sokak, cadde, mahalle" value="@(Model?.Address?.Line1 ?? "")"/>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Adres Satırı 2</label>
-                        <input id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line2))" placeholder="Apartman, daire no (opsiyonel)"/>
+                        <input id="@(nameof(Address.Line2)+ '_' + (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@(nameof(Address.Line2))" placeholder="Apartman, daire no (opsiyonel)" value="@(Model?.Address?.Line2 ?? "")"/>
                     </div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">İlçe</label>
-                        <input id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@nameof(Address.District)" placeholder="İlçe"/>
+                        <input id="@(nameof(Address.District) +'_'+ (Model.Id ?? ""))" type="text" class="form-control" name="@(Model.InputPrefix ?? "").@nameof(Address.District)" placeholder="İlçe" value="@(Model?.Address?.District ?? "")"/>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Şehir</label>
-                        <input id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))" class="form-control" type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.City)" placeholder="Şehir"/>
+                        <input id="@(nameof(Address.City)+'_' + (Model.Id ?? ""))" class="form-control" type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.City)" placeholder="Şehir" value="@(Model?.Address?.City ?? "")"/>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Ülke</label>
-                        <input id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="form-control" type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.Country)" placeholder="Ülke"/>
+                        <input id="@(nameof(Address.Country) + '_' + (Model.Id ?? ""))" class="form-control" type="text" name="@(Model.InputPrefix ?? "").@nameof(Address.Country)" placeholder="Ülke" value="@(Model?.Address?.Country ?? "")"/>
                     </div>
                 </div>
                 <div class="row g-3 mt-2">
                     <div class="col-md-6">
                         <label class="form-label">Posta Kodu</label>
-                        <input id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="form-control" type="text" name="@(Model.InputPrefix??"").@(nameof(Address.ZipCode))" placeholder="Posta kodu"/>
+                        <input id="@(nameof(Address.ZipCode)+ '_' + (Model.Id??""))" class="form-control" type="text" name="@(Model.InputPrefix??"").@(nameof(Address.ZipCode))" placeholder="Posta kodu" value="@(Model?.Address?.ZipCode ?? "")"/>
                     </div>
                 </div>
             </div>
