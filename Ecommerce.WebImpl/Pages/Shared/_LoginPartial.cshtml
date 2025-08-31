@@ -1,15 +1,22 @@
 ﻿@using System.Security.Claims
 @using Ecommerce.Entity
+@using Ecommerce.Entity.Events
+@using Ecommerce.WebImpl.Pages.Notifications
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
 @using Cart = Ecommerce.WebImpl.Pages.Cart
 @{
     var session = (Session)ViewData[nameof(Session)];
 }
-<ul class="navbar-nav d-flex justify-content-center align-content-center gap-1">
+<ul class="navbar-nav ms-1 d-flex justify-content-center align-content-center gap-3">
+    <style>
+        .nav-item{
+            padding: 0!important;
+        }
+    </style>
     @if (session != null){
         <li class="nav-item d-inline-flex align-content-center align-items-center">
             @if (!ViewData.TryGetValue(nameof(Entity.User), out var u) || u is null or Entity.Customer){
-                <a asp-page="/@(nameof(Cart))" class="nav-link hover-grow justify-content-center align-content-center text-decoration-none text-dark p-0" title="Sepet">
+                <a title="Sepet" asp-page="/@(nameof(Cart))" class="nav-link hover-grow justify-content-center align-content-center text-decoration-none text-dark p-0" title="Sepet">
                     <i class="bi bi-cart  bg-white fs-4 position-relative" style="color: orange;">
                         @if (session.ItemCount > 0){
                             <i class="text-danger z-3 float-end position-absolute top-0 end-0 fs-5 m-0 ms-1 bi-@(session.ItemCount)-circle-fill" style="font-size: x-small !important;"></i>
@@ -20,15 +27,23 @@
                 </a>
             }
             else if (u is Entity.Seller s){
-                <a asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link hover-grow justify-content-center align-items-center text-decoration-none text-danger p-0" style="color: darkorange">
-                    <i class="bi bi-shop fs-4"></i>
-                </a>
+                <li class="nav-item d-inline-flex align-content-center align-items-center">
+                    <a title="Mağazanı Görüntüle" asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link hover-grow justify-content-center align-items-center text-decoration-none text-danger p-0" style="color: orange">
+                        <i class="bi bi-shop fs-4"></i>
+                    </a>
+                </li>
+                <li class="nav-item d-inline-flex justify-content-center align-items-center">
+                    <a asp-page="Seller/AddProduct" style="color: unset;" title="İlan Ver" class="text-decoration-none gap-1 hover-grow py-3  d-inline-flex flex-row justify-content-center align-items-center">
+                        <i class="bi bi-box-seam-fill p-0 m-0 align-self-end" style="color: orange;"></i>
+                        <i class="p-0 mb-2 bi bi-plus-circle fs-5 text-primary-emphasis"></i>
+                    </a>
+                </li>
             }
         </li>
     }
     @if ((Context.User.Identity?.IsAuthenticated ?? false) && Context.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role))){
-        <li class="nav-item">
-            <a asp-page="/@(nameof(Pages.User))" asp-route-UserId="@((ViewData[nameof(Entity.User)] as User).Id)" class="nav-link text-dark hover-grow" title="Hesap">
+        <li class="nav-item d-inline-flex justify-content-center align-items-center ">
+            <a title="Hesabını Görüntüle" asp-page="/@(nameof(Pages.User))" asp-route-UserId="@((ViewData[nameof(Entity.User)] as User).Id)" class="nav-link text-dark p-0 hover-grow" title="Hesap">
                 @if (ViewBag.User.ProfilePicture != null){
                     <img style="height: 2em;aspect-ratio: 1;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(ViewBag.User.ProfilePicture?.Data))" alt="Hesap"/>
                 }
@@ -37,12 +52,15 @@
                 }
             </a>
         </li>
-        <li class="nav-item d-flex justify-content-center align-content-center">
-            <component type="typeof(_NotificationPartial)" render-mode="ServerPrerendered"/>
-        </li>
-        <li class="nav-item">
-            <form class="form-inline" method="post" hx-post="/Account/Login?handler=logout" hx-swap="innerHTML" hx-target="#popupResult">
-                <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+        if (ViewData.ContainsKey(nameof(Notification))){
+            <li class="nav-item d-flex justify-content-center align-items-center">
+                @await Html.RenderComponentAsync(typeof(_NotificationPartial), RenderMode.ServerPrerendered, new{ Notifications = (ICollection<Notification>)ViewData[nameof(Notification)] })
+            </li>
+        }
+
+        <li class="nav-item text-center d-inline-flex align-content-center justify-content-center align-items-center">
+            <form class="form-inline text-center" method="post" hx-post="/Account/Login?handler=logout" hx-swap="innerHTML" hx-target="#popupResult">
+                <button type="submit" class="nav-link hover-darken btn btn-link text-dark">Çıkış Yap<i class="ms-2 bi bi-box-arrow-right fs-6 text-secondary-emphasis"></i></button>
             </form>
         </li>
     }
