@@ -65,20 +65,14 @@
         </li>
     }
     else{
-        <li class="nav-item d-inline-flex align-content-center align-items-center">
-            <a class="nav-link text-dark hover-grow p-0" asp-page="/Account/Register" title="Kaydol">
-                <i class="bi bi-person-plus fs-4 text-success"></i>
-            </a>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-page="/Account/Register">Kaydol</a>
         </li>
-        <li class="nav-item d-inline-flex align-content-center align-items-center">
-            <a class="nav-link text-dark hover-grow p-0" asp-page="/Account/Login" title="Giriş Yap">
-                <i class="bi bi-box-arrow-in-right fs-4 text-primary"></i>
-            </a>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-page="/Account/Login">Giriş Yap</a>
         </li>
-        <li class="nav-item d-inline-flex align-content-center align-items-center">
-            <a class="nav-link text-dark hover-grow p-0" asp-page="/@(nameof(Pages.Orders))" title="Siparişlerim">
-                <i class="bi bi-bag fs-4" style="color: orange;"></i>
-            </a>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-page="/@(nameof(Pages.Orders))">Siparişlerim</a>
         </li>
     }
 </ul>
