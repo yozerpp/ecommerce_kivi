@@ -1,7 +1,78 @@
 ﻿@using Ecommerce.Entity.Common
 @model Ecommerce.WebImpl.Pages.Shared._AddressPartial
 
+<!--
+properties:
+_line1: string
+_line2: string
+_district: string
+_city: string
+_country: string
+_zipCode: string
+_apiId: string
+-->
 <div class="address-container">
+    <script>
+        ((s)=>{
+            const parent = s.parentElement;
+            document.addEventListener('DOMContentLoaded', load);
+            parent.addEventListener('htmx:load', load);
+            function load(e) {
+                if(e.type === 'htmx:load'){
+                    e.stopPropagation();
+                }
+                
+                const line1Input = parent.querySelector('input[name*="Line1"]');
+                const line2Input = parent.querySelector('input[name*="Line2"]');
+                const districtInput = parent.querySelector('input[name*="District"]');
+                const cityInput = parent.querySelector('input[name*="City"]');
+                const countryInput = parent.querySelector('input[name*="Country"]');
+                const zipCodeInput = parent.querySelector('input[name*="ZipCode"]');
+                
+                // Initialize values from server-side model or input values
+                parent._line1 = line1Input?.value || '@(Model?.Address?.Line1 ?? "")';
+                parent._line2 = line2Input?.value || '@(Model?.Address?.Line2 ?? "")';
+                parent._district = districtInput?.value || '@(Model?.Address?.District ?? "")';
+                parent._city = cityInput?.value || '@(Model?.Address?.City ?? "")';
+                parent._country = countryInput?.value || '@(Model?.Address?.Country ?? "")';
+                parent._zipCode = zipCodeInput?.value || '@(Model?.Address?.ZipCode ?? "")';
+                parent._apiId = '@(Model?.Address?.ApiId ?? "")';
+                
+                // Add event listeners for input changes
+                if(line1Input) {
+                    line1Input.addEventListener('input', (e) => {
+                        parent._line1 = e.target.value;
+                    });
+                }
+                if(line2Input) {
+                    line2Input.addEventListener('input', (e) => {
+                        parent._line2 = e.target.value;
+                    });
+                }
+                if(districtInput) {
+                    districtInput.addEventListener('input', (e) => {
+                        parent._district = e.target.value;
+                    });
+                }
+                if(cityInput) {
+                    cityInput.addEventListener('input', (e) => {
+                        parent._city = e.target.value;
+                    });
+                }
+                if(countryInput) {
+                    countryInput.addEventListener('input', (e) => {
+                        parent._country = e.target.value;
+                    });
+                }
+                if(zipCodeInput) {
+                    zipCodeInput.addEventListener('input', (e) => {
+                        parent._zipCode = e.target.value;
+                    });
+                }
+            }
+        })(document.currentScript)
+        //# sourceURL=AddressPartial.js
+    </script>
     @if (Model.AsInput){
         <div class="card">
             <div class="card-header">
