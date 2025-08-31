@@ -2,7 +2,7 @@
 @model Ecommerce.WebImpl.Pages.Seller._CreateCategoryPartial
 
 
-<form data-id class="d-flex partial-parent flex-column px-3 gap-5">
+<form data-id class="d-flex partial-parent flex-column px-4 py-4 gap-4 bg-white rounded-4 shadow border">
     @Html.AntiForgeryToken()
     <script>
         ((s)=>{
@@ -52,17 +52,17 @@
         })(document.currentScript)
         //# sourceURL=CreateCategoryPartial.js
     </script>
-    <div class="input-group">
-        <label class="fs-5 input-group-text fw-bold">Kategori İsmi</label>
-        <input name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Name))" type="text" class="form-control" required/>    
+    <div class="input-group shadow-sm">
+        <label class="fs-5 input-group-text fw-bold bg-primary text-white border-0">Kategori İsmi</label>
+        <input name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Name))" type="text" class="form-control border-2 rounded-end-3" required/>    
     </div>
     <div class="pt-1">
-        <label class="fs-4 fw-bold">Kategori Açıklaması</label>
-        <textarea name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Description))" type="text" class="form-control" required></textarea>    
+        <label class="fs-4 fw-bold text-primary mb-2">Kategori Açıklaması</label>
+        <textarea name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.Description))" type="text" class="form-control border-2 rounded-3 shadow-sm" rows="4" required></textarea>    
     </div>
-    <div >
-        <label class="fs-5 fw-bold">Üst Kategori</label>
-        <select name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.ParentId))" class="form-select">
+    <div>
+        <label class="fs-5 fw-bold text-primary mb-2">Üst Kategori</label>
+        <select name="@(nameof(AddProduct.CreatedCategory)).@(nameof(Category.ParentId))" class="form-select border-2 rounded-3 shadow-sm">
                 <option>Yok</option>
             @foreach (var category in Model.Categories){
                 <div class="d-inline-flex gap-2">
@@ -72,10 +72,10 @@
         </select>
     </div>
     <div>
-        <label class="fs-5 fw-bold">Kategori Özelliklerini Belirle</label>
+        <label class="fs-5 fw-bold text-primary mb-3">Kategori Özelliklerini Belirle</label>
         @await Html.PartialAsync("_PropertyPromptsPartial")
     </div>
     <div class="container-fluid d-flex pe-2">
-        <button type="button" class="btn btn-primary" style="background-color: darkorange">Kategori Oluştur</button>
+        <button type="button" class="btn btn-primary btn-lg rounded-3 shadow fw-semibold px-4 py-2" style="background-color: darkorange; transition: all 0.2s ease-in-out;">Kategori Oluştur</button>
     </div>
 </form>

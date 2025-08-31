@@ -7,7 +7,7 @@ _required: boolean
 _inputName: string
 _constraint: string (value of the property)
 -->
-<div class="propertyPrompt container-fluid">
+<div class="propertyPrompt container-fluid p-3 border rounded-3 shadow-sm bg-light mb-3">
     <script>
         ((s)=>{
             const parent = s.parentElement;
@@ -66,42 +66,42 @@ _constraint: string (value of the property)
         })(document.currentScript)
         //# sourceURL=PropertyPrompt.js
     </script>
-    <div class="text-start row g-1 pe-3">
+    <div class="text-start row g-3 pe-3">
         <div class="col-9">
             <div class="input-group gap-1">
-                <label class="fs-6 input-group-text">Özellik İsmi:</label>
-                <input type="text" class="form-control" name="@(nameof(CategoryProperty.PropertyName))" />
+                <label class="fs-6 input-group-text fw-semibold bg-primary text-white border-0">Özellik İsmi:</label>
+                <input type="text" class="form-control border-2 rounded-end-3" name="@(nameof(CategoryProperty.PropertyName))" />
             </div>
         </div>
         <div class="col-3 align-content-center align-items-center">
-            <label class="fs-6 ps-1 fw-bold">Zorunlu:</label>
-            <input type="checkbox" class="ms-1 form-check-inline hover-grow" style="cursor:  pointer;" name="@nameof(CategoryProperty.IsRequired)"/>
+            <label class="fs-6 ps-1 fw-bold text-primary">Zorunlu:</label>
+            <input type="checkbox" class="ms-2 form-check-input hover-grow shadow-sm" style="cursor: pointer; transform: scale(1.2);" name="@nameof(CategoryProperty.IsRequired)"/>
         </div>
         <div class="col-3 gap-2">
-            <label class="fs-6 fw-bold">Veri tipini belirle:</label>
-            <select name="dataType">
+            <label class="fs-6 fw-bold text-primary">Veri tipini belirle:</label>
+            <select name="dataType" class="form-select form-select-sm border-2 rounded-3 mt-2">
                 <option selected value="string">Metin</option>
                 <option value="number">Sayı</option>
                 <option value="enum">Enum</option>
             </select>
         </div>
-        <div data-inptype="range" class="range col-9 d-none  gap-1">
-            <div class="d-inline-flex gap-2 align-items-center align-content-center">
-                <labe class="fw-bold fs-6" l>Aralık:</labe>
+        <div data-inptype="range" class="range col-9 d-none gap-1">
+            <div class="d-inline-flex gap-2 align-items-center align-content-center p-3 bg-white rounded-3 border">
+                <labe class="fw-bold fs-6 text-primary" l>Aralık:</labe>
                 <div class="d-inline-flex gap-1 align-items-center align-content-center">
-                    <label>Min</label>
-                    <input type="number" class="form-control" name="min" placeholder="Minimum Değer" aria-placeholder="Minimum Değer" value="-1000000"/>
+                    <label class="fw-semibold text-secondary">Min</label>
+                    <input type="number" class="form-control form-control-sm border-2 rounded-3" name="min" placeholder="Minimum Değer" aria-placeholder="Minimum Değer" value="-1000000"/>
                 </div>
                 <div class="d-inline-flex gap-1 align-items-center align-content-center">
-                    <label>Max</label>
-                    <input type="number" class="form-control" name="max" placeholder="Maksimum Değer" aria-placeholder="Maksimum Değer" value="1000000"/>
+                    <label class="fw-semibold text-secondary">Max</label>
+                    <input type="number" class="form-control form-control-sm border-2 rounded-3" name="max" placeholder="Maksimum Değer" aria-placeholder="Maksimum Değer" value="1000000"/>
                 </div>                    
             </div>
         </div>
         <div data-inptype="enum" class="enum col-9 d-none gap-1">
-            <div class="d-inline-flex gap-2">
-                <label>Geçerli Değerler</label>
-                <input type="text" class="form-control" aria-placeholder="virgül ile ayrılmış değerler" placeholder="virgül ile ayrılmış değerler"/>    
+            <div class="d-inline-flex gap-2 p-3 bg-white rounded-3 border">
+                <label class="fw-bold text-primary">Geçerli Değerler</label>
+                <input type="text" class="form-control border-2 rounded-3" aria-placeholder="virgül ile ayrılmış değerler" placeholder="virgül ile ayrılmış değerler"/>    
             </div>
         </div>
         @* <button type="button" class="btn  btn-success btn-sm" style="background-color: darkorange">Onayla</button> *@
