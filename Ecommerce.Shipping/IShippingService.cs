@@ -8,6 +8,7 @@ public interface IShippingService
 {
     public Task<ICollection<ShippingOffer>> GetOffers(GetOfferOptions options);
     public Task<Shipment> AcceptOffer(AcceptOfferOptions options);
+    public Task<ICollection<Shipment>> AcceptOfferBatch(AcceptOfferOptions[] options);
     public Task<Shipment> GetStatus(string id);
     public (bool, bool) ValidateAddress(Address address);
     public Task CancelShipment(string id);

@@ -5,7 +5,6 @@
 @using Ecommerce.Entity.Common
 @using Ecommerce.Entity.Views
 @using Ecommerce.WebImpl.Pages.Shared.Review
-@using Microsoft.EntityFrameworkCore.Infrastructure
 @using Cart = Ecommerce.WebImpl.Pages.Cart
 @using Product = Pages.Product
 @{
@@ -104,16 +103,13 @@
                     e.stopPropagation();
                 parent._offerEdited = false;
                 parent._productEdited = false;
-                @if (Model.Creating){
-                    <text>document.dispatchEvent(new Event('editControl', {bubbles:false, cancelable:false}));
-                    </text>
-                }
+
                 @if (editable){
                 <text>
                     const saveButton = s.nextElementSibling.firstElementChild.firstElementChild.querySelector('button.save-button');
                     saveButton.addEventListener('click', e=>{
                         assignInputs();
-                        htmx.trigger(document.getElementById('editForm'), 'submit', {bubbles:false, cancelable:true});
+                        htmx.trigger(document.getElementById('editForm'), 'submit', {bubbles:true, cancelable:true});
                     })
                     document.addEventListener('editControl', e=>{
                         document.getElementById('carousels').lastElementChild.classList.toggle('edit-control');
@@ -124,6 +120,9 @@
                     parent.addEventListener('editOffer', e=>{
                         e.stopPropagation(); parent._offerEdited = true;
                     })
+                document.getElementById('properties').firstElementChild.addEventListener('change',_=>{
+                    parent._productEdited=true;
+                })
                 </text>
                 }
                 if(e.type === 'htmx:load'){
@@ -183,8 +182,14 @@
                             document.dispatchEvent(new CartChangedEvent(q, parseInt(elt.querySelector('#sellerIdInput').value), @Model.ViewedProduct.Id));
                         }
                     })
+
                 })
                 </text>
+                }
+                @if (Model.Creating){
+                    <text>
+                    document.dispatchEvent(new Event('editControl', {bubbles:false, cancelable:false}));
+                    </text>
                 }
                 console.log("loaded @(nameof(_ProductMainPartial)) from " + e.type)
             }
@@ -200,11 +205,11 @@
                     }
                     <button type="button" class="ms-2 btn save-button btn-success @(!Model.Creating?"d-none":"") col-auto" style="@(Model.Creating?"background-color: darkorange":"")">@(!Model.Creating?"Düzenlemeyi Kaydet":"İlan Ver")</button>
                     @if (editable && Model.StaffVisiting){
-                        <formF hx-post="/Product?handler=delete" method="post" hx-swap="innerHTML" hx-target="#popupResult" class="col-auto">
+                        <form hx-post="/Product?handler=delete"  hx-swap="innerHTML" hx-target="#popupResult" class="col-auto">
                             <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.ViewedProduct.Id"/>
                             <button class="btn btn-danger"
                                     hx-trigger="click">Sil</button>
-                        </formF>
+                        </form>
                     }
                 </div>
             </li>
@@ -213,7 +218,7 @@
             <div class="col-7 d-flex flex-column pe-1"  >
                 <div id="carousels" class="my-1">
                     @await Html.PartialAsync("Shared/Product/_CarouselPartial", new _CarouselPartial(){
-                        Editable = editable,Creating = Model.Creating,
+                        Editable = editable ,Creating = Model.Creating,
                         Images = Model.ViewedProduct.Images.OrderBy(i=>i.IsPrimary?-1:0).ToArray(),
                         FetchUrl = "/" + nameof(Product) + $"?handler=images&{nameof(Product.ProductId)}={Model.ViewedProduct.Id}&json=true"
                     })
@@ -225,7 +230,7 @@
                         </div>
                         <div class="input-group">
                             <label class="input-group-text">Fiyat</label>
-                            <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched === 'false') {event.currentTarget.dataset.dispatched = 'true';event.currentTarget.dispatchEvent(new Event('editOffer', {cancelable:true, bubbles:true}))}" class="form-control rounded-2 small" placeholder="Fiyat" min="0.01" step="0.01" id="priceValue" type="number" name="@(nameof(Product.EditedOffer.Price))" value="@decimal.Round(Model.SellerOffer?.Price ?? 0, 2).ToString("F1", CultureInfo.InvariantCulture)))"/>
+                            <input data-dispatched="false" onchange="if(event.currentTarget.dataset.dispatched === 'false') {event.currentTarget.dataset.dispatched = 'true';event.currentTarget.dispatchEvent(new Event('editOffer', {cancelable:true, bubbles:true}))}" class="form-control rounded-2 small" placeholder="Fiyat" min="0.01" step="0.01" id="priceValue" type="number" name="@(nameof(Product.EditedOffer.Price))" value="@(decimal.Round(Model.SellerOffer?.Price ?? 0, 2).ToString("F1", CultureInfo.InvariantCulture))"/>
                         </div>
                         <div class="input-group">
                             <label class="input-group-text">İndirim</label>
@@ -261,7 +266,7 @@
                     </li>
                 }
                 @if (Model.Creating){
-                    <li id="offerOptions">
+                    <li class="ps-2" id="offerOptions">
                         @await Html.PartialAsync("Shared/Product/_ProductOptionsPartial", new _ProductOptionsPartial(){
                             Editable = true, Creating=true, Options = [], PropertyCandidates = Model.Categories[Model.ViewedProduct.CategoryId].CategoryProperties
                         })
@@ -277,20 +282,28 @@
                             s.closest('.partial-parent').addEventListener('htmx:load', load);
                             document.addEventListener('DOMContentLoaded', load);
                             function load(e){
-                                const b= document.getElementById('addToCartForm').querySelector('button[type="submit"]');
-                                const bTooltip = new bootstrap.Tooltip(b, {toggle:false,title: 'Stokta yok', customClass:'bg-secondary-subtle'});
-                                bTooltip.disable();
-                                const quantityInput = document.getElementById('addToCartForm').querySelector('input[name="quantity"]');
-                                quantityInput.addEventListener('change', _=>{
-                                    if(parseInt(quantityInput.value) <= parseInt(quantityInput.max))
-                                        quantityInput._oldVal = quantityInput.value;
-                                    else quantityInput.value = quantityInput.max ?? null;
-                                });
+                                if(e.type ==='load') e.stopPropagation();
+                                
+                                @if (!Model.Creating && Model.ViewingSellerId == null){
+                                    <text>
+                                        const b= document.getElementById('addToCartForm').querySelector('button[type="submit"]');
+                                        const quantityInput = document.getElementById('addToCartForm').querySelector('input[name="quantity"]');
+                                        quantityInput.addEventListener('change', _=>{
+                                            if(parseInt(quantityInput.value) @Html.Raw("<=") parseInt(quantityInput.max))
+                                                quantityInput._oldVal = quantityInput.value;
+                                            else quantityInput.value = quantityInput.max ?? null;
+                                        });
+                                            const bTooltip = new bootstrap.Tooltip(b, {toggle:false,title: 'Stokta yok', customClass:'bg-secondary-subtle'});
+                                            bTooltip.disable();
+                                    </text>    
+                                }
+
+
                                 document.getElementById('offerList').addEventListener('htmx:afterSwap', e=>{
                                     e.detail.elt.firstElementChild.style.maxHeight = (document.getElementById('carousels').offsetHeight - s.parentElement.offsetTop +s.parentElement.parentElement.offsetTop) + "px";
                                     e.detail.elt.firstElementChild.addEventListener('sellerSelected', e=>{
                                         e.stopPropagation();
-                                        var opts = document.getElementById('offerOptions');
+                                        let opts = document.getElementById('offerOptions');
                                         opts.setAttribute('hx-vals', JSON.stringify({SellerId: e.detail.sellerId}));
                                         opts.dispatchEvent(new Event('fire', {bubbles:false, cancelable:true}));
                                         @if (!Model.Creating && Model.ViewingSellerId == null){
@@ -312,7 +325,6 @@
                                             b.disabled =false;
                                             bTooltip.disable();
                                         }
-
                                         </text>
                                         }
                                     });
@@ -363,7 +375,7 @@
                 <li class="row container-fluid g-3 mx-4 justify-content-between">
                     @if (editable){
                         <div class="edit-control col-6">
-                            <form id="editForm" hx-post="/@(nameof(Product))?handler=edit">
+                            <form id="editForm" hx-post="/@(nameof(Product))?handler=edit" hx-target="#popupResult" hx-swap="innerHTML" class="d-none">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="@(nameof(Product.EditedOffer)).Product.@(nameof(Entity.Product.CategoryId))" value="@Model.ViewedProduct.CategoryId"/>
                                 <input type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.ProductId))" value="@Model.ViewedProduct.Id"/>
@@ -375,9 +387,9 @@
                                 <input id="priceInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Price))" value="-1"/>
                                 <input id="stockInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Stock))" value="-1"/>
                                 <input id="discountInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Discount))" value="-1"/>
-                                <input id="widthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Width))" value="@(Model.ViewedProduct.Dimensions.Width))"/>
-                                <input id="heightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Height))" value="@(Model.ViewedProduct.Dimensions.Height))"/>
-                                <input id="depthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Depth))" value="@(Model.ViewedProduct.Dimensions.Depth))"/>
+                                <input id="widthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Width))" value="@(Model.ViewedProduct.Dimensions.Width)"/>
+                                <input id="heightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Height))" value="@(Model.ViewedProduct.Dimensions.Height)"/>
+                                <input id="depthInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Depth))" value="@(Model.ViewedProduct.Dimensions.Depth)"/>
                                 <input id="weightInput" type="hidden" name="@(nameof(Product.EditedOffer)).@(nameof(ProductOffer.Product)).@(nameof(Entity.Product.Dimensions)).@(nameof(Dimensions.Weight))" value="@(Model.ViewedProduct.Dimensions.Weight)"/>
                                 <input id="sentImagesInput" type="hidden" name="@nameof(Product.SentImages)"/>
                             </form>
@@ -404,82 +416,30 @@
         </li>
         <!--Tabs Section-->
         <li>
-            <style>
-                .product-nav-tabs {
-                    background-color: #f8f9fa;
-                    border: 1px solid #dee2e6;
-                    border-radius: 12px;
-                    padding: 8px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                .product-nav-tabs .nav-link {
-                    border: none;
-                    border-radius: 8px;
-                    margin: 0 4px;
-                    padding: 12px 20px;
-                    transition: all 0.3s ease;
-                    color: #6c757d;
-                    font-weight: 500;
-                    position: relative;
-                }
-                .product-nav-tabs .nav-link:hover {
-                    background-color: #e9ecef;
-                    color: #495057;
-                    transform: translateY(-1px);
-                }
-                .product-nav-tabs .nav-link.active {
-                    background-color: #495057;
-                    color: white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                }
-                .product-nav-tabs .nav-link i {
-                    margin-right: 8px;
-                }
-                .edit-control-wrapper {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-            </style>
-            <nav class="d-flex justify-content-center container-fluid mb-3">
-                <div class="nav nav-tabs product-nav-tabs justify-content-between w-100" id="nav-tab" role="tablist">
-                    <div class="edit-control-wrapper">
-                        <button class="nav-link active" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">
-                            <i class="bi bi-file-text"></i>Açıklama
-                        </button>
+            <nav class="d-flex justify-content-center container-fluid">
+                <div class="nav nav-tabs justify-content-between" id="nav-tab" role="tablist">
+                    <div class="d-flex">
+                        <button class="nav-link active" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">Açıklama</button>
                         @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial(){ Target = "descriptionValue", OnClick = "event.currentTarget.dispatchEvent(new Event('edit', {bubbles:true, cancelable:true}));" })
                     </div>
-                    <button class="nav-link" id="nav-properties-tab" data-bs-toggle="tab" data-bs-target="#nav-properties" type="button" role="tab" aria-controls="nav-properties" aria-selected="false">
-                        <i class="bi bi-list-ul"></i>Özellikler
-                    </button>
-                    <button class="nav-link" id="nav-reviews-tab" data-bs-toggle="tab" data-bs-target="#nav-reviews" type="button" role="tab" aria-controls="nav-reviews" aria-selected="false">
-                        <i class="bi bi-star"></i>Değerlendirmeler
-                    </button>
+                    <button class="nav-link" id="nav-properties-tab" data-bs-toggle="tab" data-bs-target="#nav-properties" type="button" role="tab" aria-controls="nav-properties" aria-selected="false">Özellikler</button>
+                    @if (!Model.Creating){
+                    <button class="nav-link" id="nav-reviews-tab" data-bs-toggle="tab" data-bs-target="#nav-reviews" type="button" role="tab" aria-controls="nav-reviews" aria-selected="false">Değerlendirmeler</button>
+                        
+                    }
                 </div>
             </nav>
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane card rounded-3 border-0 shadow-sm fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+                <div class="tab-pane card border-bottom-0 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
                     <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="bg-light rounded-circle p-2 me-3 border">
-                                <i class="bi bi-file-text text-dark fs-5"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0 text-dark">Ürün Açıklaması</h5>
-                        </div>
-                        <p id="descriptionValue" class="lead text-muted">
+                        <p id="descriptionValue" class="lead">
                             @(Model.ViewedProduct.Description)
                         </p>
                     </div>
                 </div>
-                <div class="tab-pane card rounded-3 border-0 shadow-sm fade" id="nav-properties" role="tabpanel" aria-labelledby="nav-properties-tab">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="bg-light rounded-circle p-2 me-3 border">
-                                <i class="bi bi-list-ul text-dark fs-5"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0 text-dark">Ürün Özellikleri</h5>
-                        </div>
-                        <ul id="properties" class="container-fluid list-group list-group-flush">
+                <div class="tab-pane card border-bottom-0 fade" id="nav-properties" role="tabpanel" aria-labelledby="#nav-properties-tab">
+                    <div class="container-fluid my-2">
+                        <ul id="properties" class="mx-3 container-fluid list-group">
                             @await Html.PartialAsync("Shared/_DimensionsPartial", new _DimensionsPartial(){
                                 Dimensions = Model.ViewedProduct.Dimensions, Editable = Model.Editable || Model.Creating
                             })
@@ -489,17 +449,9 @@
                         </ul>
                     </div>
                 </div>
-                <div class="tab-pane card rounded-3 border-0 shadow-sm fade" id="nav-reviews" role="tabpanel" aria-labelledby="nav-reviews-tab">
+                <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="#nav-reviews-tab">
                     @if (!Model.Creating){
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="bg-light rounded-circle p-2 me-3 border">
-                                <i class="bi bi-star text-dark fs-5"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0 text-dark">Ürün Değerlendirmeleri</h5>
-                        </div>
-                    </div>
-                    <div class="container-fluid card bg-light border-0 rounded-3 mx-3 mb-3">
+                    <div class="container-fluid card bg-light">
                         <script>
                             ((s)=>{
                                 document.addEventListener('DOMContentLoaded', load);

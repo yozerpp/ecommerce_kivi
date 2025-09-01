@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
@@ -39,6 +40,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<DefaultDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
             c=> {
+                c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
             }).EnableDetailedErrors(builder.Environment.IsDevelopment())
@@ -46,10 +48,15 @@ builder.Services.AddDbContext<DefaultDbContext>(options =>
 builder.Services.AddDbContext<ShippingContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(ShippingContext)),
             c => {
+                c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 c.MigrationsAssembly(typeof(ShippingContext).Assembly.FullName); 
             }).EnableServiceProviderCaching().EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.Configure<ForwardedHeadersOptions>(options => {
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 var razorPageOptions = builder.Services.AddRazorPages();
 razorPageOptions.Services.AddScoped<AuthorizationFilter>(sp =>
     new AuthorizationFilter(sp.GetRequiredKeyedService<ICartManager>(nameof(AuthorizationFilter)),
@@ -220,6 +227,10 @@ Expression CreateComparerLambdaRecursive<T>(ParameterExpression param1, Expressi
     return Expression.Condition(Expression.Equal(param1, Expression.Constant(value)), Expression.Constant(-1),
         Expression.Condition(Expression.Equal(param2, Expression.Constant(value)), Expression.Constant(1),CreateComparerLambdaRecursive<T>(param1, param2, order.Skip(1))));
 }
+
+if (app.Environment.IsProduction()){
+    app.UseForwardedHeaders();
+}
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
@@ -261,7 +272,10 @@ Localizer BuildLocalizer(IServiceProvider sp) {
             (p=>p.MinPrice, "Minimum Fiyat"),
             (p=>p.SaleCount, "Satış Sayısı"),
             (p=>p.ReviewCount, "Yorum Sayısı"),
-            (p=>p.RatingAverage, "Yorum Ortalaması"))
+            (p=>p.RatingAverage, "Yorum Ortalaması"),
+            (p=>p.FavorCount , "Favori Sayısı"), 
+            (p=>p.OrderCount, "Sipariş Sayısı"),
+            (p=>p.RefundCount, "İade Sayısı"))
         .Build();
 }
 IEnumerable<Type> GetServices(bool implementations,Assembly assembly, params string[] ns) {

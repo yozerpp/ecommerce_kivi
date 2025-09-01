@@ -27,113 +27,101 @@
 
 <div id="profil@(Model.User.Id)" class="profile-container partial-parent">
     <script>
-    const parent= document.currentScript.parentElement;
-        document.addEventListener("DOMContentLoaded", ()=>{
-        @if (Model.Registering){
-            <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));</text>
-        }
-        parent._additionalData = {};
-    })
-    document.currentScript.parentElement.addEventListener('submit', function () {
-        let profileData = {
-            '@(nameof(Register.Role))': '@(role)',
-            '@(prefix).@(nameof(Entity.User.GoogleId))': '@Model.User.GoogleId',
-            '@(prefix).@(nameof(Entity.Customer.Id))': '@Model.User.Id',
-            '@(prefix).@(nameof(Entity.Customer.NormalizedEmail))': '@Model.User.NormalizedEmail',
-            '@(prefix).@(nameof(Entity.Customer.Email))': '@Model.User.Email',
-            '@(prefix).@(nameof(Model.User.FirstName))': document.getElementById('p_@(nameof(Model.User.FirstName))').innerHTML,
-            '@(prefix).@(nameof(Model.User.LastName))': document.getElementById('p_@(nameof(Model.User.LastName))').innerHTML,
-            '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))': document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML,
-            '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))': document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML,
-            '@(nameof(Customer.IsImageEdited))': _p_editedImage@(Model.User.Id).toString()
-        };
-        
-        // Add seller-specific fields
-        @if (seller != null) {
-        <text>
-        profileData['@(prefix).@(nameof(Entity.Seller.ShopName))'] = document.getElementById('p_@(nameof(Entity.Seller.ShopName))').innerHTML;
-        </text>
-        }
-        for (const [k,v] of Object.entries(profileData._additionalData ||{})) {
-            profileData[k] = v;   
-        }
-        profileData = {
-            ...profileData
-        };
-        
-        // Add profile picture if edited
-        const profilePicInput = document.getElementById('p_@(nameof(Model.User.ProfilePicture))');
-        if (profilePicInput && profilePicInput.value) {
-            profileData['@(prefix).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))'] = profilePicInput.value;
-        }
-        
-        @if (customer != null) {
-        <text>
-        // Collect address data from CustomerAddressPartial element-object model
-        const customerAddressElement = document.getElementById('customerAddresses').querySelector('.customerAddresses');
-        if (customerAddressElement && customerAddressElement._addresses) {
-            customerAddressElement._addresses.forEach((addressElement, index) => {
-                const addressContainer = addressElement.querySelector('.address-container');
-                if (addressContainer) {
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Line1))'] = addressContainer._line1 || '';
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Line2))'] = addressContainer._line2 || '';
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.District))'] = addressContainer._district || '';
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.City))'] = addressContainer._city || '';
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Country))'] = addressContainer._country || '';
-                    profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.ZipCode))'] = addressContainer._zipCode || '';
-                    if (addressContainer._apiId) {
-                        profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' + index + '].@(nameof(Address.ApiId))'] = addressContainer._apiId;
-                    }
+        ((currentScript)=>{
+            const parent= currentScript.parentElement;
+            document.addEventListener("DOMContentLoaded", ()=>{
+                @if (Model.Registering){
+                <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));</text>
                 }
+                parent._additionalData = {};
+            })
+            currentScript.parentElement.addEventListener('submit', function () {
+                let profileData = {
+                    '@(nameof(Register.Role))': '@(role)',
+                    '@(prefix).@(nameof(Entity.User.GoogleId))': '@Model.User.GoogleId',
+                    '@(prefix).@(nameof(Entity.Customer.Id))': '@Model.User.Id',
+                    '@(prefix).@(nameof(Entity.Customer.NormalizedEmail))': '@Model.User.NormalizedEmail',
+                    '@(prefix).@(nameof(Entity.Customer.Email))': '@Model.User.Email',
+                    '@(prefix).@(nameof(Model.User.FirstName))': document.getElementById('p_@(nameof(Model.User.FirstName))').innerHTML,
+                    '@(prefix).@(nameof(Model.User.LastName))': document.getElementById('p_@(nameof(Model.User.LastName))').innerHTML,
+                    '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))': document.getElementById('@(nameof(PhoneNumber.CountryCode))').innerHTML.replaceAll(new RegExp('\\D', 'g'), ''),
+                    '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))': document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML.replaceAll(new RegExp('\\D', 'g'), ''),
+                    '@(nameof(Customer.IsImageEdited))': _p_editedImage@(Model.User.Id).toString()
+                };
+                // Add seller-specific fields
+                @if (seller != null) {
+                <text>
+                profileData['@(prefix).@(nameof(Entity.Seller.ShopName))'] = document.getElementById('p_@(nameof(Entity.Seller.ShopName))').innerHTML;
+                </text>
+                }
+                const userProps = [@Html.Raw(string.Join(',',typeof(Entity.Customer).GetProperties().Select(p => $"'{p.Name}'")))];
+                for (const [k,v] of Object.entries(parent._additionalData ||{})) {
+                    profileData[ (userProps.some(p=>p===k)?'@(prefix).':'') + k] = v;
+                }
+                profileData = {
+                    ...profileData
+                };
+                
+                // Add profile picture if edited
+                const profilePicInput = document.getElementById('p_@(nameof(Model.User.ProfilePicture))');
+                if (profilePicInput && profilePicInput.value) {
+                    profileData['@(prefix).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))'] = profilePicInput.value;
+                }
+
+                @if (customer != null) {
+                <text>
+                // Collect address data from CustomerAddressPartial element-object model
+                const customerAddressElement = document.getElementById('customerAddresses').querySelector('.customerAddresses');
+                if (customerAddressElement && customerAddressElement._addresses) {
+                    customerAddressElement._addresses.forEach((addressElement, index) => {
+                        const addressContainer = addressElement.querySelector('.address-container');
+                        if (addressContainer) {
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Line1))'] = addressContainer._line1 || '';
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Line2))'] = addressContainer._line2 || '';
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.District))'] = addressContainer._district || '';
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.City))'] = addressContainer._city || '';
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.Country))'] = addressContainer._country || '';
+                            profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' +index + '].@(nameof(Address.ZipCode))'] = addressContainer._zipCode || '';
+                            if (addressContainer._apiId) {
+                                profileData['@(prefix).@(nameof(Entity.Customer.Addresses))[' + index + '].@(nameof(Address.ApiId))'] = addressContainer._apiId;
+                            }
+                        }
+                    });
+                }
+                </text>
+                } else if(seller!=null){
+                <text>
+
+                const addressContainer = document.getElementById('sellerAddress').querySelector('.address-container');
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line1))'] = addressContainer._line1 || '';
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line2))'] = addressContainer._line2 || '';
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.District))'] = addressContainer._district || '';
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.City))'] = addressContainer._city || '';
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Country))'] = addressContainer._country || '';
+                profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.ZipCode))'] = addressContainer._zipCode || '';
+                if (addressContainer._apiId) {
+                    profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.ApiId))'] = addressContainer._apiId;
+                }
+                </text>
+                }
+
+                // Get anti-forgery token
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                // Create form data
+                profileData['__RequestVerificationToken'] =  token;
+
+                // Submit with fetch
+                htmx.ajax('POST','@Model.PostUrl', {
+                    values: profileData,
+                    target:'#popupResult',
+                    swap:'innerHTML',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                })
             });
-        }
-        </text>
-        } else if(seller!=null){
-        <text>
-        
-        const addressContainer = document.getElementById('sellerAddress').querySelector('.address-container');
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line1))'] = addressContainer._line1 || '';
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line2))'] = addressContainer._line2 || '';
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.District))'] = addressContainer._district || '';
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.City))'] = addressContainer._city || '';
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Country))'] = addressContainer._country || '';
-        profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.ZipCode))'] = addressContainer._zipCode || '';
-        if (addressContainer._apiId) {
-            profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.ApiId))'] = addressContainer._apiId;
-        }
-        </text>
-        }
-        
-        // Get anti-forgery token
-        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('__RequestVerificationToken', token);
-        
-        // Add all profile data to form
-        Object.entries(profileData).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-                formData.append(key, value);
-            }
-        });
-        
-        // Submit with fetch
-        fetch('@Model.PostUrl', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('popupResult').innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Error submitting profile:', error);
-            document.getElementById('popupResult').innerHTML = '<div class="alert alert-danger">Bir hata oluştu. Lütfen tekrar deneyin.</div>';
-        });
-    });
-    
+        })(document.currentScript)
     let _p_editedImage@(Model.User.Id) = @(Model.Registering.ToString().ToLowerInvariant());
+    //# sourceURL=@(nameof(_ProfilePartial)).js
 </script>
 
 <ul class="list-group gap-4 rounded-0">
@@ -182,7 +170,7 @@
         </div>
     </li>
     @if (customer!=null && editable){
-        <li class="card shadow-sm rounded-3">
+        <li class="card shadow-sm rounded-3" id="customerAddresses">
             @SectionHeader("Adresler", "fs-3 bi bi-building text-primary bg-white")
             @await Html.PartialAsync("Customer/_CustomerAddressPartial", new _CustomerAddressPartial(){
                 CustomerId = Model.User.Id, Editable = Model.Editable, Updateable = false, Addresses = customer.Addresses

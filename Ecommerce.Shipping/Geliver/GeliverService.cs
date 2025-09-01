@@ -71,6 +71,25 @@ public class GeliverService(GeliverClient _client, ShippingContext _context) : I
         return ret;
     }
 
+    public async Task<ICollection<Shipment>> AcceptOfferBatch(AcceptOfferOptions[] options) {
+        var offers = options.Select(options => _context.ShippingOffers
+            .Include(o => o.Provider).Include(o => o.Items)
+            .Include(shippingOffer => shippingOffer.Recipient).Include(shippingOffer => shippingOffer.Sender)
+            .First(o => o.Id == options.OfferId)).ToArray();
+        if(offers.Any(o=>o.ApiId==null)) throw new ArgumentOutOfRangeException(string.Join('.',nameof(AcceptOfferOptions), nameof(options), nameof(AcceptOfferOptions.OfferId)));
+        var shipments = await Task.WhenAll(offers.Select(async o => {
+            var resp = await _client.AcceptOffer(o.ApiId);
+            return GetShipment(resp, o);
+        }));
+        _context.Shipments.AddRange(shipments);
+        await _context.SaveChangesAsync();
+        var oids = offers.Select(o => o.Id).ToArray();
+        var cids = offers.Select(o => o.ContextId).ToArray();
+        await _context.ShippingOffers.Where(o => !oids.Contains(o.Id) && cids.Contains(o.ContextId))
+            .ExecuteDeleteAsync();
+        return shipments;
+    }
+
     public async Task<Shipment> GetStatus(string id) {
          var st = await _client.GetStatus(id);
          var status = st.TrackingSubStatusCode switch{

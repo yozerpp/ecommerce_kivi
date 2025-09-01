@@ -20,7 +20,7 @@ public class AuthorizationFilter : IAuthorizationFilter
     public void OnAuthorization(AuthorizationFilterContext context) {
         var auth = context.HttpContext.Features.Get<IAuthenticateResultFeature>();
         var schmee = auth?.AuthenticateResult?.Ticket?.AuthenticationScheme;
-        if(schmee != null && schmee!= JwtBearerDefaults.AuthenticationScheme) return;
+        if( schmee!= JwtBearerDefaults.AuthenticationScheme) return;
         
         _jwtManager.ParsePrincipal(out var user, out var session, context.HttpContext.User);
         if (user != null){

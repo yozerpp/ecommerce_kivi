@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using System.Reflection;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
@@ -110,10 +111,13 @@ public class UserManager :IUserManager
             }
             _customerRepository.Flush();
         } catch (Exception e){
+            while (e is TargetInvocationException i){
+                e = i.InnerException;
+            }
             if(!typeof(DbUpdateException).IsInstanceOfType(e) && !typeof(InvalidOperationException).IsInstanceOfType(e))
                 throw;
-            if(e.Message.Contains("already",StringComparison.InvariantCultureIgnoreCase) || e.Message.Contains("conflict",StringComparison.InvariantCultureIgnoreCase) || e.Message.Contains("same",StringComparison.InvariantCultureIgnoreCase))
-                throw new ArgumentException("User with this email already exists.");
+            if(((e as DbUpdateException)?.InnerException?.Message.Contains("duplicate", StringComparison.InvariantCultureIgnoreCase) ?? false) || e.Message.Contains("conflict",StringComparison.InvariantCultureIgnoreCase) || e.Message.Contains("same",StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException("Bu emaile ait bir hesap zaten var.");
             throw;
         }
         return (T)ret;

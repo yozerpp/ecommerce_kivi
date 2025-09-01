@@ -4,11 +4,14 @@ using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using MailKit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using IMailService = Ecommerce.Mail.IMailService;
 
 namespace Ecommerce.WebImpl.Pages.Account;
 
+[IgnoreAntiforgeryToken, Authorize(Policy = nameof(Entity.User), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class UpdateModel : BaseModel
 {
     private readonly IMailService _mailService;

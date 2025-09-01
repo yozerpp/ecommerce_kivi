@@ -31,7 +31,7 @@ using ShipmentStatus = Ecommerce.Entity.Common.ShipmentStatus;
 
 namespace Ecommerce.WebImpl.Pages;
 
-[Authorize(Roles=nameof(Entity.AnonymousCustomer),AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(Policy=nameof(Entity.AnonymousCustomer),AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Checkout : BaseModel
 {
     private readonly IOrderManager _orderManager;
@@ -154,10 +154,10 @@ public class Checkout : BaseModel
                 _anonymousUserRepository.Flush();
             }
         }
-        var apiShipments = await Task.WhenAll(SelectedShippingOffers.Values.Select(async oid =>
-            await _shippingService.AcceptOffer(new AcceptOfferOptions(){
+        var apiShipments = await _shippingService.AcceptOfferBatch(SelectedShippingOffers.Values.Select(oid =>
+            new AcceptOfferOptions(){
                 OfferId = oid
-            })));
+            }).ToArray());
         var shipments = apiShipments.Select(s => {
             var shipment = _shipmentRepository.Add(new Entity.Shipment(){
                 ApiId = s.ApiId,
@@ -276,8 +276,8 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
         }
 
         var (city, dis) = _shippingService.ValidateAddress(deliveryAddress);
-        if(!city) throw new ArgumentException(city+ " bir şehir değil.");
-        if (!dis) throw new ArgumentException($"{dis} {city}'de bir ilçe değil.");
+        if(!city) throw new ArgumentException(deliveryAddress.City+ " bir şehir değil.");
+        if (!dis) throw new ArgumentException($"{deliveryAddress.District} {deliveryAddress.City}'de bir ilçe değil.");
     }
 
     private async Task<(string sessionSecret, string intentSecret, string intentId)> CreatePaymentIntent(Entity.Cart? cart, decimal extraCosts, Address address,

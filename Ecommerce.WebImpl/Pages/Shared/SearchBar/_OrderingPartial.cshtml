@@ -1,5 +1,6 @@
 ﻿@using Ecommerce.Entity
 @using Ecommerce.Entity.Views
+@inject Localizer Localizer
 @model Ecommerce.WebImpl.Pages.Shared.SearchBar._OrderingPartial
 
 <div class="overflow-y-scroll" style="max-height: 300px;">
@@ -70,7 +71,7 @@
                         // Update internal state map
                         orderList._orders.set(propertyName, {
                             selected: state !== 'unselected',
-                            ascending: state === 'ascending'
+                            ascending: state === 'descending'
                         });
                         
                         // Dispatch change event
@@ -102,7 +103,7 @@
     {
         <div class="sort-item dropdown-item d-flex align-items-center" onclick="event.stopPropagation();">
             <div class="flex-grow-1">
-                <span class="me-2">@(prop.Name)</span>
+                <span class="me-2">@(Localizer.GetLocalization(typeof(ProductStats), prop.Name))</span>
             </div>
             <div>
                 <button type="button" class="sort-toggle btn btn-sm btn-secondary">

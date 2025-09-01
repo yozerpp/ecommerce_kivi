@@ -1,40 +1,49 @@
 ﻿@page
 @model Ecommerce.WebImpl.Pages.Account.Register
 
-
-
 <div class="container">
     <div class="card card-body flex-grow-1 shadow border-0 rounded-4">
-        @await Html.PartialAsync("Account/_EmailAndPasswordPartial", new _EmailAndPasswordPartial(){
-            ShowEmail = true, ShowPassword = true, ShowOldPassword = false
-        })
+        <script>
+                ((s)=>{
+                    document.addEventListener("DOMContentLoaded",load);
+                    function load(){
+                        s.parentElement.lastElementChild.firstElementChild.addEventListener('click',event=>{
+                       const profilePartial = event.currentTarget.parentElement.previousElementSibling;
+                    @if (Model.RegisteringUser.GoogleId == null){
+                        <text>
+                       const emailPasswordPartial = event.currentTarget.parentElement.previousElementSibling.previousElementSibling;
+                       if (!profilePartial._additionalData) {
+                           profilePartial._additionalData = {};
+                       }
+                       if (emailPasswordPartial._email) {
+                           profilePartial._additionalData.Email = emailPasswordPartial._email;
+                       }
+                       if (emailPasswordPartial._password) {
+                           profilePartial._additionalData.Password = emailPasswordPartial._password;
+                       }
+                       if (emailPasswordPartial._oldPassword) {
+                           profilePartial._additionalData.oldPassword = emailPasswordPartial._oldPassword;
+                       }
+                    </text>
+                    }
+                       profilePartial.dispatchEvent(new Event('submit', {bubbles:false,cancelable:true}))
+                   })
+                }
+
+                })(document.currentScript)
+                //# sourceURL=@(nameof(Register)).js
+            </script>
+        @if (Model.RegisteringUser.GoogleId == null){
+            @await Html.PartialAsync("Account/_EmailAndPasswordPartial", new _EmailAndPasswordPartial(){
+                ShowEmail = true, ShowPassword = true, ShowOldPassword = false
+            })
+
+        }
         @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
-            Editable = true, PostUrl = "/Account/Register", User = Model.RegisteringUser,Registering = true,
+            Editable = true, PostUrl = "/Account/Register", User = Model.RegisteringUser, Registering = true,
         })
         <div class="card-footer d-flex justify-content-center align-items-center p-4">
-            <button type="button" onclick="
-                const emailPasswordPartial = event.currentTarget.parentElement.previousElementSibling.previousElementSibling;
-                const profilePartial = event.currentTarget.parentElement.previousElementSibling;
-                
-                // Initialize _additionalData if it doesn't exist
-                if (!profilePartial._additionalData) {
-                    profilePartial._additionalData = {};
-                }
-                
-                // Copy email and password values from email/password partial to profile partial's _additionalData
-                if (emailPasswordPartial._email) {
-                    profilePartial._additionalData.email = emailPasswordPartial._email;
-                }
-                if (emailPasswordPartial._password) {
-                    profilePartial._additionalData.password = emailPasswordPartial._password;
-                }
-                if (emailPasswordPartial._oldPassword) {
-                    profilePartial._additionalData.oldPassword = emailPasswordPartial._oldPassword;
-                }
-                
-                // Submit the profile partial
-                profilePartial.dispatchEvent(new Event('submit', {bubbles:false,cancelable:true}))
-            " class="btn btn-success btn-lg px-5 py-3 rounded-3 shadow-sm">
+            <button type="button" class="btn btn-success btn-lg px-5 py-3 rounded-3 shadow-sm">
                 <i class="bi bi-check-circle me-2"></i>Kaydol
             </button>
         </div>

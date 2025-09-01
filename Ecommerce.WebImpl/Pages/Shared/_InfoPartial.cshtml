@@ -149,24 +149,22 @@
                         if (Model.Redirect == "refresh")
                     {
                     <text>
-                    setTimeout(() => window.location.reload(), @Model.TimeOut);
+                    setTimeout(() => window.location.reload(), @Model.TimeOut + 1);
                     </text>
                     }
                     else
                     {
                     <text>
-                    setTimeout(()=>window.location.href='@Model.Redirect', @(Model.TimeOut)) ;
+                    setTimeout(()=>window.location.href='@Model.Redirect', @(Model.TimeOut+ 1)) ;
                     </text>
                     }
-                        <text>
-                    document.querySelector('.info-content').innerHTML = '<div class="d-flex align-items-center"><div class="loading-spinner"></div><span>Yükleniyor...</span></div>';
-                        </text>
+          
                     }
                     else
                     {
                     <text>
-                        e.currentTarget.classList.add('fade-out');
-                        setTimeout(() => this.remove(), 300);
+                        setTimeout(()=>this.classList.add('fade-out'), @(Model.TimeOut != 0 ? Model.TimeOut - 300: 1700));
+                        setTimeout(() => this.remove(), @(Model.TimeOut != 0 ? Model.TimeOut: 2000));
                     </text>    
                     }
             }
@@ -190,6 +188,12 @@
                 <div class="info-title">@Model.Title</div>
             }
             <div class="info-message">@Model.Message</div>
+            @if (Model.Redirect != null){
+             
+                <div class="w-100 d-inline-flex justify-content-end align-items-center align-content-center text-muted py-1 px-2" style="font-size: smaller">
+                    Yükleniyor...
+                </div>   
+            }
         </div>
         
         <button type="button" class="info-close" data-bs-dismiss="alert" aria-label="Close">

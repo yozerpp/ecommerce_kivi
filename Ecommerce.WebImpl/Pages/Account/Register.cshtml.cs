@@ -7,18 +7,23 @@ using Ecommerce.WebImpl.Pages.Shared;
 using Google.Apis.Core;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages.Account;
 
+[AllowAnonymous]
 public class Register : PageModel
 {
     private readonly IUserManager _userManager;
     private readonly IJwtManager _jwtManager;
-    public Register(IUserManager userManager, IJwtManager jwtManager) {
+    private readonly DbContext _dbContext;
+    public Register(IUserManager userManager, IJwtManager jwtManager, DbContext dbContext) {
         _userManager = userManager;
         _jwtManager = jwtManager;
+        _dbContext = dbContext;
     }
 
     [BindProperty]
@@ -45,6 +50,7 @@ public class Register : PageModel
         user.LastName = LastName;
         user.GoogleId = GoogleId;
         user.ProfilePicture = ProfilePicture!=null?new Image(){ Data = ProfilePicture }:null;
+        user.PhoneNumber = new PhoneNumber(){ Number = "" };
     }
 
     public async Task<IActionResult> OnGetOauth([FromQuery] string? continueUrl) {
@@ -55,8 +61,9 @@ public class Register : PageModel
         if (authResult.Properties == null) return new BadRequestObjectResult("Geçersiz durum. Lütfen tekrar deneyin.");
         var claims = authResult.Principal.Claims.ToArray();
         var googleId = claims.First(c => c.Type == ClaimTypes.NameIdentifier);
-        Entity.User user;
-        if ((user = _userManager.GetByGoogleId(googleId.Value)) != null){
+        Entity.User? user;
+        var email = claims.First(c => c.Type == ClaimTypes.Email);
+        if ((user = await _dbContext.Set<Entity.User>().FirstOrDefaultAsync(u=>u.GoogleId == googleId.Value  )) != null){
             Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(_jwtManager.CreateToken(user.Session)), new CookieOptions(){
                 MaxAge = TimeSpan.FromHours(1),
             });
@@ -64,7 +71,6 @@ public class Register : PageModel
         }
         var type = authResult.Properties.Items[nameof(AuthProperties.AuthType)];
         if (type == nameof(AuthProperties.Type.Identity)){
-            var email = claims.First(c => c.Type == ClaimTypes.Email);
             var firstName = claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
             var lastName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
             var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? firstName + " " + lastName;
@@ -76,6 +82,7 @@ public class Register : PageModel
                 Entity.User.UserRole.Seller => new Entity.Seller(){Address = Address.Empty}, _ => throw new NotImplementedException()
             };
             user.Email = email.Value;
+            user.GoogleId = googleId.Value;
             user.NormalizedEmail = email.Value.ToUpperInvariant();
             user.FirstName = firstName;
             user.LastName = lastName;
@@ -94,11 +101,12 @@ public class Register : PageModel
             Entity.User.UserRole.Customer => RegisteredCustomer,
             _ => throw new NotImplementedException()
         };
+        if (u.NormalizedEmail == null) u.NormalizedEmail = u.Email.ToUpperInvariant();
         _userManager.Register(Role, u);
-        if (GoogleId != null){
-            var t = _jwtManager.CreateToken(u.Session);
-            Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t));
-        }
+        // if (GoogleId != null){
+        var t = _jwtManager.CreateToken(u.Session);
+        Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t));
+        // }
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Kaydınız yapıldı. Kullanıcı sayfanıza yönlendiriliyorsunuz.",
             Redirect = "/User?" + nameof(Pages.User.UserId) + '=' + u.Id,

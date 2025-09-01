@@ -49,6 +49,10 @@ public class ShippingService (ShippingContext _context):IShippingService
         return ret;
     }
 
+    public Task<ICollection<Shipment>> AcceptOfferBatch(AcceptOfferOptions[] options) {
+        throw new NotImplementedException();
+    }
+
     public async Task<Shipment> GetStatus(string id) {
         var sid = ulong.Parse(id);
         var s = _context.Shipments.First(s=>s.Id == sid);

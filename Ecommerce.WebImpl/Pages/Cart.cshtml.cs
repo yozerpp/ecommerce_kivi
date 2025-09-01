@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Ecommerce.WebImpl.Pages;
 
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = nameof(AnonymousCustomer))]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = nameof(AnonymousCustomer))]
 public class Cart : BaseModel
 {
     private readonly ICartManager _cartManager;

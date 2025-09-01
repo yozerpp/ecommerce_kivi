@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages.Notifications;
 
-[Authorize(Roles = nameof(Entity.User), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(Policy = nameof(Entity.User), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Notifications : PageModel
 {
     private readonly INotificationService _notificationService;

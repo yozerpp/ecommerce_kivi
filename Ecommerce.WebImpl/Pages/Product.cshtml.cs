@@ -101,9 +101,9 @@ public class Product : BaseModel
          var cid = CurrentSession.CartId;
          var selectedOptions = _dbContext.Set<CartItem>().AsNoTracking().Where(i=>i.CartId==cid && i.ProductId == ProductId && i.SellerId == SellerId).Select(i=>i.SelectedOptions).FirstOrDefault();
          var editable = CurrentSeller?.Id == SellerId;
-         var oids = opts.Select(o => o.CategoryPropertyId).Where(o=>o!=null).Cast<uint>().ToArray();
+         // var oids = opts.Select(o => o.CategoryPropertyId).Where(o=>o!=null).Cast<uint>().ToArray();
          return Partial("Shared/Product/"+nameof(_ProductOptionsPartial), new _ProductOptionsPartial{
-             Options = opts.Select(o=>ValueTuple.Create(selectedOptions?.Any(o1=>o1.Equals(o)) ??false, o)).ToArray(), Editable = editable,PropertyCandidates = editable&&categoryId.HasValue?Categories[categoryId.Value].CategoryProperties.Where(c=>!oids.Contains(c.Id)).ToArray():[]
+             Options = opts.Select(o=>ValueTuple.Create(selectedOptions?.Any(o1=>o1.Equals(o)) ??false, o)).ToArray(), Editable = editable,PropertyCandidates = Categories[categoryId ?? ViewedProduct.CategoryId].CategoryProperties
          });
     }
 

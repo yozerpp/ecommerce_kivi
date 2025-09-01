@@ -16,6 +16,7 @@
             } 
             const fields = parent.querySelectorAll('span[data-field]');
             parent.addEventListener('contentChanged', (e) => {
+                parent.dispatchEvent(new Event('change', {bubbles:false, cancelable:true}));
                 if (e.target.classList.contains('editable-field')) {
                     const field = e.target.dataset.field;
                     const value = parseFloat(e.target.textContent.replace(/[^\d.]/g, ''));

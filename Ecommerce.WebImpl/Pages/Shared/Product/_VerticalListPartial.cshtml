@@ -8,7 +8,7 @@
         <partial name="Shared/Product/_ProductMainCardPartial" model="(item, Model.Categories)"/>
     </div>
     if (i ==7){
-        <div class="col-12 my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Seller" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
+        <div class="col-12 my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Seller" hx-on::after-request="if(event.detail.xhr.status===204)event.detail.elt.remove();" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
             <div class="d-flex justify-content-center align-items-center" style="height: 150px;">
                 <div class="spinner-border text-secondary" role="status">
                     <span class="visually-hidden">Loading...</span>
@@ -18,7 +18,7 @@
         </div>
             
     } else if (i ==15){
-        <div class="col-12 container-fluid my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Category" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
+        <div class="col-12 container-fluid my-2 px-0 overflow-y-visible" hx-get="/Index?handler=recommended&Type=Category" hx-on::after-request="if(event.detail.xhr.status===204)event.detail.elt.remove();" hx-trigger="revealed" hx-swap="innerHTML" hx-target="this">
             <div class="d-flex justify-content-center align-items-center" style="height: 150px;">
                 <div class="spinner-border text-secondary" role="status">
                     <span class="visually-hidden">Loading...</span>

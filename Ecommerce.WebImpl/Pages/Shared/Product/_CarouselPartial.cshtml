@@ -59,7 +59,11 @@
                 }
                 document.addEventListener('editControl', _=>{
                     console.log(s.nextElementSibling);
+                    @if (!Model.Creating){
+                    <text>
                     s.nextElementSibling.classList.toggle('edit-control');
+                    </text>
+                    }
                     parent.lastElementChild.classList.toggle('edit-control');
                 })
                 s.nextElementSibling.addEventListener('click',()=>{
@@ -155,6 +159,7 @@
                 console.log('initied paging of @(nameof(_CarouselPartial)) from ' + e.type);
             }
         })(document.currentScript)
+        //# sourceURL=@(nameof(_CarouselPartial)).js
     </script>
     @{ var imageMargin = Model.Editable ? "my-1" : ""; }
     @if (!Model.Creating&&Model.Editable){

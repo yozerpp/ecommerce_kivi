@@ -25,7 +25,7 @@ _options:Map<int,string>
                 parent.querySelectorAll('.tab-pane').forEach(el=>{
                     const opt = el.firstElementChild;
                     opt.dispatchEvent(new Event('htmx:load', {bubbles:false, cancelable:true}));
-                    const key = opt.dataset.propertyid!=undefined?parseInt(opt.dataset.propertyid):opt.dataset.keyname;
+                    const key = opt.dataset.propertyid!==undefined?parseInt(opt.dataset.propertyid):opt.dataset.keyname;
                     opt.addEventListener('change', e=>{
                         e.stopPropagation();
                         parent._options.set(key, opt.dataset.selected);
@@ -39,9 +39,6 @@ _options:Map<int,string>
                 document.addEventListener('editControl', e=>{
                     parent._editControls.forEach(el=>el.classList.toggle('edit-control'))
                 });
-                @if (Model.Creating){
-                    <text>parent._editControls.forEach(e=>e.classList.remove('edit-control'));</text>
-                }
                 s.nextElementSibling.nextElementSibling.querySelectorAll('button[role="tab"]').forEach(b=>{
                     const tabctrl = new bootstrap.Tab(b);
                     b.addEventListener('click', ev=> {
@@ -61,6 +58,8 @@ _options:Map<int,string>
                         if(!ev.target.dataset.id) return;
                         const propertyId = parseInt(ev.target.dataset.id);
                         const propertyName = ev.target.innerHTML;
+                        /**@@type {{id: number, enumvals: (string[]|null), isnumber: boolean, min: string, max: string, name: *}}
+                         */
                         const metadata = {
                             id: propertyId,
                             enumvals: ev.target.dataset.enumvals?ev.target.dataset.enumvals.split('|'):null,
@@ -113,7 +112,7 @@ _options:Map<int,string>
 
                 const plusIcon = document.createElement('i');
                 document.addEventListener('editControl', e=>{
-                    plusIcon.classList.toggle('d-none');
+                    plusIcon.classList.toggle('edit-control');
                 })
                 plusIcon.classList.add('bi', 'bi-plus-circle-fill', 'text-success', 'fs-5');
                 plusIcon.style.cursor = 'pointer';
@@ -134,6 +133,7 @@ _options:Map<int,string>
                     optionInput.classList.add('form-select', 'form-select-sm', 'border-secondary-subtle', 'border-2', 'rounded-4');
                     metadata.enumvals.forEach((val,idx )=> {
                         const option = document.createElement('option');
+                        if(idx===0) option.selected=true;
                         option.value = val;
                         option.textContent = val;
                         optionInput.appendChild(option);
@@ -148,7 +148,7 @@ _options:Map<int,string>
                     if (metadata.max) optionInput.max = metadata.max;
                 }
 
-                let kv = Array.of(propertyId, '');
+                let kv = Array.of(propertyId, optionInput.value);
                 parent._newOptions.push(kv);
                 // Store value in _options
                 optionInput.addEventListener('change', () => {
@@ -160,7 +160,9 @@ _options:Map<int,string>
         //# sourceURL=/ProductOptions/@(nameof(_ProductOptionsPartial)).js
         </script>
     <div class="d-flex"></div>
-    <h3 class="fs-5 fw-bold">Seçenekleri Tamamlayın</h3>
+    <div class="border-2 px-2 py-1 rounded-2 border-dark-subtle border-opacity-50">
+        <h3 class="fs-5 fw-bold">Seçenekleri Tamamlayın</h3>
+    </div>
     <div class="tab-content border-0" style="background-color: inherit">
         @foreach (var options in optionsGrouped){
             var propertyId = uint.Parse(options.Key);
@@ -171,8 +173,8 @@ _options:Map<int,string>
             </div>
         }
     </div>
-    <div role="tablist" class="w-100 d-flex py-1 mt-2 ps-2 justify-content-start align-content-center gap-2 align-items-center">
-            <p class="mb-0 fs-6">Özellik:</p>
+    <div role="tablist" class="w-100 ms-2 d-flex py-1 mt-2 ps-2 justify-content-start align-content-center gap-2 align-items-center">
+            <p class="mb-0 fs-6 text-muted">Özellik:</p>
         @foreach(var opt in optionsGrouped){
             <button data-toggle="tooltip" title="Satıcının bu özelliğe ait sunduğu varyasyonları görmek için tıklayın." id="option@(opt.Key.GetHashCode())-tab"  data-bs-toggle="tab" type="button" role="tab" data-bs-target="#option@(opt.Key.GetHashCode())" aria-controls="option@(opt.Key.GetHashCode())" aria-selected="false"
                 class="text-center py-1 bg-light hover-grow-small gap-0 hover-shadow btn-sm border-1 border-opacity-25 shadow-sm border-secondary-subtle rounded-4">
