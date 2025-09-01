@@ -35,165 +35,100 @@
 @{
      var fieldIdPrefix = "customer-";
 }
-<div class="container-fluid p-4">
-    <style>
-        .user-profile-card {
-            transition: all 0.3s ease;
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .user-profile-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
-        .profile-header {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-        }
-        .profile-avatar {
-            width: 80px;
-            height: 80px;
-            border: 2px solid #dee2e6;
-            transition: transform 0.3s ease;
-        }
-        .profile-avatar:hover {
-            transform: scale(1.05);
-        }
-        .nav-pills .nav-link {
-            border-radius: 8px;
-            margin-bottom: 4px;
-            transition: all 0.3s ease;
-            border: none;
-            color: #6c757d;
-        }
-        .nav-pills .nav-link:hover {
-            background-color: #f8f9fa;
-            color: #495057;
-        }
-        .nav-pills .nav-link.active {
-            background-color: #495057;
-            color: white;
-        }
-        .sidebar-nav {
-            background-color: #f8f9fa;
-            border-right: 1px solid #dee2e6;
-        }
-        .content-area {
-            background: white;
-        }
-        .tab-content {
-            min-height: 500px;
-        }
-        .shop-link {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 12px;
-            transition: all 0.3s ease;
-        }
-        .shop-link:hover {
-            background-color: #ffeaa7;
-            transform: translateY(-1px);
-        }
-        .stat-card {
-            transition: all 0.3s ease;
-            border: 1px solid #dee2e6;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-    </style>
-    
-    <div class="user-profile-card card rounded-3">
-        <!-- Header Section -->
-        <div class="profile-header card-header border-0 rounded-top-3">
-            <div class="p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-3">
-                        @if (Model.ViewedUser.ProfilePicture?.Data != null){
-                            <img class="profile-avatar rounded-circle" src="@(Utils.GetImageUrlOrDefault(Model.ViewedUser.ProfilePicture?.Data, false))" alt="Profile Resmi">
-                        }
-                        else{
-                            <img src="user-icon.svg" class="profile-avatar rounded-circle" alt="Profil Resmi"/>
-                        }
-                        <div>
-                            <h3 class="mb-1 fw-bold text-dark">@Model.ViewedUser.FirstName @Model.ViewedUser.LastName</h3>
-                            <p class="mb-0 text-muted">Müşteri Hesabı</p>
-                            <small class="text-muted">@Model.ViewedUser.Email</small>
-                        </div>
-                    </div>
-                    @if (Model.ViewedUser is Entity.Seller seller){
-                        <a asp-page="/Seller" asp-route-Id="@seller.Id" class="shop-link text-decoration-none text-center">
-                            <i class="bi bi-shop fs-4 text-warning d-block mb-1"></i>
-                            <small class="text-muted">Mağazanı Görüntüle</small>
-                        </a>
-                    }
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0 text-center">
+                        <i class="fas fa-user-circle me-2"></i>@Model.ViewedUser.FirstName @Model.ViewedUser.LastName
+                    </h3>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Main Content -->
-        <div class="card-body p-0">
-            <div class="row g-0">
-                <!-- Sidebar Navigation -->
-                <div class="col-3 sidebar-nav">
-                    <div class="nav flex-column nav-pills p-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                        <button class="nav-link active text-start" id="v-pills-statistics-tab" data-bs-toggle="pill" data-bs-target="#v-pills-statistics" type="button" role="tab">
-                            <i class="bi bi-graph-up me-2"></i>İstatistikler
-                        </button>
-                        <button class="nav-link text-start" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab">
-                            <i class="bi bi-person me-2"></i>Profil
-                        </button>
-                        @if (editable){
-                            <button class="nav-link text-start" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab">
-                                <i class="bi bi-shield-lock me-2"></i>Güvenlik
-                            </button>
-                            <button class="nav-link text-start" id="v-pills-orders-tab" data-bs-toggle="pill" data-bs-target="#v-pills-orders" type="button" role="tab">
-                                <i class="bi bi-bag me-2"></i>@(Model.CurrentCustomer != null ? "Siparişlerim" : "Siparişler")
-                            </button>
-                        }
-                    </div>
-                </div>
-                
-                <!-- Content Area -->
-                <div class="col-9 content-area">
-                    <div class="tab-content p-4" id="v-pills-tabContent">
-                        <!-- Statistics Tab -->
-                        <div class="tab-pane fade show active" id="v-pills-statistics" role="tabpanel">
-                            <div class="d-flex align-items-center mb-4">
-                                <div class="bg-light rounded-circle p-3 me-3 border">
-                                    <i class="bi bi-graph-up text-dark fs-4"></i>
-                                </div>
+                <div class="card-body p-0">
+                    <!-- Header Section -->
+                    <div class="bg-light border-bottom p-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (Model.ViewedUser.ProfilePicture?.Data != null){
+                                    <img class="rounded-circle border" style="width: 80px; height: 80px;" src="@(Utils.GetImageUrlOrDefault(Model.ViewedUser.ProfilePicture?.Data, false))" alt="Profile Resmi">
+                                }
+                                else{
+                                    <img src="user-icon.svg" class="rounded-circle border" style="width: 80px; height: 80px;" alt="Profil Resmi"/>
+                                }
                                 <div>
-                                    <h4 class="fw-bold mb-1">İstatistikler</h4>
-                                    <p class="text-muted mb-0">Hesap aktivite özeti</p>
+                                    <h4 class="mb-1 fw-bold text-dark">@Model.ViewedUser.FirstName @Model.ViewedUser.LastName</h4>
+                                    <p class="mb-0 text-muted">Müşteri Hesabı</p>
+                                    <small class="text-muted">@Model.ViewedUser.Email</small>
                                 </div>
                             </div>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <div class="card stat-card h-100 rounded-3">
-                                        <div class="card-body text-center p-4">
-                                            <i class="bi bi-bag-check text-muted fs-1 mb-3"></i>
-                                            <h6 class="fw-semibold text-muted">Toplam Sipariş</h6>
-                                            <h4 class="text-dark mb-0">-</h4>
+                            @if (Model.ViewedUser is Entity.Seller seller){
+                                <a asp-page="/Seller" asp-route-Id="@seller.Id" class="btn btn-outline-warning text-decoration-none">
+                                    <i class="bi bi-shop me-2"></i>Mağazanı Görüntüle
+                                </a>
+                            }
+                        </div>
+                    </div>
+        
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs nav-justified" id="userTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-3" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#v-pills-statistics" type="button" role="tab" aria-controls="v-pills-statistics" aria-selected="true">
+                                <i class="bi bi-graph-up me-2"></i>İstatistikler
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-3" id="profile-tab" data-bs-toggle="tab" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="false">
+                                <i class="bi bi-person me-2"></i>Profil
+                            </button>
+                        </li>
+                        @if (editable){
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-3" id="security-tab" data-bs-toggle="tab" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
+                                    <i class="bi bi-shield-lock me-2"></i>Güvenlik
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-3" id="orders-tab" data-bs-toggle="tab" data-bs-target="#v-pills-orders" type="button" role="tab" aria-controls="v-pills-orders" aria-selected="false">
+                                    <i class="bi bi-bag me-2"></i>@(Model.CurrentCustomer != null ? "Siparişlerim" : "Siparişler")
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="v-pills-tabContent">
+                        <!-- Statistics Tab -->
+                        <div class="tab-pane fade show active" id="v-pills-statistics" role="tabpanel">
+                            <div class="p-4">
+                                <div class="mb-4">
+                                    <h5 class="text-muted mb-3">Hesap İstatistikleri</h5>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="card border h-100">
+                                            <div class="card-body text-center p-4">
+                                                <i class="bi bi-bag-check text-primary fs-1 mb-3"></i>
+                                                <h6 class="fw-semibold text-muted">Toplam Sipariş</h6>
+                                                <h4 class="text-dark mb-0">-</h4>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card h-100 rounded-3">
-                                        <div class="card-body text-center p-4">
-                                            <i class="bi bi-heart text-muted fs-1 mb-3"></i>
-                                            <h6 class="fw-semibold text-muted">Favoriler</h6>
-                                            <h4 class="text-dark mb-0">-</h4>
+                                    <div class="col-md-4">
+                                        <div class="card border h-100">
+                                            <div class="card-body text-center p-4">
+                                                <i class="bi bi-heart text-danger fs-1 mb-3"></i>
+                                                <h6 class="fw-semibold text-muted">Favoriler</h6>
+                                                <h4 class="text-dark mb-0">-</h4>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card h-100 rounded-3">
-                                        <div class="card-body text-center p-4">
-                                            <i class="bi bi-star text-muted fs-1 mb-3"></i>
-                                            <h6 class="fw-semibold text-muted">Değerlendirmeler</h6>
-                                            <h4 class="text-dark mb-0">-</h4>
+                                    <div class="col-md-4">
+                                        <div class="card border h-100">
+                                            <div class="card-body text-center p-4">
+                                                <i class="bi bi-star text-warning fs-1 mb-3"></i>
+                                                <h6 class="fw-semibold text-muted">Değerlendirmeler</h6>
+                                                <h4 class="text-dark mb-0">-</h4>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -202,79 +137,70 @@
                         
                         <!-- Profile Tab -->
                         <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" data-editing="0">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle p-3 me-3 border">
-                                        <i class="bi bi-person text-dark fs-4"></i>
-                                    </div>
+                            <div class="p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
                                     <div>
-                                        <h4 class="fw-bold mb-1">Profil Bilgileri</h4>
+                                        <h5 class="text-muted mb-1">Profil Bilgileri</h5>
                                         <p class="text-muted mb-0">Kişisel bilgilerinizi yönetin</p>
                                     </div>
+                                    @if (editable){
+                                        <button id="profileEditBtn" class="btn btn-outline-primary"
+                                                onclick="if(document.getElementById('v-pills-profile').dataset.editing=='0'){
+                                                    event.currentTarget.innerHTML='<i class=\'bi bi-x-circle me-2\'></i>İptal';
+                                                    event.currentTarget.className='btn btn-outline-danger';
+                                                    document.getElementById('v-pills-profile').dataset.editing='1';
+                                                } else {
+                                                    event.currentTarget.innerHTML = '<i class=\'bi bi-pencil me-2\'></i>Düzenle';
+                                                    event.currentTarget.className='btn btn-outline-primary';
+                                                    document.getElementById('v-pills-profile').dataset.editing='0';
+                                                }
+                                                editableProfileElements.forEach(e=>e.classList.toggle('edit-control'));
+                                                document.getElementById('profileSaveButton').classList.remove('d-none');">
+                                            <i class="bi bi-pencil me-2"></i>Düzenle
+                                        </button>
+                                    }
                                 </div>
-                                @if (editable){
-                                    <button id="profileEditBtn" class="btn btn-outline-secondary rounded-2 px-3"
-                                            onclick="if(document.getElementById('v-pills-profile').dataset.editing=='0'){
-                                                event.currentTarget.innerHTML='<i class=\'bi bi-x-circle me-2\'></i>İptal';
-                                                event.currentTarget.className='btn btn-outline-danger rounded-2 px-3';
-                                                document.getElementById('v-pills-profile').dataset.editing='1';
-                                            } else {
-                                                event.currentTarget.innerHTML = '<i class=\'bi bi-pencil me-2\'></i>Düzenle';
-                                                event.currentTarget.className='btn btn-outline-secondary rounded-2 px-3';
-                                                document.getElementById('v-pills-profile').dataset.editing='0';
-                                            }
-                                            editableProfileElements.forEach(e=>e.classList.toggle('edit-control'));
-                                            document.getElementById('profileSaveButton').classList.remove('d-none');">
-                                        <i class="bi bi-pencil me-2"></i>Düzenle
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
+                                            Editable = editable, User = Model.ViewedUser,PostUrl = "/" + nameof(Pages.User)+"?handler=update"
+                                        })
+                                    </div>
+                                </div>
+                                <div class="text-center mt-4">
+                                    <button id="profileSaveButton" onclick="document.getElementById('v-pills-profile').dataset.editing='0'; 
+                                        event.currentTarget.classList.add('d-none');
+                                        submitProfile()" 
+                                            class="btn btn-success w-100 d-none">
+                                        <i class="bi bi-check-circle me-2"></i>Kaydet
                                     </button>
-                                }
-                            </div>
-                            <div class="card border rounded-3">
-                                <div class="card-body p-4">
-                                    @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
-                                        Editable = editable, User = Model.ViewedUser,PostUrl = "/" + nameof(Pages.User)+"?handler=update"
-                                    })
                                 </div>
-                            </div>
-                            <div class="text-center mt-4">
-                                <button id="profileSaveButton" onclick="document.getElementById('v-pills-profile').dataset.editing='0'; 
-                                    event.currentTarget.classList.add('d-none');
-                                    submitProfile()" 
-                                        class="btn btn-success rounded-2 px-4 d-none">
-                                    <i class="bi bi-check-circle me-2"></i>Kaydet
-                                </button>
                             </div>
                         </div>
                         
                         @if (editable){
                             <!-- Security Tab -->
                             <div class="tab-pane fade" id="v-pills-security" role="tabpanel">
-                                <div class="d-flex align-items-center mb-4">
-                                    <div class="bg-light rounded-circle p-3 me-3 border">
-                                        <i class="bi bi-shield-lock text-dark fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="fw-bold mb-1">Güvenlik Ayarları</h4>
+                                <div class="p-4">
+                                    <div class="mb-4">
+                                        <h5 class="text-muted mb-1">Güvenlik Ayarları</h5>
                                         <p class="text-muted mb-0">Hesap güvenliğinizi yönetin</p>
                                     </div>
-                                </div>
-                                <div class="card border rounded-3">
-                                    <div class="card-body p-4">
-                                        @await Html.PartialAsync("Account/_SecurityPartial", new _SecurityPartial(){
-                                            ViewedUser = Model.CurrentUser
-                                        })
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            @await Html.PartialAsync("Account/_SecurityPartial", new _SecurityPartial(){
+                                                ViewedUser = Model.CurrentUser
+                                            })
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Orders Tab -->
                             <div class="tab-pane fade" id="v-pills-orders" role="tabpanel">
-                                <div class="d-flex align-items-center mb-4">
-                                    <div class="bg-light rounded-circle p-3 me-3 border">
-                                        <i class="bi bi-bag text-dark fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h4 hx-get="/@nameof(Pages.Customer)?handler=orders&@(nameof(Pages.Customer.CustomerId))=@(Model.ViewedUser.Id)&pageSize=5&page=1" hx-trigger="revealed" hx-swap="afterend" hx-target="this" class="fw-bold mb-1">Siparişler@(Model.CurrentCustomer != null ? "im" : "")</h4>
+                                <div class="p-4">
+                                    <div class="mb-4">
+                                        <h5 hx-get="/@nameof(Pages.Customer)?handler=orders&@(nameof(Pages.Customer.CustomerId))=@(Model.ViewedUser.Id)&pageSize=5&page=1" hx-trigger="revealed" hx-swap="afterend" hx-target="this" class="text-muted mb-1">Siparişler@(Model.CurrentCustomer != null ? "im" : "")</h5>
                                         <p class="text-muted mb-0">Sipariş geçmişinizi görüntüleyin</p>
                                     </div>
                                 </div>
