@@ -25,25 +25,80 @@
         })(document.currentScript)
     </script>
 }
+<style>
+    .product-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .product-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .product-section-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 2px solid #dee2e6;
+    }
+    .product-nav-tabs .nav-link {
+        border: none;
+        border-radius: 0;
+        color: #6c757d;
+        background: transparent;
+        transition: all 0.3s ease;
+        padding: 1rem 1.5rem;
+    }
+    .product-nav-tabs .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #495057;
+    }
+    .product-nav-tabs .nav-link.active {
+        background-color: #495057;
+        color: white;
+        border-bottom: 3px solid #495057;
+    }
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    .category-dropdown {
+        background-color: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .category-dropdown:hover {
+        border-color: #ced4da;
+    }
+</style>
+
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-10">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0 text-center">
-                        <i class="fas fa-plus-circle me-2"></i>Ürün İlanı Ver
-                    </h3>
+            <div class="card product-card rounded-3">
+                <div class="card-header product-section-header border-0 rounded-top-3">
+                    <div class="d-flex align-items-center justify-content-center p-3">
+                        <div class="bg-light rounded-circle p-3 me-3 border">
+                            <i class="fas fa-plus-circle text-dark fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-1 text-dark">Ürün İlanı Ver</h3>
+                            <p class="text-muted mb-0">Yeni ürün ekleyin veya mevcut ürünlere teklif verin</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <!-- Tab Navigation -->
-                    <ul class="nav nav-tabs nav-justified" id="productTabs" role="tablist">
+                    <ul class="nav nav-tabs nav-justified product-nav-tabs" id="productTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active py-3" id="existing-tab" data-bs-toggle="tab" data-bs-target="#existing-product" type="button" role="tab" aria-controls="existing-product" aria-selected="true">
+                            <button class="nav-link active" id="existing-tab" data-bs-toggle="tab" data-bs-target="#existing-product" type="button" role="tab" aria-controls="existing-product" aria-selected="true">
                                 <i class="fas fa-search me-2"></i>Varolan Bir Ürünü Ekle
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link py-3" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-product" type="button" role="tab" aria-controls="new-product" aria-selected="false">
+                            <button class="nav-link" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-product" type="button" role="tab" aria-controls="new-product" aria-selected="false">
                                 <i class="fas fa-plus me-2"></i>Yeni Bir Ürün Oluştur
                             </button>
                         </li>
@@ -54,37 +109,43 @@
                         <div class="tab-pane fade show active" id="existing-product" role="tabpanel" aria-labelledby="existing-tab">
                             <div class="p-4">
                                 <div class="mb-4">
-                                    <h5 class="text-muted mb-3">Ürün Ara</h5>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-light rounded-circle p-2 me-3 border">
+                                            <i class="fas fa-search text-dark"></i>
+                                        </div>
+                                        <h5 class="fw-semibold mb-0 text-dark">Ürün Ara</h5>
+                                    </div>
                                     @await Html.PartialAsync("Shared/SearchBar/_SearchBarPartial", new _SearchBarPartial(){
                                         Categories = Model.Categories.Values,Target = "#productList", ViewType = HomepageModel.ViewType_.List	
                                     })
                                 </div>
                                 
-                                <div class="card bg-light mb-4">
-                                    <div class="card-header">
-                                        <h6 class="mb-0">Teklif Bilgileri</h6>
+                                <div class="form-section">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-light rounded-circle p-2 me-3 border">
+                                            <i class="fas fa-tag text-dark"></i>
+                                        </div>
+                                        <h6 class="fw-semibold mb-0 text-dark">Teklif Bilgileri</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <form   hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
-                                            @Html.AntiForgeryToken()
-                                            <input id="offerpid" type="hidden" name="@(nameof(AddProduct.NewOffer)).@(nameof(ProductOffer.ProductId))"/>
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-semibold">Fiyat (₺)</label>
-                                                    <input class="form-control" type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))" placeholder="0.00" required/>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-semibold">İndirim (%)</label>
-                                                    <input class="form-control" type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))" placeholder="0"/>
-                                                </div>
-                                                <div class="col-12">
-                                                    <button type="submit" class="btn btn-success w-100">
-                                                        <i class="fas fa-plus me-2"></i>Teklif Oluştur
-                                                    </button>
-                                                </div>
+                                    <form hx-post="/Seller/AddProduct?handler=addExisting" hx-target="#addExistingResult" hx-swap="innerHTML">
+                                        @Html.AntiForgeryToken()
+                                        <input id="offerpid" type="hidden" name="@(nameof(AddProduct.NewOffer)).@(nameof(ProductOffer.ProductId))"/>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold text-muted">Fiyat (₺)</label>
+                                                <input class="form-control border-2" type="number" step="0.1" name="@(nameof(Model.NewOffer.Price))" placeholder="0.00" required/>
                                             </div>
-                                        </form>
-                                    </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold text-muted">İndirim (%)</label>
+                                                <input class="form-control border-2" type="number" step="0.01" min="0" max="100" name="@(nameof(Model.NewOffer.Discount))" placeholder="0"/>
+                                            </div>
+                                            <div class="col-12">
+                                                <button type="submit" class="btn btn-dark w-100 rounded-3 fw-semibold py-2">
+                                                    <i class="fas fa-plus me-2"></i>Teklif Oluştur
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
                                 </div>
                                 
                                 <div class="border rounded" style="max-height: 400px; overflow-y: auto;">
@@ -98,49 +159,54 @@
                         <div class="tab-pane fade" id="new-product" role="tabpanel" aria-labelledby="new-tab">
                             <div class="p-4">
                                 <div class="mb-4">
-                                    <h5 class="text-muted mb-3">Kategori Seçimi</h5>
-                                        <div class="dropdown px-3 bg-white border-0">    
-                                            <script>
-                                                ((s)=>{
-                                                    const parent = s.parentElement;
-                                                    document.addEventListener('DOMContentLoaded', ()=>{
-                                                        const p=s.nextElementSibling.nextElementSibling.firstElementChild;
-                                                        parent._promptCopy = document.getElementById('productTemplate').firstElementChild.cloneNode(true);
-                                                        p.addEventListener('change', (e)=>{
-                                                            if(p.dataset.id==='0'){
-                                                                document.getElementById('createCategory').classList.remove('d-none');
-                                                                document.getElementById('productTemplate').innerHTML = '';
-                                                                document.getElementById('productTemplate').appendChild(parent._promptCopy);
-                                                            } else {
-                                                                document.getElementById('createCategory').classList.add('d-none');
-                                                                htmx.ajax('GET', '/Seller/@(nameof(AddProduct))?handler=template&categoryId='+ p.dataset.id, {
-                                                                    target: '#productTemplate',
-                                                                    swap: 'innerHTML',
-                                                                })
-                                                            }
-                                                            s.nextElementSibling.innerHTML = p.dataset.name;
-                                                        });     
-                                                    })
-                                                })(document.currentScript)
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-light rounded-circle p-2 me-3 border">
+                                            <i class="fas fa-layer-group text-dark"></i>
+                                        </div>
+                                        <h5 class="fw-semibold mb-0 text-dark">Kategori Seçimi</h5>
+                                    </div>
+                                    <div class="category-dropdown dropdown p-3">    
+                                        <script>
+                                            ((s)=>{
+                                                const parent = s.parentElement;
+                                                document.addEventListener('DOMContentLoaded', ()=>{
+                                                    const p=s.nextElementSibling.nextElementSibling.firstElementChild;
+                                                    parent._promptCopy = document.getElementById('productTemplate').firstElementChild.cloneNode(true);
+                                                    p.addEventListener('change', (e)=>{
+                                                        if(p.dataset.id==='0'){
+                                                            document.getElementById('createCategory').classList.remove('d-none');
+                                                            document.getElementById('productTemplate').innerHTML = '';
+                                                            document.getElementById('productTemplate').appendChild(parent._promptCopy);
+                                                        } else {
+                                                            document.getElementById('createCategory').classList.add('d-none');
+                                                            htmx.ajax('GET', '/Seller/@(nameof(AddProduct))?handler=template&categoryId='+ p.dataset.id, {
+                                                                target: '#productTemplate',
+                                                                swap: 'innerHTML',
+                                                            })
+                                                        }
+                                                        s.nextElementSibling.innerHTML = p.dataset.name;
+                                                    });     
+                                                })
+                                            })(document.currentScript)
                                         </script>
-                                        <button data-bs-toggle="dropdown" aria-expanded="false" class="dropdown-toggle btn btn-sm btn-primary" style="background-color: darkorange">Seçiniz</button>
+                                        <button data-bs-toggle="dropdown" aria-expanded="false" class="dropdown-toggle btn btn-outline-secondary rounded-3 fw-semibold px-4">Kategori Seçiniz</button>
                                         <div class="dropdown-menu">
                                             @await Html.PartialAsync("Shared/SearchBar/_CategoryPicker", new _CategoryPicker(Categories.Values, "categoryPickerSeller"){ AllowNonSelection = true, NonSelectionText = "Yeni Kategori" })
                                         </div>
                                     </div>
                                 </div>
-                                    <div id="createCategory" class="container-fluid d-none border rounded p-3 bg-white">
-                                        @await Html.PartialAsync("Seller/_CreateCategoryPartial", new _CreateCategoryPartial(){
-                                            Categories = Model.Categories.Values,
-                                            ForProductTemplate = true, Target = "#productTemplate"
-                                        })
+                                <div id="createCategory" class="form-section d-none">
+                                    @await Html.PartialAsync("Seller/_CreateCategoryPartial", new _CreateCategoryPartial(){
+                                        Categories = Model.Categories.Values,
+                                        ForProductTemplate = true, Target = "#productTemplate"
+                                    })
+                                </div>
+                                <div id="productTemplate">
+                                    <div class="text-center text-muted py-5 border rounded-3" style="background-color: #f8f9fa;">
+                                        <i class="fas fa-arrow-up fa-2x mb-3 text-secondary"></i>
+                                        <p class="fw-medium">Kategori Seçin veya Oluşturun</p>
                                     </div>
-                                    <div id="productTemplate">
-                                        <div class="text-center text-muted py-5">
-                                            <i class="fas fa-arrow-up fa-2x mb-3"></i>
-                                            <p>Kategori Seçin veya Oluşturun</p>
-                                        </div>
-                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
