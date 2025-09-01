@@ -4,8 +4,63 @@
 @{
     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Create) throw new InvalidEnumArgumentException("Use other one for creation");
 }
-<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50 p-4 bg-light rounded shadow-sm border" : "container-fluid")">
-    <h4 class="fw-bold fs-5 @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "mb-4 text-primary border-bottom pb-2" : "")">Ürün Özellikleri</h4>
+<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50 p-4 bg-gradient-light rounded-3 shadow-lg border-0" : "container-fluid")">
+    <style>
+        .categoryProperties.bg-gradient-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        
+        .categoryProperties .text-primary {
+            color: #3b82f6 !important;
+        }
+        
+        .categoryProperties .border-bottom {
+            border-color: #e5e7eb !important;
+        }
+        
+        .categoryProperties .alert-light {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+        }
+        
+        .categoryProperties .col-md-6.col-lg-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .categoryProperties .form-label {
+            color: #374151 !important;
+            font-weight: 600 !important;
+        }
+        
+        .categoryProperties .bg-white {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .categoryProperties .form-control,
+        .categoryProperties .form-select {
+            border: 1px solid #d1d5db !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .categoryProperties .form-control:focus,
+        .categoryProperties .form-select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .categoryProperties .border-primary {
+            border-color: #3b82f6 !important;
+        }
+        
+        .categoryProperties .form-select.border-primary:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+        }
+    </style>
+    <h4 class="fw-bold fs-5 @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "mb-4 text-primary border-bottom pb-3" : "")">Ürün Özellikleri</h4>
     <script>
             ((s)=>{
                 document.addEventListener("DOMContentLoaded", load);
@@ -66,8 +121,8 @@
         </script>
     <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "row g-3" : "row-cols-4")">
         @if (Model.Properties.Count == 0){
-            <div class="alert alert-light">
-                <h3 class="fs-6 mt-1 fw-bold">@(Model.Mode==_CategoryPropertiesPartial.DisplayMode.Filter?"Bu kategoriye ait özellik bulunmamaktadır.":"Bu ürünün kategorisi için özellik belirtilmemiş.")</h3>
+            <div class="alert alert-light border-0 shadow-sm">
+                <h3 class="fs-6 mt-1 fw-bold text-muted">@(Model.Mode==_CategoryPropertiesPartial.DisplayMode.Filter?"Bu kategoriye ait özellik bulunmamaktadır.":"Bu ürünün kategorisi için özellik belirtilmemiş.")</h3>
             </div>
         }
         @foreach (var property in Model.Properties){
@@ -89,7 +144,7 @@
                         </div>
                     }
                     else{
-                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
+                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
                             <script>
                         ((s)=>{
                             const parent=  s.closest('.partial-parent');
@@ -121,7 +176,7 @@
                                     Target = "next",
 
                                 })
-                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
+                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
                                     <select style="min-width: 0;" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-select border-primary" : "form-select-sm")">
                                         <option selected>Seçiniz</option>
                                         @{
@@ -149,7 +204,7 @@
                                 })
                             }
                         }
-                        <div data-proptype="text" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "propertyInput col-auto d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
+                        <div data-proptype="text" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "propertyInput col-auto d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
                             <input class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-control border-primary" : "form-control-sm")" style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
                                    name="@(Model.InputNamePrefix)[@metadata.PropertyName]"
                                    type="@(metadata.IsNumber ? $"number" : $"text")"/>
