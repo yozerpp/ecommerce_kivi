@@ -4,8 +4,8 @@
 @{
     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Create) throw new InvalidEnumArgumentException("Use other one for creation");
 }
-<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50" : "container-fluid")">
-    <h4 class="fw-bold fs-5">Ürün Özellikleri</h4>
+<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50 p-4 bg-light rounded shadow-sm border" : "container-fluid")">
+    <h4 class="fw-bold fs-5 @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "mb-4 text-primary border-bottom pb-2" : "")">Ürün Özellikleri</h4>
     <script>
             ((s)=>{
                 document.addEventListener("DOMContentLoaded", load);
@@ -64,7 +64,7 @@
             })(document.currentScript)
             //# sourceURL=CategoryPropertiesPartial.js
         </script>
-    <div class="row-cols-4">
+    <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "row g-3" : "row-cols-4")">
         @if (Model.Properties.Count == 0){
             <div class="alert alert-light">
                 <h3 class="fs-6 mt-1 fw-bold">@(Model.Mode==_CategoryPropertiesPartial.DisplayMode.Filter?"Bu kategoriye ait özellik bulunmamaktadır.":"Bu ürünün kategorisi için özellik belirtilmemiş.")</h3>
@@ -72,8 +72,8 @@
         }
         @foreach (var property in Model.Properties){
             var metadata = property.CategoryProperty;
-            <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-flex justify-content-between align-items-center py-2 px-3 mb-2 bg-light rounded border" : "col g-2")">
-                <label class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "fs-6 fw-semibold text-muted mb-0" : "fs-5 fw-bold")">@metadata.PropertyName: </label>
+            <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-flex justify-content-between align-items-center py-2 px-3 mb-2 bg-light rounded border" : "col-md-6 col-lg-4")">
+                <label class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "fs-6 fw-semibold text-muted mb-0" : "form-label fw-semibold text-dark mb-2")">@metadata.PropertyName: </label>
                 @if (metadata.IsNumber){
                     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
                         <div class="d-flex align-items-center gap-2">
@@ -89,7 +89,7 @@
                         </div>
                     }
                     else{
-                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
+                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
                             <script>
                         ((s)=>{
                             const parent=  s.closest('.partial-parent');
@@ -121,8 +121,8 @@
                                     Target = "next",
 
                                 })
-                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="col-auto propertyInput @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
-                                    <select style="min-width: 0;" class="form-select-sm">
+                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
+                                    <select style="min-width: 0;" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-select border-primary" : "form-select-sm")">
                                         <option selected>Seçiniz</option>
                                         @{
                                             var vals = metadata.EnumValues.Split('|');
@@ -149,8 +149,8 @@
                                 })
                             }
                         }
-                        <div data-proptype="text" data-propertyid="@metadata.Id" class="propertyInput col-auto @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-none" : "")">
-                            <input class="form-control-sm" style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
+                        <div data-proptype="text" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "propertyInput col-auto d-none" : "propertyInput bg-white p-3 rounded border shadow-sm")">
+                            <input class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-control border-primary" : "form-control-sm")" style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
                                    name="@(Model.InputNamePrefix)[@metadata.PropertyName]"
                                    type="@(metadata.IsNumber ? $"number" : $"text")"/>
                         </div>
