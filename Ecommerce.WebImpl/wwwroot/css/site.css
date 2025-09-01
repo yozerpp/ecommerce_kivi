@@ -55,6 +55,9 @@ body {
     transform: scale(1.05);
     transition: all 0.2s ease-out;
 }
+.hover-grow-small{
+    transition: all 0.2s ease;
+}
 .hover-darken-2:hover{
     background-color: var(--bs-secondary-bg-subtle);
 }
@@ -62,6 +65,9 @@ body {
     transform: scale(1.2);
     transition: all 0.2s ease-out;
 
+}
+.hover-grow{
+    transition: all 0.2s ease;
 }
 .edit-control{
   display: none !important;

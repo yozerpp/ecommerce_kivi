@@ -153,21 +153,21 @@ internal static class Initializer
                         Name = "Toys & Games",
                         Description = "Children's toys and gaming products",
                     },
-                    new Category()
-                    {
-                        Name = "Electronics",
-                        Description = "Electronic devices and accessories"
-                    },
-                    new Category()
-                    {
-                        Name = "Clothing",
-                        Description = "Apparel and fashion items"
-                    },
-                    new Category()
-                    {
-                        Name = "Books",
-                        Description = "Books and educational materials"
-                    },
+                    // new Category()
+                    // {
+                    //     Name = "Electronics",
+                    //     Description = "Electronic devices and accessories"
+                    // },
+                    // new Category()
+                    // {
+                    //     Name = "Clothing",
+                    //     Description = "Apparel and fashion items"
+                    // },
+                    // new Category()
+                    // {
+                    //     Name = "Books",
+                    //     Description = "Books and educational materials"
+                    // },
                     new Category()
                     {
                         Name = "Home & Garden",
@@ -186,9 +186,9 @@ internal static class Initializer
             if (!context.Set<CategoryProperty>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
-                var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
-                var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
-                var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
+                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
+                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
+                // var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
                 var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Home & Garden");
                 
                 var categoryProperties = new[]
@@ -227,109 +227,109 @@ internal static class Initializer
                     },
                     
                     // Electronics properties
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Screen Size",
-                        CategoryId = electronicsCategory.Id,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 99,
-                        MinValue = 1,
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Operating System",
-                        CategoryId = electronicsCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Windows", "macOS", "Linux", "Android", "iOS", "Other", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Connectivity",
-                        CategoryId = electronicsCategory.Id,
-                        IsNumber = false,
-                        IsRequired = false,
-                        EnumValues = string.Join('|', ["", "WiFi", "Bluetooth", "USB", "Ethernet", "Wireless", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Warranty Period",
-                        CategoryId = electronicsCategory.Id,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 60,
-                        MinValue = 0,
-                    },
-                    
-                    // Clothing properties
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Size",
-                        CategoryId = clothingCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                        EnumValues = string.Join('|', ["", "XS", "S", "M", "L", "XL", "XXL", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Color",
-                        CategoryId = clothingCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Fabric Type",
-                        CategoryId = clothingCategory.Id,
-                        IsNumber = false,
-                        IsRequired = false,
-                        EnumValues = string.Join('|', ["", "Cotton", "Polyester", "Wool", "Silk", "Denim", "Leather", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Gender",
-                        CategoryId = clothingCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Men", "Women", "Unisex", "Kids", ""]),
-                    },
-                    
-                    // Books properties
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Genre",
-                        CategoryId = booksCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Fiction", "Non-Fiction", "Science", "History", "Biography", "Children", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Page Count",
-                        CategoryId = booksCategory.Id,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 2000,
-                        MinValue = 1,
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Language",
-                        CategoryId = booksCategory.Id,
-                        IsNumber = false,
-                        IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Turkish", "English", "German", "French", "Spanish", ""]),
-                    },
-                    new CategoryProperty()
-                    {
-                        PropertyName = "Publication Year",
-                        CategoryId = booksCategory.Id,
-                        IsNumber = true,
-                        IsRequired = false,
-                        MaxValue = 2024,
-                        MinValue = 1900,
-                    },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Screen Size",
+                    //     CategoryId = electronicsCategory.Id,
+                    //     IsNumber = true,
+                    //     IsRequired = false,
+                    //     MaxValue = 99,
+                    //     MinValue = 1,
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Operating System",
+                    //     CategoryId = electronicsCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    //     EnumValues = string.Join('|', ["", "Windows", "macOS", "Linux", "Android", "iOS", "Other", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Connectivity",
+                    //     CategoryId = electronicsCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = false,
+                    //     EnumValues = string.Join('|', ["", "WiFi", "Bluetooth", "USB", "Ethernet", "Wireless", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Warranty Period",
+                    //     CategoryId = electronicsCategory.Id,
+                    //     IsNumber = true,
+                    //     IsRequired = false,
+                    //     MaxValue = 60,
+                    //     MinValue = 0,
+                    // },
+                    //
+                    // // Clothing properties
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Size",
+                    //     CategoryId = clothingCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    //     EnumValues = string.Join('|', ["", "XS", "S", "M", "L", "XL", "XXL", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Color",
+                    //     CategoryId = clothingCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Fabric Type",
+                    //     CategoryId = clothingCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = false,
+                    //     EnumValues = string.Join('|', ["", "Cotton", "Polyester", "Wool", "Silk", "Denim", "Leather", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Gender",
+                    //     CategoryId = clothingCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    //     EnumValues = string.Join('|', ["", "Men", "Women", "Unisex", "Kids", ""]),
+                    // },
+                    //
+                    // // Books properties
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Genre",
+                    //     CategoryId = booksCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    //     EnumValues = string.Join('|', ["", "Fiction", "Non-Fiction", "Science", "History", "Biography", "Children", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Page Count",
+                    //     CategoryId = booksCategory.Id,
+                    //     IsNumber = true,
+                    //     IsRequired = false,
+                    //     MaxValue = 2000,
+                    //     MinValue = 1,
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Language",
+                    //     CategoryId = booksCategory.Id,
+                    //     IsNumber = false,
+                    //     IsRequired = true,
+                    //     EnumValues = string.Join('|', ["", "Turkish", "English", "German", "French", "Spanish", ""]),
+                    // },
+                    // new CategoryProperty()
+                    // {
+                    //     PropertyName = "Publication Year",
+                    //     CategoryId = booksCategory.Id,
+                    //     IsNumber = true,
+                    //     IsRequired = false,
+                    //     MaxValue = 2024,
+                    //     MinValue = 1900,
+                    // },
                     
                     // Home & Garden properties
                     new CategoryProperty()
@@ -377,9 +377,9 @@ internal static class Initializer
             if (!context.Set<Product>().Any())
             {
                 var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
-                var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
-                var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
-                var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
+                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
+                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
+                // var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
                 var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Home & Garden");
                 
                 // Get category properties for reference
@@ -387,18 +387,18 @@ internal static class Initializer
                 var materialProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Material");
                 var batteryProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Battery Required");
                 var brandProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Brand");
-                var screenSizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Screen Size");
-                var osProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Operating System");
-                var connectivityProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Connectivity");
-                var warrantyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Warranty Period");
-                var sizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Size");
-                var colorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Color");
-                var fabricProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Fabric Type");
-                var genderProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Gender");
-                var genreProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Genre");
-                var pageCountProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Page Count");
-                var languageProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Language");
-                var publicationYearProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Publication Year");
+                // var screenSizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Screen Size");
+                // var osProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Operating System");
+                // var connectivityProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Connectivity");
+                // var warrantyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Warranty Period");
+                // var sizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Size");
+                // var colorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Color");
+                // var fabricProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Fabric Type");
+                // var genderProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Gender");
+                // var genreProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Genre");
+                // var pageCountProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Page Count");
+                // var languageProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Language");
+                // var publicationYearProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Publication Year");
                 var roomTypeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Room Type");
                 var assemblyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Assembly Required");
                 var powerSourceProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Power Source");
@@ -411,6 +411,7 @@ internal static class Initializer
                     {
                         CategoryId = toysCategory.Id,
                         Name = "Remote Control Car",
+                        Images = GetImage,
                         Description = "High-speed remote control racing car with LED lights",
                         Dimensions = new Dimensions()
                         {
@@ -428,6 +429,7 @@ internal static class Initializer
                     {
                         CategoryId = toysCategory.Id,
                         Name = "Wooden Building Blocks",
+                        Images = GetImage,
                         Description = "Educational wooden blocks for creative building",
                         Dimensions = new Dimensions()
                         {
@@ -445,6 +447,7 @@ internal static class Initializer
                     {
                         CategoryId = toysCategory.Id,
                         Name = "Plush Teddy Bear",
+                        Images = GetImage,
                         Description = "Soft and cuddly teddy bear for children",
                         Dimensions = new Dimensions()
                         {
@@ -459,130 +462,133 @@ internal static class Initializer
                         }
                     },
                     
-                    // Electronics products
-                    new Product()
-                    {
-                        CategoryId = electronicsCategory.Id,
-                        Name = "Gaming Laptop",
-                        Description = "High performance laptop for gaming and professional work",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 25m, Height = 2.5m, Weight = 2.3m, Width = 35m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "15.6" },
-                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Windows" },
-                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
-                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = electronicsCategory.Id,
-                        Name = "Wireless Mouse",
-                        Description = "Ergonomic wireless mouse with precision tracking",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 12m, Height = 4m, Weight = 0.1m, Width = 7m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Other" },
-                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "Wireless" },
-                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "12" }
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = electronicsCategory.Id,
-                        Name = "Smartphone",
-                        Description = "Latest generation smartphone with advanced camera",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 0.8m, Height = 15m, Weight = 0.18m, Width = 7m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "6.1" },
-                            new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Android" },
-                            new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
-                            new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
-                        }
-                    },
+                    // // Electronics products
+                    // new Product()
+                    // {
+                    //     CategoryId = electronicsCategory.Id,
+                    //     Name = "Gaming Laptop",
+                    //     Images = GetImage,
+                    //     Description = "High performance laptop for gaming and professional work",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 25m, Height = 2.5m, Weight = 2.3m, Width = 35m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "15.6" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Windows" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
+                    //     }
+                    // },
+                    // new Product()
+                    // {
+                    //     CategoryId = electronicsCategory.Id,
+                    //     Name = "Wireless Mouse",
+                    //     Images = GetImage,
+                    //     Description = "Ergonomic wireless mouse with precision tracking",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 12m, Height = 4m, Weight = 0.1m, Width = 7m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Other" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "Wireless" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "12" }
+                    //     }
+                    // },
+                    // new Product()
+                    // {
+                    //     CategoryId = electronicsCategory.Id,
+                    //     Name = "Smartphone",
+                    //     Images = GetImage,
+                    //     Description = "Latest generation smartphone with advanced camera",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 0.8m, Height = 15m, Weight = 0.18m, Width = 7m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = screenSizeProp.Id, Value = "6.1" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Android" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "WiFi" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "24" }
+                    //     }
+                    // },
                     
-                    // Clothing products
-                    new Product()
-                    {
-                        CategoryId = clothingCategory.Id,
-                        Name = "Cotton T-Shirt",
-                        Description = "Comfortable cotton t-shirt for everyday wear",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 70m, Weight = 0.2m, Width = 50m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "M" },
-                            new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Blue" },
-                            new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Cotton" },
-                            new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Unisex" }
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = clothingCategory.Id,
-                        Name = "Denim Jeans",
-                        Description = "Classic blue denim jeans with modern fit",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 2m, Height = 20m, Weight = 0.6m, Width = 40m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "L" },
-                            new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Dark Blue" },
-                            new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Denim" },
-                            new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Men" }
-                        }
-                    },
+                    // // Clothing products
+                    // new Product()
+                    // {
+                    //     CategoryId = clothingCategory.Id,
+                    //     Name = "Cotton T-Shirt",
+                    //     Description = "Comfortable cotton t-shirt for everyday wear",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 1m, Height = 70m, Weight = 0.2m, Width = 50m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "M" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Blue" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Cotton" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Unisex" }
+                    //     }
+                    // },
+                    // new Product()
+                    // {
+                    //     CategoryId = clothingCategory.Id,
+                    //     Name = "Denim Jeans",
+                    //     Description = "Classic blue denim jeans with modern fit",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 2m, Height = 20m, Weight = 0.6m, Width = 40m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "L" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Dark Blue" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Denim" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Men" }
+                    //     }
+                    // },
                     
-                    // Books products
-                    new Product()
-                    {
-                        CategoryId = booksCategory.Id,
-                        Name = "Programming Guide",
-                        Description = "Comprehensive guide to modern programming languages",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 3m, Height = 24m, Weight = 0.8m, Width = 17m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Science" },
-                            new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "450" },
-                            new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "English" },
-                            new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2023" }
-                        }
-                    },
-                    new Product()
-                    {
-                        CategoryId = booksCategory.Id,
-                        Name = "Children's Story Book",
-                        Description = "Colorful illustrated story book for young readers",
-                        Dimensions = new Dimensions()
-                        {
-                            Depth = 1m, Height = 21m, Weight = 0.3m, Width = 15m
-                        },
-                        CategoryProperties = new List<ProductCategoryProperty>()
-                        {
-                            new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Children" },
-                            new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "32" },
-                            new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "Turkish" },
-                            new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2022" }
-                        }
-                    },
-                    
+                    // // Books products
+                    // new Product()
+                    // {
+                    //     CategoryId = booksCategory.Id,
+                    //     Name = "Programming Guide",
+                    //     Description = "Comprehensive guide to modern programming languages",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 3m, Height = 24m, Weight = 0.8m, Width = 17m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Science" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "450" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "English" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2023" }
+                    //     }
+                    // },
+                    // new Product()
+                    // {
+                    //     CategoryId = booksCategory.Id,
+                    //     Name = "Children's Story Book",
+                    //     Description = "Colorful illustrated story book for young readers",
+                    //     Dimensions = new Dimensions()
+                    //     {
+                    //         Depth = 1m, Height = 21m, Weight = 0.3m, Width = 15m
+                    //     },
+                    //     CategoryProperties = new List<ProductCategoryProperty>()
+                    //     {
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Children" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "32" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "Turkish" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2022" }
+                    //     }
+                    // },
+                    //
                     // Home & Garden products
                     new Product()
                     {
@@ -849,5 +855,14 @@ internal static class Initializer
         }
     }
 
-    
+    private static IList<ImageProduct> GetImage => new List<ImageProduct>([
+        new ImageProduct(){
+            IsPrimary = true, Image = new Image(){
+                Data =
+                    Convert.ToBase64String(ValueRandomizer.FetchImage())
+            }
+        }
+    ]);
+
+
 }

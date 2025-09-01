@@ -16,7 +16,7 @@ using Address = Ecommerce.Entity.Common.Address;
 
 namespace Ecommerce.Dao.Initializer;
 
-internal class ValueRandomizer
+public class ValueRandomizer
 {
 
     private readonly Config _config;
@@ -275,7 +275,7 @@ internal class ValueRandomizer
     private static int _imageCount = ImageFiles.Length;
     private const int MaxImageCount = 50;
 
-    private byte[] FetchImage() {
+    public static byte[] FetchImage() {
         if (_imageCount >=MaxImageCount){
             return File.ReadAllBytes(Path.Combine(ImagesLocation.FullName, Random.Shared.Next(_imageCount ) + ".jpg"));
         }

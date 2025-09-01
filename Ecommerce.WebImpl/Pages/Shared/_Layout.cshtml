@@ -18,9 +18,9 @@
 <body>
 <header>
     <div id="popupResult" class="position-fixed end-0 z-3" style="z-index: 9999;margin-top: 4rem;"></div>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-        <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index"><i class="bi bi-house text-black-50 fs-2 fw-bold"></i></a>
+    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow px-0 mx-0 mb-3">
+        <div class="d-flex justify-content-center flex-fill flex-grow-1 align-items-center align-content-center ps-5" style="padding-right: 5%">
+            <a class="navbar-brand me-4 d-inline-flex justify-content-center align-content-center align-items-center" asp-area="" asp-page="/Index">Ecommerce Sandbox<i style="color: orange" class="ms-2 bi bi-boxes  fs-2 "></i></a>
             <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                 <ul class="navbar-nav flex-grow-1">
                     <!-- search -->
@@ -28,7 +28,9 @@
                         <partial name="SearchBar/_SearchBarPartial" model="new _SearchBarPartial(){Categories=Categories.Values, ViewType = HomepageModel.ViewType_.Page}"/>
                     </li>
                 </ul>
-                <partial name="_LoginPartial"/>
+                <div class="ms-3">
+                    <partial name="_LoginPartial"/>
+                </div>
             </div>
         </div>
     </nav>

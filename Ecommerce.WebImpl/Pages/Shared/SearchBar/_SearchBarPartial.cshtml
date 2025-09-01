@@ -10,133 +10,7 @@
 @{
     var formId = (Model.Target?.ToLowerInvariant().Replace("#","").Replace("-","_") ?? "searchBar") +"Form";
 }
-<div id="@(formId)" class="search-bar-container">
-    <style>
-        .search-bar-container {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid #e2e8f0;
-            margin-bottom: 1.5rem;
-        }
-        
-        .search-bar-container .input-group {
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .search-bar-container .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border: none;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .search-bar-container .btn-primary:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-        }
-        
-        .search-bar-container .btn-outline-light {
-            background: white;
-            border: 1px solid #d1d5db;
-            color: #374151;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .search-bar-container .btn-outline-light:hover {
-            background: #f3f4f6;
-            border-color: #9ca3af;
-            transform: translateY(-1px);
-        }
-        
-        .search-bar-container .form-control {
-            border: 1px solid #d1d5db;
-            padding: 0.75rem 1rem;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-        }
-        
-        .search-bar-container .form-control:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .search-bar-container .btn-outline-info {
-            background: white;
-            border: 1px solid #06b6d4;
-            color: #0891b2;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .search-bar-container .btn-outline-info:hover {
-            background: #06b6d4;
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(6, 182, 212, 0.3);
-        }
-        
-        .search-bar-container .dropdown-menu {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            background: white;
-            backdrop-filter: blur(10px);
-        }
-        
-        .search-bar-container .dropdown-item {
-            padding: 0.75rem 1rem;
-            transition: all 0.2s ease;
-        }
-        
-        .search-bar-container .dropdown-item:hover {
-            background: #f3f4f6;
-            color: #1f2937;
-        }
-        
-        .search-bar-container .btn-group {
-            gap: 0.75rem;
-        }
-        
-        .search-bar-container .bi-search {
-            font-size: 1.1rem;
-        }
-        
-        .search-bar-container #filters {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            min-width: 600px;
-            max-width: 800px;
-        }
-        
-        .search-bar-container #filters h4 {
-            color: #1f2937;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #e5e7eb;
-        }
-        
-        .search-bar-container #filters .col-6 {
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .search-bar-container #filters .col-6 > div:first-child {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.75rem;
-            font-size: 0.9rem;
-        }
-    </style>
+<div id="@(formId)">
     <script>
         let filterDropdown@(formId);
         let orderDropdown@(formId);
@@ -233,11 +107,11 @@
     <input type="hidden" id="categoryIdInput" name="@(nameof(HomepageModel.SearchCategory))"/>
     <div class="d-flex gap-1">
         <div class="input-group rounded-start-2">
-            <button hx-get="" hx-trigger="go" id="@(formId)Submit" class="input-group-text rounded-start-2 rounded-end-0 btn-primary btn" type="button">
+            <button hx-get="" hx-trigger="go" id="@(formId)Submit" class="input-group-text rounded-start-2 hover-grow-small border-light-subtle border-1 border-opacity-50 shadow-sm rounded-end-0 btn-primary btn" type="button">
                 <i class="bi bi-search m-0" style="font-size: large"></i>
             </button>
             <div class="dropdown my-0">
-                <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light text-dark rounded-0 box-shadow" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tüm Kategoriler</button>
+                <button id="pickerBtn" class="my-0 dropdown-toggle btn btn-outline-light border-opacity-75 border-light border-2 hover-darken shadow-sm text-dark rounded-0" data-bs-toggle="dropdown" data-bs-target="#categoryPicker" aria-expanded="false">Tüm Kategoriler</button>
                 <div id="categoryPicker" class="dropdown-menu rounded-bottom-2 border-1">
                     <script>
                         ((s)=>{
@@ -259,7 +133,7 @@
             <input id="@(formId)Search" class="rounded-1 rounded-start-0 form-control" type="text" @Html.Raw(Model.Target!=null?$"onchange=\"document.getElementById('{formId}Submit').dispatchEvent(new Event('click', {{cancelable: true, bubbles: true}}))\"":"") value="@null" name="@(nameof(HomepageModel.SearchName))" />
         </div>
         <div class="btn-group justify-content-center mx-1 align-items-center gap-2">
-            <button type="button" class="dropdown-toggle btn btn-outline-info"  onclick="filterDropdown@(formId).toggle();event.stopImmediatePropagation();">
+            <button type="button" class="dropdown-toggle btn btn-outline-dark btn-outline-info btn-primary bg-info text-white border-1 border-light border-opacity-50 shadow-sm text-black"  style=":scope:hover{filter: brightness(60%)}" onclick="filterDropdown@(formId).toggle();event.stopImmediatePropagation();">
                 Filtreler
             </button>
             <div class="dropdown">
