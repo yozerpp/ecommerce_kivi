@@ -404,27 +404,82 @@
         </li>
         <!--Tabs Section-->
         <li>
-            <nav class="d-flex justify-content-center container-fluid">
-                <div class="nav nav-tabs justify-content-between" id="nav-tab" role="tablist">
-                    <div class="d-flex">
-                        <button class="nav-link active" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">Açıklama</button>
+            <style>
+                .product-nav-tabs {
+                    background-color: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 12px;
+                    padding: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                .product-nav-tabs .nav-link {
+                    border: none;
+                    border-radius: 8px;
+                    margin: 0 4px;
+                    padding: 12px 20px;
+                    transition: all 0.3s ease;
+                    color: #6c757d;
+                    font-weight: 500;
+                    position: relative;
+                }
+                .product-nav-tabs .nav-link:hover {
+                    background-color: #e9ecef;
+                    color: #495057;
+                    transform: translateY(-1px);
+                }
+                .product-nav-tabs .nav-link.active {
+                    background-color: #495057;
+                    color: white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                }
+                .product-nav-tabs .nav-link i {
+                    margin-right: 8px;
+                }
+                .edit-control-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+            </style>
+            <nav class="d-flex justify-content-center container-fluid mb-3">
+                <div class="nav nav-tabs product-nav-tabs justify-content-between w-100" id="nav-tab" role="tablist">
+                    <div class="edit-control-wrapper">
+                        <button class="nav-link active" id="nav-info-tab" data-bs-toggle="tab" data-bs-target="#nav-info" type="button" role="tab" aria-controls="nav-info" aria-selected="true">
+                            <i class="bi bi-file-text"></i>Açıklama
+                        </button>
                         @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial(){ Target = "descriptionValue", OnClick = "event.currentTarget.dispatchEvent(new Event('edit', {bubbles:true, cancelable:true}));" })
                     </div>
-                    <button class="nav-link" id="nav-properties-tab" data-bs-toggle="tab" data-bs-target="#nav-properties" type="button" role="tab" aria-controls="nav-properties" aria-selected="false">Özellikler</button>
-                    <button class="nav-link" id="nav-reviews-tab" data-bs-toggle="tab" data-bs-target="#nav-reviews" type="button" role="tab" aria-controls="nav-reviews" aria-selected="false">Değerlendirmeler</button>
+                    <button class="nav-link" id="nav-properties-tab" data-bs-toggle="tab" data-bs-target="#nav-properties" type="button" role="tab" aria-controls="nav-properties" aria-selected="false">
+                        <i class="bi bi-list-ul"></i>Özellikler
+                    </button>
+                    <button class="nav-link" id="nav-reviews-tab" data-bs-toggle="tab" data-bs-target="#nav-reviews" type="button" role="tab" aria-controls="nav-reviews" aria-selected="false">
+                        <i class="bi bi-star"></i>Değerlendirmeler
+                    </button>
                 </div>
             </nav>
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane card border-bottom-0 fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
+                <div class="tab-pane card rounded-3 border-0 shadow-sm fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
                     <div class="card-body p-4">
-                        <p id="descriptionValue" class="lead">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-light rounded-circle p-2 me-3 border">
+                                <i class="bi bi-file-text text-dark fs-5"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0 text-dark">Ürün Açıklaması</h5>
+                        </div>
+                        <p id="descriptionValue" class="lead text-muted">
                             @(Model.ViewedProduct.Description)
                         </p>
                     </div>
                 </div>
-                <div class="tab-pane card border-bottom-0 fade" id="nav-properties" role="tabpanel" aria-labelledby="#nav-properties-tab">
-                    <div class="container-fluid my-2">
-                        <ul id="properties" class="mx-3 container-fluid list-group">
+                <div class="tab-pane card rounded-3 border-0 shadow-sm fade" id="nav-properties" role="tabpanel" aria-labelledby="nav-properties-tab">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-light rounded-circle p-2 me-3 border">
+                                <i class="bi bi-list-ul text-dark fs-5"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0 text-dark">Ürün Özellikleri</h5>
+                        </div>
+                        <ul id="properties" class="container-fluid list-group list-group-flush">
                             @await Html.PartialAsync("Shared/_DimensionsPartial", new _DimensionsPartial(){
                                 Dimensions = Model.ViewedProduct.Dimensions, Editable = Model.Editable || Model.Creating
                             })
@@ -434,9 +489,17 @@
                         </ul>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="#nav-reviews-tab">
+                <div class="tab-pane card rounded-3 border-0 shadow-sm fade" id="nav-reviews" role="tabpanel" aria-labelledby="nav-reviews-tab">
                     @if (!Model.Creating){
-                    <div class="container-fluid card bg-light">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-light rounded-circle p-2 me-3 border">
+                                <i class="bi bi-star text-dark fs-5"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0 text-dark">Ürün Değerlendirmeleri</h5>
+                        </div>
+                    </div>
+                    <div class="container-fluid card bg-light border-0 rounded-3 mx-3 mb-3">
                         <script>
                             ((s)=>{
                                 document.addEventListener('DOMContentLoaded', load);
