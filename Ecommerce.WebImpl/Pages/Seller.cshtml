@@ -8,54 +8,148 @@
     var editable = Model.CurrentSeller?.Id == Model.ViewedSeller.Id;
 }
 
+<style>
+    .seller-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+    }
+    .seller-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+    .seller-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .seller-header {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border-bottom: 2px solid #dee2e6;
+        border-radius: 12px 12px 0 0;
+    }
+    .seller-nav-pills .nav-link {
+        border-radius: 25px;
+        color: #6c757d;
+        background: transparent;
+        transition: all 0.3s ease;
+        margin: 0 5px;
+        border: 2px solid transparent;
+    }
+    .seller-nav-pills .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #495057;
+        border-color: #dee2e6;
+    }
+    .seller-nav-pills .nav-link.active {
+        background-color: #495057;
+        color: white;
+        border-color: #495057;
+    }
+    .seller-stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    .seller-stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .edit-buttons {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .seller-card:hover .edit-buttons {
+        opacity: 1;
+    }
+    .seller-info-section {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+    }
+</style>
+
 <script>
     let editables;
     document.addEventListener('DOMContentLoaded', function() {
         editables = document.querySelectorAll('.edit-control');
     });
 </script>
-<div class="container-fluid bg-light py-4">
+<div class="container-fluid seller-container py-4">
     <div class="container">
         <!-- Seller Header Card -->
-        <div class="card shadow-sm mb-4 ">
+        <div class="card seller-card mb-4">
             @if (editable){
-                <div class="container-fluid d-flex gap-3 justify-content-end pt-3 pe-5">
-                    <button onclick="document.getElementById('editForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn  edit-control btn-success" >Değişiklikleri Kaydet</button>
-                    
-                    <button onclick="editables.forEach(e=>e.classList.toggle('edit-control'))" class="btn-primary btn">Bilgilerini Düzenle</button>
+                <div class="edit-buttons position-absolute top-0 end-0 p-3 z-3">
+                    <div class="d-flex gap-2">
+                        <button onclick="document.getElementById('editForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-dark edit-control btn-sm rounded-3">
+                            <i class="bi bi-check-circle me-1"></i>Değişiklikleri Kaydet
+                        </button>
+                        <button onclick="editables.forEach(e=>e.classList.toggle('edit-control'))" class="btn btn-outline-secondary btn-sm rounded-3">
+                            <i class="bi bi-pencil me-1"></i>Bilgilerini Düzenle
+                        </button>
+                    </div>
                 </div>
             }
-            <div class="card-body">
+            <div class="card-header seller-header border-0">
+                <div class="d-flex align-items-center justify-content-center p-4">
+                    <div class="bg-light rounded-circle p-3 me-4 border">
+                        <i class="bi bi-shop text-dark fs-2"></i>
+                    </div>
+                    <div class="text-center">
+                        <h2 class="fw-bold mb-1 text-dark">Satıcı Profili</h2>
+                        <p class="text-muted mb-0">Mağaza bilgileri ve istatistikleri</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-3">
-                            <h1 id="shopNameField" class="display-6 fw-bold text-primary mb-0 me-3">@Model.ViewedSeller.ShopName</h1>
-                            @if (editable){
-                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                })
-                            }
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-auto">
-                                <div class="d-flex align-items-center">
-                                    <span class="h4 text-warning me-2">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage, 2).ToString("F")</span>
-                                    <i class="bi bi-star-fill text-warning fs-5"></i>
+                        <div class="seller-info-section">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-shop text-dark"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label class="fw-semibold text-muted mb-1 d-block">Mağaza Adı</label>
+                                    <div class="d-flex align-items-center">
+                                        <h1 id="shopNameField" class="h3 fw-bold text-dark mb-0 me-3">@Model.ViewedSeller.ShopName</h1>
+                                        @if (editable){
+                                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                            })
+                                        }
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-auto">
-                                <span class="text-muted">(@Model.ViewedSeller.Stats.ReviewCount değerlendirme)</span>
-                            </div>
-                        </div>
 
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="d-flex align-items-center">
-                                    <strong class="me-2">E-posta:</strong>
-                                    <span id="emailField" class="me-2">@Model.ViewedSeller.Email</span>
-                                    @if (editable){
-                                        @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
-                                    }
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="h5 text-warning me-2 mb-0">@decimal.Round(Model.ViewedSeller.Stats.ReviewAverage, 2).ToString("F")</span>
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                        <span class="text-muted ms-2">(@Model.ViewedSeller.Stats.ReviewCount değerlendirme)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-envelope text-dark"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label class="fw-semibold text-muted mb-1 d-block">E-posta</label>
+                                    <div class="d-flex align-items-center">
+                                        <span id="emailField" class="text-dark me-2">@Model.ViewedSeller.Email</span>
+                                        @if (editable){
+                                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -64,15 +158,21 @@
                     <div class="col-md-4">
                         <div class="row g-3">
                             <div class="col-6">
-                                <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
-                                    <div class="h4 text-primary mb-1">@Model.ViewedSeller.Stats.OfferCount</div>
-                                    <small class="text-muted">Ürün</small>
+                                <div class="seller-stats-card text-center p-3">
+                                    <div class="bg-light rounded-circle p-2 mx-auto mb-2" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-box-seam text-dark fs-5"></i>
+                                    </div>
+                                    <div class="h4 text-dark mb-1">@Model.ViewedSeller.Stats.OfferCount</div>
+                                    <small class="text-muted fw-semibold">Ürün</small>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                <div class="seller-stats-card text-center p-3">
+                                    <div class="bg-light rounded-circle p-2 mx-auto mb-2" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-graph-up text-success fs-5"></i>
+                                    </div>
                                     <div class="h4 text-success mb-1">@Model.ViewedSeller.Stats.SaleCount</div>
-                                    <small class="text-muted">Satış</small>
+                                    <small class="text-muted fw-semibold">Satış</small>
                                 </div>
                             </div>
                         </div>
@@ -80,14 +180,28 @@
                 </div>
 
                 <!-- Contact Information -->
-                <div class="row mt-4">
+                <div class="row mt-4 g-4">
                     <div class="col-md-6">
-                        <h6 class="text-muted mb-2">Adres Bilgileri</h6>
-                        <partial name="Shared/_AddressPartial" model="new _AddressPartial(){ Address = @Model.ViewedSeller.Address!, Editable = editable }"/>
+                        <div class="seller-info-section">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-geo-alt text-dark"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">Adres Bilgileri</h6>
+                            </div>
+                            <partial name="Shared/_AddressPartial" model="new _AddressPartial(){ Address = @Model.ViewedSeller.Address!, Editable = editable }"/>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-muted mb-2">İletişim</h6>
-                        <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){ PhoneNumber = Model.ViewedSeller.PhoneNumber, Editable = editable }"/>
+                        <div class="seller-info-section">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-telephone text-dark"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">İletişim</h6>
+                            </div>
+                            <partial name="Shared/_PhoneNumberPartial" model="new _PhoneNumberPartial(){ PhoneNumber = Model.ViewedSeller.PhoneNumber, Editable = editable }"/>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -109,27 +223,27 @@
             <input type="hidden" name="@(nameof(Model.ViewedSeller)).@($"{nameof(Model.ViewedSeller.PhoneNumber)}.{nameof(PhoneNumber.Number)}")" id="PhoneNumberNumberInput" value="@(Model.ViewedSeller.PhoneNumber.Number)"/>
         </form>
         <!-- Navigation Tabs -->
-        <ul class="nav nav-pills nav-fill mb-4" id="sellerTabs" role="tablist">
+        <ul class="nav nav-pills nav-fill seller-nav-pills mb-4" id="sellerTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="coupons-tab" data-bs-toggle="pill" data-bs-target="#coupons" type="button" role="tab">
+                <button class="nav-link active fw-semibold" id="coupons-tab" data-bs-toggle="pill" data-bs-target="#coupons" type="button" role="tab">
                     <i class="bi bi-ticket-perforated me-2"></i>Kuponlar
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="offers-tab" data-bs-toggle="pill" data-bs-target="#offersSection" type="button" role="tab">
+                <button class="nav-link fw-semibold" id="offers-tab" data-bs-toggle="pill" data-bs-target="#offersSection" type="button" role="tab">
                     <i class="bi bi-box-seam me-2"></i>Ürünler
                 </button>
             </li>
             @if (editable){
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#ordersSection" type="button" role="tab">
+                    <button class="nav-link fw-semibold" id="orders-tab" data-bs-toggle="pill" data-bs-target="#ordersSection" type="button" role="tab">
                         <i class="bi bi-bag me-2"></i>Siparişler
                     </button>
                 </li>
             }
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="reviews-tab" data-bs-toggle="pill" data-bs-target="#reviewsSection" type="button" role="tab">
-                    <i class="bi bi-star"></i>Değerlendirmeler
+                <button class="nav-link fw-semibold" id="reviews-tab" data-bs-toggle="pill" data-bs-target="#reviewsSection" type="button" role="tab">
+                    <i class="bi bi-star me-2"></i>Değerlendirmeler
                 </button>
             </li>
         </ul>
@@ -138,13 +252,16 @@
         <div class="tab-content" id="sellerTabsContent">
             <!-- Coupons Tab -->
             <div class="tab-pane fade show active" id="coupons" role="tabpanel">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-ticket-perforated me-2"></i>Satıcı Kuponları
-                        </h5>
+                <div class="card seller-card">
+                    <div class="card-header seller-header border-0">
+                        <div class="d-flex align-items-center p-3">
+                            <div class="bg-light rounded-circle p-2 me-3 border">
+                                <i class="bi bi-ticket-perforated text-dark"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0 text-dark">Satıcı Kuponları</h5>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         @if (Model.ViewedSeller.Coupons.Count == 0){
                             <div class="text-center py-5">
                                 <i class="bi bi-ticket-perforated display-1 text-muted"></i>
@@ -178,18 +295,23 @@
 
             <!-- Products Tab -->
             <div class="tab-pane fade" id="offersSection" role="tabpanel">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-box-seam me-2"></i>Ürün İlanları
-                        </h5>
-                        @if (editable){
-                            <a asp-page="Seller/AddProduct" class="btn btn-primary btn-sm">
-                                <i class="bi bi-plus-circle me-1"></i>Yeni Ürün Ekle
-                            </a>
-                        }
+                <div class="card seller-card">
+                    <div class="card-header seller-header border-0">
+                        <div class="d-flex align-items-center justify-content-between p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-box-seam text-dark"></i>
+                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Ürün İlanları</h5>
+                            </div>
+                            @if (editable){
+                                <a asp-page="Seller/AddProduct" class="btn btn-dark btn-sm rounded-3 fw-semibold">
+                                    <i class="bi bi-plus-circle me-1"></i>Yeni Ürün Ekle
+                                </a>
+                            }
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div id="offers" hx-get="/Seller?handler=offers&Id=@(Model.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
                     </div>
                 </div>
@@ -198,13 +320,16 @@
             <!-- Orders Tab -->
             @if (editable){
                 <div class="tab-pane fade" id="ordersSection" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-bag me-2"></i>Siparişler
-                            </h5>
+                    <div class="card seller-card">
+                        <div class="card-header seller-header border-0">
+                            <div class="d-flex align-items-center p-3">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-bag text-dark"></i>
+                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Siparişler</h5>
+                            </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div id="orders" hx-get="/Seller?handler=orders&@(nameof(SellerModel.Id))=@(Model.ViewedSeller.Id)" hx-trigger="load" hx-swap="outerHTML" hx-target="this"></div>
                         </div>
                     </div>
@@ -214,24 +339,29 @@
 
             <!-- Reviews Tab -->
             <div class="tab-pane fade" id="reviewsSection" role="tabpanel">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-star me-2"></i>Müşteri Değerlendirmeleri
-                        </h5>
-                        <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="d-flex align-items-center">
-                            <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
-                            <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
-                            <label class="form-label me-2 mb-0">Sayfa boyutu:</label>
-                            <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="form-select form-select-sm" name="@(nameof(Reviews.PageSize))" style="width: auto;">
-                                @{ var ar = new int[]{ 20, 10, 50, 100 }; }
-                                @for (int i = 0; i < ar.Length; i++){
-                                    <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
-                                }
-                            </select>
-                        </form>
+                <div class="card seller-card">
+                    <div class="card-header seller-header border-0">
+                        <div class="d-flex align-items-center justify-content-between p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-3 border">
+                                    <i class="bi bi-star text-dark"></i>
+                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Müşteri Değerlendirmeleri</h5>
+                            </div>
+                            <form id="reviewsPageForm" method="get" hx-trigger="submit" hx-get="/@(nameof(Reviews))" hx-target="#reviews" hx-swap="innerHTML" class="d-flex align-items-center">
+                                <input type="hidden" name="@(nameof(Reviews.ReviewsPage))" value="@(Model.ReviewsPage)"/>
+                                <input type="hidden" name="@(nameof(Reviews.SellerId))" value="@(Model.Id)"/>
+                                <label class="form-label me-2 mb-0 fw-semibold text-muted">Sayfa boyutu:</label>
+                                <select onchange="document.getElementById('reviewsPageForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="form-select form-select-sm border-2 rounded-3" name="@(nameof(Reviews.PageSize))" style="width: auto;">
+                                    @{ var ar = new int[]{ 20, 10, 50, 100 }; }
+                                    @for (int i = 0; i < ar.Length; i++){
+                                        <option selected="@(Model.ReviewsPageSize == ar[i])" value="@(ar[i])">@(ar[i])</option>
+                                    }
+                                </select>
+                            </form>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div id="reviews" hx-target="this" hx-on::after-request="if(event.detail.xhr.status===204)event.currentTarget.firstElementChild.classList.remove('d-none');" hx-get="/@(nameof(Reviews))?@(nameof(Reviews.SellerId))=@(Model.ViewedSeller.Id)&@(nameof(Reviews.Page))=@(Model.ReviewsPage)&@(nameof(Reviews.PageSize))=@(Model.ReviewsPageSize)" hx-trigger="load" hx-swap="innerHTML">
                             <h3 class="d-none fs-4 fw-bold text-center mt-2 w-100">Henüz Değerlendirme Yok.</h3>
                         </div>
