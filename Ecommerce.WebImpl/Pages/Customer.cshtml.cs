@@ -4,13 +4,14 @@ using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages;
 
-[Authorize(Policy = nameof(Entity.Customer))]
+[Authorize(Policy = nameof(Entity.Customer), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Customer : BaseModel
 {
     private ICustomerManager _customerManager;

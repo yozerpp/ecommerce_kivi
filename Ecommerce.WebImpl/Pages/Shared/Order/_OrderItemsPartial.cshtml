@@ -94,21 +94,26 @@
                 <td colspan="3" class="align-middle text-center">
                     @switch (item.Status){
                         case OrderStatus.Shipped:
+                        case OrderStatus.ReturnApproved:
+                            var shipment = item.Status == OrderStatus.Shipped ? item.SentShipment : item.RefundShipment;
                             <div>
                                 <div>
                                     <i class="bi bi-truck fs-4" style="color: darkorange"></i>
                                     
                                 </div>
                                 <div class="d-inline-flex">
-                                    <p class="fs-6">Durum:</p>
-                                    <p class="text-center fs-6 fw-bold">@(item.SentShipment.Status.ToLocalizedString())</p>
+                                    <p class="fs-6 fw-bold">@item.Status.ToLocalizedString()</p>
+                                </div>
+                                <div class="d-inline-flex">
+                                    <p class="fs-6">Kargo Durumu:</p>
+                                    <p class="text-center fs-6 fw-bold">@(shipment.Status.ToLocalizedString())</p>
                                 </div>
                                 <div class="d-inline-flex align-items-center justify-content-center p-0 gap-1">
-                                    @if (item.SentShipment.Provider != null){
+                                    @if (shipment.Provider != null){
                                         <p class="fs-6 mb-0">Taşıyıcı:</p>
-                                        <p class="fw-bold fs-6 mb-0">@item.SentShipment.Provider</p>
+                                        <p class="fw-bold fs-6 mb-0">@shipment.Provider</p>
                                     }
-                                    <a href="https://app.geliver.io/tracking/@(item.SentShipment.ApiId)" target="_blank" class="link-primary">
+                                    <a href="https://app.geliver.io/tracking/@(shipment.ApiId)" target="_blank" class="link-primary">
                                         <i class="ms-2 bi fs-5 bi-arrow-up-right-square"></i>
                                     </a>
                                 </div>
@@ -245,7 +250,7 @@
                                         <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
                                         <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
                                         <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>
-                                        <button type="button" class="dropdown-item text-warning">
+                                        <button data-bs-toggle="tooltip" title="Satıcıdan Ürünü Geri Almasını İsteyebilirsin." type="button" class="dropdown-item text-warning">
                                             İade Talebi Oluştur.
                                         </button>
                                     </form>

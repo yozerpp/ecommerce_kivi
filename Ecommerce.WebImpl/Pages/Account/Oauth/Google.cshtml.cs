@@ -25,7 +25,7 @@ public class Google : PageModel
         }
         if (authResult.Properties == null) return RedirectToPage("/Index");
         var type = authResult.Properties.Items[nameof(AuthProperties.AuthType)];
-        if (type == nameof(AuthProperties.Type.Register)){
+        if (type == nameof(AuthProperties.Type.Identity)){
             var claims = authResult.Principal.Claims.ToArray();
             var email = claims.First(c => c.Type == ClaimTypes.Email);
             var firstName = claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;

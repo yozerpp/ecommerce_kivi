@@ -143,20 +143,19 @@
             document.addEventListener('DOMContentLoaded', load);
             s.parentElement.addEventListener('htmx:load', load);
             function load(e){
-                setTimeout(()=>{
                     @if (Model.Redirect != null)
                     {
 
                         if (Model.Redirect == "refresh")
                     {
                     <text>
-                    setTimeout(() => window.location.reload(), 1500);
+                    setTimeout(() => window.location.reload(), @Model.TimeOut);
                     </text>
                     }
                     else
                     {
                     <text>
-                    window.location.href='@Model.Redirect';
+                    setTimeout(()=>window.location.href='@Model.Redirect', @(Model.TimeOut)) ;
                     </text>
                     }
                         <text>
@@ -170,7 +169,6 @@
                         setTimeout(() => this.remove(), 300);
                     </text>    
                     }
-                },@(Model.Redirect!=null?0:Model.TimeOut))
             }
         })(document.currentScript)
     </script>

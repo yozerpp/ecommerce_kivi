@@ -729,11 +729,12 @@ public static class ViewMigrations
                 COALESCE(SUM(spr.{nameof(SellerStats.ReviewCount)}),0) as {nameof(SellerStats.ReviewCount)},
                 COALESCE(SUM(spra.{nameof(SellerStats.ReviewAverage)}),0.0) as {nameof(SellerStats.ReviewAverage)},
                 COALESCE(SUM(spr.{nameof(SellerStats.RatingTotal)}),0.0) as {nameof(SellerStats.RatingTotal)},
-                COALESCE(SUM(sosc.{nameof(SellerOrderStats.CountComplete)}),0) + COALESCE(SUM(sosi.{nameof(SellerOrderStats.CountInProgress)}),0.0) as {nameof(SellerStats.SaleCount)},
-                COALESCE(SUM(sosc.{nameof(SellerOrderStats.TotalComplete)}),0) + COALESCE(SUM(sosi.{nameof(SellerOrderStats.TotalInProgress)}),0.0) as {nameof(SellerStats.TotalSold)},
+                COALESCE(SUM(sosc.{nameof(SellerOrderStats.CountComplete)}),0) + COALESCE(SUM(sosi.{nameof(SellerOrderStats.CountInProgress)}),0) as {nameof(SellerStats.SaleCount)},
+                COALESCE(SUM(sosc.{nameof(SellerOrderStats.TotalComplete)}),0) + COALESCE(SUM(sosi.{nameof(SellerOrderStats.TotalInProgress)}),0) as {nameof(SellerStats.TotalSold)},
                 COALESCE(SUM(srr.{nameof(SellerStats.RefundCount)}),0) as {nameof(SellerStats.RefundCount)}
             FROM [{DefaultDbContext.DefaultSchema}].[{nameof(User)}] s
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductOffer)}] spo ON s.Id = spo.{nameof(SellerStats.SellerId)}
+            LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(OrderItem)}] soi ON s.Id = soi.{nameof(SellerStats.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerStats)}_{nameof(ProductReview)}] spr ON s.Id = spr.{nameof(SellerStats.SellerId)}
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerOrderStats)}_{nameof(SellerOrderStats.TotalComplete)}] sosc ON s.Id = sosc.{nameof(SellerOrderStats.SellerId)} 
             LEFT JOIN [{DefaultDbContext.DefaultSchema}].[{nameof(SellerOrderStats)}_{nameof(SellerOrderStats.TotalInProgress)}] sosi ON s.Id = sosi.{nameof(SellerOrderStats.SellerId)} 

@@ -19,6 +19,7 @@ using LinqKit;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
@@ -30,6 +31,7 @@ using ShipmentStatus = Ecommerce.Entity.Common.ShipmentStatus;
 
 namespace Ecommerce.WebImpl.Pages;
 
+[Authorize(Roles=nameof(Entity.AnonymousCustomer),AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class Checkout : BaseModel
 {
     private readonly IOrderManager _orderManager;
@@ -44,9 +46,9 @@ public class Checkout : BaseModel
     private readonly IRepository<OrderItem> _orderItemRepository;
     private readonly Aes _encryption;
     private readonly IUserManager _userManager;
-    private readonly IRepository<AnonymousUser> _anonymousUserRepository;
+    private readonly IRepository<AnonymousCustomer> _anonymousUserRepository;
     private readonly IMailService _mailService;
-    public Checkout(INotificationService notificationService, IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager,  IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository): base(notificationService) {
+    public Checkout(INotificationService notificationService, IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager,  IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousCustomer> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository): base(notificationService) {
         _orderManager = orderManager;
         _mailService = mailService;
         _userManager = userManager;
@@ -131,7 +133,7 @@ public class Checkout : BaseModel
     }
 
     public async Task<IActionResult> OnPostShipment() {
-        AnonymousUser? anonymousUser = null;
+        AnonymousCustomer? anonymousUser = null;
         if(CurrentCustomer==null && (anonymousUser = _userManager.FindAnonymousUser(Email)) == null) throw new UnauthorizedAccessException("Yönlendirme sırasında bir hata oluştu, lütfen tekrar deneyin.");
         var address= Address??CurrentCustomer?.PrimaryAddress ?? throw new ArgumentException("Lütfen Adres bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
         var customerEmail = CurrentCustomer?.Email ??Email?? throw new ArgumentException("Lütfen E-Posta bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
@@ -148,7 +150,7 @@ public class Checkout : BaseModel
             }
             else{
                 anonymousUser.ApiId = apiId;
-                _anonymousUserRepository.UpdateInclude(anonymousUser, nameof(AnonymousUser.ApiId));
+                _anonymousUserRepository.UpdateInclude(anonymousUser, nameof(AnonymousCustomer.ApiId));
                 _anonymousUserRepository.Flush();
             }
         }
@@ -244,11 +246,11 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
             City = deliveryAddress.City, Country = deliveryAddress.Country, Line1 = deliveryAddress.Line1,
             Line2 = deliveryAddress.Line2, ZipCode = deliveryAddress.ZipCode, District = deliveryAddress.District
         };
-        AnonymousUser? anonymousUser = null;
+        AnonymousCustomer? anonymousUser = null;
         var cid = CurrentSession.CartId;
         var items = _dbContext.Set<CartItem>().Include(i=>i.SelectedOptions).Where(ci => ci.CartId == cid).ToArray();
         if(CurrentCustomer==null && (anonymousUser = _userManager.FindAnonymousUser(customerEmail))==null) 
-            _userManager.CreateAnonymous(anonymousUser = new AnonymousUser(){Email = customerEmail});
+            _userManager.CreateAnonymous(anonymousUser = new AnonymousCustomer(){Email = customerEmail});
         var order = _orderManager.CreateOrder(CurrentSession, items, CurrentCustomer, anonymousUser,
             deliveryAddress, customerName);
 
@@ -272,6 +274,10 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
             string.IsNullOrWhiteSpace(customerPhoneNumber?.ToString()) || string.IsNullOrWhiteSpace(customerName) ){
             throw new ArgumentException("Lütfen Adres ve E-posta bilgilerinizi doldurun veya müşteri hesabınızla giriş yapın.");
         }
+
+        var (city, dis) = _shippingService.ValidateAddress(deliveryAddress);
+        if(!city) throw new ArgumentException(city+ " bir şehir değil.");
+        if (!dis) throw new ArgumentException($"{dis} {city}'de bir ilçe değil.");
     }
 
     private async Task<(string sessionSecret, string intentSecret, string intentId)> CreatePaymentIntent(Entity.Cart? cart, decimal extraCosts, Address address,

@@ -25,7 +25,7 @@ public class OrderManager : IOrderManager
         _dbContext = dbContext;
     }
 
-    public Order CreateOrder(Session session, ICollection<CartItem> cartItems, Customer? user=null, AnonymousUser? anonymousUser = null, Address? shippingAddress = null, string? name=null) {
+    public Order CreateOrder(Session session, ICollection<CartItem> cartItems, Customer? user=null, AnonymousCustomer? anonymousUser = null, Address? shippingAddress = null, string? name=null) {
         var p = new CardPayment(){
             Status = PaymentStatus.Preparing,
             Method = PaymentMethod.Card,

@@ -35,20 +35,19 @@ using Customer = Ecommerce.Entity.Customer;
 using Product = Ecommerce.Entity.Product;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = DefaultDbContext.DefaultConnectionString;
 
 builder.Services.AddDbContext<DefaultDbContext>(options =>
-    options.UseSqlServer(connectionString,
+    options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
             c=> {
                 c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
-            }).EnableDetailedErrors()
+            }).EnableDetailedErrors(builder.Environment.IsDevelopment())
         .EnableServiceProviderCaching(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
 builder.Services.AddDbContext<ShippingContext>(options =>
-        options.UseSqlServer(ShippingContext.DefaultConntectionString,
+        options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(ShippingContext)),
             c => {
                 c.MigrationsAssembly(typeof(ShippingContext).Assembly.FullName); 
-            }).EnableServiceProviderCaching().EnableSensitiveDataLogging(true),
+            }).EnableServiceProviderCaching().EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var razorPageOptions = builder.Services.AddRazorPages();
@@ -63,7 +62,7 @@ builder.Services.AddKeyedScoped<IModel>(nameof(DefaultDbContext),
     (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
 builder.Services.AddKeyedScoped<IModel>(nameof(ShippingContext),
     (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
-var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>().UseSqlServer(connectionString,
+var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>().UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
         c=> {
             c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
@@ -86,6 +85,7 @@ new DependencyRegisterer(builder, typeof(DefaultDbContext), blValidators, blEnti
 builder.Services.AddSingleton<GeliverClient>(sp =>
     new GeliverClient(builder.Configuration.GetSection("Shipping")["ApiKey"] ?? throw new ArgumentException("Missing shipping API key"))
 );
+builder.Services.AddScoped<JwtMiddleware>();
 builder.Services.AddScoped<IShippingService, GeliverService>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(NotificationService));
 builder.Services.AddScoped<IRepository<Notification>>(sp => RepositoryFactory.Create<Notification>(
@@ -94,6 +94,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IUserManager>(sp => sp.GetRequiredKeyedService<IUserManager>(nameof(IUserManager)));
 builder.Services.AddScoped<IRepository<User>>(sp =>
     sp.GetRequiredKeyedService<IRepository<User>>(nameof(IUserManager)));
+builder.Services.AddScoped<ISessionManager>(sp => sp.GetRequiredKeyedService<ISessionManager>(nameof(ISessionManager)));
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddIdentityCore<User>(options => {
         options.SignIn.RequireConfirmedAccount = false;
@@ -144,14 +145,7 @@ builder.Services.AddAuthentication(options => {
         };
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,options => {
-        options.Events = new JwtBearerEvents(){
-            OnMessageReceived = context => {
-                if (!context.Request.Cookies.TryGetValue(JwtBearerDefaults.AuthenticationScheme, out var cookie))
-                    return Task.CompletedTask;
-                context.Token = cookie;
-                return Task.CompletedTask;
-            },
-        };
+        options.EventsType = typeof(JwtMiddleware);
         options.ForwardSignIn = "Cookie";
         options.TokenValidationParameters = tokenValidationParameters;
     })
@@ -177,7 +171,7 @@ builder.Services.AddAuthentication(options => {
         cb.Scope.Add("openid");
         cb.Scope.Add("https://www.googleapis.com/auth/userinfo.email");
         cb.Scope.Add("https://www.googleapis.com/auth/userinfo.profile");
-        cb.SaveTokens = true;
+        cb.SaveTokens = false;
     });
 var sKey = builder.Configuration.GetSection("Oauth").GetSection("Google")["StateKey"] ?? throw new ArgumentException("Missing state encryption key");
 builder.Services.AddKeyedSingleton<string>("GoogleStateKey", sKey);
@@ -190,6 +184,7 @@ builder.Services.AddSingleton<IMailService, SMTPService>(_ => new SMTPService(ma
 builder.Services.AddAuthorization(options => {
     options.AddPolicy(nameof(Seller), policy => policy.RequireRole(nameof(Seller), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(Customer), policy => policy.RequireRole(nameof(Customer), nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
+    options.AddPolicy(nameof(AnonymousCustomer), policy=>policy.RequireAssertion(c=>!c.User.HasClaim(c=>c.Type==ClaimTypes.Role) || c.User.HasClaim(ClaimTypes.Role, nameof(Customer))));
     options.AddPolicy(nameof(Staff), policy=> policy.RequireRole(nameof(Staff)).AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme));
     options.AddPolicy(nameof(User), p=>p.RequireAssertion(f=>f.User.HasClaim(c=>c.Type == ClaimTypes.Role)));
     // options.DefaultPolicy = //anonymous

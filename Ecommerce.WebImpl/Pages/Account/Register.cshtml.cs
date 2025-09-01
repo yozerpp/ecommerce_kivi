@@ -4,7 +4,9 @@ using Ecommerce.Entity;
 using Ecommerce.Entity.Common;
 using Ecommerce.WebImpl.Pages.Account.Oauth;
 using Ecommerce.WebImpl.Pages.Shared;
+using Google.Apis.Core;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -13,9 +15,10 @@ namespace Ecommerce.WebImpl.Pages.Account;
 public class Register : PageModel
 {
     private readonly IUserManager _userManager;
-
-    public Register(IUserManager userManager) {
+    private readonly IJwtManager _jwtManager;
+    public Register(IUserManager userManager, IJwtManager jwtManager) {
         _userManager = userManager;
+        _jwtManager = jwtManager;
     }
 
     [BindProperty]
@@ -44,26 +47,33 @@ public class Register : PageModel
         user.ProfilePicture = ProfilePicture!=null?new Image(){ Data = ProfilePicture }:null;
     }
 
-    public async Task<IActionResult> OnGetOauth() {
+    public async Task<IActionResult> OnGetOauth([FromQuery] string? continueUrl) {
         var authResult = await HttpContext.AuthenticateAsync(nameof(Google));
         if (!authResult.Succeeded){
             return RedirectToPage("/Account/Unauthorized",new {authResult.Failure?.GetBaseException().Message, Type=nameof(Oauth)});
         }
-        if (authResult.Properties == null) return RedirectToPage("/Index");
+        if (authResult.Properties == null) return new BadRequestObjectResult("Geçersiz durum. Lütfen tekrar deneyin.");
+        var claims = authResult.Principal.Claims.ToArray();
+        var googleId = claims.First(c => c.Type == ClaimTypes.NameIdentifier);
+        Entity.User user;
+        if ((user = _userManager.GetByGoogleId(googleId.Value)) != null){
+            Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(_jwtManager.CreateToken(user.Session)), new CookieOptions(){
+                MaxAge = TimeSpan.FromHours(1),
+            });
+            return continueUrl!=null? Redirect(continueUrl) : RedirectToPage("/Index");
+        }
         var type = authResult.Properties.Items[nameof(AuthProperties.AuthType)];
-        if (type == nameof(AuthProperties.Type.Register)){
-            var claims = authResult.Principal.Claims.ToArray();
+        if (type == nameof(AuthProperties.Type.Identity)){
             var email = claims.First(c => c.Type == ClaimTypes.Email);
             var firstName = claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
             var lastName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
             var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? firstName + " " + lastName;
-            var googleId = claims.First(c => c.Type == ClaimTypes.NameIdentifier);
             var profilePicture = claims.FirstOrDefault(c => c.Type == "urn:google:picture")?.Value;
             var role = Enum.Parse<Entity.User.UserRole>(authResult.Properties.Items[nameof(AuthProperties.Role)]);
-            Entity.User user = role switch{
+            user = role switch{
                 Entity.User.UserRole.Customer
                     => new Entity.Customer(),
-                Entity.User.UserRole.Seller => new Entity.Seller(), _ => throw new NotImplementedException()
+                Entity.User.UserRole.Seller => new Entity.Seller(){Address = Address.Empty}, _ => throw new NotImplementedException()
             };
             user.Email = email.Value;
             user.NormalizedEmail = email.Value.ToUpperInvariant();
@@ -85,12 +95,13 @@ public class Register : PageModel
             _ => throw new NotImplementedException()
         };
         _userManager.Register(Role, u);
+        if (GoogleId != null){
+            var t = _jwtManager.CreateToken(u.Session);
+            Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t));
+        }
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Kaydınız yapıldı. Kullanıcı sayfanıza yönlendiriliyorsunuz.",
             Redirect = "/User?" + nameof(Pages.User.UserId) + '=' + u.Id,
         });
-    }
-    public void OnGetAuth() {
-        
     }
 }

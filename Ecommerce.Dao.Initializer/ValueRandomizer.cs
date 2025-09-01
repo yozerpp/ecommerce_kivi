@@ -97,7 +97,7 @@ internal class ValueRandomizer
 
     private object RandomizePhoneNumber(Type propType) {
         object value;
-        var n = new Bogus.Faker("tr").Phone.PhoneNumber().Trim('(', ')', '-', 'x');
+        var n = new Bogus.Faker("tr").Phone.PhoneNumber().Replace("(","").Replace( ")","").Replace("-", "").Replace("x", "");
         if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
             value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = n};    
         } else value = n;

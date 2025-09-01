@@ -8,7 +8,7 @@ namespace Ecommerce.Bl.Interface;
 public interface IOrderManager
 {
     public Order CreateOrder(Session session, ICollection<CartItem> cartItems, Customer? user = null,
-        AnonymousUser? anonymousUser = null, Address? shippingAddress = null, string? name = null);
+        AnonymousCustomer? anonymousUser = null, Address? shippingAddress = null, string? name = null);
     public Order? GetOrder(uint orderId, bool includeItems = true , bool includeAggregates= false);
     public (OrderAggregates, ICollection<OrderItemAggregates>)? GetAggregates(uint orderId);
     public OrderStatus? RefreshOrderStatus(uint orderId);

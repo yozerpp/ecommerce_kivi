@@ -15,12 +15,10 @@ public class CartManager : ICartManager
     private readonly IRepository<Cart> _cartRepository;
     private readonly IRepository<Session> _sessionRepository;
     private readonly IRepository<CartItem> _cartItemRepository;
-    private readonly IRepository<User> _userRepository;
     private readonly IRepository<Product> _productRepository;
     private readonly DbContext _dbContext;
-    public CartManager(IRepository<User> userRepository, IRepository<Product> productRepository,IRepository<Session> sessionRepository, IRepository<Coupon> couponRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
+    public CartManager(IRepository<Product> productRepository,IRepository<Session> sessionRepository, IRepository<Cart> cartRepository, IRepository<CartItem> cartItemRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
         _productRepository = productRepository;
-        _userRepository = userRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _dbContext = dbContext;
@@ -51,21 +49,7 @@ public class CartManager : ICartManager
     /**
      * updates user too.
      */
-    public Session newSession(User? newUser, bool flush = false) {
-        var session = new Session(){Cart = _cartRepository.Add(new Cart{}) };
-        session.Cart.Session = session;
-        session = _sessionRepository.Add(session);
-        if (newUser != null){
-            session.UserId = newUser.Id;
-            session.User = newUser.Id != 0 ? null! : newUser;
-            newUser.Session = session;
-            if (newUser.Id != 0)
-                _userRepository.Update(newUser);
-            else _userRepository.Add(newUser);
-        }
-        if(flush) _sessionRepository.Flush();
-        return session;
-    }
+
 
     public void Clear(uint cartId) {
         _cartItemRepository.Delete(i=>i.CartId == cartId);

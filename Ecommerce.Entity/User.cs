@@ -24,7 +24,8 @@ public abstract class User
     public string? GoogleId { get; set; }
     public bool Active { get; set; }
     // public ICollection<Request> Requests { get; set; }
-    public ICollection<Notification> Notifications { get; set; }
+    public ICollection<ReviewComment> ReviewComments { get; set; } = new List<ReviewComment>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     public ICollection<ReviewCommentNotification> ReviewCommentNotifications { get; set; } = new List<ReviewCommentNotification>();
     public override bool Equals(object? obj)
     {

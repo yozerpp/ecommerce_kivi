@@ -57,6 +57,10 @@ public class ShippingService (ShippingContext _context):IShippingService
         return s;
     }
 
+    public (bool,bool) ValidateAddress(Address address) {
+        throw new NotImplementedException();
+    }
+
     public Task CancelShipment(string id) {
         throw new NotImplementedException();
     }

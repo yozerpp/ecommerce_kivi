@@ -5,11 +5,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>aspnet-Ecommerce.WebImpl-c6b1811a-9aa3-4b86-a4aa-fed87dccd08e</UserSecretsId>
+	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     </PropertyGroup>
-
-    <ItemGroup>
-        <None Update="app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
-    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.70.0" />

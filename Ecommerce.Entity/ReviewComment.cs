@@ -11,7 +11,7 @@ public class ReviewComment
     public uint? UserId { get; set; }
     public ProductReview Review { get; set; }
     public Session Commenter { get; set; }
-    public Customer? User { get; set; }
+    public User? User { get; set; }
     public ReviewComment? Parent { get; set; }
     public string Comment { get; set; }
     public string? Name { get; set; }

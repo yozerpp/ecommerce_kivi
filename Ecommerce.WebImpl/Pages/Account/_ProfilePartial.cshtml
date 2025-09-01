@@ -27,16 +27,15 @@
 
 <div id="profil@(Model.User.Id)" class="profile-container partial-parent">
     <script>
-    document.addEventListener("DOMContentLoaded", ()=>{
+    const parent= document.currentScript.parentElement;
+        document.addEventListener("DOMContentLoaded", ()=>{
         @if (Model.Registering){
             <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));</text>
         }
+        parent._additionalData = {};
     })
     document.currentScript.parentElement.addEventListener('submit', function () {
-        console.log('submitting profile');
-        
-        // Collect profile data
-        const profileData = {
+        let profileData = {
             '@(nameof(Register.Role))': '@(role)',
             '@(prefix).@(nameof(Entity.User.GoogleId))': '@Model.User.GoogleId',
             '@(prefix).@(nameof(Entity.Customer.Id))': '@Model.User.Id',
@@ -55,7 +54,9 @@
         profileData['@(prefix).@(nameof(Entity.Seller.ShopName))'] = document.getElementById('p_@(nameof(Entity.Seller.ShopName))').innerHTML;
         </text>
         }
-        
+        for (const [k,v] of Object.entries(profileData._additionalData ||{})) {
+            profileData[k] = v;   
+        }
         profileData = {
             ...profileData
         };
@@ -132,7 +133,7 @@
         });
     });
     
-    let _p_editedImage@(Model.User.Id) = @Model.Registering;
+    let _p_editedImage@(Model.User.Id) = @(Model.Registering.ToString().ToLowerInvariant());
 </script>
 
     <style>
@@ -217,19 +218,6 @@
                                 </div>
                             </div>
                         </div>
-                        @if (seller != null) {
-                            <div class="col-12">
-                                <div class="profile-info-item d-flex justify-content-between align-items-center">
-                                    <label class="fw-semibold text-muted mb-0">Mağaza Adı:</label>
-                                    <div class="d-flex align-items-center">
-                                        <span id="p_@(nameof(Entity.Seller.ShopName))" class="fs-5 fw-medium text-dark me-2">@(seller.ShopName)</span>
-                                        @if (editable){
-                                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
                     </div>
                 </div>
                 <div class="col-lg-5 text-center">
@@ -281,11 +269,22 @@
                 <div class="d-flex align-items-center justify-content-between p-3">
                     <h4 class="mb-0 fw-bold text-dark">
                         <i class="bi bi-shop me-3 text-primary"></i>
-                        Mağaza Adresi
+                        Mağaza Bilgileri
                     </h4>
                 </div>
             </div>
-            <div class="card-body p-4">
+            <div class="card-body p-4 gap-3">
+                <div class="col-12 ">
+                    <div class="profile-info-item d-flex justify-content-start gap-5 align-items-center">
+                        <label class="fw-semibold mb-0 me-5">Mağaza Adı:</label>
+                        <div class="d-flex align-items-center">
+                            <span id="p_@(nameof(Entity.Seller.ShopName))" class="fs-5 fw-medium text-dark me-2">@(seller.ShopName)</span>
+                            @if (editable){
+                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial())
+                            }
+                        </div>
+                    </div>
+                </div>
                 @await Html.PartialAsync("Shared/_AddressPartial", new _AddressPartial(){
                     Address = seller.Address, Editable = true,
                 })

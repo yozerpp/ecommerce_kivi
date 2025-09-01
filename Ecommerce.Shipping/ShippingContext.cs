@@ -15,9 +15,7 @@ public class ShippingContext : DbContext
         new Provider{ Id = 2, Name = "Mng Kargo" },
         new Provider{ Id = 3, Name = "Ptt kargo" }
     ];
-    public static readonly string DefaultConntectionString = "Server=localhost;Database=Shipping;User Id=sa;Password=12345;TrustServerCertificate=True";
     public ShippingContext(DbContextOptions<ShippingContext> options) :base(options){ }
-    public ShippingContext() : base(new DbContextOptionsBuilder<ShippingContext>().UseSqlServer(DefaultConntectionString).Options){}
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.Entity<DeliveryInfo>(d => {
             d.HasKey(d => d.Id);

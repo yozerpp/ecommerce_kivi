@@ -20,10 +20,12 @@ public class UserManager :IUserManager
     private readonly IRepository<User> _userRepository;
     private readonly ICartManager _cartManager;
     private readonly IRepository<Staff> _staffRepository;
-    private readonly IRepository<AnonymousUser> _anonymousUserRepository;
+    private readonly IRepository<AnonymousCustomer> _anonymousUserRepository;
     private readonly IRepository<Image>  _imageRepository;
     private readonly DbContext _dbContext;
-    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousUser> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager, IRepository<Image> imageRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext) {
+    private ISessionManager _sessionManager;
+
+    public UserManager(IJwtManager manager,IRepository<Customer> customerRepository, IRepository<AnonymousCustomer> anonymousUserRepository, IRepository<Staff> staffRepository, IRepository<User> userRepository, IRepository<Seller> sellerRepository, HashFunction hashFunction, ICartManager cartManager, IRepository<Image> imageRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, ISessionManager sessionManager) {
         this._jwtManager = manager;
         _anonymousUserRepository = anonymousUserRepository;
         _userRepository = userRepository;
@@ -33,6 +35,7 @@ public class UserManager :IUserManager
         this._cartManager = cartManager;
         _imageRepository = imageRepository;
         _dbContext = dbContext;
+        _sessionManager = sessionManager;
         _sellerRepository = sellerRepository;
     }
     public Customer? LoginCustomer(string email, string password, bool rememberMe, out string? token)
@@ -69,8 +72,12 @@ public class UserManager :IUserManager
             token = null;
             return null;
         }
-        token = _jwtManager.Serialize(_jwtManager.CreateToken(user.Session!, rememberMe));
+        token = _jwtManager.Serialize(_jwtManager.CreateToken(user.Session!, rememberMe? TimeSpan.FromDays(30): TimeSpan.FromHours(1)));
         return user;
+    }
+
+    public User? GetByGoogleId(string googleId) {
+        return _userRepository.First(u => u.GoogleId == googleId);
     }
 
     public object Register(User.UserRole type, object newUser) {
@@ -86,7 +93,7 @@ public class UserManager :IUserManager
     }
     public T Register<T>(T newUser) where T :User
     {
-        _cartManager.newSession(newUser);
+        _sessionManager.newSession(newUser);
         User ret;
         try{
             switch (newUser){
@@ -129,7 +136,7 @@ public class UserManager :IUserManager
         _userRepository.Flush();
     }
 
-    public AnonymousUser? FindAnonymousUser(string? email) {
+    public AnonymousCustomer? FindAnonymousUser(string? email) {
         return _anonymousUserRepository.First(a => a.Email == email);
     }
 
@@ -157,8 +164,8 @@ public class UserManager :IUserManager
         _userRepository.Flush();
     }
 
-    public void CreateAnonymous(AnonymousUser anonymousUser) {
-        _anonymousUserRepository.TryAdd(anonymousUser);
+    public void CreateAnonymous(AnonymousCustomer anonymousCustomer) {
+        _anonymousUserRepository.TryAdd(anonymousCustomer);
     }
 
     public User? Get(uint id, bool includeImage=false) {

@@ -29,7 +29,7 @@ public class Login : PageModel
     public LoginCredential LoginCredentials { get; set; }
     [BindProperty]
     public bool RememberMe { get; set; }
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public string UserType { get; set; } = "Customer";
 
     public IActionResult OnPost() {
@@ -51,16 +51,17 @@ public class Login : PageModel
     }
 
     public IActionResult OnGetGoogle() {
+        
         return Challenge(new AuthenticationProperties(){
             IsPersistent = false,
             RedirectUri = "/Account/Register?handler=oauth",
             Items ={
                 {nameof(AuthProperties.Role), UserType},
-                { nameof(AuthProperties.AuthType), nameof(AuthProperties.Type.Register) },
+                { nameof(AuthProperties.AuthType), nameof(AuthProperties.Type.Identity) },
             }
         }, nameof(Google));
     }
-    public IActionResult OnPostLogout() {
+    public IActionResult OnGetLogout() {
         Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,

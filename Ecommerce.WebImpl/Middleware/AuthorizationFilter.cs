@@ -21,17 +21,7 @@ public class AuthorizationFilter : IAuthorizationFilter
         var auth = context.HttpContext.Features.Get<IAuthenticateResultFeature>();
         var schmee = auth?.AuthenticateResult?.Ticket?.AuthenticationScheme;
         if(schmee != null && schmee!= JwtBearerDefaults.AuthenticationScheme) return;
-        if (context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value==null){ //if no id is present.
-            var s = _cartManager.newSession(null, true);
-            var tok = _jwtManager.CreateToken(s, true);
-            context.HttpContext.Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(tok),new CookieOptions(){
-                MaxAge = TimeSpan.FromDays(3),
-            });
-            var redirectUrl = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
-            context.Result =
-                new RedirectResult(redirectUrl,false);
-            return;
-        }
+        
         _jwtManager.ParsePrincipal(out var user, out var session, context.HttpContext.User);
         if (user != null){
             context.HttpContext.Items[nameof(User)] = user;
@@ -45,7 +35,12 @@ public class AuthorizationFilter : IAuthorizationFilter
         }
         else 
             context.HttpContext.Items[nameof(Session)] = session;
-
+        if (context.HttpContext.Items["RefreshJwt"] is not true) return;
+        context.HttpContext.Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
+        context.HttpContext.Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme,
+            _jwtManager.Serialize(_jwtManager.CreateToken(session)), new CookieOptions(){
+                MaxAge = TimeSpan.FromHours(1),
+            });
     }
 
     public Task OnAuthorizationAsync(AuthorizationFilterContext context) {

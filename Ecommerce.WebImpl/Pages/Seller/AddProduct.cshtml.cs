@@ -6,6 +6,7 @@ using Ecommerce.Entity.Views;
 using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Product;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.WebImpl.Pages.Seller;
 
-[Authorize(Policy = nameof(Entity.Seller))]
+[Authorize(Policy = nameof(Entity.Seller), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class AddProduct : BaseModel
 {
     private readonly ISellerManager _sellerManager;

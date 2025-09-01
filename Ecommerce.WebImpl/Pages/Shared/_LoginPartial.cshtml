@@ -44,8 +44,8 @@
     @if ((Context.User.Identity?.IsAuthenticated ?? false) && Context.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role))){
         <li class="nav-item d-inline-flex justify-content-center align-items-center ">
             <a title="Hesabını Görüntüle" asp-page="/@(nameof(Pages.User))" asp-route-UserId="@((ViewData[nameof(Entity.User)] as User).Id)" class="nav-link text-dark p-0 hover-grow" title="Hesap">
-                @if (ViewBag.User.ProfilePicture != null){
-                    <img style="height: 2em;aspect-ratio: 1;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(ViewBag.User.ProfilePicture?.Data))" alt="Hesap"/>
+                @if ((ViewData[nameof(Entity.User)]as Entity.User)?.ProfilePicture is {} profilePicture){
+                    <img style="height: 2em;aspect-ratio: 1;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(profilePicture.Data))" alt="Hesap"/>
                 }
                 else{
                     <i class="bi bi-person-circle text-secondary bg-light fs-4"></i>
@@ -59,7 +59,7 @@
         }
 
         <li class="nav-item text-center d-inline-flex align-content-center justify-content-center align-items-center">
-            <form class="form-inline text-center" method="post" hx-post="/Account/Login?handler=logout" hx-swap="innerHTML" hx-target="#popupResult">
+            <form class="form-inline text-center" hx-get="/Account/Login?handler=logout" hx-swap="innerHTML" hx-target="#popupResult">
                 <button type="submit" class="nav-link hover-darken btn btn-link text-dark">Çıkış Yap<i class="ms-2 bi bi-box-arrow-right fs-6 text-secondary-emphasis"></i></button>
             </form>
         </li>

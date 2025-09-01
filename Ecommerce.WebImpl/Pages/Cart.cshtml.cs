@@ -6,11 +6,14 @@ using Ecommerce.WebImpl.Pages.Seller;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.CartPartials;
 using Ecommerce.WebImpl.Pages.Shared.Product;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Ecommerce.WebImpl.Pages;
 
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = nameof(AnonymousCustomer))]
 public class Cart : BaseModel
 {
     private readonly ICartManager _cartManager;

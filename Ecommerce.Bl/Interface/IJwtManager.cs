@@ -8,7 +8,7 @@ public interface IJwtManager
 {
     public void ParsePrincipal(out User? user, out Session? session, ClaimsPrincipal principal);
     public void UnwrapToken(SecurityToken token, out User? user, out Session? session);
-    public SecurityToken CreateToken(Session session, bool rememberMe = false);
+    public SecurityToken CreateToken(Session session, TimeSpan lifetime = default);
     public List<Claim> GetClaims(Session session);
     public string CreateAuthToken(string value, TimeSpan lifetime);
     public string? ReadAuthToken(string token);

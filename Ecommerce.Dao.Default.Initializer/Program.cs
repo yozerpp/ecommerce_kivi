@@ -128,7 +128,7 @@ internal static class Initializer
                 {typeof(ImageProduct), ProductCount*5},
                 {typeof(Payment), OrderCount},
                 {typeof(Shipment), OrderItemCount+1000},
-                {typeof(AnonymousUser), AnonymousUserCount},
+                {typeof(AnonymousCustomer), AnonymousUserCount},
                 {typeof(ProductFavor), ProductFavorCount},
                 {typeof(SellerFavor), SellerFavorCount},
                 {typeof(Image), 100}

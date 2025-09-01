@@ -4,11 +4,7 @@
 @using Ecommerce.WebImpl.Pages.Shared.Product
 @model HomepageModel
 @{
-    ViewData["Title"] = "Home page";
-    ViewBag.User = Model.CurrentUser;
-    if (Model.CurrentCustomer != null || Model.CurrentUser == null){
-        ViewBag.Cart = Model.CurrentSession.Cart;
-    }
+    ViewData["Title"] = "Anasayfa - Ecommerce Sandbox";
 }
 <div class="container-fluid d-flex flex-column">
     <div class="row g-3">

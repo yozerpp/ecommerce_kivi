@@ -33,7 +33,7 @@ public class DefaultDbContext : DbContext
         userBuilder.HasKey(u => u.Id);
         userBuilder.Property(u => u.Id).ValueGeneratedOnAdd();
         userBuilder.HasAlternateKey(u => u.NormalizedEmail);
-        userBuilder.Property(u => u.PasswordHash).HasMaxLength(24).IsRequired();
+        userBuilder.Property(u => u.PasswordHash).HasMaxLength(24).IsRequired(false);
         userBuilder.HasOne<Session>(u=>u.Session).WithOne(s=>s.User).HasForeignKey<User>(s=>s.SessionId).HasPrincipalKey<Session>(s=>s.Id)
             .IsRequired().OnDelete(DeleteBehavior.Restrict).Metadata.DependentToPrincipal!.SetIsEagerLoaded(true);
         userBuilder.HasOne<Image>(u => u.ProfilePicture).WithOne()
@@ -44,6 +44,8 @@ public class DefaultDbContext : DbContext
             c.Property(p => p.CountryCode).IsRequired();
             c.Property(p => p.Number).HasMaxLength(30).IsRequired();
         });
+        userBuilder.HasMany(u => u.ReviewComments).WithOne(rc => rc.User).HasForeignKey(r => r.UserId).HasPrincipalKey(u => u.Id)
+            .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
         // userBuilder.HasMany<Notification>(u=>u.Notifications).WithOne(n=>n.User).HasForeignKey(n=>n.UserId).HasPrincipalKey(u=>u.Id)
         // .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var customerBuilder = modelBuilder.Entity<Customer>();
@@ -51,8 +53,7 @@ public class DefaultDbContext : DbContext
         customerBuilder.HasMany(c => c.FavoriteSellers).WithMany(s => s.FavoredCustomers);
         customerBuilder.HasMany(u => u.Reviews).WithOne(r => r.Reviewer).HasForeignKey(u => u.ReviewerId)
             .HasPrincipalKey(u => u.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
-        customerBuilder.HasMany(u => u.ReviewComments).WithOne(rc => rc.User).HasForeignKey(r => r.UserId).HasPrincipalKey(u => u.Id)
-            .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
+
         customerBuilder.HasMany<Order>(c=>c.Orders).WithOne(o=>o.User).HasForeignKey(o=>o.UserId).HasPrincipalKey(u=>u.Id)
             .IsRequired().OnDelete(DeleteBehavior.Restrict).Metadata.GetNavigation(false);
         customerBuilder.HasMany<Product>(c => c.FavoriteProducts).WithMany(p => p.FavoredCustomers)
@@ -280,7 +281,7 @@ public class DefaultDbContext : DbContext
                     ValueGenerated.OnAddOrUpdate;
             });
         });
-        var anonymousUserBuilder = modelBuilder.Entity<AnonymousUser>();
+        var anonymousUserBuilder = modelBuilder.Entity<AnonymousCustomer>();
         anonymousUserBuilder.HasKey(a => a.Email);
         anonymousUserBuilder.HasMany<Order>(a => a.Orders).WithOne(o => o.AnonymousUser).HasForeignKey(o => o.Email)
             .HasPrincipalKey(a => a.Email);
@@ -294,7 +295,7 @@ public class DefaultDbContext : DbContext
         shipmentBuilder.ComplexProperty<Address>(s => s.SenderAddress).IsRequired();
         var orderBuilder = modelBuilder.Entity<Order>();
         orderBuilder.HasKey(o => o.Id);
-        orderBuilder.HasOne<AnonymousUser>(o => o.AnonymousUser).WithMany(u => u.Orders);
+        orderBuilder.HasOne<AnonymousCustomer>(o => o.AnonymousUser).WithMany(u => u.Orders);
         orderBuilder.Property(o=>o.Id).ValueGeneratedOnAdd();
         orderBuilder.Property(o => o.Status).HasDefaultValue(OrderStatus.WaitingConfirmation);
         orderBuilder.HasMany<OrderItem>(o => o.Items).WithOne(oi=>oi.Order).HasForeignKey(oi=>oi.OrderId)
@@ -541,7 +542,7 @@ public class DefaultDbContext : DbContext
             entity.HasMany<ReviewVote>(r=>r.Votes).WithOne(r=>r.ReviewComment).HasForeignKey(v=>v.ReviewId)
                 .HasPrincipalKey(r=>r.Id).IsRequired(false).OnDelete(DeleteBehavior.ClientCascade);
             entity.HasOne<Session>(r=>r.Commenter).WithMany().HasForeignKey(c => c.CommenterId).HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Customer>(c => c.User).WithMany(u => u.ReviewComments).HasForeignKey(c => c.UserId)
+            entity.HasOne<User>(c => c.User).WithMany(u => u.ReviewComments).HasForeignKey(c => c.UserId)
                 .HasPrincipalKey(c => c.Id)
                 .IsRequired(false).OnDelete(DeleteBehavior.ClientSetNull);
             entity.Property(c => c.Created).HasDefaultValueSql("DATEADD(HOUR, 3, GETUTCDATE())");

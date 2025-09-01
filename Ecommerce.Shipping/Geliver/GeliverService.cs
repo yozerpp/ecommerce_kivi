@@ -90,6 +90,10 @@ public class GeliverService(GeliverClient _client, ShippingContext _context) : I
          return s;
     }
 
+    public (bool,bool) ValidateAddress(Address address) {
+        return (_locationCodeStore.GetCity(address.City) != null ,_locationCodeStore.GetDistrict(address.City, address.District) != null);
+    }
+
     public async Task CancelShipment(string id) {
         if (!await _client.CancelShipment(id))
             throw null;

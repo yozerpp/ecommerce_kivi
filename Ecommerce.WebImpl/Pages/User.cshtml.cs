@@ -8,6 +8,7 @@ using Ecommerce.Notifications;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
 using Ecommerce.WebImpl.Pages.Shared.Order;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -17,7 +18,7 @@ using Microsoft.Identity.Client;
 
 namespace Ecommerce.WebImpl.Pages;
 
-[Authorize(Policy = nameof(Entity.User))]
+[Authorize(Policy = nameof(Entity.User), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class User : BaseModel
 {
     private readonly ICustomerManager _customerManager;

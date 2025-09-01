@@ -99,14 +99,13 @@ public class JwtManager : IJwtManager
         }
         return claims;
     }
-    public SecurityToken CreateToken(Session session, bool rememberMe = false) {
+    public SecurityToken CreateToken(Session session, TimeSpan lifetime = default) {
+        if(lifetime==TimeSpan.Zero) lifetime = TimeSpan.FromHours(1);
         var claims = GetClaims(session);
-        if(rememberMe)
-            claims.Add(new Claim(ClaimTypes.IsPersistent, true.ToString()));
         return _tokenHandler.CreateToken(new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims,JwtBearerDefaults.AuthenticationScheme),
-            Expires = rememberMe?DateTime.UtcNow.AddDays(3):DateTime.UtcNow.AddHours(3),
+            Expires = DateTime.Now + lifetime,
             SigningCredentials = _credentials,
             Audience = _tokenValidationParameters.ValidAudience,
             Issuer = _tokenValidationParameters.ValidIssuer,

@@ -48,8 +48,8 @@
                 </a>
             </div>
             <div class="d-inline-flex flex-column justify-content-center col-1 gap-2 text-center align-middle">
-            @if ((Model.Order.Status & (OrderStatus.WaitingPayment | OrderStatus.WaitingConfirmation)) !=0 || Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
-                var title = Model.ViewedBySeller ? "Siparişte sana ait olan tüm ürünleri iptal et." : "Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için ekibimizden iptal etmesini isteyebilrsin.";
+            @if (Model.Order.Items.All(i => (int)i.Status <= (int)OrderStatus.WaitingConfirmation)){
+                var title = Model.ViewedBySeller ? "Siparişte sana ait olan tüm ürünleri iptal et." : "Henüz hiçbir satıcı siparişindeki ürünleri onaylamadığı için siparişi iptal edebilirsin.";
                 var url = Model.ViewedBySeller ? "/" + nameof(Seller) + "?handler=cancelOrder": "/" +nameof(Orders) + "?handler=cancel";
                 <div>
                     <form  hx-post="/@(url)" hx-trigger="click" hx-target="#popupResult" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful)event.detail.elt.remove();">

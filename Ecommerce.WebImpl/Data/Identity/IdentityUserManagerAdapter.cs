@@ -31,6 +31,10 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
         return _userManager.Register(newUser);
     }
 
+    public User? GetByGoogleId(string googleId) {
+       return _userManager.GetByGoogleId(googleId);
+    }
+
     public object Register(User.UserRole type, object newUser) {
        return _userManager.Register(type, newUser);
     }
@@ -40,7 +44,7 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
     }
 
 
-    public AnonymousUser? FindAnonymousUser(string? email) {
+    public AnonymousCustomer? FindAnonymousUser(string? email) {
         return _userManager.FindAnonymousUser(email);
     }
 
@@ -56,8 +60,8 @@ public class IdentityUserManagerAdapter : UserManager<User>, IUserManager
         _userManager.Deactivate(customer);
     }
 
-    public void CreateAnonymous(AnonymousUser anonymousUser) {
-        _userManager.CreateAnonymous(anonymousUser);
+    public void CreateAnonymous(AnonymousCustomer anonymousCustomer) {
+        _userManager.CreateAnonymous(anonymousCustomer);
     }
 
     public User Get(uint id, bool includeImage = false) {

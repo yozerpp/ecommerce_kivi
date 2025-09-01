@@ -11,7 +11,7 @@ public class AuthProperties
         Address,
     }
     public enum Type {
-        Register,
+        Identity,
         Permission,
     }
     public string ReturnUrl { get; set; }

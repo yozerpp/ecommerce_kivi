@@ -155,7 +155,6 @@ public class Reviews : BaseModel
     public ulong? ParentId { get; set; }
     [BindProperty(SupportsGet = true)] 
     public int? NestLevel { get; set; }
-
     [BindProperty] public int Page { get; set; } = 1;
     [BindProperty] public int PageSize { get; set; } = 10;
     public IActionResult OnGetComments() {

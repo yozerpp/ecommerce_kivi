@@ -17,7 +17,7 @@ public class Order
     public OrderStatus Status { get; set; }
     public Address ShippingAddress { get; set; }
     public decimal? ShippingCost { get; set; }
-    public AnonymousUser? AnonymousUser { get; set; }
+    public AnonymousCustomer? AnonymousUser { get; set; }
     public OrderAggregates Aggregates { get; set; }
     public Session Session { get; set; }
     public Customer? User { get; set; }
