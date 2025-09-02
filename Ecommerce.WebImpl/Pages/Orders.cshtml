@@ -7,19 +7,19 @@
 @switch (Model.View){
     case Orders.ViewType.Auth:
         <div class="container-fluid d-flex flex-grow-1 flex-column align-content-center align-content-center justify-content-center h-100" style="min-height: 100vh;">
-            <h3 class="fs-5 text-center fw-bold">Siparişinizde Kullandığınız Email'i giriniz.</h3>
+            <h3 class="fs-3 text-center fw-bold">Siparişinizde Kullandığınız Email'i giriniz.</h3>
             @await Html.PartialAsync("Shared/_SeperatorPartial", (3,4,"border-1 border-black"))
-            <div class="card rounded-1 text-center align-self-center w-50 align-middle shadow border-black border-1">
+            <div class="card rounded-2 text-center align-self-center w-50 align-middle shadow-sm border-light-subtle border-1">
                 <form hx-post="/@nameof(Orders)" hx-trigger="submit" hx-target="#emailResult" hx-swap="innerHTML">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="@(nameof(Orders.OrderId))" value="@(Model.OrderId)"/>
                     <div class="card-body">
                         <div class="input-group d-inline-flex justify-content-center container-fluid align-middle align-self-center text-center mb-5">
-                            <label class="col-form-label">Email</label>
-                            <input class="form-control" type="email" name="email" required/>
+                            <label class="col-form-label fw-semibold">Email</label>
+                            <input class="form-control rounded-1 border-light-subtle shadow-sm" type="email" name="email" required/>
                         </div>
                         <div class="text-end align-self-end">
-                            <button type="submit" onclick="event.currentTarget.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary">Email Gönder</button>
+                            <button type="submit" onclick="event.currentTarget.parentElement.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}))" class="btn btn-primary shadow-sm hover-grow-small">Email Gönder</button>
                         </div>
                     </div>
                 </form>
