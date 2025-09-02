@@ -22,4 +22,8 @@
       <ProjectReference Include="..\Ecommerce.Mail\Ecommerce.Mail.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Migrations\" />
+    </ItemGroup>
+
 </Project>

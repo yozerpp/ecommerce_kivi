@@ -168,7 +168,7 @@
                         body[prefix + '@(nameof(ProductOption.ProductId))'] = @Model.ViewedProduct.Id;
                     }
                     htmx.ajax('POST', '/@nameof(Cart)', {
-                        target:'#addToCartResult',
+                        target:'#popupResult',
                         swap:'innerHTML',
                         source:e.currentTarget,
                         values: body,
@@ -397,7 +397,7 @@
                     }
                     @if (!Model.Creating && Model.ViewingSellerId==null){
                         <div class="col-6 ms-auto me-4">
-                            <form id="addToCartForm">
+                            <form id="addToCartForm" hx-post="">
                                 @Html.AntiForgeryToken()
                                 <input id="sellerIdInput" type="hidden" name="sellerId" />
                                 <div class="d-inline-flex justify-content-center align-items-center gap-2">

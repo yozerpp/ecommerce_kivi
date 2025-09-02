@@ -1,4 +1,5 @@
 ﻿@using Ecommerce.Entity.Common
+@using Ecommerce.WebImpl.Pages.CustomerPartials
 @using Ecommerce.WebImpl.Pages.Shared
 @model Ecommerce.WebImpl.Pages.CustomerPartials._CustomerAddressPartial
 
@@ -12,7 +13,7 @@ _selectedIndex: number
         ((s)=>{
             const parent = s.parentElement;
             document.addEventListener('DOMContentLoaded', load);
-            document.addEventListener('htmx:load', load);
+            parent.addEventListener('htmx:load', load);
             function load(e) {
                 if(e.type==='htmx:load'){
                     e.stopPropagation();
@@ -46,7 +47,7 @@ _selectedIndex: number
                         const newAddressItem = document.createElement('li');
                         newAddressItem.className = 'address-item card border-black border-start rounded-1';
                         newAddressItem.appendChild(template);
-                        
+                        template.querySelectorAll('[id]').forEach(el=>el.id = el.id + 'address' + parent._addresses.length);
                         addressesContainer.insertBefore(newAddressItem, addressesContainer.querySelector('.template'));
                         template.dispatchEvent(new Event('htmx:load', {bubbles: false}));
                         parent._addresses.push(newAddressItem);
@@ -139,6 +140,7 @@ _selectedIndex: number
                     selectAddress(parent._selectedIndex);
                 }
                 updateDropdown();
+            console.log("Initializer @(nameof(_CustomerAddressPartial)) from " + e.type);
             }
         })(document.currentScript)
         //# sourceURL=CustomerAddressPartial.js
@@ -155,7 +157,7 @@ _selectedIndex: number
             </li>
         }
         <li class="template d-none">
-            @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = Address.Empty, Editable = true, AsInput = true })
+            @await Html.PartialAsync("Shared/" + nameof(_AddressPartial), new _AddressPartial(){ Address = Address.Empty, Editable = true, AsInput = true})
         </li>
     </ul>
     <div class="mx-3 mt-3">

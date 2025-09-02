@@ -71,22 +71,22 @@
         
                     <!-- Tab Navigation -->
                     <ul class="nav nav-tabs nav-justified" id="userTabs" role="tablist">
+                        @* <li class="nav-item" role="presentation"> *@
+                        @*     <button class="nav-link active py-3" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#v-pills-statistics" type="button" role="tab" aria-controls="v-pills-statistics" aria-selected="true"> *@
+                        @*         <i class="bi bi-graph-up me-2"></i>İstatistikler *@
+                        @*     </button> *@
+                        @* </li> *@
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active py-3" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#v-pills-statistics" type="button" role="tab" aria-controls="v-pills-statistics" aria-selected="true">
-                                <i class="bi bi-graph-up me-2"></i>İstatistikler
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link py-3" id="profile-tab" data-bs-toggle="tab" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="false">
+                            <button class="nav-link py-3 active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="false">
                                 <i class="bi bi-person me-2"></i>Profil
                             </button>
                         </li>
-                        @if (editable){
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link py-3" id="security-tab" data-bs-toggle="tab" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
-                                    <i class="bi bi-shield-lock me-2"></i>Güvenlik
-                                </button>
-                            </li>
+                        @if (editable && Model.CurrentCustomer!=null){
+                            @* <li class="nav-item" role="presentation"> *@
+                            @*     <button class="nav-link py-3" id="security-tab" data-bs-toggle="tab" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false"> *@
+                            @*         <i class="bi bi-shield-lock me-2"></i>Güvenlik *@
+                            @*     </button> *@
+                            @* </li> *@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link py-3" id="orders-tab" data-bs-toggle="tab" data-bs-target="#v-pills-orders" type="button" role="tab" aria-controls="v-pills-orders" aria-selected="false">
                                     <i class="bi bi-bag me-2"></i>@(Model.CurrentCustomer != null ? "Siparişlerim" : "Siparişler")
@@ -98,45 +98,45 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="v-pills-tabContent">
                         <!-- Statistics Tab -->
-                        <div class="tab-pane fade show active" id="v-pills-statistics" role="tabpanel">
-                            <div class="p-4">
-                                <div class="mb-4">
-                                    <h5 class="text-muted mb-3">Hesap İstatistikleri</h5>
-                                </div>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <div class="card border h-100">
-                                            <div class="card-body text-center p-4">
-                                                <i class="bi bi-bag-check text-primary fs-1 mb-3"></i>
-                                                <h6 class="fw-semibold text-muted">Toplam Sipariş</h6>
-                                                <h4 class="text-dark mb-0">-</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="card border h-100">
-                                            <div class="card-body text-center p-4">
-                                                <i class="bi bi-heart text-danger fs-1 mb-3"></i>
-                                                <h6 class="fw-semibold text-muted">Favoriler</h6>
-                                                <h4 class="text-dark mb-0">-</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="card border h-100">
-                                            <div class="card-body text-center p-4">
-                                                <i class="bi bi-star text-warning fs-1 mb-3"></i>
-                                                <h6 class="fw-semibold text-muted">Değerlendirmeler</h6>
-                                                <h4 class="text-dark mb-0">-</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        @* <div class="tab-pane fade show active" id="v-pills-statistics" role="tabpanel"> *@
+                        @*     <div class="p-4"> *@
+                        @*         <div class="mb-4"> *@
+                        @*             <h5 class="text-muted mb-3">Hesap İstatistikleri</h5> *@
+                        @*         </div> *@
+                        @*         <div class="row g-3"> *@
+                        @*             <div class="col-md-4"> *@
+                        @*                 <div class="card border h-100"> *@
+                        @*                     <div class="card-body text-center p-4"> *@
+                        @*                         <i class="bi bi-bag-check text-primary fs-1 mb-3"></i> *@
+                        @*                         <h6 class="fw-semibold text-muted">Toplam Sipariş</h6> *@
+                        @*                         <h4 class="text-dark mb-0">-</h4> *@
+                        @*                     </div> *@
+                        @*                 </div> *@
+                        @*             </div> *@
+                        @*             <div class="col-md-4"> *@
+                        @*                 <div class="card border h-100"> *@
+                        @*                     <div class="card-body text-center p-4"> *@
+                        @*                         <i class="bi bi-heart text-danger fs-1 mb-3"></i> *@
+                        @*                         <h6 class="fw-semibold text-muted">Favoriler</h6> *@
+                        @*                         <h4 class="text-dark mb-0">-</h4> *@
+                        @*                     </div> *@
+                        @*                 </div> *@
+                        @*             </div> *@
+                        @*             <div class="col-md-4"> *@
+                        @*                 <div class="card border h-100"> *@
+                        @*                     <div class="card-body text-center p-4"> *@
+                        @*                         <i class="bi bi-star text-warning fs-1 mb-3"></i> *@
+                        @*                         <h6 class="fw-semibold text-muted">Değerlendirmeler</h6> *@
+                        @*                         <h4 class="text-dark mb-0">-</h4> *@
+                        @*                     </div> *@
+                        @*                 </div> *@
+                        @*             </div> *@
+                        @*         </div> *@
+                        @*     </div> *@
+                        @* </div> *@
                         
                         <!-- Profile Tab -->
-                        <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" data-editing="0">
+                        <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel" data-editing="0">
                             <div class="p-4">
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <div>
@@ -197,14 +197,16 @@
                             </div>
                             
                             <!-- Orders Tab -->
-                            <div class="tab-pane fade" id="v-pills-orders" role="tabpanel">
-                                <div class="p-4">
-                                    <div class="mb-4">
-                                        <h5 hx-get="/@nameof(Pages.Customer)?handler=orders&@(nameof(Pages.Customer.CustomerId))=@(Model.ViewedUser.Id)&pageSize=5&page=1" hx-trigger="revealed" hx-swap="afterend" hx-target="this" class="text-muted mb-1">Siparişler@(Model.CurrentCustomer != null ? "im" : "")</h5>
-                                        <p class="text-muted mb-0">Sipariş geçmişinizi görüntüleyin</p>
+                            @if (Model.CurrentCustomer != null){
+                                <div class="tab-pane fade" id="v-pills-orders" role="tabpanel">
+                                    <div class="p-4">
+                                        <div class="mb-4">
+                                            <h5 hx-get="/@nameof(Pages.Customer)?handler=orders&@(nameof(Pages.Customer.CustomerId))=@(Model.ViewedUser.Id)&pageSize=5&page=1" hx-trigger="revealed" hx-swap="afterend" hx-target="this" hx-on::after-request="if(event.detail.xhr.status < 300 && event.detail.xhr.status >=200)event.detail.elt.parentElement.lastElementChild.remove();console.log(event.detail.elt.parentElement.lastElementChild);" class="fs-4 fw-bold ms-4 mb-3">Siparişleriniz</h5>
+                                            <p class="text-muted mb-0">Sipariş geçmişinizi görüntüleyin</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </div> 
+                            }
                         }
                     </div>
                 </div>

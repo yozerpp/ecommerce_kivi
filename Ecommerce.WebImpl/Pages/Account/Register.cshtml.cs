@@ -105,6 +105,8 @@ public class Register : PageModel
         _userManager.Register(Role, u);
         // if (GoogleId != null){
         var t = _jwtManager.CreateToken(u.Session);
+        Console.WriteLine("OAuth Registered.-------------------------------");
+        Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
         Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t));
         // }
         return Partial(nameof(_InfoPartial), new _InfoPartial(){

@@ -32,15 +32,15 @@
 </style>
 
 <div class="login-container px-5 container-fluid d-flex align-content-center justify-content-center align-items-center" style="min-height: 70vh !important;">
-    <div class="login-card">
-        <div class="text-center">
+    <div class="login-card ">
+        <div class="text-center" style="min-width: 45vh !important;">
             <h2 class="mb-4">Giriş Yap</h2>
-            <ul class="nav nav-tabs mb-4" id="forms" role="tablist">
+            <ul class="nav nav-tabs mb-4 justify-content-center"  id="forms" role="tablist">
             @{ 
                 var userTypes = new[] { 
                     new { Name = "Customer", Display = "Müşteri" },
                     new { Name = "Seller", Display = "Satıcı" },
-                    new { Name = "Staff", Display = "Çalışan" }
+                    // new { Name = "Staff", Display = "Çalışan" }
                 };
                 var first = true;
             }

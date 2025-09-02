@@ -2,7 +2,7 @@
 @model Ecommerce.WebImpl.Pages.Account.Register
 
 <div class="container">
-    <div class="card card-body flex-grow-1 shadow border-0 rounded-4">
+    <div class="card card-body container py-5 px-5 flex-grow-1 shadow border-0 rounded-4">
         <script>
                 ((s)=>{
                     document.addEventListener("DOMContentLoaded",load);
@@ -33,6 +33,27 @@
                 })(document.currentScript)
                 //# sourceURL=@(nameof(Register)).js
             </script>
+        @if (Model.RegisteringUser.GoogleId != null){
+            
+            <div class="container-fluid ms-1">
+                <h3 class="fw-bold fs-3">
+                    Bilgilerinizi Tamamlayın
+                </h3>
+                <p class=" text-muted fs-6">
+                    Neredeyse vardınız...
+                </p>
+            </div>
+        }
+        else{
+            <div class="container-fluid ms-1">                
+                <h3 class="fw-bold fs-3">
+                    Bilgilerinizi Tamamlayın
+                </h3>
+                <p class=" text-muted fs-6">
+                    Kayıt İçin Gerekli Bilgilerinizi Girin.
+                </p>
+            </div>
+        }
         @if (Model.RegisteringUser.GoogleId == null){
             @await Html.PartialAsync("Account/_EmailAndPasswordPartial", new _EmailAndPasswordPartial(){
                 ShowEmail = true, ShowPassword = true, ShowOldPassword = false
@@ -42,8 +63,8 @@
         @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
             Editable = true, PostUrl = "/Account/Register", User = Model.RegisteringUser, Registering = true,
         })
-        <div class="card-footer d-flex justify-content-center align-items-center p-4">
-            <button type="button" class="btn btn-success btn-lg px-5 py-3 rounded-3 shadow-sm">
+        <div class=" d-flex justify-content-center align-items-center mt-5 ">
+            <button type="button" class="hover-grow-small btn btn-success btn-lg px-5 py-3 rounded-3 border-secondary-subtle border-opacity-50 border-1">
                 <i class="bi bi-check-circle me-2"></i>Kaydol
             </button>
         </div>

@@ -16,7 +16,7 @@
             @if (Model.CurrentCustomer != null){
                 <text>
                     document.addEventListener("DOMContentLoaded", ()=>{
-                       document.querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control')); 
+                       document.querySelectorAll('.edit-control').forEach(e=>e.classList.remove('edit-control'));
                     });
                 </text>
             }
@@ -31,21 +31,29 @@
             });
             function assignCheckoutInputs() {
                 @{ var acsor = Model.CurrentCustomer == null ? "value" : "innerText";}
-               const addrIdPostfix = @(Html.Raw(Model.CurrentCustomer!=null? "'address' + document.getElementById('customerAddress')._selectedIndex?.toString() ?? ''":"''"));
+               const addrIdPostfix = @(Html.Raw(Model.CurrentCustomer!=null? "'address' + document.getElementById('address').querySelector('.customerAddresses')._selectedIndex?.toString() ?? ''":"''"));
                @if (Model.CurrentCustomer == null){
                    <text>
                    document.getElementById('@(nameof(Checkout.Name))Input').value = document.getElementById('name').@acsor;
                    document.getElementById('@(nameof(Checkout.Email))Input').value= document.getElementById('email').@acsor;
                     </text>
                }
-               document.getElementById('@(nameof(Address.City))Input').value = document.getElementById( '@(nameof(Address.City))_'+addrIdPostfix).@acsor;
-               document.getElementById('@(nameof(Address.Line1))Input').value= document.getElementById('@nameof(Address.Line1)_' + addrIdPostfix).@acsor;
-               document.getElementById('@nameof(Address.Line2)Input').value= document.getElementById('@nameof(Address.Line2)_' + addrIdPostfix).@acsor;
-               document.getElementById('@(nameof(Address.District))Input').value = document.getElementById( '@nameof(Address.District)_' + addrIdPostfix).@acsor;
-               document.getElementById('@(nameof(Address.ZipCode))Input').value = document.getElementById('@nameof(Address.ZipCode)_' + addrIdPostfix).@acsor;
-               document.getElementById('@(nameof(Address.Country))Input').value = document.getElementById('@nameof(Address.Country)_' + addrIdPostfix).@acsor;
-               document.getElementById('countrycodeInput').value = document.getElementById('@(nameof(PhoneNumber.CountryCode))').@acsor;
-               document.getElementById('numberInput').value = document.getElementById('@(nameof(PhoneNumber.Number))').@acsor;
+                const city = document.getElementById('@(nameof(Address.City))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.City))Input').value = city.value ?? city.innerText;
+                const line1 = document.getElementById('@(nameof(Address.Line1))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.Line1))Input').value = line1.value ?? line1.innerText;
+                const line2 = document.getElementById('@(nameof(Address.Line2))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.Line2))Input').value = line2.value ?? line2.innerText;
+                const district = document.getElementById('@(nameof(Address.District))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.District))Input').value = district.value ?? district.innerText;
+                const zip = document.getElementById('@(nameof(Address.ZipCode))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.ZipCode))Input').value = zip.value ?? zip.innerText;
+                const country = document.getElementById('@(nameof(Address.Country))_' + addrIdPostfix);
+                document.getElementById('@(nameof(Address.Country))Input').value = country.value ?? country.innerText;
+                const countryCode = document.getElementById('@(nameof(PhoneNumber.CountryCode))');
+                document.getElementById('countrycodeInput').value = countryCode.value ?? countryCode.innerText;
+                const number = document.getElementById('@(nameof(PhoneNumber.Number))');
+                document.getElementById('numberInput').value = number.value ?? number.innerText;
             }
 
             //# sourceURL=@(nameof(Checkout))_1.js
@@ -89,6 +97,7 @@
                 if(selectedOffers.size < @(Model.ShippingOffersGrouped.Count)){
                     alert("Lütfen Sepetinizdeki tüm satıcılar için kargo seçimi yapın.")
                     event.stopImmediatePropagation();
+                    event.preventDefault();
                     return;
                 }
                 
@@ -188,7 +197,7 @@
                             <div class="mb-3 gap-2">
                                 <h2 class="align-self-start mx-3 mb-4">Teslimat Adresini @(Model.CurrentCustomer == null ? "Gir" : "Onayla")</h2>
                                 <div id="address" class="mx-3">
-                                    @if (Model.CurrentCustomer == null || Model.CurrentCustomer.Addresses.Count==0){
+                                    @if (Model.CurrentCustomer == null){
                                         if (Model.CurrentSeller!=null){
                                             <h3 class="fs-5 mb-0 ms-3">Kayıtlı Adresleriniz</h3>
                                             <p class="fs-6 text-muted mb-0 mt-1 ms-5">Kayıtsız adres ile işlem yapmak için düzenleyin.</p>
@@ -415,7 +424,7 @@
                     <div class="container-fluid mb-3">
                         <p class="fs-3 text-center w-100 fw-bold ms-2">@title</p>
                         @await Html.PartialAsync("Shared/_SeperatorPartial", (3,4, "text-dark"))
-                        <p class="text-start fs-5">@text</p>
+                        <p class="text-center fs-5">@text</p>
                         <div class="card container-fluid pt-2 rounded-3 mx-0 mt-3 shadow-lg">
                             <div class="container-fluid d-flex justify-content-start mb-3">
                                 <p class="fs-4 fw-bold">Sipariş Detayları</p>

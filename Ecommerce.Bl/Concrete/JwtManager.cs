@@ -138,6 +138,11 @@ public class JwtManager : IJwtManager
             var s = _dbContext.Database.SqlQueryRaw<SessionSimple>(
                 $"SELECT s.Id, s.{nameof(Session.CartId)}, s.{nameof(Session.UserId)}, c.{nameof(CartAggregates.ItemCount)} as {nameof(Session.ItemCount)} FROM [data].[{nameof(Session)}] s LEFT JOIN [data].[{nameof(CartAggregates)}] c ON c.{nameof(CartAggregates.CartId)} = s.{nameof(Session.CartId)} WHERE s.Id = {{0}}",
                 id).FirstOrDefault();
+            if(s==null) {
+                session = null;
+                user = null;
+                return;
+            }
             session = new Session(){
                 Id = s.Id,
                 CartId = s.CartId,

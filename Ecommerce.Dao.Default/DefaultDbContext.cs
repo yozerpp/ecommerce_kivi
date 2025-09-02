@@ -18,7 +18,6 @@ public class DefaultDbContext : DbContext
     public const string DefaultConnectionString = "Server=localhost;Database=Ecommerce;User Id=sa;Password=12345;TrustServerCertificate=True;";
     public const string DefaultSchema = "data";
     public DefaultDbContext() : base() { }
-
     public DefaultDbContext(DbContextOptions<DefaultDbContext> options) : base(options) { }
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.HasDefaultSchema(DefaultSchema);

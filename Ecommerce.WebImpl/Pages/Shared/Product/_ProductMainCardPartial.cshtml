@@ -2,7 +2,7 @@
 @using Product = Ecommerce.WebImpl.Pages.Product
 @model (ProductWithAggregatesCustomerView, IDictionary<uint, Ecommerce.Entity.Category>)
 @{
-    var isBuyer = ViewContext.ViewData[nameof(Entity.User)] is Customer or null;
+    var isBuyer = ViewContext.ViewData[nameof(Entity.User)] is Entity.Customer or null;
 }
 <div class="product-main-card card m-1  h-100 rounded-2 shadow-sm hover-grow-small hover-shadow justify-content-between">
     <style>

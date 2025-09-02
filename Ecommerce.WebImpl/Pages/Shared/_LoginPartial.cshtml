@@ -30,14 +30,14 @@
     }
         else if (u is Entity.Seller s){
             <li class="nav-item d-inline-flex align-content-center align-items-center">
-                <a title="Mağazanı Görüntüle" asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link hover-grow justify-content-center align-items-center text-decoration-none text-danger p-0" style="color: orange">
-                    <i class="bi bi-shop fs-4"></i>
+                <a title="Mağazanı Görüntüle" asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link d-inline-flex fs-5 hover-grow justify-content-center align-items-center text-decoration-none  p-0">
+                    <i class="ms-2 bi bi-shop me-2 text-danger"></i><span style="color: darkorange">Mağazan</span>
                 </a>
             </li>
             <li class="nav-item d-inline-flex justify-content-center align-items-center">
-                <a asp-page="Seller/AddProduct" style="color: unset;" title="İlan Ver" class="text-decoration-none gap-1 hover-grow py-3  d-inline-flex flex-row justify-content-center align-items-center">
-                    <i class="bi bi-box-seam-fill p-0 m-0 align-self-end" style="color: orange;"></i>
-                    <i class="p-0 mb-2 bi bi-plus-circle fs-5 text-primary-emphasis"></i>
+                <a asp-page="Seller/AddProduct" style="color: unset;" title="İlan Ver" class="nav-link d-inline-flex hover-grow fs-5  justify-content-center align-items-center text-decoration-none  p-0 align-items-center gap-1">
+                    <i class="ms-2 bi bi-box-seam-fill p-0 align-self-end" style="color: orange;"></i>
+                    <i class="p-0 mb-2 bi bi-plus-circle  text-success me-1"></i><span class="mt-1 text-primary-emphasis">Ürün Ekle</span>
                 </a>
             </li>
         }

@@ -31,7 +31,9 @@
             const parent= currentScript.parentElement;
             document.addEventListener("DOMContentLoaded", ()=>{
                 @if (Model.Registering){
-                <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));</text>
+                <text>document.dispatchEvent(new Event('editControl', {cancelable:false, bubbles:false}));
+                    document.getElementById('profilePic').parentElement.nextElementSibling.classList.toggle('edit-control');
+                </text>
                 }
                 parent._additionalData = {};
             })
@@ -48,6 +50,13 @@
                     '@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))': document.getElementById('@(nameof(PhoneNumber.Number))').innerHTML.replaceAll(new RegExp('\\D', 'g'), ''),
                     '@(nameof(Customer.IsImageEdited))': _p_editedImage@(Model.User.Id).toString()
                 };
+                // if(!profileData['@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))'] || !profileData['@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.CountryCode))']
+                // || profileData['@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))']>3 || !(profileData['@(prefix).@(nameof(Model.User.PhoneNumber)).@(nameof(PhoneNumber.Number))']).match(new RegExp('\\d{10}'))) {
+                //     alert("Lütfen Geçerli Bir Telefon Numarası Girin.")
+                // }
+                @if (Model.Registering && Model.User.ProfilePicture != null){
+                    <text>profileData['@(prefix).@(nameof(Entity.User.ProfilePicture)).@(nameof(Image.Data))'] = '@Model.User.ProfilePicture.Data';</text>
+                }
                 // Add seller-specific fields
                 @if (seller != null) {
                 <text>
@@ -125,10 +134,10 @@
 </script>
 
 <ul class="list-group gap-4 rounded-0">
-    <li class="card shadow-sm rounded-3 pt-4">
+    <li class="@(Model.Registering?"card":"") shadow-sm rounded-3 pt-4">
         @(SectionHeader("Kişisel Bilgiler", "bi-person fs-3 text-primary bg-white"))
         <div class="container-fluid mt-4 pt-1 mb-4 row g-4">
-            <div class="col-5 pt-2 gap-4 ps-3">
+            <div class="col-5 pt-2 d-inline-flex flex-column justify-content-between gap-5 h-100 ps-3">
                 <div class="d-flex container-fluid justify-content-between p-3 bg-light rounded-2 mb-3 shadow-sm">
                     <label class="fw-bold fs-5 text-primary">İsim:</label>
                     <div class="d-inline-flex">
@@ -148,19 +157,19 @@
                     </div>
                 </div>
             </div>
-            <div class="col-1"></div>
-            <div class="col-6 me-0 pe-0 row">
-                <div class="col-8">
-                    <img id="profilePic" class="card-img img-fluid rounded-circle shadow-sm border border-primary" src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
+            <div class="col-3"></div>
+            <div class="col-4 me-0 pe-0 row">
+                <div class="col-9">
+                    <img id="profilePic" class="card-img img-fluid shadow-sm rounded-circle shadow-sm border border-primary" style="max-height: 350px;" src="@(Utils.GetImageUrlOrDefault(Model.User.ProfilePicture?.Data, false))"
                          alt="Profil Resmi"/>
                 </div>
                 @if (editable){
-                    <div class="edit-control col-4 gap-3 justify-content-center">
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" class="btn mb-3 btn-outline-primary p-2 shadow-sm rounded-3 w-100">
+                    <div class="edit-control col-3 gap-3 justify-content-center">
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" class="btn btn-sm mb-3 btn-outline-primary p-2 border-2 border-light border-opacity-50 shadow-sm rounded-3 w-100">
                             Değiştir
                             @* <i class="col-auto bi bi-pencil-fill bg-white text-secondary"></i> *@
                         </button>
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-2 rounded-3 w-100 btn btn-outline-danger shadow-sm">
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-2 btn-sm rounded-3 w-100 btn btn-outline-danger shadow-sm border-2 border-light border-opacity-50">
                             Sil
                             @* <i class="col-auto bi bi-pencil-fill bg-white text-danger"></i> *@
                         </button>
@@ -193,7 +202,7 @@
             </div>
         </div>
     }
-    <li class="card shadow-sm rounded-3">
+    <li class="card justify-content-end">
         @SectionHeader("Telefon Numarası", "fs-3 bi bi-telephone-fill text-primary bg-white")
         @{
             var num = Model.User.PhoneNumber.Number.Replace("(", "").Replace(")", "");
@@ -201,7 +210,7 @@
                 ? num.Substring(0, 3) + string.Concat(Enumerable.Range(0, num.Length - 3).Select(_ => '*'))
                 : num;
         }
-        <div class="container-fluid d-flex justify-content-end align-content-center align-items-center mt-3 p-3 bg-light border border-primary gap-3 rounded-3 shadow-sm">
+        <div class="container-fluid d-flex justify-content-end align-content-center align-items-center mt-1 p-3 me-3    gap-3 shadow-sm">
             @await Html.PartialAsync("Shared/_PhoneNumberPartial", new _PhoneNumberPartial(){
                 Editable = true, PhoneNumber = Model.User.PhoneNumber
             })

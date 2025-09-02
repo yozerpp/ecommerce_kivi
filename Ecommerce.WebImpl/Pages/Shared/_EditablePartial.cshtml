@@ -1,5 +1,5 @@
 ﻿@model _EditablePartial
-<a class="col-auto hover-grow hover-darken edit-control text-decoration-none text-secondary mx-3" href="javascript:void(0);" onclick="
+<a class="col-auto hover-grow  edit-control text-decoration-none text-secondary mx-3" href="javascript:void(0);" onclick="
     @foreach (var target in Model.Target.Split(',')){ <text>
             {
                 @(Model.OnClick ?? "");

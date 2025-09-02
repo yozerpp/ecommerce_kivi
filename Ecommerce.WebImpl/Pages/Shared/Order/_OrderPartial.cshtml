@@ -9,7 +9,7 @@
 @model Ecommerce.WebImpl.Pages.Shared.Order._OrderPartial
 @{
     IHtmlContent OrderHeadingItem((string, string, int) v) => Html.Raw($""""
-                                                                            <li class="list-group-item rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-start overflow-hidden">
+                                                                            <li class="list-group-item mx-0 px-0 rounded-bottom-0 col-{v.Item3} d-inline-flex flex-column justify-content-start overflow-hidden">
                                                                                 <p class="fs-5 h-50">{v.Item2}</p>
                                                                             </li>
                                                                         """");

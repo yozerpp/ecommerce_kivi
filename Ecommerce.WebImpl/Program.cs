@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Ecommerce.Bl.Concrete;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Default;
@@ -28,11 +30,13 @@ using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using Customer = Ecommerce.Entity.Customer;
+using ICompressionProvider = Microsoft.AspNetCore.ResponseCompression.ICompressionProvider;
 using Product = Ecommerce.Entity.Product;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,21 +46,18 @@ builder.Services.AddDbContext<DefaultDbContext>(options =>
             c=> {
                 c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
+                c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.GetName().Name);
             }).EnableDetailedErrors(builder.Environment.IsDevelopment())
         .EnableServiceProviderCaching(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
 builder.Services.AddDbContext<ShippingContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(ShippingContext)),
             c => {
                 c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
-                c.MigrationsAssembly(typeof(ShippingContext).Assembly.FullName); 
+                c.MigrationsAssembly(typeof(ShippingContext).Assembly.GetName().Name); 
             }).EnableServiceProviderCaching().EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-builder.Services.Configure<ForwardedHeadersOptions>(options => {
-    options.ForwardedHeaders =
-        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-});
+
 var razorPageOptions = builder.Services.AddRazorPages();
 razorPageOptions.Services.AddScoped<AuthorizationFilter>(sp =>
     new AuthorizationFilter(sp.GetRequiredKeyedService<ICartManager>(nameof(AuthorizationFilter)),
@@ -69,10 +70,30 @@ builder.Services.AddKeyedScoped<IModel>(nameof(DefaultDbContext),
     (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
 builder.Services.AddKeyedScoped<IModel>(nameof(ShippingContext),
     (sp, k) => sp.GetRequiredKeyedService<DbContext>(k).Model);
+if (builder.Environment.IsProduction()){
+    if (Environment.GetEnvironmentVariable("ASPNETCORE_PATHBASE") != null){ //proxy
+        builder.Services.Configure<ForwardedHeadersOptions>(options => {
+            options.ForwardedHeaders =
+                ForwardedHeaders.All;
+            // options.KnownProxies.Clear();
+        });
+    }
+    else{
+        builder.WebHost.ConfigureKestrel(k => {
+            k.ListenAnyIP(443, options => {
+                options.UseHttps(
+                    builder.Configuration["Certificate:Path"] ?? throw new ArgumentNullException("Certificate:Path"),
+                    builder.Configuration["Certificate:Password"]);
+            });
+            k.ListenAnyIP(80);
+        });
+    }
+}
+
 var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>().UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
         c=> {
             c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-            c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.FullName);
+            c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.GetName().Name);
         }).EnableDetailedErrors()
     .EnableServiceProviderCaching().Options);
 
@@ -103,6 +124,12 @@ builder.Services.AddScoped<IRepository<User>>(sp =>
     sp.GetRequiredKeyedService<IRepository<User>>(nameof(IUserManager)));
 builder.Services.AddScoped<ISessionManager>(sp => sp.GetRequiredKeyedService<ISessionManager>(nameof(ISessionManager)));
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddResponseCompression(o => {
+    o.EnableForHttps = true;
+    o.Providers.Add(new BrotliCompressionProvider(new BrotliCompressionProviderOptions(){
+        Level = CompressionLevel.Fastest,
+    }));
+});
 builder.Services.AddIdentityCore<User>(options => {
         options.SignIn.RequireConfirmedAccount = false;
     }).AddUserStore<PasswordStore>()
@@ -216,22 +243,34 @@ else{
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     // app.UseHsts();
 }
-Expression<Comparison<T>> CreateComparerLambda<T>(params IEnumerable<T> order) {
-    var param1 = Expression.Parameter(typeof(T), "p1");
-    var param2 = Expression.Parameter(typeof(T), "p2");
-    return Expression.Lambda<Comparison<T>>(CreateComparerLambdaRecursive(param1, param2, order), param1, param2);
-}
-Expression CreateComparerLambdaRecursive<T>(ParameterExpression param1, Expression param2,params IEnumerable<T> order) {
-    if(!order.Any()) return Expression.Constant(0);
-    var value = order.First();
-    return Expression.Condition(Expression.Equal(param1, Expression.Constant(value)), Expression.Constant(-1),
-        Expression.Condition(Expression.Equal(param2, Expression.Constant(value)), Expression.Constant(1),CreateComparerLambdaRecursive<T>(param1, param2, order.Skip(1))));
+
+string? pathBase;
+if (app.Environment.IsProduction()){
+    if (!string.IsNullOrEmpty(pathBase = Environment.GetEnvironmentVariable("ASPNETCORE_PATHBASE"))){
+        Console.WriteLine($"Pathbase: {pathBase}");
+        app.UsePathBase(pathBase);
+        app.UseForwardedHeaders();
+        app.MapGet("/debug-forwarding", (HttpRequest request) => {
+            var headers = request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString());
+            var result = new{
+                Message = "This is the state of the request INSIDE the ASP.NET Core app.",
+                Scheme = request.Scheme,
+                Host = request.Host.ToString(),
+                PathBase = request.PathBase.ToString(),
+                Path = request.Path.ToString(),
+                FullUrl = $"{request.Scheme}://{request.Host}{request.PathBase}{request.Path}",
+                Headers = headers
+            };
+            // Use System.Text.Json for clean, indented output
+            return Results.Json(result, new JsonSerializerOptions{ WriteIndented = true });
+        });
+    }
+    else{
+        app.UseHttpsRedirection();
+    }
 }
 
-if (app.Environment.IsProduction()){
-    app.UseForwardedHeaders();
-}
-app.UseHttpsRedirection();
+app.UseResponseCompression();
 app.UseRouting();
 app.UseAuthorization();
 app.MapStaticAssets();
@@ -241,6 +280,19 @@ app.UseMiddleware<GlobalExceptionHandler>();
 // app.UseMiddleware<SessionMiddleware>();
 app.Run();
 return;
+
+Expression<Comparison<T>> CreateComparerLambda<T>(params IEnumerable<T> order) {
+    var param1 = Expression.Parameter(typeof(T), "p1");
+    var param2 = Expression.Parameter(typeof(T), "p2");
+    return Expression.Lambda<Comparison<T>>(CreateComparerLambdaRecursive(param1, param2, order), param1, param2);
+}
+
+Expression CreateComparerLambdaRecursive<T>(ParameterExpression param1, Expression param2,params IEnumerable<T> order) {
+    if(!order.Any()) return Expression.Constant(0);
+    var value = order.First();
+    return Expression.Condition(Expression.Equal(param1, Expression.Constant(value)), Expression.Constant(-1),
+        Expression.Condition(Expression.Equal(param2, Expression.Constant(value)), Expression.Constant(1),CreateComparerLambdaRecursive<T>(param1, param2, order.Skip(1))));
+}
 
 StaffBag GetStaves() {
     lock (lockobj){

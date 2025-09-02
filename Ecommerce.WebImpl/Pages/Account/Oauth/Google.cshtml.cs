@@ -23,7 +23,7 @@ public class Google : PageModel
         if (!authResult.Succeeded){
             return RedirectToPage("/Account/Unauthorized",new {authResult.Failure?.GetBaseException().Message, Type=nameof(Oauth)});
         }
-        if (authResult.Properties == null) return RedirectToPage("/Index");
+        if (authResult.Properties == null)throw new ArgumentNullException(nameof(authResult.Properties));
         var type = authResult.Properties.Items[nameof(AuthProperties.AuthType)];
         if (type == nameof(AuthProperties.Type.Identity)){
             var claims = authResult.Principal.Claims.ToArray();

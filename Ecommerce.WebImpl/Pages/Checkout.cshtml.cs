@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Ecommerce.Bl.Interface;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity;
@@ -241,6 +242,9 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
         var deliveryAddress = Address ?? CurrentCustomer?.PrimaryAddress ?? throw new ArgumentException("Lütfen Adres bilgilerinizi girin veya müşteri hesabınızla giriş yapın.");
         var customerName = CurrentCustomer?.FullName ?? Name ?? throw new ArgumentException("Lütfen Adınızı girin veya müşteri hesabınızla giriş yapın.");
         var customerPhoneNumber =  PhoneNumber ?? CurrentCustomer?.PhoneNumber ?? throw new ArgumentException("Lütfen Telefon Numaranızı girin veya müşteri hesabınızla giriş yapın.");
+        deliveryAddress.City = deliveryAddress.City?.Trim();
+        deliveryAddress.District= deliveryAddress.District?.Trim();
+        deliveryAddress.Country= deliveryAddress.Country?.Trim();
         ValidateParams(deliveryAddress, customerEmail, customerPhoneNumber, customerName);
         var ao = new Address(){
             City = deliveryAddress.City, Country = deliveryAddress.Country, Line1 = deliveryAddress.Line1,
@@ -275,6 +279,10 @@ var customerEmail = Email ?? CurrentCustomer?.Email ?? throw new ArgumentExcepti
             throw new ArgumentException("Lütfen Adres ve E-posta bilgilerinizi doldurun veya müşteri hesabınızla giriş yapın.");
         }
 
+        customerPhoneNumber.Number = customerPhoneNumber.Number.Trim();
+        if (customerPhoneNumber.CountryCode != 90 && Regex.IsMatch(customerPhoneNumber.Number, "^\\d{10}$")){
+            throw new ArgumentException("Telefon numarası 90 ile başlamalı ve 12 haneli olmalıdır.");
+        }
         var (city, dis) = _shippingService.ValidateAddress(deliveryAddress);
         if(!city) throw new ArgumentException(deliveryAddress.City+ " bir şehir değil.");
         if (!dis) throw new ArgumentException($"{deliveryAddress.District} {deliveryAddress.City}'de bir ilçe değil.");

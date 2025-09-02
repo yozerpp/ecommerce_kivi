@@ -23,12 +23,12 @@
              class="d-flex align-items-center p-2 bg-light rounded border">
             <i class="bi bi-telephone me-2 text-muted"></i>
             <span id="@(nameof(PhoneNumber.CountryCode))@(Model.Id??"")" 
-                  class="badge bg-secondary me-1">+@Model.PhoneNumber!.CountryCode</span>
+                  class="badge bg-secondary me-1 me-4">+@Model.PhoneNumber!.CountryCode</span>
             @if (Model.Editable){
                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
             }
             <span id="@(nameof(PhoneNumber.Number))@(Model.Id??"")" 
-                  class="fw-medium">@Model.PhoneNumber.Number</span>
+                  class="fw-medium me-4">@Model.PhoneNumber.Number</span>
             @if (Model.Editable){
                 @await Html.PartialAsync(nameof(_EditablePartial), new _EditablePartial())
             }
