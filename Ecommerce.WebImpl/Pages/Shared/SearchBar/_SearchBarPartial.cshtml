@@ -147,7 +147,7 @@
     </div>
     <div class="dropdown">
         <button type="button" id="filtersButton" role="button" class="dropdown-toggle" data-bs-toggle="dropdown" hidden aria-expanded="false"></button>
-        <div id="filters" class="dropdown-menu border-top-0 rounded-3 h-50 p-4 bg-gradient-light shadow-lg border-0">
+        <div id="filters" class="dropdown-menu border-top-0 rounded-3 h-50 p-4 bg-white shadow-lg border-0">
             <ul class="list-unstyled gap-3 g-3">
                 <li hx-on::after-settle="console.log(event.detail.elt.firstElementChild);event.detail.elt.firstElementChild.dispatchEvent(new Event('init', {bubbles:false}));"
                     id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&Type=@(nameof(_CategoryPropertiesPartial.DisplayMode.Filter))&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
