@@ -150,28 +150,28 @@ internal static class Initializer
                 {
                     new Category()
                     {
-                        Name = "Toys & Games",
-                        Description = "Children's toys and gaming products",
+                        Name = "Oyuncak & Oyun",
+                        Description = "Çocuk oyuncakları ve oyun ürünleri",
                     },
                     // new Category()
                     // {
-                    //     Name = "Electronics",
-                    //     Description = "Electronic devices and accessories"
+                    //     Name = "Elektronik",
+                    //     Description = "Elektronik cihazlar ve aksesuarlar"
                     // },
                     // new Category()
                     // {
-                    //     Name = "Clothing",
-                    //     Description = "Apparel and fashion items"
+                    //     Name = "Giyim",
+                    //     Description = "Kıyafet ve moda ürünleri"
                     // },
                     // new Category()
                     // {
-                    //     Name = "Books",
-                    //     Description = "Books and educational materials"
+                    //     Name = "Kitap",
+                    //     Description = "Kitaplar ve eğitim materyalleri"
                     // },
                     new Category()
                     {
-                        Name = "Home & Garden",
-                        Description = "Home improvement and garden supplies"
+                        Name = "Ev & Bahçe",
+                        Description = "Ev geliştirme ve bahçe malzemeleri"
                     }
                 };
                 context.Set<Category>().AddRange(categories);
@@ -185,51 +185,51 @@ internal static class Initializer
         {
             if (!context.Set<CategoryProperty>().Any())
             {
-                var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
-                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
-                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
-                // var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
-                var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Home & Garden");
+                var toysCategory = context.Set<Category>().First(c => c.Name == "Oyuncak & Oyun");
+                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Elektronik");
+                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Giyim");
+                // var booksCategory = context.Set<Category>().First(c => c.Name == "Kitap");
+                var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Ev & Bahçe");
                 
                 var categoryProperties = new[]
                 {
-                    // Toys & Games properties
+                    // Oyuncak & Oyun özellikleri
                     new CategoryProperty()
                     {
-                        PropertyName = "Age Range",
+                        PropertyName = "Yaş Aralığı",
                         CategoryId = toysCategory.Id,
                         IsNumber = false,
                         IsRequired = true,
-                        EnumValues = string.Join('|', ["", "0-2 years", "3-5 years", "6-8 years", "9-12 years", "13+ years", ""]),
+                        EnumValues = string.Join('|', ["", "0-2 yaş", "3-5 yaş", "6-8 yaş", "9-12 yaş", "13+ yaş", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Material",
+                        PropertyName = "Malzeme",
                         CategoryId = toysCategory.Id,
                         IsNumber = false,
                         IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Plastic", "Wood", "Metal", "Fabric", "Mixed", ""]),
+                        EnumValues = string.Join('|', ["", "Plastik", "Ahşap", "Metal", "Kumaş", "Karışık", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Battery Required",
+                        PropertyName = "Pil Gerekli",
                         CategoryId = toysCategory.Id,
                         IsNumber = false,
                         IsRequired = false,
-                        EnumValues = string.Join('|', ["", "Yes", "No", ""]),
+                        EnumValues = string.Join('|', ["", "Evet", "Hayır", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Brand",
+                        PropertyName = "Marka",
                         CategoryId = toysCategory.Id,
                         IsNumber = false,
                         IsRequired = false,
                     },
                     
-                    // Electronics properties
+                    // Elektronik özellikleri
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Screen Size",
+                    //     PropertyName = "Ekran Boyutu",
                     //     CategoryId = electronicsCategory.Id,
                     //     IsNumber = true,
                     //     IsRequired = false,
@@ -238,23 +238,23 @@ internal static class Initializer
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Operating System",
+                    //     PropertyName = "İşletim Sistemi",
                     //     CategoryId = electronicsCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
-                    //     EnumValues = string.Join('|', ["", "Windows", "macOS", "Linux", "Android", "iOS", "Other", ""]),
+                    //     EnumValues = string.Join('|', ["", "Windows", "macOS", "Linux", "Android", "iOS", "Diğer", ""]),
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Connectivity",
+                    //     PropertyName = "Bağlantı",
                     //     CategoryId = electronicsCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = false,
-                    //     EnumValues = string.Join('|', ["", "WiFi", "Bluetooth", "USB", "Ethernet", "Wireless", ""]),
+                    //     EnumValues = string.Join('|', ["", "WiFi", "Bluetooth", "USB", "Ethernet", "Kablosuz", ""]),
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Warranty Period",
+                    //     PropertyName = "Garanti Süresi",
                     //     CategoryId = electronicsCategory.Id,
                     //     IsNumber = true,
                     //     IsRequired = false,
@@ -262,10 +262,10 @@ internal static class Initializer
                     //     MinValue = 0,
                     // },
                     //
-                    // // Clothing properties
+                    // // Giyim özellikleri
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Size",
+                    //     PropertyName = "Beden",
                     //     CategoryId = clothingCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
@@ -273,40 +273,40 @@ internal static class Initializer
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Color",
+                    //     PropertyName = "Renk",
                     //     CategoryId = clothingCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Fabric Type",
+                    //     PropertyName = "Kumaş Türü",
                     //     CategoryId = clothingCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = false,
-                    //     EnumValues = string.Join('|', ["", "Cotton", "Polyester", "Wool", "Silk", "Denim", "Leather", ""]),
+                    //     EnumValues = string.Join('|', ["", "Pamuk", "Polyester", "Yün", "İpek", "Kot", "Deri", ""]),
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Gender",
+                    //     PropertyName = "Cinsiyet",
                     //     CategoryId = clothingCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
-                    //     EnumValues = string.Join('|', ["", "Men", "Women", "Unisex", "Kids", ""]),
+                    //     EnumValues = string.Join('|', ["", "Erkek", "Kadın", "Üniseks", "Çocuk", ""]),
                     // },
                     //
-                    // // Books properties
+                    // // Kitap özellikleri
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Genre",
+                    //     PropertyName = "Tür",
                     //     CategoryId = booksCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
-                    //     EnumValues = string.Join('|', ["", "Fiction", "Non-Fiction", "Science", "History", "Biography", "Children", ""]),
+                    //     EnumValues = string.Join('|', ["", "Kurgu", "Kurgu Dışı", "Bilim", "Tarih", "Biyografi", "Çocuk", ""]),
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Page Count",
+                    //     PropertyName = "Sayfa Sayısı",
                     //     CategoryId = booksCategory.Id,
                     //     IsNumber = true,
                     //     IsRequired = false,
@@ -315,15 +315,15 @@ internal static class Initializer
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Language",
+                    //     PropertyName = "Dil",
                     //     CategoryId = booksCategory.Id,
                     //     IsNumber = false,
                     //     IsRequired = true,
-                    //     EnumValues = string.Join('|', ["", "Turkish", "English", "German", "French", "Spanish", ""]),
+                    //     EnumValues = string.Join('|', ["", "Türkçe", "İngilizce", "Almanca", "Fransızca", "İspanyolca", ""]),
                     // },
                     // new CategoryProperty()
                     // {
-                    //     PropertyName = "Publication Year",
+                    //     PropertyName = "Yayın Yılı",
                     //     CategoryId = booksCategory.Id,
                     //     IsNumber = true,
                     //     IsRequired = false,
@@ -331,38 +331,38 @@ internal static class Initializer
                     //     MinValue = 1900,
                     // },
                     
-                    // Home & Garden properties
+                    // Ev & Bahçe özellikleri
                     new CategoryProperty()
                     {
-                        PropertyName = "Room Type",
+                        PropertyName = "Oda Tipi",
                         CategoryId = homeGardenCategory.Id,
                         IsNumber = false,
                         IsRequired = false,
-                        EnumValues = string.Join('|', ["", "Living Room", "Bedroom", "Kitchen", "Bathroom", "Garden", "Office", ""]),
+                        EnumValues = string.Join('|', ["", "Oturma Odası", "Yatak Odası", "Mutfak", "Banyo", "Bahçe", "Ofis", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Assembly Required",
+                        PropertyName = "Montaj Gerekli",
                         CategoryId = homeGardenCategory.Id,
                         IsNumber = false,
                         IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Yes", "No", ""]),
+                        EnumValues = string.Join('|', ["", "Evet", "Hayır", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Power Source",
+                        PropertyName = "Güç Kaynağı",
                         CategoryId = homeGardenCategory.Id,
                         IsNumber = false,
                         IsRequired = false,
-                        EnumValues = string.Join('|', ["", "Electric", "Battery", "Manual", "Solar", ""]),
+                        EnumValues = string.Join('|', ["", "Elektrikli", "Pilli", "Manuel", "Güneş Enerjili", ""]),
                     },
                     new CategoryProperty()
                     {
-                        PropertyName = "Indoor/Outdoor",
+                        PropertyName = "İç Mekan/Dış Mekan",
                         CategoryId = homeGardenCategory.Id,
                         IsNumber = false,
                         IsRequired = true,
-                        EnumValues = string.Join('|', ["", "Indoor", "Outdoor", "Both", ""]),
+                        EnumValues = string.Join('|', ["", "İç Mekan", "Dış Mekan", "Her ikisi de", ""]),
                     }
                 };
                 context.Set<CategoryProperty>().AddRange(categoryProperties);
@@ -376,99 +376,99 @@ internal static class Initializer
         {
             if (!context.Set<Product>().Any())
             {
-                var toysCategory = context.Set<Category>().First(c => c.Name == "Toys & Games");
-                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Electronics");
-                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Clothing");
-                // var booksCategory = context.Set<Category>().First(c => c.Name == "Books");
-                var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Home & Garden");
+                var toysCategory = context.Set<Category>().First(c => c.Name == "Oyuncak & Oyun");
+                // var electronicsCategory = context.Set<Category>().First(c => c.Name == "Elektronik");
+                // var clothingCategory = context.Set<Category>().First(c => c.Name == "Giyim");
+                // var booksCategory = context.Set<Category>().First(c => c.Name == "Kitap");
+                var homeGardenCategory = context.Set<Category>().First(c => c.Name == "Ev & Bahçe");
                 
                 // Get category properties for reference
-                var ageRangeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Age Range");
-                var materialProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Material");
-                var batteryProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Battery Required");
-                var brandProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Brand");
-                // var screenSizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Screen Size");
-                // var osProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Operating System");
-                // var connectivityProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Connectivity");
-                // var warrantyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Warranty Period");
-                // var sizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Size");
-                // var colorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Color");
-                // var fabricProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Fabric Type");
-                // var genderProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Gender");
-                // var genreProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Genre");
-                // var pageCountProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Page Count");
-                // var languageProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Language");
-                // var publicationYearProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Publication Year");
-                var roomTypeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Room Type");
-                var assemblyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Assembly Required");
-                var powerSourceProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Power Source");
-                var indoorOutdoorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Indoor/Outdoor");
+                var ageRangeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Yaş Aralığı");
+                var materialProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Malzeme");
+                var batteryProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Pil Gerekli");
+                var brandProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Marka");
+                // var screenSizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Ekran Boyutu");
+                // var osProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "İşletim Sistemi");
+                // var connectivityProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Bağlantı");
+                // var warrantyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Garanti Süresi");
+                // var sizeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Beden");
+                // var colorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Renk");
+                // var fabricProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Kumaş Türü");
+                // var genderProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Cinsiyet");
+                // var genreProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Tür");
+                // var pageCountProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Sayfa Sayısı");
+                // var languageProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Dil");
+                // var publicationYearProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Yayın Yılı");
+                var roomTypeProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Oda Tipi");
+                var assemblyProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Montaj Gerekli");
+                var powerSourceProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "Güç Kaynağı");
+                var indoorOutdoorProp = context.Set<CategoryProperty>().First(cp => cp.PropertyName == "İç Mekan/Dış Mekan");
                 
                 var products = new[]
                 {
-                    // Toys & Games products
+                    // Oyuncak & Oyun ürünleri
                     new Product()
                     {
                         CategoryId = toysCategory.Id,
-                        Name = "Remote Control Car",
+                        Name = "Uzaktan Kumandalı Araba",
                         Images = GetImage,
-                        Description = "High-speed remote control racing car with LED lights",
+                        Description = "LED ışıklı yüksek hızlı uzaktan kumandalı yarış arabası",
                         Dimensions = new Dimensions()
                         {
                             Depth = 25m, Height = 12m, Weight = 0.8m, Width = 15m
                         },
                         CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "6-8 years" },
-                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Plastic" },
-                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "Yes" },
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "6-8 yaş" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Plastik" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "Evet" },
                             new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "SpeedRacer" }
                         }
                     },
                     new Product()
                     {
                         CategoryId = toysCategory.Id,
-                        Name = "Wooden Building Blocks",
+                        Name = "Ahşap Yapı Blokları",
                         Images = GetImage,
-                        Description = "Educational wooden blocks for creative building",
+                        Description = "Yaratıcı yapılar için eğitici ahşap bloklar",
                         Dimensions = new Dimensions()
                         {
                             Depth = 30m, Height = 20m, Weight = 1.2m, Width = 30m
                         },
                         CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "3-5 years" },
-                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Wood" },
-                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "No" },
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "3-5 yaş" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Ahşap" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "Hayır" },
                             new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "EduToys" }
                         }
                     },
                     new Product()
                     {
                         CategoryId = toysCategory.Id,
-                        Name = "Plush Teddy Bear",
+                        Name = "Peluş Oyuncak Ayı",
                         Images = GetImage,
-                        Description = "Soft and cuddly teddy bear for children",
+                        Description = "Çocuklar için yumuşak ve sevimli oyuncak ayı",
                         Dimensions = new Dimensions()
                         {
                             Depth = 20m, Height = 35m, Weight = 0.5m, Width = 25m
                         },
                         CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "0-2 years" },
-                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Fabric" },
-                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "No" },
+                            new ProductCategoryProperty() { CategoryPropertyId = ageRangeProp.Id, Value = "0-2 yaş" },
+                            new ProductCategoryProperty() { CategoryPropertyId = materialProp.Id, Value = "Kumaş" },
+                            new ProductCategoryProperty() { CategoryPropertyId = batteryProp.Id, Value = "Hayır" },
                             new ProductCategoryProperty() { CategoryPropertyId = brandProp.Id, Value = "CuddleBear" }
                         }
                     },
                     
-                    // // Electronics products
+                    // // Elektronik ürünleri
                     // new Product()
                     // {
                     //     CategoryId = electronicsCategory.Id,
-                    //     Name = "Gaming Laptop",
+                    //     Name = "Oyuncu Dizüstü Bilgisayarı",
                     //     Images = GetImage,
-                    //     Description = "High performance laptop for gaming and professional work",
+                    //     Description = "Oyun ve profesyonel işler için yüksek performanslı dizüstü bilgisayar",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 25m, Height = 2.5m, Weight = 2.3m, Width = 35m
@@ -484,26 +484,26 @@ internal static class Initializer
                     // new Product()
                     // {
                     //     CategoryId = electronicsCategory.Id,
-                    //     Name = "Wireless Mouse",
+                    //     Name = "Kablosuz Fare",
                     //     Images = GetImage,
-                    //     Description = "Ergonomic wireless mouse with precision tracking",
+                    //     Description = "Hassas izlemeli ergonomik kablosuz fare",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 12m, Height = 4m, Weight = 0.1m, Width = 7m
                     //     },
                     //     CategoryProperties = new List<ProductCategoryProperty>()
                     //     {
-                    //         new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Other" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "Wireless" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = osProp.Id, Value = "Diğer" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = connectivityProp.Id, Value = "Kablosuz" },
                     //         new ProductCategoryProperty() { CategoryPropertyId = warrantyProp.Id, Value = "12" }
                     //     }
                     // },
                     // new Product()
                     // {
                     //     CategoryId = electronicsCategory.Id,
-                    //     Name = "Smartphone",
+                    //     Name = "Akıllı Telefon",
                     //     Images = GetImage,
-                    //     Description = "Latest generation smartphone with advanced camera",
+                    //     Description = "Gelişmiş kameralı en yeni nesil akıllı telefon",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 0.8m, Height = 15m, Weight = 0.18m, Width = 7m
@@ -517,12 +517,12 @@ internal static class Initializer
                     //     }
                     // },
                     
-                    // // Clothing products
+                    // // Giyim ürünleri
                     // new Product()
                     // {
                     //     CategoryId = clothingCategory.Id,
-                    //     Name = "Cotton T-Shirt",
-                    //     Description = "Comfortable cotton t-shirt for everyday wear",
+                    //     Name = "Pamuklu Tişört",
+                    //     Description = "Günlük kullanım için rahat pamuklu tişört",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 1m, Height = 70m, Weight = 0.2m, Width = 50m
@@ -530,16 +530,16 @@ internal static class Initializer
                     //     CategoryProperties = new List<ProductCategoryProperty>()
                     //     {
                     //         new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "M" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Blue" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Cotton" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Unisex" }
+                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Mavi" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Pamuk" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Üniseks" }
                     //     }
                     // },
                     // new Product()
                     // {
                     //     CategoryId = clothingCategory.Id,
-                    //     Name = "Denim Jeans",
-                    //     Description = "Classic blue denim jeans with modern fit",
+                    //     Name = "Kot Pantolon",
+                    //     Description = "Modern kesimli klasik mavi kot pantolon",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 2m, Height = 20m, Weight = 0.6m, Width = 40m
@@ -547,83 +547,83 @@ internal static class Initializer
                     //     CategoryProperties = new List<ProductCategoryProperty>()
                     //     {
                     //         new ProductCategoryProperty() { CategoryPropertyId = sizeProp.Id, Value = "L" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Dark Blue" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Denim" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Men" }
+                    //         new ProductCategoryProperty() { CategoryPropertyId = colorProp.Id, Value = "Koyu Mavi" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = fabricProp.Id, Value = "Kot" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genderProp.Id, Value = "Erkek" }
                     //     }
                     // },
                     
-                    // // Books products
+                    // // Kitap ürünleri
                     // new Product()
                     // {
                     //     CategoryId = booksCategory.Id,
-                    //     Name = "Programming Guide",
-                    //     Description = "Comprehensive guide to modern programming languages",
+                    //     Name = "Programlama Rehberi",
+                    //     Description = "Modern programlama dilleri için kapsamlı rehber",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 3m, Height = 24m, Weight = 0.8m, Width = 17m
                     //     },
                     //     CategoryProperties = new List<ProductCategoryProperty>()
                     //     {
-                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Science" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Bilim" },
                     //         new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "450" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "English" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "İngilizce" },
                     //         new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2023" }
                     //     }
                     // },
                     // new Product()
                     // {
                     //     CategoryId = booksCategory.Id,
-                    //     Name = "Children's Story Book",
-                    //     Description = "Colorful illustrated story book for young readers",
+                    //     Name = "Çocuk Hikaye Kitabı",
+                    //     Description = "Genç okuyucular için renkli resimli hikaye kitabı",
                     //     Dimensions = new Dimensions()
                     //     {
                     //         Depth = 1m, Height = 21m, Weight = 0.3m, Width = 15m
                     //     },
                     //     CategoryProperties = new List<ProductCategoryProperty>()
                     //     {
-                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Children" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = genreProp.Id, Value = "Çocuk" },
                     //         new ProductCategoryProperty() { CategoryPropertyId = pageCountProp.Id, Value = "32" },
-                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "Turkish" },
+                    //         new ProductCategoryProperty() { CategoryPropertyId = languageProp.Id, Value = "Türkçe" },
                     //         new ProductCategoryProperty() { CategoryPropertyId = publicationYearProp.Id, Value = "2022" }
                     //     }
                     // },
                     //
-                    // Home & Garden products
+                    // Ev & Bahçe ürünleri
                     new Product()
                     {
                         CategoryId = homeGardenCategory.Id,
-                        Name = "Garden Hose",
+                        Name = "Bahçe Hortumu",
                         Images = GetImage,
-                        Description = "Flexible garden hose for watering plants",
+                        Description = "Bitkileri sulamak için esnek bahçe hortumu",
                         Dimensions = new Dimensions()
                         {
                             Depth = 30m, Height = 30m, Weight = 2.5m, Width = 30m
                         },
                         CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Garden" },
-                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "No" },
-                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Manual" },
-                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Outdoor" }
+                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Bahçe" },
+                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "Hayır" },
+                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Manuel" },
+                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Dış Mekan" }
                         }
                     },
                     new Product()
                     {
                         CategoryId = homeGardenCategory.Id,
-                        Name = "LED Desk Lamp",
+                        Name = "LED Masa Lambası",
                         Images = GetImage,
-                        Description = "Adjustable LED desk lamp with touch controls",
+                        Description = "Dokunmatik kontrollü ayarlanabilir LED masa lambası",
                         Dimensions = new Dimensions()
                         {
                             Depth = 20m, Height = 45m, Weight = 1.2m, Width = 15m
                         },
                         CategoryProperties = new List<ProductCategoryProperty>()
                         {
-                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Office" },
-                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "Yes" },
-                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Electric" },
-                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "Indoor" }
+                            new ProductCategoryProperty() { CategoryPropertyId = roomTypeProp.Id, Value = "Ofis" },
+                            new ProductCategoryProperty() { CategoryPropertyId = assemblyProp.Id, Value = "Evet" },
+                            new ProductCategoryProperty() { CategoryPropertyId = powerSourceProp.Id, Value = "Elektrikli" },
+                            new ProductCategoryProperty() { CategoryPropertyId = indoorOutdoorProp.Id, Value = "İç Mekan" }
                         }
                     }
                 };
@@ -645,17 +645,17 @@ internal static class Initializer
                         Email = "toystore@example.com",
                         NormalizedEmail = "TOYSTORE@EXAMPLE.COM",
                         PasswordHash = "hashedpassword123",
-                        FirstName = "John",
-                        LastName = "Smith",
+                        FirstName = "Can",
+                        LastName = "Yılmaz",
                         Session = new Session(){
                             Cart = new Cart()
                         },
-                        ShopName = "ToyWorld Store",
+                        ShopName = "Oyuncak Dünyası Mağazası",
                         PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551234567" },
                         Address = new Address()
                         {
-                            Line1 = "123 Toy Street",
-                            Line2 = "Suite 100",
+                            Line1 = "123 Oyuncak Caddesi",
+                            Line2 = "Daire 100",
                             District = "Kadıköy",
                             City = "İstanbul",
                             Country = "Türkiye",
@@ -667,15 +667,15 @@ internal static class Initializer
                         Email = "techgadgets@example.com",
                         NormalizedEmail = "TECHGADGETS@EXAMPLE.COM",
                         PasswordHash = "hashedpassword456",
-                        FirstName = "Sarah",
-                        LastName = "Johnson",                        Session = new Session(){
+                        FirstName = "Sare",
+                        LastName = "Yıldırım",                        Session = new Session(){
                             Cart = new Cart()
                         },
-                        ShopName = "Tech Gadgets Pro",
+                        ShopName = "Teknoloji Aletleri Pro",
                         PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5559876543" },
                         Address = new Address()
                         {
-                            Line1 = "456 Electronics Ave",
+                            Line1 = "456 Elektronik Bulvarı",
                             District = "Beşiktaş",
                             City = "İstanbul",
                             Country = "Türkiye",
@@ -687,15 +687,15 @@ internal static class Initializer
                         Email = "fashionhub@example.com",
                         NormalizedEmail = "FASHIONHUB@EXAMPLE.COM",
                         PasswordHash = "hashedpassword789",
-                        FirstName = "Michael",
-                        LastName = "Brown",                        Session = new Session(){
+                        FirstName = "Mert",
+                        LastName = "Kahraman",                        Session = new Session(){
                             Cart = new Cart()
                         },
-                        ShopName = "Fashion Hub",
+                        ShopName = "Moda Merkezi",
                         PhoneNumber = new PhoneNumber() { CountryCode = 90, Number = "5551122334" },
                         Address = new Address()
                         {
-                            Line1 = "789 Fashion Blvd",
+                            Line1 = "789 Moda Bulvarı",
                             District = "Şişli",
                             City = "İstanbul",
                             Country = "Türkiye",
@@ -818,15 +818,15 @@ internal static class Initializer
                                     // For string properties: create string variations
                                     switch (categoryProperty.CategoryProperty.PropertyName.ToLower())
                                     {
-                                        case "brand":
-                                            options.AddRange(new[] { "Generic", "Premium", "Deluxe" });
+                                        case "marka":
+                                            options.AddRange(new[] { "Jenerik", "Premium", "Lüks" });
                                             break;
-                                        case "color":
-                                            options.AddRange(new[] { "Black", "White", "Gray" });
+                                        case "renk":
+                                            options.AddRange(new[] { "Siyah", "Beyaz", "Gri" });
                                             break;
                                         default:
                                             // Generic string variations
-                                            options.AddRange(new[] { $"{currentValue} Plus", $"{currentValue} Pro", $"Standard {currentValue}" });
+                                            options.AddRange(new[] { $"{currentValue} Plus", $"{currentValue} Pro", $"Standart {currentValue}" });
                                             break;
                                     }
                                 }
