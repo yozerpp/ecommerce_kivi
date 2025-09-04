@@ -72,9 +72,8 @@
                 };
                 
                 // Add profile picture if edited
-                const profilePicInput = document.getElementById('p_@(nameof(Model.User.ProfilePicture))');
-                if (profilePicInput && profilePicInput.value) {
-                    profileData['@(prefix).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))'] = profilePicInput.value;
+                if (parent._pp) {
+                    profileData['@(prefix).@(nameof(Entity.Customer.ProfilePicture)).@(nameof(Image.Data))'] = parent._pp;
                 }
 
                 @if (customer != null) {
@@ -134,7 +133,7 @@
 </script>
 
 <ul class="list-group gap-4 rounded-0">
-    <li class="@(Model.Registering?"card":"") shadow-sm rounded-3 pt-4">
+    <li class="card shadow-sm rounded-3 pt-4">
         @(SectionHeader("Kişisel Bilgiler", "bi-person fs-3 text-primary bg-white"))
         <div class="container-fluid mt-4 pt-1 mb-4 row g-4">
             <div class="col-5 pt-2 d-inline-flex flex-column justify-content-between gap-5 h-100 ps-3">
@@ -165,11 +164,11 @@
                 </div>
                 @if (editable){
                     <div class="edit-control col-3 gap-3 justify-content-center">
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;promptFile().then(f=>{document.getElementById('profilePic').src=f;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value=f;});" class="btn btn-sm mb-3 btn-outline-primary p-2 border-2 border-light border-opacity-50 shadow-sm rounded-3 w-100">
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;const parent=event.currentTarget.closest('.partial-parent');promptFile().then(f=>{document.getElementById('profilePic').src=f;parent._pp=f;});" class="btn btn-sm mb-3 btn-outline-primary p-2 border-2 border-light border-opacity-50 shadow-sm rounded-3 w-100">
                             Değiştir
                             @* <i class="col-auto bi bi-pencil-fill bg-white text-secondary"></i> *@
                         </button>
-                        <button onclick="_p_editedImage@(Model.User.Id)=true;document.getElementById('p_@(nameof(Model.User.ProfilePicture))').value='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-2 btn-sm rounded-3 w-100 btn btn-outline-danger shadow-sm border-2 border-light border-opacity-50">
+                        <button onclick="_p_editedImage@(Model.User.Id)=true;event.currentTarget.closest('.partial-parent')._pp='-';document.getElementById('profilePic').src = '/user-icon.svg'" class="col-auto p-2 btn-sm rounded-3 w-100 btn btn-outline-danger shadow-sm border-2 border-light border-opacity-50">
                             Sil
                             @* <i class="col-auto bi bi-pencil-fill bg-white text-danger"></i> *@
                         </button>

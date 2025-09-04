@@ -15,6 +15,7 @@ public class ReviewComment
     public ReviewComment? Parent { get; set; }
     public string Comment { get; set; }
     public string? Name { get; set; }
+    public bool SellerReply { get; set; }
     public DateTime Created { get; set; }
     public ReviewCommentStats Stats { get; set; }
     public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();

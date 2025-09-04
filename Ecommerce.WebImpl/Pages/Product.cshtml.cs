@@ -83,6 +83,14 @@ public class Product : BaseModel
         });
     }
 
+    public IActionResult OnGetReviewStats() {
+        var stats = _dbContext.Set<Entity.Product>().AsNoTracking().Where(p => p.Id == ProductId)
+            .Select(p => p.RatingStats).FirstOrDefault();
+        if (stats == null) return new NotFoundObjectResult(new{ Message = "Product not found" });
+        return Partial("Shared/Product/" + nameof(_ProductRatingStatsPartial), new _ProductRatingStatsPartial(){
+            ReviewStats = stats
+        });
+    }
     public IActionResult OnGetImages([FromQuery] bool json, [FromQuery] int page, [FromQuery] int pageSize) {
         var images = _imageProductRepository.Where(i => i.ProductId == ProductId, offset: (page - 1) * pageSize,
             limit: page * pageSize, includes:[[nameof(ImageProduct.Image)]]);

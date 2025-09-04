@@ -18,7 +18,7 @@
                 })
                 list.setAttribute('hx-vals', '@(Html.Raw(JsonSerializer.Serialize(new{ PageIndex = Model.PageIndex.ToString() }, JsonSerializerOptions.Web)))');
                 list.addEventListener('scroll', event => {
-                    if(list.dataset.stop === '1' ||list.dataset.loading==='1'||list.scrollLeft < (list.scrollWidth - list.offsetWidth * 1.25)) return;
+                    if(list.dataset.stop === '1' ||list.dataset.loading==='1'||list.scrollWidth < list.clientWidth||list.scrollLeft < (list.scrollWidth - list.offsetWidth * 1.25)) return;
                     const page = parseInt(list.dataset.page) +1;
                     list.dataset.page = page.toString();
                     list.setAttribute('hx-vals', JSON.stringify({PageIndex: page.toString()}));
@@ -28,6 +28,7 @@
                 list.addEventListener('htmx:afterRequest', event=>{
                     list.dataset.loading='0';
                     if(event.detail.xhr.status===204){
+                        event.stopPropagation();
                         list.dataset.stop='1';
                     }
                 })

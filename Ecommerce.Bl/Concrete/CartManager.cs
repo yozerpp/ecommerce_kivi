@@ -56,10 +56,12 @@ public class CartManager : ICartManager
     }
 
     public void AddCoupon(Cart cart, ProductOffer offer, string couponId) {
+        if(_dbContext.Set<Coupon>().Where(c=>c.Id == couponId).Select(c=>new {c.Id, c.SellerId}).FirstOrDefault()?.SellerId!=offer.SellerId)
+            throw new ArgumentException("Kupon bu satıcıya ait değil.");
         _cartItemRepository.UpdateInclude(new CartItem(){
             CartId = cart.Id, CouponId = couponId, ProductId = offer.ProductId,
             SellerId = offer.SellerId
-        }, nameof(CartItem.CouponId));
+        }, nameof(CartItem.CouponId), nameof(CartItem.Coupon));
         _cartItemRepository.Flush();
         // var cartId = ContextHolder.Session?.Cart.Id?? ContextHolder.Session.CartId;
         // var c = _cartItemRepository.UpdateExpr([
@@ -184,7 +186,6 @@ public class CartManager : ICartManager
         },
         CartId = s.CartId,
         Id = s.Id,
-        UserId = s.UserId,
     };
     private static readonly Expression<Func<Product, Product>> ProductProjection = p => new Product(){
         Id = p.Id,

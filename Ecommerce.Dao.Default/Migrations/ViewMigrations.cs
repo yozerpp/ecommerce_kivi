@@ -273,7 +273,9 @@ public static class ViewMigrations
             CREATE VIEW [{DefaultDbContext.DefaultSchema}].[{nameof(ProductRatingStats)}] WITH SCHEMABINDING AS
             SELECT 
                 p.Id as {nameof(ProductRatingStats.ProductId)},
-                COUNT_BIG(*) as {nameof(ProductRatingStats.ReviewCount)},
+                COALESCE(SUM(pr5s.{nameof(ProductRatingStats.FiveStarCount)}),0) + COALESCE(SUM(pr4s.{nameof(ProductRatingStats.FourStarCount)}),0)
+                + COALESCE(SUM(pr3s.{nameof(ProductRatingStats.ThreeStarCount)}),0) + COALESCE(SUM(pr2s.{nameof(ProductRatingStats.TwoStarCount)}),0) 
+                + COALESCE(SUM(pr1s.{nameof(ProductRatingStats.OneStarCount)}),0) + COALESCE(SUM(pr0s.{nameof(ProductRatingStats.ZeroStarCount)}),0) as {nameof(ProductRatingStats.ReviewCount)},
                 COALESCE(SUM(pr5s.{nameof(ProductRatingStats.FiveStarCount)}),0) as {nameof(ProductRatingStats.FiveStarCount)},
                 COALESCE(SUM(pr4s.{nameof(ProductRatingStats.FourStarCount)}),0) as {nameof(ProductRatingStats.FourStarCount)},
                 COALESCE(SUM(pr3s.{nameof(ProductRatingStats.ThreeStarCount)}),0) as {nameof(ProductRatingStats.ThreeStarCount)},

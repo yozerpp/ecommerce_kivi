@@ -9,14 +9,24 @@
             function load(e){
                 if(e.type === 'htmx:load') e.stopPropagation();
                 const parent = s.parentElement;
-                parent.querySelectorAll('button.btn-link').forEach(t=>{
-                    const tt = new bootstrap.Tooltip(t, {trigger: 'manual' , title: 'Panoya Kopyalandı', placement: 'top'});
+                parent.querySelectorAll('button.coupon-copy').forEach(t=>{
+                    const tt = new bootstrap.Tooltip(t, {trigger: 'manual' , title: 'Panoya Kopyalandı',container:t.parentElement, placement: 'top'});
+                    t.addEventListener('mouseenter', event=>{
+                        if(t._copied) return;
+                        tt.setContent({'.tooltip-inner':'Bu satıcının ürünlerinde kullanabileceğiniz kupon kodunu kopyala'});
+                        tt.show();
+                    })
+                    t.addEventListener('mouseleave', event=>{
+                        if(t._copied) return;
+                        tt.hide();
+                    })
                     t.addEventListener('click',event=>{
                         event.preventDefault();
-                        event.stopImmediatePropagation();
                         navigator.clipboard.writeText(event.currentTarget.previousElementSibling.innerText);
+                        tt.setContent({'.tooltip-inner':'Panoya Kopyalandı'});
                         tt.show();
-                        setTimeout(()=>tt.hide(), 4000);
+                        t._copied=true;
+                        setTimeout(()=>{tt.hide(); t._copied=false;}, 4000);
                     })
                 })
             }
@@ -28,7 +38,7 @@
                         <div class="d-flex gap-3">
                             <div class="d-inline-flex gap-2">
                                 <p class="fw-bold card-title fs-5 text-wrap">@coupon.Id</p>
-                                <button  data-bs-toggle="tooltip" data-bs-placement="top" class="btn btn-link text-decoration-none p-0 align-items-center justify-content-center">
+                                <button  class="btn coupon-copy btn-link text-decoration-none p-0 align-items-center justify-content-center">
                                     <i class="bi m-0 bi-clipboard text-black bg-light"></i>
                                 </button>    
                             </div>

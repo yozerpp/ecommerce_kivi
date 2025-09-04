@@ -39,11 +39,11 @@
     <div class="row justify-content-center">
         <div class="col-12 col-lg-10">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0 text-center">
-                        <i class="fas fa-user-circle me-2"></i>@Model.ViewedUser.FirstName @Model.ViewedUser.LastName
-                    </h3>
-                </div>
+                @* <div class="card-header bg-primary text-white"> *@
+                @*     <h3 class="card-title mb-0 text-center"> *@
+                @*         <i class="fas fa-user-circle me-2"></i>@Model.ViewedUser.FirstName @Model.ViewedUser.LastName *@
+                @*     </h3> *@
+                @* </div> *@
                 <div class="card-body p-0">
                     <!-- Header Section -->
                     <div class="bg-light border-bottom p-4">
@@ -160,12 +160,10 @@
                                         </button>
                                     }
                                 </div>
-                                <div class="card bg-light">
-                                    <div class="card-body">
+                                <div >
                                         @await Html.PartialAsync("Account/_ProfilePartial", new _ProfilePartial(){
                                             Editable = editable, User = Model.ViewedUser,PostUrl = "/" + nameof(Pages.User)+"?handler=update"
                                         })
-                                    </div>
                                 </div>
                                 <div class="text-center mt-4">
                                     <button id="profileSaveButton" onclick="document.getElementById('v-pills-profile').dataset.editing='0'; 

@@ -1,27 +1,28 @@
-﻿@model ReviewUserView
+﻿@using Ecommerce.Entity
+@model ReviewUserView
 @{
     var editable = Model.Review.ReviewerId.HasValue&& Model.Review.ReviewerId == (Context.Items[nameof(Entity.User)] as Entity.User)?.Id || 
                    Model.Review.SessionId == (Context.Items[nameof(Entity.Session)] as Entity.Session)?.Id;}
-<div class="card shadow-sm mb-4 review partial-parent">
+<div id="review@(Model.Review.Id)" class="card shadow-sm mb-4 review partial-parent">
     <div class="card-body">
         <div class="w-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center">
                     @await Html.PartialAsync(nameof(_ReviewStarPartial), new _ReviewStarPartial(){ Rating = Model.Review.Rating })
                 </div>
-                <div class="d-flex">
+                <div class="d-inline-flex gap-2">
+                    <small class="text-muted">@(Utils.GetRelativeTime(Model.Review.Created) ?? "şimdi")</small>
                     @if(editable){
-                        <form hx-trigger="submit" hx-target="#commentResult@(Model.Review.Id)" hx-on::after-request="if(event.detail.successful)event.currentTarget.closest('.partial-parent').remove();" hx-on::before-swap="if(event.detail.xhr.status.ok)event.detail.shouldSwap=false;" hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteReview">
+                        <form id="delete@(Model.Review.Id)" hx-trigger="submit" hx-target="#commentResult@(Model.Review.Id)"  hx-swap="innerHTML" hx-post="/@(nameof(Reviews))?handler=deleteReview">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="reviewId" value="@Model.Review.Id"/>
                             <button type="submit" class="btn border-1 rounded-2 border-secondary-subtle bg-light text-decoration-none p-0"><i class="bi bi-trash-fill text-danger"></i></button>
                         </form>
                     }
-                    <small class="text-muted">@(Utils.GetRelativeTime(Model.Review.Created) ?? "şimdi")</small>
                 </div>
             </div>
             <div class="mb-2">
-                <h6 class="text-primary fw-semibold mb-0">@(Model.Review.Reviewer?.FullName?? (Model.Review.Name ?? ""))</h6>
+                <h6 class="text-dark-emphasis fw-semibold mb-0">@(Model.Review.Reviewer?.FullName?? (Model.Review.Name ?? ""))</h6>
             </div>
             @if (Model.Review.Comment != null){
                 <div class="mb-3">
@@ -30,19 +31,19 @@
             }
             @if (Model.Review.HasBought){
                 <div class="d-flex justify-content-end mb-2">
-                    <span class="badge bg-success text-white small">✓ Doğrulanmış Alıcı</span>
+                    <span class="badge bg-success text-white small">✓ Satıcının Ürünü Aldığı Doğrulandı</span>
                 </div>
             }
             <div class="d-flex justify-content-end align-items-center gap-3 border-top pt-2">
                 <div class="d-flex gap-3 align-items-center">
                     <span class="d-inline-flex align-items-center text-muted">
-                        <button  data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Review.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 hover-grow" style="background-color: transparent;" hx-trigger="click" hx-target="#comments@(Model.Review.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Review.Id&ParentId=null">
+                        <button data-bs-toggle="collapse" data-bs-target="#comments@(Model.Review.Id)" data-bs-placement="left" title="Cevapları Gör" id="commentsBtn@(Model.Review.Id)" class="btn btn-sm btn-outline-secondary border-0 p-1 me-2 fs-6 hover-grow-small" style="background-color: transparent;" hx-trigger="click" hx-on::after-request="event.currentTarget.removeAttribute('hx-get');" hx-target="#comments@(Model.Review.Id)" hx-swap="innerHTML" hx-get="/@nameof(Reviews)?handler=comments&ReviewId=@Model.Review.Id&ParentId=null">
                             <i class="bi bi-chat-dots"></i>
                         </button> 
                         <span class="badge bg-light text-dark">@Model.Review.Stats.CommentCount</span>
                     </span>
 
-                    <a  data-bs-placement="right" title="Cevapla" class="btn btn-sm btn-outline-primary p-1 text-decoration-none hover-grow" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Review.Id)" aria-expanded="false" aria-controls="reply@(Model.Review.Id)">
+                    <a  data-bs-placement="right" title="Cevapla" class="btn btn-sm btn-outline-primary p-1 text-decoration-none hover-grow-small fs-6" type="button" data-bs-toggle="collapse" data-bs-target="#reply@(Model.Review.Id)" aria-expanded="false" aria-controls="reply@(Model.Review.Id)">
                         <i class="bi bi-reply"></i>
                     </a>
                     <script>
@@ -63,26 +64,61 @@
         </div>
     </div>
     <div class="card-footer bg-light">
-        <div hx-on::after-swap="const b = document.getElementById('commentsBtn@(Model.Review.Id)');if(b){b.classList.remove('hover-grow');;b.disabled=true;b.removeAttribute('hx-get');}" id="comments@(Model.Review.Id)"></div>
+        <div class="collapse" hx-on::after-swap="const b = document.getElementById('commentsBtn@(Model.Review.Id)');if(b){b.classList.remove('hover-grow');b.removeAttribute('hx-get');}" id="comments@(Model.Review.Id)"></div>
         <div class="collapse mt-3 card shadow-sm" id="reply@(Model.Review.Id)">
             <script>
                 ((s)=>{
                     document.addEventListener('DOMContentLoaded', load);
                     s.closest('.partial-parent').addEventListener('htmx:load', load);
                     function load(e){
-                        s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
+                        if(e.type === 'htmx:load' ) e.stopPropagation();
+                        document.getElementById('delete@(Model.Review.Id)').parentElement.addEventListener('htmx:afterRequest', event=>{
+                            if(event.detail.successful){
+                                if(event.detail.xhr.status <200 || event.detail.xhr.status >= 300) event.detail.shouldSwap=true;
+                                const parent = s.closest('.partial-parent');
+                                parent.dispatchEvent(new Event('reviewDeleted', {bubbles:true, cancelable:true}));
+                                parent.remove();
+                            }
+                        })
+                        document.getElementById('comments@(Model.Review.Id)').addEventListener('commentDeleted', e=>{
+                            const n = document.getElementById('commentsBtn@(Model.Review.Id)').nextElementSibling;
+                            n.innerHTML = (parseInt(n.innerHTML) - 1).toString();
+                            if(Array.from(n.children).filter(c=>c.nodeType === Node.ELEMENT_NODE).length === 0)document.getElementById('comments@(Model.Review.Id)').classList.remove('show');
+                            e.stopPropagation();
+                        })
+                            s.nextElementSibling.addEventListener('htmx:afterRequest',e=>{
+                                e.stopPropagation();
                             if(!e.detail.successful) return;
-                            document.getElementById('commentsBtn@(Model.Review.Id)')
-                                .dispatchEvent(new Event('click', {cancelable:true, bubbles:true}));
-                            s.parentElement.parentElement.previousElementSibling.querySelector('a[aria-controls="reply@(Model.Review.Id)"]').dispatchEvent(new Event('click', {cancelable:true, bubbles:true}))
+                            const span = document.getElementById('commentsBtn@(Model.Review.Id)').nextElementSibling;
+                            span.innerHTML = parseInt(span.innerHTML) + 1;
+                            const reply = s.parentElement;
+                            reply.style.transition='none';
+                            reply.classList.remove('show');
+                            void reply.offsetHeight;
+                            reply.style.transition = "";
                         });
+                        document.getElementById('commentResult@(Model.Review.Id)').addEventListener('htmx:beforeSwap', event=>{
+                            if(event.detail.xhr.status >=200 && event.detail.xhr.status < 300){
+                                event.detail.target=document.getElementById('comments@(Model.Review.Id)');
+                                document.getElementById('comments@(Model.Review.Id)').classList.add('show');
+                            } else event.detail.shouldSwap=true;
+                        })
                     }
                 })(document.currentScript)
                 //# sourceURL=ReviewPartial.js
                 
             </script>
-            <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Review.Id)" hx-swap="innerHTML">
+            <form class="card-body" hx-post="/@(nameof(Reviews))?handler=comment" method="post" hx-target="#commentResult@(Model.Review.Id)"  hx-swap="innerHTML">
                 <input type="hidden" name="SentComment.ReviewId" value="@Model.Review.Id"/>
+                @if(ViewContext.ViewData[nameof(Entity.User)] is null){
+                    <div class="row d-inline-flex container-fluid mb-1">
+                        <label class="fs-6 col-form-label-sm col-1">
+                            İsminiz:
+                        </label>
+                        <input class="form-control-sm col-2" type="text" name="@(nameof(Reviews.SentComment)).@(nameof(ReviewComment.Name))" required/>
+                        <div class="col-9"></div>
+                    </div>
+                }
                 <div class="row g-3 align-items-end">
                     <div class="col-9">
                         <textarea class="form-control border-2" rows="3" name="SentComment.Comment" placeholder="Cevaplayın..."></textarea>

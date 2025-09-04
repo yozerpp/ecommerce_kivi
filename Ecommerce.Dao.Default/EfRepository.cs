@@ -64,7 +64,7 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
     public TEntity Attach(TEntity entity) {
         return _context.Attach(entity).Entity;
     }
-
+/// <param name="orderBy">false for descending</param>
     public List<TP> WhereP<TP>(Expression<Func<TEntity, TP>> select, Expression<Func<TEntity, bool>> predicate, int offset = 0, int limit = 20,
         ICollection<(Expression<Func<TEntity, object>>, bool)>? orderBy = null, string[][]? includes = null, bool nonTracking = false) {
         var reverse = IsLastPage(ref offset, ref limit);
@@ -267,9 +267,10 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
                 return cancellationToken.IsCancellationRequested ?null!:r.Result;
         },cancellationToken);
     }
-    public void Flush() {
-        _context.ChangeTracker.DetectChanges();
-            _context.SaveChanges();
+    public void Flush(bool detectChanges = true) {
+        if (detectChanges)
+            _context.ChangeTracker.DetectChanges();
+        _context.SaveChanges();
     }
 
     public TEntity Detach(TEntity entity) {

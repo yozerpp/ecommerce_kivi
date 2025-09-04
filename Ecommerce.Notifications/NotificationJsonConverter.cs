@@ -7,8 +7,8 @@ public class NotificationJsonConverter : System.Text.Json.Serialization.JsonConv
 {
     public override Notification? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
         var doc = JsonDocument.ParseValue(ref reader);
-        var type = doc.RootElement.GetProperty(nameof(Notification.Type)).GetString();
-        return type switch{
+        var type = doc.RootElement.GetProperty(nameof(Notification.Type).ToLower()).GetInt32();
+        return Enum.GetValues<Notification.NotificationType>()[type].ToString("G") switch{
             nameof(Notification.NotificationType.Review) => doc.Deserialize<ReviewNotification>(options),
             nameof(Notification.NotificationType.Order) => doc.Deserialize<OrderNotification>(options),
             nameof(Notification.NotificationType.Coupon) => doc.Deserialize<CouponNotification>(options),
@@ -24,6 +24,6 @@ public class NotificationJsonConverter : System.Text.Json.Serialization.JsonConv
     }
 
     public override void Write(Utf8JsonWriter writer, Notification value, JsonSerializerOptions options) {
-        throw new NotImplementedException();
+        JsonSerializer.Serialize(value, options);
     }
 }

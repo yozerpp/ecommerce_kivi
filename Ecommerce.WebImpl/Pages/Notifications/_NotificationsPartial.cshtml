@@ -1,12 +1,40 @@
-﻿@using Ecommerce.Entity.Events
-@using Microsoft.AspNetCore.Html
-@using Microsoft.EntityFrameworkCore
-@inherits _NotificationPartialModel
-
-<div class="notification-dropdown dropdown-center">
-    <script>
+﻿@model _NotificationsPartial
+@using Ecommerce.Entity.Events
+@using Ecommerce.WebImpl.Pages
+<div class="notification-dropdown dropdown-center partial-parent">
+    @if (Model.Notifications != null){ //not a registered user
+        <script>
         ((currentScript) => {
             document.addEventListener('DOMContentLoaded', () => {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/notifications", {
+                        accessTokenFactory: ()=> {
+                            const c= (`;${document.cookie}`).split(';').filter(c => new RegExp('\\s*Bearer=.*').test(c)).pop()?.replace(new RegExp('\\s*Bearer=\\s*'), '').trim()
+                            console.log('cookie: ' + c);
+                            return c;
+                        }
+                    })
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+                async function start() {
+                    try {
+                        await connection.start();
+                        console.log("SignalR Connected.");
+                    } catch (err) {
+                        console.log(err);
+                        setTimeout(start, 5000);
+                    }
+                }
+                connection.on('ReceiveNotification', _=>{
+                    htmx.ajax('GET', '@(Url.Page(nameof(Notifications)))', {
+                        target: 'closest .partial-parent',
+                        swap: 'outerHTML',
+                    })
+                })
+                connection.onclose(async () => {
+                    await start();
+                });
+                start();
                 const dropdownToggle = currentScript.nextElementSibling;
                 const dropdownMenu = dropdownToggle.nextElementSibling;
                 const badge = dropdownToggle.querySelector('.notification-badge');
@@ -29,7 +57,7 @@
                         notification.classList.remove('unread');
                         notification.classList.add('read');
                         badge.innerHTML = parseInt(badge.innerHTML) -1;
-                        fetch('@((MarkupString)$"/Notifications/{nameof(Pages.Notifications.Notifications)}?handler=markRead&{nameof(Pages.Notifications.Notifications.NotificationId)}=")'  + notificationId, {
+                        fetch('@(Html.Raw($"/Notifications/{nameof(WebImpl.Pages.Notifications.Notifications)}?handler=markRead&{nameof(WebImpl.Pages.Notifications.Notifications.NotificationId)}="))'  + notificationId, {
                             method: 'GET'
                         });
                     }));
@@ -42,97 +70,92 @@
                         badge.innerHTML = parseInt(badge.innerHTML) + 1;
                         markReadBtns.forEach(b=>b.classList.remove('d-none'));
                         
-                        fetch('@((MarkupString)$"/Notifications/{nameof(Pages.Notifications.Notifications)}?handler=markUnRead&{nameof(Pages.Notifications.Notifications.NotificationId)}=")' + notificationId, {
+                        fetch('@(Html.Raw($"/Notifications/{nameof(WebImpl.Pages.Notifications.Notifications)}?handler=markUnRead&{nameof(WebImpl.Pages.Notifications.Notifications.NotificationId)}="))' + notificationId, {
                             method: 'GET'
                         });
                     });
                 });
-                console.log(`Initialized @(nameof(_NotificationPartial)) successfully`);
+                console.log(`Initialized @(nameof(NotificationPartial)) successfully`);
             });
         })(document.currentScript);
         //# sourceURL=NotificationPartial.js
     </script>
 
-    <!-- Notification Bell Button -->
-    <button class="notification-bell hover-grow"
-            data-bs-toggle="dropdown"
-            data-bs-target="#notifications"
-            aria-controls="notifications"
-            aria-expanded="false">
-        <i class="bi bi-bell"></i>
-        @{
-        int unreadCount = Notifications.Count(n => !n.IsRead);
-        }
-        @if (unreadCount > 0)
-        {
-        <span class="notification-badge">@unreadCount</span>
-        }
-    </button>
+        <!-- Notification Bell Button -->
+        <button class="notification-bell hover-grow"
+                data-bs-toggle="dropdown"
+                data-bs-target="#notifications"
+                aria-controls="notifications"
+                aria-expanded="false">
+            <i class="bi bi-bell"></i>
+            @{
+                int unreadCount = @Model.Notifications.Count(n => !n.IsRead);
+            }
+            @if (unreadCount > 0){
+                <span class="notification-badge">@unreadCount</span>
+            }
+        </button>
 
-    <!-- Notifications Dropdown Menu -->
-    <ul id="notifications" class="dropdown-menu notification-menu">
-        @if (!Notifications.Any())
-        {
-        <li class="dropdown-item text-center text-muted py-4">
-            <i class="bi bi-bell-slash fs-2 mb-2"></i>
-            <p class="mb-0">Henüz bildirim yok</p>
-        </li>
-        }
-        else
-        {
-        @foreach (var notification in Notifications)
-        {
-        var (iconClass, title, content, link) = GetNotificationDetails(notification);
+        <!-- Notifications Dropdown Menu -->
+        <ul id="notifications" class="dropdown-menu notification-menu">
+            @if (!Model.Notifications.Any()){
+                <li class="dropdown-item text-center text-muted py-4">
+                    <i class="bi bi-bell-slash fs-2 mb-2"></i>
+                    <p class="mb-0">Henüz bildirim yok</p>
+                </li>
+            }
+            else{
+                foreach (var notification in Model.Notifications){
+                    var (iconClass, title, content, link) = GetNotificationDetails(notification);
 
-        <li data-id="@notification.Id"
-            data-type="@notification.Type"
-            class="notification-item @(notification.IsRead ? "read" : "unread")">
+                    <li data-id="@notification.Id"
+                        data-type="@notification.Type"
+                        class="notification-item @(notification.IsRead ? "read" : "unread")">
 
-            <div class="notification-content">
-                <div class="notification-icon">
-                    <i class="@iconClass"></i>
-                </div>
+                        <div class="notification-content">
+                            <div class="notification-icon">
+                                <i class="@iconClass"></i>
+                            </div>
 
-                <div class="notification-body">
-                    @if (link != null)
-                    {
-                    <a href="@link" class="notification-link mark-read">
-                        @if (!string.IsNullOrWhiteSpace(title))
-                        {
-                        <h6 class="notification-title">@title</h6>
-                        }
-                        <p class="notification-text">@((MarkupString)content)</p>
-                    </a>
-                    }
-                    else
-                    {
-                    @if (!string.IsNullOrWhiteSpace(title))
-                    {
-                    <h6 class="notification-title">@title</h6>
-                    }
-                    <p class="notification-text">@((MarkupString)content)</p>
-                    }
-                </div>
+                            <div class="notification-body">
+                                @if (link != null){
+                                    <a href="@link" class="notification-link mark-read">
+                                        @if (!string.IsNullOrWhiteSpace(title)){
+                                            <h6 class="notification-title">@title</h6>
+                                        }
+                                        <p class="notification-text">@(Html.Raw(content))</p>
+                                    </a>
+                                }
+                                else{
+                                    @if (!string.IsNullOrWhiteSpace(title)){
+                                        <h6 class="notification-title">@title</h6>
+                                    }
 
-                <div class="notification-actions">
+                                    <p class="notification-text">@(Html.Raw(content))</p>
+                                }
+                            </div>
 
-                    <button class="action-btn mark-unread @(notification.IsRead?"":"d-none")" title="Okunmadı olarak işaretle">
-                        <i class="bi bi-envelope"></i>
-                    </button>
+                            <div class="notification-actions">
 
-                    <button class="action-btn mark-read @(notification.IsRead?"d-none":"")" title="Okundu olarak işaretle">
-                        <i class="bi bi-envelope-open"></i>
-                    </button>
-                </div>
-            </div>
+                                <button class="action-btn mark-unread @(notification.IsRead ? "" : "d-none")" title="Okunmadı olarak işaretle">
+                                    <i class="bi bi-envelope"></i>
+                                </button>
 
-            <div class="notification-time">
-                <small class="text-muted">@notification.Time.ToString("dd/MM/yyyy HH:mm")</small>
-            </div>
-        </li>
-        }
-        }
-    </ul>
+                                <button class="action-btn mark-read @(notification.IsRead ? "d-none" : "")" title="Okundu olarak işaretle">
+                                    <i class="bi bi-envelope-open"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="notification-time">
+                            <small class="text-muted">@notification.Time.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                    </li>
+                }
+            }
+        </ul>
+    }
+
 </div>
 
 <style>
@@ -305,7 +328,7 @@
     }
 </style>
 
-@code {
+@functions {
     private (string iconClass, string title, string content, string? link) GetNotificationDetails(object notification)
     {
         return notification switch
@@ -346,7 +369,7 @@
             "bi bi-star-fill",
             "Yeni Yorum",
             "Ürününüze yorum yapıldı, yorumu görüntülemek için tıklayın.",
-            $"/{nameof(Reviews)}?handler=review&{nameof(Reviews.ReviewId)}={r.ReviewId}"
+            $"/{nameof(Product)}?{nameof(Product.ProductId)}={r.ProductId}#review{r.ReviewId}"
             ),
             CancellationRequest c => (
             "bi bi-x-circle-fill",
@@ -369,3 +392,5 @@
         };
     }
 }
+
+

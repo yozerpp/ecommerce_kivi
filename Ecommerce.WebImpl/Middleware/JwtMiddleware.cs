@@ -16,7 +16,9 @@ public class JwtMiddleware :JwtBearerEvents
     }
 
     public override Task MessageReceived(MessageReceivedContext context) {
-        if (!context.Request.Cookies.TryGetValue(JwtBearerDefaults.AuthenticationScheme, out var cookie))
+        if (context.Request.Path.StartsWithSegments("/notifications", StringComparison.Ordinal)){
+            context.Token = context.Request.Query["access_token"];
+        }else if (!context.Request.Cookies.TryGetValue(JwtBearerDefaults.AuthenticationScheme, out var cookie))
             context.Token = CreateToken(context);
         else context.Token = cookie;
         return Task.CompletedTask;
@@ -37,7 +39,7 @@ public class JwtMiddleware :JwtBearerEvents
         var s = _sessionManager.newSession(null, true);
         var tok =_jwtManager.Serialize(_jwtManager.CreateToken(s, TimeSpan.FromDays(30)));
         context.HttpContext.Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, tok,new CookieOptions(){
-            MaxAge = TimeSpan.FromDays(30),
+            MaxAge = TimeSpan.FromDays(30),SameSite = SameSiteMode.Lax
         });
         context.Principal = new ClaimsPrincipal([
             new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, s.Id.ToString())],

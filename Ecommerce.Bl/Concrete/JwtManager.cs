@@ -136,7 +136,7 @@ public class JwtManager : IJwtManager
 
         if (role == null){
             var s = _dbContext.Database.SqlQueryRaw<SessionSimple>(
-                $"SELECT s.Id, s.{nameof(Session.CartId)}, s.{nameof(Session.UserId)}, c.{nameof(CartAggregates.ItemCount)} as {nameof(Session.ItemCount)} FROM [data].[{nameof(Session)}] s LEFT JOIN [data].[{nameof(CartAggregates)}] c ON c.{nameof(CartAggregates.CartId)} = s.{nameof(Session.CartId)} WHERE s.Id = {{0}}",
+                $"SELECT s.Id, s.{nameof(Session.CartId)}, c.{nameof(CartAggregates.ItemCount)} as {nameof(Session.ItemCount)} FROM [data].[{nameof(Session)}] s LEFT JOIN [data].[{nameof(CartAggregates)}] c ON c.{nameof(CartAggregates.CartId)} = s.{nameof(Session.CartId)} WHERE s.Id = {{0}}",
                 id).FirstOrDefault();
             if(s==null) {
                 session = null;
@@ -147,7 +147,6 @@ public class JwtManager : IJwtManager
                 Id = s.Id,
                 CartId = s.CartId,
                 ItemCount = s.ItemCount,
-                UserId = s.UserId
             };
             _dbContext.Attach(session);
             user = null;
@@ -169,7 +168,6 @@ public class JwtManager : IJwtManager
     {
         public ulong Id { get; set; }
         public uint CartId { get; set; }
-        public uint? UserId { get; set; }
         public uint? ItemCount { get; set; }
     }
 }

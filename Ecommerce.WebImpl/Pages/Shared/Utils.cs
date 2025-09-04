@@ -17,17 +17,19 @@ public static class Utils
         var now = DateTime.UtcNow + TimeSpan.FromHours(3);
         var dif =now>dateTime?(now - dateTime):(dateTime - now);
         int showed;
+        string s; 
         if((showed = dif.Days/365)>0)
-            return showed + " yıl" ;
+             s = showed + " yıl" ;
         if((showed = dif.Days/30) > 0)
-            return showed + " ay" ;
+            s= showed + " ay" ;
         if((showed = dif.Days) > 0)
-            return showed + " gün" ;
+            s= showed + " gün" ;
         if((showed = dif.Hours) > 0)
-            return showed + " saat" ;
+            s= showed + " saat" ;
         if ((showed = dif.Minutes) > 0)
-            return showed + " dakika" ;
-        return null;
+            s = showed + " dakika";
+        else return null;
+        return s + (now > dateTime ? "önce" : "sonra");
     }
     public static IHtmlContent GenerateAssignAddressInputsFunction(int count, string inputPrefix = "addr", string elementPostfix="address") {
         var sb = new HtmlContentBuilder();

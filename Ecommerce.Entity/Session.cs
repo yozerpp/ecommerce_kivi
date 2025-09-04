@@ -9,7 +9,6 @@ public class Session
     [NotMapped]
     public uint? ItemCount { get; set; }
     public Cart Cart { get; set; }
-    public uint? UserId {get;set;}
     public User? User {get;set;}
     public ICollection<Category> VisitedCategories { get; set; }
     public override bool Equals(object? obj)

@@ -10,16 +10,37 @@
 @using Ecommerce.WebImpl.Pages.Shared.Review
 
 @{
+    ViewData["Title"] = Model.ViewedProduct.Name;
     Layout = "Shared/_Layout";
     var editable = Model.CurrentStaff!=null && Model.CurrentStaff.HasPermission(Permission.EditProduct) || Model.CurrentSeller!=null && 
                    Model.Offers.Any(o=>o.SellerId == Model.CurrentSeller?.Id);
     ViewBag.User = Model.CurrentUser;
     var sellersOffer = Model.Offers.FirstOrDefault(o=>o.SellerId == Model.CurrentSeller?.Id);
 }
+<div id="reviewLoadingScreen" class="d-none">
+    
+</div>
 @await Html.PartialAsync("Shared/Product/_ProductMainPartial", new _ProductMainPartial(){
     Categories = Model.Categories,
     Editable = editable, Favorites = Model.Favorites, SellerOffer = sellersOffer, ViewedProduct = Model.ViewedProduct,ViewingSellerId = Model.CurrentSeller?.Id
 })
 @section Scripts{
-
+    <script>
+        if(window.location.hash.match(new RegExp('#review\\d+'))) {
+            document.getElementById('reviewLoadingScreen').classList.remove('d-none');
+            document.addEventListener("reviewsLoaded", function () {
+                document.getElementById('reviewLoadingScreen').remove();
+                document.getElementById(window.location.hash.replace('#','')).scrollIntoView();
+            })
+        }
+        else if(window.location.hash.match(new RegExp('#comment\\d+'))){
+            document.getElementById('reviewLoadingScreen').classList.remove('d-none');
+            document.addEventListener('reviewsLoaded', ()=>{
+                const review = document.getElementById(window.location.hash.replace('#',''));
+                review.querySelector('#commentsBtn' + window.location.hash.replace('#comment', '')).dispatchEvent(new Event('click', {bubbles:true, cancelable:false}))
+                document.getElementById('reviewLoadingScreen').remove();
+                document.getElementById(window.location.hash.replace('#','')).scrollIntoView();
+            });
+        }
+    </script>
 }

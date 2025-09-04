@@ -594,6 +594,7 @@ internal static class Initializer
                     {
                         CategoryId = homeGardenCategory.Id,
                         Name = "Garden Hose",
+                        Images = GetImage,
                         Description = "Flexible garden hose for watering plants",
                         Dimensions = new Dimensions()
                         {
@@ -611,6 +612,7 @@ internal static class Initializer
                     {
                         CategoryId = homeGardenCategory.Id,
                         Name = "LED Desk Lamp",
+                        Images = GetImage,
                         Description = "Adjustable LED desk lamp with touch controls",
                         Dimensions = new Dimensions()
                         {

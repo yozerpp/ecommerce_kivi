@@ -126,9 +126,10 @@ public class UserManager :IUserManager
     public void Update(User user, bool updateImage) {
         var ignoreList =new List<string>([nameof(User.PasswordHash), nameof(User.Session), nameof(User.Active), nameof(User.SessionId), nameof(User.GoogleId), nameof(User.Email)]);
         if (updateImage){
-            user.ProfilePicture = _imageRepository.Add(new Image(){
-                Data = user.ProfilePicture.Data,
-            });
+            if(user.ProfilePicture?.Data!=null)
+                user.ProfilePicture = _imageRepository.Add(new Image(){
+                    Data = user.ProfilePicture.Data,
+                });
         }
         else{
             user.ProfilePictureId = null;

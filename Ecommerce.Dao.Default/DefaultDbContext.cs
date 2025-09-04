@@ -533,6 +533,7 @@ public class DefaultDbContext : DbContext
             entity.HasKey(e => e.Id).IsClustered(false);
             entity.HasIndex(e => e.ReviewId)
                 .IsClustered(true);
+            entity.HasIndex(e => e.Created).IsDescending();
             entity.Property(c => c.Id).ValueGeneratedOnAdd();
             entity.HasOne<ProductReview>(r=>r.Review).WithMany(r=>r.Comments).HasForeignKey(c=>c.ReviewId)
                 .HasPrincipalKey(r=>r.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
@@ -616,8 +617,7 @@ public class DefaultDbContext : DbContext
             .IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var couponNotificationBuilder = modelBuilder.Entity<CouponNotification>();
         couponNotificationBuilder.HasBaseType<Notification>();
-        couponNotificationBuilder.HasOne<Coupon>(c => c.Coupon).WithMany().HasForeignKey(c => c.CouponId)
-            .HasPrincipalKey(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
+
         couponNotificationBuilder.HasOne<Seller>(c => c.Seller).WithMany().HasForeignKey(c => c.SellerId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         couponNotificationBuilder.HasOne<Customer>(c => c.Customer).WithMany(c => c.CouponNotifications)
@@ -633,30 +633,21 @@ public class DefaultDbContext : DbContext
             .OnDelete(DeleteBehavior.ClientCascade);
         var reviewNotificationBuilder = modelBuilder.Entity<ReviewNotification>();
         reviewNotificationBuilder.HasBaseType<Notification>();
+        reviewNotificationBuilder.HasOne<ProductOffer>(r => r.ProductOffer).WithMany()
+            .HasForeignKey(r => new{ r.UserId, r.ProductId }).HasPrincipalKey(p => new{ p.SellerId, p.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade).Metadata.IsUnique = false;
         reviewNotificationBuilder.HasOne<Seller>(r => r.Seller).WithMany(s => s.ReviewNotifications)
             .HasForeignKey(s => s.UserId).HasPrincipalKey(s => s.Id).IsRequired()
             .OnDelete(DeleteBehavior.ClientCascade);
-        reviewNotificationBuilder.HasOne<ProductReview>(n => n.Review).WithOne().HasForeignKey<ReviewNotification>(n => n.ReviewId)
-            .HasPrincipalKey<ProductReview>(r => r.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
         var rcnBuilder = modelBuilder.Entity<ReviewCommentNotification>();
         rcnBuilder.HasBaseType<Notification>();
-        rcnBuilder.HasOne<ReviewComment>(r => r.ReviewComment).WithOne()
-            .HasForeignKey<ReviewCommentNotification>(n => n.CommentId)
-            .HasPrincipalKey<ReviewComment>(c => c.Id).IsRequired().OnDelete(DeleteBehavior.ClientSetNull);
         var orderNotificationBuilder = modelBuilder.Entity<OrderNotification>();
         orderNotificationBuilder.HasBaseType<Notification>();
         orderNotificationBuilder.HasOne<Seller>(o => o.Seller).WithMany().HasForeignKey(o => o.UserId)
             .HasPrincipalKey(s => s.Id).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
-        orderNotificationBuilder.HasOne<OrderItem>(n => n.Item).WithOne()
-            .HasForeignKey<OrderNotification>(n => new{ n.OrderId, n.UserId, n.ProductId })
-            .HasPrincipalKey<OrderItem>(o => new{ o.OrderId, o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var discountNotificationBuilder = modelBuilder.Entity<DiscountNotification>();
         discountNotificationBuilder.HasBaseType<Notification>();
         discountNotificationBuilder.Property(d => d.DiscountAmount).HasPrecision(10, 2);
         discountNotificationBuilder.Property(d => d.DiscountRate).HasPrecision(2, 2);
-        discountNotificationBuilder.HasOne<ProductOffer>(d => d.ProductOffer).WithMany()
-            .HasForeignKey(n => new{ n.SellerId, n.ProductId })
-            .HasPrincipalKey(o => new{ o.SellerId, o.ProductId }).IsRequired().OnDelete(DeleteBehavior.ClientCascade);
         var orderCompletionNotificationBuilder = modelBuilder.Entity<OrderCompletionNotification>();
         orderCompletionNotificationBuilder.HasBaseType<OrderNotification>();
         

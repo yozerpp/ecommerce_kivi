@@ -1,9 +1,10 @@
 ﻿@using Ecommerce.Entity
+@using Product = Ecommerce.WebImpl.Pages.Product
 @model Ecommerce.WebImpl.Pages.Shared.Product._ProductRatingStatsPartial
 @functions{
     static uint Percent(uint c, uint t) => t != 0 ? (uint)(c / (float)t * 100f) : 0u;
 }
-<div class="rating-stats-container">
+<div class="rating-stats-container" hx-trigger="reload" hx-get="/@(nameof(Product))?handler=reviewStats&@(nameof(Product.ProductId))=@(Model.ReviewStats.ProductId)" hx-target="this" hx-swap="outerHTML">
     <script>
         ((s) => {
             document.addEventListener('DOMContentLoaded', initializeRatingStats);
@@ -13,7 +14,6 @@
                     e.stopPropagation();
                 }
                 const parentElement = s.parentElement;
-                
                 // Initialize custom properties on the parent element
                 parentElement._selectedRating = null;
                 parentElement._sortBy = '@(nameof(ProductReview.Created))';
@@ -24,7 +24,8 @@
                     fourStars: @Model.ReviewStats.FourStarCount,
                     threeStars: @Model.ReviewStats.ThreeStarCount,
                     twoStars: @Model.ReviewStats.TwoStarCount,
-                    OneStarCount: @Model.ReviewStats.OneStarCount
+                    OneStarCount: @Model.ReviewStats.OneStarCount,
+                    zeroStarCount: 0
                 };
                 
                 // Add click event listeners to rating rows
@@ -224,6 +225,25 @@
             </div>
             <div class="percentage text-muted" style="min-width: 35px;">
                 @(Percent(Model.ReviewStats.OneStarCount, Model.ReviewStats.ReviewCount))%
+            </div>
+        </div>
+        <!-- 0 Star -->
+        <div class="rating-row d-flex align-items-center mb-2 p-2 rounded cursor-pointer" data-rating="0">
+            <div class="stars me-2">
+                @for (int i = 0; i < 5; i++)
+                {
+                    <i class="bi bi-star-fill text-muted"></i>
+                }
+            </div>
+            <div class="review-count me-2 text-muted" style="min-width: 40px;">
+                @Model.ReviewStats.ZeroStarCount
+            </div>
+            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                <div class="progress-bar bg-warning rounded-pill" 
+                     style="width: @(Percent(Model.ReviewStats.ZeroStarCount, Model.ReviewStats.ReviewCount))%"></div>
+            </div>
+            <div class="percentage text-muted" style="min-width: 35px;">
+                @(Percent(Model.ReviewStats.ZeroStarCount, Model.ReviewStats.ReviewCount))%
             </div>
         </div>
     </div>

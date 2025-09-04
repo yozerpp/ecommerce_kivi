@@ -78,8 +78,9 @@ public class Login : PageModel
                 Title = "Giriş Başarısız",
                 Message = "Kullanıcı adı veya şifre hatalı",
             });
+        Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
         Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme,jwt,new CookieOptions(){
-            MaxAge = rememberMe?TimeSpan.FromDays(1):TimeSpan.FromHours(1) 
+            MaxAge = rememberMe?TimeSpan.FromDays(1):TimeSpan.FromHours(1) , SameSite = SameSiteMode.Lax
         }); 
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,

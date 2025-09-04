@@ -22,7 +22,6 @@ public class SessionManager : ISessionManager
         session.Cart.Session = session;
         session = _dbContext.Add(session).Entity;
         if (newUser != null){
-            session.UserId = newUser.Id;
             session.User = newUser.Id != 0 ? null! : newUser;
             newUser.Session = session;
         }

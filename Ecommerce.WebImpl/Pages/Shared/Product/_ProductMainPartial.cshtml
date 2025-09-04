@@ -160,12 +160,14 @@
 
                     const options = document.getElementById('offerOptions').firstElementChild;
                     let i=0;
-                    for(const [k,v] of options._options.entries()){
-                        const prefix = '@(nameof(Cart.Options))[' +i++ + '].';
-                        const keyInputName = isNaN(parseInt(k))?prefix + '@(nameof(ProductOption.Key))':(prefix + '@(nameof(ProductOption.CategoryPropertyId))')
-                        body[keyInputName] = k;
-                        body[prefix + '@(nameof(ProductOption.Id))']= parseInt(v);
-                        body[prefix + '@(nameof(ProductOption.ProductId))'] = @Model.ViewedProduct.Id;
+                    if(options) {
+                        for (const [k, v] of options._options.entries()) {
+                            const prefix = '@(nameof(Cart.Options))[' + i++ + '].';
+                            const keyInputName = isNaN(parseInt(k)) ? prefix + '@(nameof(ProductOption.Key))' : (prefix + '@(nameof(ProductOption.CategoryPropertyId))')
+                            body[keyInputName] = k;
+                            body[prefix + '@(nameof(ProductOption.Id))'] = parseInt(v);
+                            body[prefix + '@(nameof(ProductOption.ProductId))'] = @Model.ViewedProduct.Id;
+                        }
                     }
                     htmx.ajax('POST', '/@nameof(Cart)', {
                         target:'#popupResult',
@@ -461,6 +463,10 @@
                                     const rstats = s.nextElementSibling.querySelector('.rating-stats-container');
                                    if(e.type==='htmx:load') 
                                        rstats.dispatchEvent(new Event(e.type, {cancelable:true, bubbles:false}));
+                                   s.parentElement.nextElementSibling.nextElementSibling.addEventListener('reviewDeleted', e=>{
+                                       e.stopPropagation();
+                                       s.nextElementSibling.firstElementChild.dispatchEvent(new Event('reload', {cancelable:true, bubbles:false}));
+                                   })
                                    rstats.addEventListener('change', e=>{
                                        e.stopPropagation();
                                        if(e.detail.selectedRating===selectedRating && e.detail.sortBy === sortBy && e.detail.sortOrder===sortOrder)return;
@@ -491,17 +497,21 @@
                                     s.nextElementSibling.addEventListener('htmx:afterRequest', e=>{
                                         if(!e.detail.successful) return;
                                         s.parentElement.nextElementSibling.dispatchEvent(new Event('fire', {bubbles:true, cancelable:true}));
-                                    })    
+                                        s.parentElement.previousElementSibling.lastElementChild.firstElementChild.dispatchEvent(new Event('reload', {bubbles:false, cancelable:true}));
+                                    })
+                                    s.parentElement.nextElementSibling.addEventListener('htmx:afterSwap',e=>{
+                                        if(e.currentTarget.dataset.loaded==='0')
+                                            document.dispatchEvent(new Event('reviewsLoaded', {bubbles:false, cancelable:false}));
+                                        else e.currentTarget.dataset.loaded = '1'; 
+                                    })
                                 }
                             })(document.currentScript)
                             //# sourceURL=ProductMainReviewForm.js
                         </script>
-                        }
-                        @if (!Model.Creating && Model.ViewingSellerId == null){
-                        @await Html.PartialAsync("Shared/Review/_ReviewFormPartial", new _ReviewFormPartial(){ ProductId = Model.ViewedProduct.Id })
+                        @await Html.PartialAsync("Shared/Review/_ReviewFormPartial", new _ReviewFormPartial(){ ProductId = Model.ViewedProduct.Id})
                         }
                     </div>
-                    <div class="my-3" hx-trigger="load,fire" hx-target="this" hx-on::before-swap="if(event.detail.xhr.status===204) event.detail.shouldSwap=true;" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)" hx-vals='@Html.Raw(JsonSerializer.Serialize(new {sortBy=nameof(ProductReview.Created), sortOrder="desc"}))'>
+                    <div class="my-3" data-loaded="0" hx-trigger="load,fire" hx-target="this" hx-on::before-swap="if(event.detail.xhr.status===204) event.detail.shouldSwap=true;" hx-swap="innerHTML" hx-get="/@(nameof(Reviews))?ProductId=@(Model.ViewedProduct.Id)" hx-vals='@Html.Raw(JsonSerializer.Serialize(new {sortBy=nameof(ProductReview.Created), sortOrder="desc"}))'>
                     </div>
                     }
                 </div>

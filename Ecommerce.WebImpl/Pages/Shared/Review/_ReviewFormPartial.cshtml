@@ -1,5 +1,8 @@
 ﻿@using Ecommerce.Entity
 @model Ecommerce.WebImpl.Pages.Shared.Review._ReviewFormPartial
+@{
+    var viewingUser = ViewContext.ViewData[nameof(Entity.User)] as Entity.User;
+}
 <!--Type:
 _setSellerId: function(int)
 -->
@@ -24,27 +27,52 @@ _setSellerId: function(int)
                 const collapse = new bootstrap.Collapse(collapseBtn.parentElement.nextElementSibling,{
                     toggle:false,
                 });
+                const form  = parent.querySelector('form');
+                @if(viewingUser!=null){
+                    <text>
+                    form.addEventListener('submit', e=>{
+                        e.preventDefault();
+                        const i = form.querySelector('input[name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.CensorName))"]');
+                        const c = form.querySelector('input[type="checkbox"]');
+                        i.value = c.value === 'yes';
+                    })   
+                    </text>
+                }
                 parent.addEventListener('htmx:afterRequest', e=>{
                     collapseBtn.dispatchEvent(new Event('click', {bubbles: false, cancelable:true}));
+                    if(e.detail.xhr.status < 300 && e.detail.xhr.status >= 200) parent.dispatchEvent(new Event('reload', {bubbles: false, cancelable: true}));
                 });
                 collapseBtn.addEventListener('click',()=>{
                     e.stopPropagation();e.preventDefault();collapse.toggle();
                 });
                 stars.forEach((star, index) => {
+                    star.dataset.clicked = '0';
                     star.addEventListener('click', function() {
-                        const rating = index + 1;
-                        ratingInput.value = rating;
-                        stars.forEach((s, i) => {
-                            if (i < rating) {
-                                s.style.color = '#ffc107';
-                                s.classList.remove('bi-star');
-                                s.classList.add('bi-star-fill');
-                            } else {
+;
+                        if(star.dataset.clicked==='1'){
+                            ratingInput.value = 0;
+                            Array.from(stars).forEach(s=>{
                                 s.style.color = '#ddd';
                                 s.classList.remove('bi-star-fill');
                                 s.classList.add('bi-star');
-                            }
-                        });
+                            })
+                            star.dataset.clicked = '0';
+                        } else {
+                            const rating = index+ 1;
+                            ratingInput.value = rating
+                            star.dataset.clicked='1';
+                            stars.forEach((s, i) => {
+                                if (i < rating) {
+                                    s.style.color = '#ffc107';
+                                    s.classList.remove('bi-star');
+                                    s.classList.add('bi-star-fill');
+                                } else {
+                                    s.style.color = '#ddd';
+                                    s.classList.remove('bi-star-fill');
+                                    s.classList.add('bi-star');
+                                }
+                            });
+                        }
                     });
                     star.addEventListener('mouseenter', function() {
                         const rating = index + 1;
@@ -83,12 +111,25 @@ _setSellerId: function(int)
                         </div>
                         <input type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Rating))" class="rating-input" value="0"/>
                     </div>
-
+                    @if (viewingUser == null){
+                        <div class="row">
+                            <label class="col-1 col-form-label-sm fs-6 me-0">İsminiz:</label>
+                            <input class="col-2 form-control-sm ms-0" type="text" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Name))" required/>
+                            <div class="col-9"></div>
+                        </div>
+                    }
                     <div class="mb-3">
                         <label class="form-label">Yorumunuz</label>
-                        <textarea class="form-control" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Comment))" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000"></textarea>
+                        <textarea class="form-control" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.Comment))" rows="4" placeholder="Ürün hakkındaki deneyiminizi paylaşın..." maxlength="1000" required></textarea>
                     </div>
-
+                    @if (viewingUser != null){
+                     
+                        <div class="d-flex justify-content-end form-check-inline">
+                            <input class="form-check-input" type="hidden" name="@(nameof(Reviews.SentReview)).@(nameof(ProductReview.CensorName))"/>
+                            <label class="form-check-label">İsmini Gizle</label>
+                            <input class="form-check-input" type="checkbox"/>
+                        </div>   
+                    }
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-send me-1"></i>Değerlendirmeyi Gönder

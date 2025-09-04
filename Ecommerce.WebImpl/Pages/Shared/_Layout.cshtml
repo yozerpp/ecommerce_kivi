@@ -1,19 +1,30 @@
 ﻿@using Ecommerce.Bl.Interface
 @using Ecommerce.Entity
 @inject IDictionary<uint,Category> Categories
-
+@using Ecommerce.WebImpl.Components
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>@ViewData["Title"] - Ecommerce.WebImpl</title>
+    <title>@ViewData["Title"] - Ecommerce Sandbox</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Ecommerce.WebImpl.styles.css" asp-append-version="true"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+    <script src="_framework/blazor.server.js" autostart="false"></script>
+    <script>
+      Blazor.start({
+        ssr: { disableDomPreservation: true }
+      });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
-    
+    <base href="~/" />
+    <component type="typeof(Microsoft.AspNetCore.Components.Web.HeadOutlet)" 
+               render-mode="ServerPrerendered" />
 </head>
 <body>
 <header>
@@ -43,7 +54,7 @@
 
 <footer class="border-top footer text-muted">
     <div class="container">
-        <a href="https://github/yozerpp/ecommerce_kivi" class="text-decoration-none text-dark hover-underline">EcommerceSandbox - Github Repo<i class="bi bi-github ms-2"></i></a>
+        <a href="https://github.com/yozerpp/ecommerce_kivi" class="text-decoration-none text-dark hover-underline">EcommerceSandbox - Github Repo<i class="bi bi-github ms-2"></i></a>
     </div>
 </footer>
 
@@ -57,5 +68,6 @@
         document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(e=>new bootstrap.Tooltip(e));
     })
 </script>
+<persist-component-state persist-mode="PersistenceMode.Server"/>
 </body>
 </html>

@@ -16,6 +16,19 @@ public class Notifications : PageModel
     }
     [BindProperty(SupportsGet =true)]
     public ulong NotificationId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public uint UserId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+    [BindProperty(SupportsGet = true)]
+    public int PageSize { get; set; } = 20;
+    
+    public IActionResult OnGet() {
+        var notifications = _notificationService.Get(UserId, false, PageNumber, PageSize);
+        return Partial(nameof(_NotificationsPartial), new _NotificationsPartial(){
+            Notifications = notifications
+        });
+    }
     public IActionResult OnGetMarkRead() {
         _notificationService.MarkAsync(true,NotificationId).Wait();
         return new OkResult();

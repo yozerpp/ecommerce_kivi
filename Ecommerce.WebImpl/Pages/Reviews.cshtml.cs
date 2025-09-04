@@ -41,7 +41,7 @@ public class Reviews : BaseModel
             });
         }
         _notificationService.SendSingleAsync(new ReviewNotification(){
-            UserId = SentReview.SellerId, ReviewId = SentReview.Id
+            UserId = SentReview.SellerId, ReviewId = SentReview.Id,ProductId = SentReview.ProductId 
         }).Wait();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,
@@ -97,11 +97,9 @@ public class Reviews : BaseModel
                 UserId = uid.Value,
             }).Wait();
         }
-
-        return Partial("_InfoPartial", new _InfoPartial(){
-            Success = true,
-            Message = "Yorum eklendi.",
-        });
+        ReviewId = SentComment.ReviewId;
+        ParentId = SentComment.ParentId;
+        return OnGetComments();
     }
 
     private uint? GetRepliedUserId(ulong? pid, ulong? rid) {

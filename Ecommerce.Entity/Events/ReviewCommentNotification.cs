@@ -5,7 +5,6 @@ namespace Ecommerce.Entity.Events;
 public class ReviewCommentNotification : Notification //UserId is the SellerId
 {
     public ulong CommentId { get; set; }
-    public ReviewComment ReviewComment { get; set; }
 
     protected bool Equals(ReviewCommentNotification other) {
         return base.Equals(other) && CommentId == other.CommentId;

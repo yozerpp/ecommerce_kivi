@@ -57,7 +57,7 @@
                         @await Html.PartialAsync($"Shared/{nameof(_ReviewStarPartial)}", new _ReviewStarPartial(){ Rating = Model.Item1.Product.Stats.RatingAverage , RatingCount = (int)(Model.Item1.Product.Stats.ReviewCount) })
                     </div>
                     <div class="d-flex container-fluid justify-content-between align-items-center">
-                        <p class="fw-bold my-0 text-muted" style="font-size: x-small">@(Model.Item1.Product.Stats.SaleCount) Kere Satıldı</p>
+                        <p class="fw-bold my-0 text-muted" style="font-size: x-small">@(Model.Item1.Product.Stats.SaleCount) Adet Satıldı</p>
                         <div class="d-flex align-items-center justify-content-center gap-2">
                             @await Html.PartialAsync("Shared/Product/_FavoritePartial", (false, Model.Item1))
                         </div>

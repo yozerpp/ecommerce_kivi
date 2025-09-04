@@ -40,7 +40,7 @@ public interface IRepository<TEntity> where TEntity : class
     public TEntity Delete(TEntity entity);
     public Task<TEntity> DeleteAsync(TEntity entity, bool flush = true, CancellationToken cancellationToken = default);
     public int Delete(Expression<Func<TEntity, bool>> predicate,string[][]? includes =null);
-    public void Flush();
+    public void Flush(bool detectChanges = true);
     public TEntity Detach(TEntity entity);
     public Task<TEntity> DetachAsync(TEntity entity, CancellationToken cancellationToken = default);
     public TEntity Merge(TEntity entity);

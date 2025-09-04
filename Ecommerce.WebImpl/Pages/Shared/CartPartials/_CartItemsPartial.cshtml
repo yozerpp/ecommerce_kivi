@@ -28,6 +28,16 @@
             color: #155724;
         }
     </style>
+    <script>((s)=>{
+            document.addEventListener("DOMContentLoaded", load);
+            s.parentElement.addEventListener('htmx:load', load);
+            function  load(e){
+                if(e.type==='htmx:load') {
+                    e.stopPropagation();
+                    s.nextElementSibling.querySelectorAll('.promptable').forEach(el=>el.dispatchEvent(new Event('htmx:load', {cancelable: true, bubbles:false})));
+                }
+            }
+        })(document.currentScript)</script>
     <div class="col-12 col-lg-9">
         <div class="d-flex align-items-center mb-4">
             <div>
@@ -36,7 +46,7 @@
             </div>
         </div>
         @if (Model.ViewedCart.Aggregates.ItemCount > 0){
-            foreach (var item in Model.ViewedCart.Items){
+            foreach (var item in Model.ViewedCart.Items.OrderBy(o=>o.ProductId).ThenBy(o=>o.SellerId)){
                 <div class="card cart-item-card mb-3 shadow-sm hover-grow-small">
                     <div class="card-body">
                         <div class="row align-items-center">
@@ -47,7 +57,7 @@
                                 }
                                 <img src="@(data)" class="img-fluid rounded" style="max-height: 80px; max-width: 80px; object-fit: cover;" alt="Image of @item.ProductOffer.Product.Name"/>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <h6 class="mb-1 fw-semibold">@(item.ProductOffer.Product.Name)</h6>
                                 <small class="text-muted">@item.ProductOffer.Seller.ShopName</small>
                                 @if (item.SelectedOptions != null && item.SelectedOptions.Any()){
@@ -58,11 +68,11 @@
                                     </div>
                                 }
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 @if (item.CouponId != null){
                                     <div class="d-flex flex-column align-items-center">
                                         <span class="badge bg-warning text-dark mb-1">@(item.CouponId)</span>
-                                        <form hx-trigger="submit" hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
+                                        <form hx-trigger="submit" hx-post="/@(nameof(Cart))?handler=deleteCoupon&FromCart=true" hx-on::before-swap="if(event.detail.xhr.status >=300 || event.detail.xhr.status <200) event.detail.target=document.getElementById('popupResult');" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="productId" value="@item.ProductId"/>
                                             <input type="hidden" name="sellerId" value="@item.SellerId"/>
@@ -91,7 +101,7 @@
                                 }
                                 <div class="fw-bold text-primary">@(decimal.Round(item.ProductOffer.Price * item.ProductOffer.Discount, 2).ToString("C"))</div>
                             </div>
-                            <div class="col-md-2 text-center">
+                            <div class="col-md-1 text-center">
                                 <div class="d-flex align-items-center justify-content-center">
                                     <form hx-target="#@(Model.ContainerId)" hx-post="/Cart?FromCart=true" class="me-2">
                                         @Html.AntiForgeryToken()
@@ -114,7 +124,7 @@
                                     </form>
                                 </div>
                             </div>
-                            <div class="col-md-1 text-center">
+                            <div class="col-md-2 text-center">
                                 <partial name="Shared/_ItemPricePartial" model="item.Aggregates"/>
                                 <form method="post" hx-target="#@(Model.ContainerId)" hx-swap="innerHTML" hx-post="/Cart?handler=delete&FromCart=true" class="mt-2">
                                     @Html.AntiForgeryToken()

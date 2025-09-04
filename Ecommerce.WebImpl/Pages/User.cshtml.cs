@@ -61,9 +61,14 @@ public class User : BaseModel
     [BindProperty]
     public bool IsImageEdited { get; set; }
     public IActionResult OnPostUpdate() {
-        _userManager.Update(Role switch{
+        Entity.User u = Role switch{
             Entity.User.UserRole.Seller
-        =>RegisteredSeller, Entity.User.UserRole.Customer => RegisteredCustomer,_=> throw new ArgumentOutOfRangeException(nameof(Role), Role.ToString(), "Satıcı kaydı yapılamıyor.")}, IsImageEdited);
+                => RegisteredSeller,
+            Entity.User.UserRole.Customer => RegisteredCustomer,
+            _ => throw new ArgumentOutOfRangeException(nameof(Role), Role.ToString(), "Satıcı kaydı yapılamıyor.")
+        };
+        if (u.ProfilePicture?.Data == "-") u.ProfilePicture = null;
+        _userManager.Update(u, IsImageEdited);
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Profiliniz Güncellendi",
             Title = "İşlem Başarılı", Redirect ="refresh"

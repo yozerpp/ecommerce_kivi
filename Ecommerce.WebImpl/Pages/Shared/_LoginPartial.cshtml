@@ -1,11 +1,17 @@
-﻿@using System.Security.Claims
+﻿@using System.Net
+@using System.Security.Claims
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Events
+@using Microsoft.AspNetCore.Authentication.JwtBearer
+@using Ecommerce.WebImpl.Components
 @using Ecommerce.WebImpl.Pages.Notifications
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
 @using Cart = Ecommerce.WebImpl.Pages.Cart
 @{
     var session = (Session)ViewData[nameof(Session)];
+    var customer = !ViewContext.ViewData.TryGetValue(nameof(Entity.User), out var user) || user is  Entity.Customer;
+    var isUser = user != null;
+    var seller= user as Seller;
 }
 <ul class="navbar-nav ms-1 d-flex justify-content-center align-content-center gap-3">
     <style>
@@ -13,67 +19,65 @@
             padding: 0!important;
         }
     </style>
-    @if (session != null){
-    if (!ViewData.TryGetValue(nameof(Entity.User), out var u) || u is null or Entity.Customer){
-        <li class="nav-item d-inline-flex align-content-center align-items-center">
+
+    <li class="nav-item d-inline-flex align-content-center align-items-center">
+        @if (customer && session!=null){
             <a title="Sepet" asp-page="/@(nameof(Cart))" class="nav-link hover-grow justify-content-center align-content-center text-decoration-none text-dark p-0" title="Sepet">
                 <i class="bi bi-cart  bg-white fs-4 position-relative" style="color: orange;">
-                    @if (session.ItemCount > 0){
+                    @if (session?.ItemCount > 0){
                         <i class="text-danger z-3 float-end position-absolute top-0 end-0 fs-5 m-0 ms-1 bi-@(session.ItemCount)-circle-fill" style="font-size: x-small !important;"></i>
                         <!--Find a reliable and effiicent way to get the item count-->
                     }
                 </i>
                 @* <img style="height: 2em;" src="cart-icon.jpg" alt="Sepet"/> *@
             </a>
-
-        </li>
-    }
-        else if (u is Entity.Seller s){
-            <li class="nav-item d-inline-flex align-content-center align-items-center">
-                <a title="Mağazanı Görüntüle" asp-page="/Seller" asp-route-Id="@s.Id" class="nav-link d-inline-flex fs-5 hover-grow justify-content-center align-items-center text-decoration-none  p-0">
-                    <i class="ms-2 bi bi-shop me-2 text-danger"></i><span style="color: darkorange">Mağazan</span>
-                </a>
-            </li>
-            <li class="nav-item d-inline-flex justify-content-center align-items-center">
-                <a asp-page="Seller/AddProduct" style="color: unset;" title="İlan Ver" class="nav-link d-inline-flex hover-grow fs-5  justify-content-center align-items-center text-decoration-none  p-0 align-items-center gap-1">
-                    <i class="ms-2 bi bi-box-seam-fill p-0 align-self-end" style="color: orange;"></i>
-                    <i class="p-0 mb-2 bi bi-plus-circle  text-success me-1"></i><span class="mt-1 text-primary-emphasis">Ürün Ekle</span>
-                </a>
-            </li>
+        } else if (seller!=null){
+            <a title="Mağazanı Görüntüle" asp-page="/Seller" asp-route-Id="@seller.Id" class="nav-link d-inline-flex fs-6 hover-grow-small justify-content-center align-items-center text-decoration-none  p-0">
+                <i class="ms-2 bi bi-shop me-2 text-danger"></i><span style="color: darkorange">Mağazan</span>
+            </a>
         }
-    }
-    @if ((Context.User.Identity?.IsAuthenticated ?? false) && Context.User.HasClaim(c => c.Type.Equals(ClaimTypes.Role))){
-        <li class="nav-item d-inline-flex justify-content-center align-items-center ">
+    </li>
+    <li class="nav-item d-inline-flex justify-content-center align-items-center">
+        @if (seller != null){
+            <a asp-page="Seller/AddProduct" style="color: unset;" title="İlan Ver" class="nav-link d-inline-flex hover-grow-small fs-6  justify-content-center align-items-center text-decoration-none  p-0 align-items-center gap-1">
+                <i class="ms-2 bi bi-box-seam-fill p-0 align-self-end" style="color: orange;"></i>
+                <i class="p-0 mb-2 bi bi-plus-circle  text-success me-1"></i><span class="mt-1 text-primary-emphasis">Ürün Ekle</span>
+            </a>   
+        }
+    </li>
+
+    <li class="nav-item d-inline-flex justify-content-center align-items-center ">
+        @if (isUser){
             <a title="Hesabını Görüntüle" asp-page="/@(nameof(Pages.User))" asp-route-UserId="@((ViewData[nameof(Entity.User)] as User).Id)" class="nav-link text-dark p-0 hover-grow" title="Hesap">
-                @if ((ViewData[nameof(Entity.User)]as Entity.User)?.ProfilePicture is {} profilePicture){
+                @if ((ViewData[nameof(Entity.User)] as Entity.User)?.ProfilePicture is{ } profilePicture){
                     <img style="height: 2em;aspect-ratio: 1;" class="rounded-circle shadow-sm" src="@(Utils.GetImageUrlOrDefault(profilePicture.Data))" alt="Hesap"/>
                 }
                 else{
-                    <i class="bi bi-person-circle text-secondary bg-light fs-4"></i>
+                    <i class="bi bi-person-circle text-secondary fs-4"></i>
                 }
-            </a>
-        </li>
-        if (ViewData.ContainsKey(nameof(Notification))){
-            <li class="nav-item d-flex justify-content-center align-items-center">
-                @await Html.RenderComponentAsync(typeof(_NotificationPartial), RenderMode.ServerPrerendered, new{ Notifications = (ICollection<Notification>)ViewData[nameof(Notification)] })
-            </li>
+            </a>    
         }
-
-        <li class="nav-item text-center d-inline-flex align-content-center justify-content-center align-items-center">
+        else{
+            <a class="nav-link hover-grow-small text-dark" asp-page="/Account/Register"><i style="color: orange" class="bi  bi-person-plus fs-5 me-2"></i>Kaydol</a>
+        }
+    </li>
+    <li class="nav-item d-flex justify-content-center align-items-center">
+        @* <component type="typeof(NotificationPartial)"  render-mode="ServerPrerendered" param-Notifications="@((ICollection<Notification>)ViewData[nameof(Notification)])"/> *@
+        @await Html.PartialAsync("Notifications/"+nameof(_NotificationsPartial), new _NotificationsPartial(){Notifications = ViewContext.ViewData[nameof(Notification)] as ICollection<Notification> })
+    </li>
+    <li class="nav-item">
+        @if (!isUser){
+        <a class="nav-link hover-grow-small text-dark" asp-page="/@(nameof(Pages.Orders))"><i class="text-info bi  bi-bag me-2 fs-5"></i>Siparişlerim</a>
+        }
+    </li>
+    <li class="nav-item text-center d-inline-flex align-content-center justify-content-center align-items-center">
+        @if (isUser){
             <form class="form-inline text-center" hx-get="/Account/Login?handler=logout" hx-swap="innerHTML" hx-target="#popupResult">
                 <button type="submit" class="nav-link hover-darken btn btn-link text-dark">Çıkış Yap<i class="ms-2 bi bi-box-arrow-right fs-6 text-secondary-emphasis"></i></button>
             </form>
-        </li>
-    }
-    else{
-        <li class="nav-item">
-            <a class="nav-link hover-grow-small text-dark" asp-page="/Account/Register"><i style="color: orange" class="bi  bi-person-plus fs-5 me-2"></i>Kaydol</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link hover-grow-small text-dark" asp-page="/Account/Login"><i class="text-primary  bi bi-box-arrow-in-right fs-5 me-2"></i>Giriş Yap</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link hover-grow-small text-dark" asp-page="/@(nameof(Pages.Orders))"><i class="text-info bi  bi-bag me-2 fs-5"></i>Siparişlerim</a>
-        </li>
-    }
+        }
+        else{
+        <a class="nav-link hover-grow-small text-dark" asp-page="/Account/Login"><i class="text-primary  bi bi-box-arrow-in-right fs-5 me-2"></i>Giriş Yap</a>
+        }
+    </li>
 </ul>

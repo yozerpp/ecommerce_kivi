@@ -73,8 +73,8 @@
             <input type="hidden" name="@(nameof(Reviews.SentVote)).@(nameof(ReviewVote.CommentId))" value="@Model.CommentId"/>
         }
         <input type="hidden" name="@(nameof(Reviews.SentVote)).@(nameof(ReviewVote.Up))"/>
-        <i class="bi hover-grow bi-hand-thumbs-up@(Model.CurrentUserVote > 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i>
-        <i class="bi bi hover-grow bi-hand-thumbs-down@(Model.CurrentUserVote < 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i> @Model.Karma
+        <i class="bi hover-grow fs-6 bi-hand-thumbs-up@(Model.CurrentUserVote > 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i>
+        <i class="bi bi hover-grow fs-6 bi-hand-thumbs-down@(Model.CurrentUserVote < 0 ? "-fill" : "") me-1" style="cursor: pointer;"></i> @Model.Karma
     </form>
 </span>
 

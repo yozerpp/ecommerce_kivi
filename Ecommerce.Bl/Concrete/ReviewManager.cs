@@ -1,4 +1,5 @@
-﻿using Ecommerce.Bl.Interface;
+﻿using System.Collections;
+using Ecommerce.Bl.Interface;
 using Ecommerce.Dao;
 using Ecommerce.Dao.Spi;
 using Ecommerce.Entity.Views;
@@ -34,11 +35,15 @@ public class ReviewManager : IReviewManager
         var ret =  _reviewRepository.WhereP(WithAggregates,GetPredicateOrThrow(productId, sellerId, selectedRating), includes: includes, 
             offset:(page - 1) * pageSize, limit:pageSize * page,orderBy:ordering);
         foreach (var r in ret){
-            if (r.Reviewer==null || !r.CensorName ) continue;
-            r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
-            r.Reviewer.LastName = r.Reviewer.LastName[0] + "***";
+            Censor(r);
         }
         return ret;
+    }
+
+    private static void Censor(ProductReview r) {
+        if (r.Reviewer==null || !r.CensorName ) return;
+        r.Reviewer.FirstName = r.Reviewer.FirstName[0] + Enumerable.Range(0, r.Reviewer.FirstName.Length - 1).Select(_ => '*').Aggregate("", (s,c)=>s+c);
+        r.Reviewer.LastName = r.Reviewer.LastName[0]  +  Enumerable.Range(0, r.Reviewer.LastName.Length - 1).Select(_ => '*').Aggregate("", (s,c)=>s+c);
     }
 
     public ReviewComment? GetCommentTree(ulong commentId, bool includeChildren, bool includeParent,
@@ -104,7 +109,7 @@ public class ReviewManager : IReviewManager
     public List<ReviewComment> GetCommentsWithAggregates(ulong reviewId, ulong? commentId=null, int page = 1, int pageSize = 20) {
         return _reviewCommentRepository.WhereP(CommentWithAggregates,rc =>
             rc.ParentId == commentId && rc.ReviewId == reviewId, offset: (page - 1)*pageSize, limit:
-            page*pageSize);
+            page*pageSize, orderBy:[(rc=>rc.Created, false)]);
     }
     public ProductReview? GetProductReview(uint productId, uint sellerId, Customer? customer=null, Session? session = null,
         bool includeComments=false, bool includeSeller =true) {
@@ -113,9 +118,8 @@ public class ReviewManager : IReviewManager
         var includes = GetReviewIncludes(includeComments,includeSeller );
         var r= _reviewRepository.FirstP(WithAggregates,
             r => r.ProductId == productId && r.SellerId == sellerId&&r.ReviewerId == reviewerId&& r.SessionId==sessionId, includes: includes);
-        if (!(r?.CensorName ?? false)) return r;
-        r.Reviewer.FirstName = r.Reviewer.FirstName[0] + "***";
-        r.Reviewer.LastName = r.Reviewer.LastName[0] + "***";
+        if(r==null) return null;
+        Censor(r);
         return r;
     }
     private static string[][] GetReviewIncludes(bool includeComments, bool includeSeller) {
@@ -135,8 +139,8 @@ public class ReviewManager : IReviewManager
             review.SellerId = _productOfferRepository.FirstP(o => o.SellerId, o => o.ProductId == review.ProductId,
                 nonTracking: true);
         review.SessionId = session.Id;
-        var uid = session.User?.Id ?? session.UserId;
-        review.HasBought = _orderItemRepository.Exists(oi => oi.Order.UserId==uid && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
+        var uid = session.User?.Id;
+        review.HasBought =uid!=null&& _orderItemRepository.Exists(oi => oi.Order.UserId==uid && oi.ProductId==review.ProductId && oi.SellerId==review.SellerId, includes:[[nameof(OrderItem.Order)]]);
         try{
             var ret = _reviewRepository.Add(review);
             _reviewRepository.Flush();
@@ -165,6 +169,11 @@ public class ReviewManager : IReviewManager
         comment.CommenterId = session.Id;
         if (session.User != null){
             comment.UserId = session.User.Id;
+            if (session.User is Seller){
+                var uid = session.User.Id;
+                comment.SellerReply = _context.Set<ProductReview>()
+                    .Any(r => r.Id == comment.ReviewId && r.SellerId == uid);
+            }
         }
         try{
             var ret = _reviewCommentRepository.Add(comment);
@@ -182,7 +191,8 @@ public class ReviewManager : IReviewManager
     public void DeleteReview(Session? session, ProductReview review) {
         using var t = _context.Database.BeginTransaction();
         _context.Set<ReviewVote>().Where(v => v.ReviewId == review.Id && v.CommentId == null).ExecuteDelete();
-        var c= _context.Set<ProductReview>().Where(r => r.Id == review.Id && (r.SessionId == session.Id || r.ReviewerId == session.UserId)).ExecuteDelete();
+        var uid = session.User?.Id;
+        var c= _context.Set<ProductReview>().Where(r => r.Id == review.Id && (r.SessionId == session.Id || uid!=null&&r.ReviewerId == uid)).ExecuteDelete();
         if (c == 0){
             t.Rollback();
             throw new ArgumentException("Değerlendirme bulunamadı ya da size ait değil.");
@@ -201,7 +211,8 @@ public class ReviewManager : IReviewManager
     public void DeleteComment(Session? session, ReviewComment comment) {
         using var t = _context.Database.BeginTransaction();
         _context.Set<ReviewVote>().Where(v => v.CommentId == comment.Id && v.ReviewId ==comment.ReviewId).ExecuteDelete();
-        var c=_context.Set<ReviewComment>().Where(c=>c.Id == comment.Id && (c.CommenterId == session.Id || c.UserId == session.UserId)).ExecuteDelete();
+        var uid = session.User?.Id;
+        var c=_context.Set<ReviewComment>().Where(c=>c.Id == comment.Id && (c.CommenterId == session.Id || uid!=null&&c.UserId == uid)).ExecuteDelete();
         if (c == 0){
             t.Rollback();
             throw new ArgumentException("yorum bulunamadı ya da size ait değil.\"");
@@ -223,7 +234,8 @@ public class ReviewManager : IReviewManager
     }
 
     public void UnVote(Session session, ReviewVote vote) {
-        var c = _reviewVoteRepository.Delete(v=> (v.ReviewId == vote.ReviewId || v.CommentId == vote.CommentId) &&(v.VoterId == session.Id || session.UserId!=null && v.UserId == session.UserId));
+        var uid  = session.User?.Id;
+        var c = _reviewVoteRepository.Delete(v=> (v.ReviewId == vote.ReviewId || v.CommentId == vote.CommentId) &&(v.VoterId == session.Id || uid!=null && v.UserId == uid));
         if (c==0){
             throw new ArgumentException("Either your comment or the review cannot be found.");
         }
@@ -292,6 +304,12 @@ public class ReviewManager : IReviewManager
         CensorName = r.CensorName,
         Comment = r.Comment,
         Created = r.Created,
+        Reviewer =r.Reviewer==null?null:new Customer(){
+            Id = r.Reviewer.Id,
+            FirstName = r.Reviewer.FirstName,
+            LastName = r.Reviewer.LastName,
+            Email = r.Reviewer.Email
+        },
         HasBought = r.HasBought,
         Name = r.Name,
         Rating = r.Rating,

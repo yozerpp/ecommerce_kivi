@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -16,6 +17,7 @@ using Ecommerce.Entity.Events;
 using Ecommerce.Entity.Views;
 using Ecommerce.Mail;
 using Ecommerce.Notifications;
+using Ecommerce.Notifications.UserIdProvider;
 using Ecommerce.Shipping;
 using Ecommerce.Shipping.Dummy;
 using Ecommerce.Shipping.Geliver;
@@ -24,6 +26,7 @@ using Ecommerce.WebImpl.Data;
 using Ecommerce.WebImpl.Data.Identity;
 using Ecommerce.WebImpl.Middleware;
 using Ecommerce.WebImpl.Pages.Shared;
+using Google.Apis.Util;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
@@ -31,12 +34,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using Customer = Ecommerce.Entity.Customer;
 using ICompressionProvider = Microsoft.AspNetCore.ResponseCompression.ICompressionProvider;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using Product = Ecommerce.Entity.Product;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,15 +49,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<DefaultDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
             c=> {
-                c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                // c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 c.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 c.MigrationsAssembly(typeof(DefaultDbContext).Assembly.GetName().Name);
-            }).EnableDetailedErrors(builder.Environment.IsDevelopment())
+
+            }).EnableDetailedErrors(false).EnableSensitiveDataLogging(false).LogTo(Console.WriteLine, LogLevel.Warning)
         .EnableServiceProviderCaching(),ServiceLifetime.Scoped,ServiceLifetime.Singleton);
 builder.Services.AddDbContext<ShippingContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString(nameof(ShippingContext)),
             c => {
-                c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                // c.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 c.MigrationsAssembly(typeof(ShippingContext).Assembly.GetName().Name); 
             }).EnableServiceProviderCaching().EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
     ServiceLifetime.Scoped, ServiceLifetime.Singleton);
@@ -63,6 +69,8 @@ razorPageOptions.Services.AddScoped<AuthorizationFilter>(sp =>
     new AuthorizationFilter(sp.GetRequiredKeyedService<ICartManager>(nameof(AuthorizationFilter)),
         sp.GetRequiredKeyedService<IJwtManager>(nameof(AuthorizationFilter))));
 razorPageOptions.AddMvcOptions(o=>o.Filters.AddService<AuthorizationFilter>());
+builder.Services.AddServerSideBlazor();
+
 builder.Services.AddScoped<DbContext, DefaultDbContext>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(DefaultDbContext));
 builder.Services.AddKeyedScoped<DbContext, ShippingContext>(nameof(ShippingContext));
@@ -89,6 +97,16 @@ if (builder.Environment.IsProduction()){
         });
     }
 }
+else{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenLocalhost(5180); // HTTP
+        options.ListenLocalhost(7011, listenOptions =>
+        {
+            listenOptions.UseHttps();   // HTTPS
+        });
+    });
+}
 
 var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContext>().UseSqlServer(builder.Configuration.GetConnectionString(nameof(DefaultDbContext)),
         c=> {
@@ -99,11 +117,12 @@ var blContext = new DefaultDbContext(new DbContextOptionsBuilder<DefaultDbContex
 
 builder.Services.AddSingleton<UserManager.HashFunction>(s => s);
 builder.Services.AddSingleton(BuildLocalizer);
-
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("tr-TR");
 //register BL
 var blEntities = GetEntityTypes(Assembly.GetAssembly(typeof(Cart)), "Ecommerce.Entity").ToList();
 var blValidators = Assembly.GetAssembly(typeof(CartItemValidator)).GetTypes()
-    .Where(t => t.Namespace?.Split('.').Last().Equals("Validation") ?? false).ToList();
+    .Where(t => (t.Namespace?.Split('.').Last().Equals("Validation") ?? false) && !t.IsNested).ToList();
 var blImpls = GetServices(true,Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Concrete").ToDictionary(t=>t.Name, t=>t);
 var blInterfaces = GetServices(false, Assembly.GetAssembly(typeof(ICartManager)), "Ecommerce.Bl.Interface")
     .Order(Comparer<Type>.Create(CreateComparerLambda(typeof(IJwtManager), typeof(ICartManager)).Compile())).ToList();
@@ -113,6 +132,8 @@ new DependencyRegisterer(builder, typeof(DefaultDbContext), blValidators, blEnti
 builder.Services.AddSingleton<GeliverClient>(sp =>
     new GeliverClient(builder.Configuration.GetSection("Shipping")["ApiKey"] ?? throw new ArgumentException("Missing shipping API key"))
 );
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<Ecommerce.WebImpl.Components.NotificationService>();
 builder.Services.AddScoped<JwtMiddleware>();
 builder.Services.AddScoped<IShippingService, GeliverService>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(NotificationService));
@@ -123,7 +144,6 @@ builder.Services.AddScoped<IUserManager>(sp => sp.GetRequiredKeyedService<IUserM
 builder.Services.AddScoped<IRepository<User>>(sp =>
     sp.GetRequiredKeyedService<IRepository<User>>(nameof(IUserManager)));
 builder.Services.AddScoped<ISessionManager>(sp => sp.GetRequiredKeyedService<ISessionManager>(nameof(ISessionManager)));
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddResponseCompression(o => {
     o.EnableForHttps = true;
     o.Providers.Add(new BrotliCompressionProvider(new BrotliCompressionProviderOptions(){
@@ -151,6 +171,7 @@ var tokenValidationParameters = new TokenValidationParameters()
 };
 var creds = new SigningCredentials(key, signingAlgorithm);
 builder.Services.AddSingleton(creds);
+builder.Services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton(tokenValidationParameters);
 builder.Services.AddKeyedSingleton( nameof(IJwtManager), tokenValidationParameters);
@@ -231,10 +252,7 @@ Environment.SetEnvironmentVariable("STRIPE_PK",builder.Configuration.GetSection(
 blContext.Dispose();
 var app = builder.Build();
 // Configure the HTTP request pipeline.
-app.MapHub<NotificationHub>("/notifications", options => {
-    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
-                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling ;
-});
+
 if (app.Environment.IsDevelopment()){
     app.UseMigrationsEndPoint();
 }
@@ -266,16 +284,23 @@ if (app.Environment.IsProduction()){
         });
     }
     else{
-        app.UseHttpsRedirection();
     }
 }
-
+app.UseHttpsRedirection();
 app.UseResponseCompression();
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
     .WithStaticAssets();
+app.MapHub<NotificationHub>("/notifications", options => {
+    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                         Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling ;
+    options.AuthorizationData.Add(new AuthorizeAttribute(){AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = nameof(User)});
+});
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
 app.UseMiddleware<GlobalExceptionHandler>();
 // app.UseMiddleware<SessionMiddleware>();
 app.Run();
@@ -371,7 +396,6 @@ public class DependencyRegisterer(
                 return provider.GetRequiredKeyedService(t, serviceKey);
             }
             catch (Exception e){
-                Console.WriteLine("Used non-keyed service " + t.Name + " for " + implementationType.Name);
                 return provider.GetRequiredService(t);
             }
         }).ToArray();
@@ -384,15 +408,15 @@ public class DependencyRegisterer(
         builder.Services.AddSingleton<IModel>(sp => ((DbContext)sp.GetRequiredService(contextType)).Model);
         //Validators
         foreach (var validatorType in validators){
-            builder.Services.AddScoped(validatorType, (sp) => {
-                var c = validatorType.GetConstructors().First();
-                return c.Invoke(c.GetParameters().Select(p => sp.GetRequiredService(p.ParameterType))
-                    .ToArray());
-            });
-            builder.Services.AddKeyedScoped(validatorType, serviceKey, (sp, k) => {
-                var c = validatorType.GetConstructors().First();
-                return c.Invoke(c.GetParameters().Select(p => sp.GetRequiredKeyedService(p.ParameterType, k)).ToArray());
-            });
+            // builder.Services.AddScoped(validatorType.GetInterfaces().First(i=>i.GetGenericTypeDefinition()==typeof(IValidator<>)), (sp) => {
+            //     var c = validatorType.GetConstructors().First();
+            //     return c.Invoke(c.GetParameters().Select(p => sp.GetRequiredService(p.ParameterType))
+            //         .ToArray());
+            // });
+            // builder.Services.AddKeyedScoped(validatorType, serviceKey, (sp, k) => {
+            //     var c = validatorType.GetConstructors().First();
+            //     return c.Invoke(c.GetParameters().Select(p => sp.GetRequiredKeyedService(p.ParameterType, k)).ToArray());
+            // });
         }
         foreach (var entityType in entities){
             builder.Services.AddScoped(typeof(IValidator<>).MakeGenericType(entityType),(sp) => {

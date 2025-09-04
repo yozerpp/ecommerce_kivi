@@ -16,8 +16,8 @@ public class NotificationService : INotificationService
 
     public async Task SendSingleAsync<T>(T notification) where T : Notification {
         var n=  await _notificationRepository.TryAddAsync(notification);
-        _notificationRepository.Flush();
-        await _notificationHub.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", n);
+        if(n)
+            await _notificationHub.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", notification);
     }
 
     public async Task SendBatchAsync<T>(ICollection<T> notifications) where T : Notification {
@@ -38,7 +38,7 @@ public class NotificationService : INotificationService
 
     public async Task BroadcastDiscountAsync(DiscountNotification notification) {
         var n = (DiscountNotification)await _notificationRepository.SaveAsync(notification);
-        await _notificationHub.Clients.Groups(NotificationHub.ProductFavorGroup + notification.ProductOffer.ProductId)
+        await _notificationHub.Clients.Groups(NotificationHub.ProductFavorGroup + notification.ProductId)
             .SendAsync("ReceiveNotification", n);
     }
     public async Task BroadcastCouponAsync(CouponNotification notification) {

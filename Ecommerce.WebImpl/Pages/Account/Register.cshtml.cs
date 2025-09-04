@@ -65,7 +65,7 @@ public class Register : PageModel
         var email = claims.First(c => c.Type == ClaimTypes.Email);
         if ((user = await _dbContext.Set<Entity.User>().FirstOrDefaultAsync(u=>u.GoogleId == googleId.Value  )) != null){
             Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(_jwtManager.CreateToken(user.Session)), new CookieOptions(){
-                MaxAge = TimeSpan.FromHours(1),
+                MaxAge = TimeSpan.FromHours(1), SameSite = SameSiteMode.Lax
             });
             return continueUrl!=null? Redirect(continueUrl) : RedirectToPage("/Index");
         }
@@ -101,13 +101,15 @@ public class Register : PageModel
             Entity.User.UserRole.Customer => RegisteredCustomer,
             _ => throw new NotImplementedException()
         };
-        if (u.NormalizedEmail == null) u.NormalizedEmail = u.Email.ToUpperInvariant();
+        if (u.NormalizedEmail == null) u.NormalizedEmail = u.Email?.ToUpperInvariant() ?? throw new ArgumentException("Email boş olamaz.");
         _userManager.Register(Role, u);
         // if (GoogleId != null){
         var t = _jwtManager.CreateToken(u.Session);
         Console.WriteLine("OAuth Registered.-------------------------------");
         Response.Cookies.Delete(JwtBearerDefaults.AuthenticationScheme);
-        Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t));
+        Response.Cookies.Append(JwtBearerDefaults.AuthenticationScheme, _jwtManager.Serialize(t), new CookieOptions(){
+            SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromHours(1),
+        });
         // }
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, Message = "Kaydınız yapıldı. Kullanıcı sayfanıza yönlendiriliyorsunuz.",
