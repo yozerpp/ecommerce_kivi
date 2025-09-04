@@ -152,9 +152,11 @@
                 <li hx-on::after-settle="console.log(event.detail.elt.firstElementChild);event.detail.elt.firstElementChild.dispatchEvent(new Event('init', {bubbles:false}));"
                     id="categoryProperties" hx-get="/@(nameof(Product))?handler=categoryProperties&Type=@(nameof(_CategoryPropertiesPartial.DisplayMode.Filter))&idPrefix=@(nameof(HomepageModel.PropertyFilters))" hx-target="this" hx-swap="innerHTML" hx-trigger="fire">
                 </li>
-                <li id="ranges" class="row g-2 d-flex ps-2">
-                    <h4 class="form-label fw-semibold fs-5 text-dark mb-2">İstatistik Özellikleri</h4>
-                    <div class="col-6 gap-1">
+                <li id="ranges" class="row g-3">
+                    <div class="col-12">
+                        <h4 class="fw-bold fs-5 mb-4 border-bottom pb-3">İstatistik Özellikleri</h4>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
                         <label class="fw-semibold text-dark-emphasis fs-6"></label>
                         <div id="saleCountRange">
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
@@ -164,8 +166,8 @@
                             })
                         </div>
                     </div>
-                    <div class="col-6 gap-2 d-inline-flex ps-2">
-                        <div class="form-label fw-semibold text-dark mb-2 fs-6">İade Sayısı</div>
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-semibold text-dark mb-2">İade Sayısı</label>
                         <div id="refundCountRange">
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
@@ -174,10 +176,10 @@
                             })
                         </div>
                     </div>
-                    <div class="col-6 gap-2 d-inline-flex ps-2 fs-6">
-                        <div class="form-label fw-semibold text-dark mb-2">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-semibold text-dark mb-2">
                             Favorilere Eklenme Sayısı
-                        </div>
+                        </label>
                         <div id="favoriteRange">
                             <input type="hidden" name=""/>
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
@@ -187,10 +189,10 @@
                             })
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="form-label fw-semibold text-dark fs-6 mb-2">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-semibold text-dark mb-2">
                             Değerlendirme Sayısı
-                        </div>
+                        </label>
                         <div id="ratingCountRange">
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000,
@@ -199,8 +201,8 @@
                             })
                         </div>
                     </div>
-                    <div class="gap-2 col-6 d-inline-flex ps-2">
-                        <label class="form-label fw-semibold text-dark fs-6 column-auto mb-2">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-semibold text-dark mb-2">
                             Değerlendirme Ortalaması
                         </label>
                         <div id="ratingRange">
@@ -212,8 +214,8 @@
                             })
                         </div>
                     </div>
-                    <div class="col-6 gap-1 d-inline-flex">
-                        <label class="form-label fw-semibold text-dark mb-2 fs-6">Fiyat</label>
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-semibold text-dark mb-2">Fiyat</label>
                         <div id="priceRange">
                             @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
                                 MaxValue = 1000000, MinValue = 0,
