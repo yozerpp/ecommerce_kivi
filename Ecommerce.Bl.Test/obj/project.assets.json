@@ -1458,6 +1458,7 @@
           "Ecommerce.Entity": "1.0.0",
           "LinqKit.Microsoft.EntityFrameworkCore": "8.1.8",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.18",
+          "Microsoft.EntityFrameworkCore.SqlServer": "8.0.18",
           "System.IdentityModel.Tokens.Jwt": "8.12.1"
         },
         "compile": {
