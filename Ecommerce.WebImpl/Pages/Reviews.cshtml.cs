@@ -136,18 +136,20 @@ public class Reviews : BaseModel
 
 [BindProperty]
     public ReviewVote SentVote { get; set; }
-    public void OnPostVote() {
+    public IActionResult OnPostVote() {
         _reviewManager.Vote(CurrentSession, SentVote);
         var (uid, karma) = GetCurrentVotes(SentVote.CommentId, SentVote.ReviewId);
-        if (!uid.HasValue ||karma is not (1 or 3 or 5 or 10 or 20 or 30) ) return;
+        if (!uid.HasValue ||karma is not (1 or 3 or 5 or 10 or 20 or 30) ) return new OkResult();
         _notificationService.SendSingleAsync(new VoteNotification(){
             CommentId = SentVote.CommentId, ReviewId = SentVote.ReviewId, UserId = uid.Value,
             NumVotes = (uint)karma,
         }).Wait();
+        return new OkResult();
     }
     
-    public void OnPostUnVote() {
+    public IActionResult OnPostUnVote() {
         _reviewManager.UnVote(CurrentSession, SentVote);
+        return new OkResult();
     }
     [BindProperty(SupportsGet = true)]
     public uint ReviewsPage { get; set; } = 1;
