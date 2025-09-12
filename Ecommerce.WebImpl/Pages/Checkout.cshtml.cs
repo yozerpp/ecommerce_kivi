@@ -49,7 +49,8 @@ public class Checkout : BaseModel
     private readonly IUserManager _userManager;
     private readonly IRepository<AnonymousCustomer> _anonymousUserRepository;
     private readonly IMailService _mailService;
-    public Checkout(INotificationService notificationService, IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager,  IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousCustomer> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository): base(notificationService) {
+    private readonly PartialRenderer _partialRenderer;
+    public Checkout(INotificationService notificationService, IOrderManager orderManager, IMailService mailService, IShippingService shippingService, IUserManager userManager, ICartManager cartManager,  IRepository<Entity.Seller> sellerRepository, IRepository<Order> orderRepository, IRepository<AnonymousCustomer> anonymousUserRepository, IRepository<Entity.Shipment> shipmentRepository,[FromKeyedServices("DefaultDbContext")] DbContext dbContext, IRepository<OrderItem> orderItemRepository, PartialRenderer partialRenderer): base(notificationService) {
         _orderManager = orderManager;
         _mailService = mailService;
         _userManager = userManager;
@@ -60,6 +61,7 @@ public class Checkout : BaseModel
         _shipmentRepository = shipmentRepository;
         _dbContext = dbContext;
         _orderItemRepository = orderItemRepository;
+        _partialRenderer = partialRenderer;
         _encryption = CreateAes();
     }
 
@@ -90,7 +92,7 @@ public class Checkout : BaseModel
         Success,NonExistent,Fail,Processing
     }
     [BindProperty] public Result OrderResult { get; set; }
-    public IActionResult OnGetCreated([FromQuery] string intentId, [FromQuery] uint orderId)  {
+    public async Task<IActionResult> OnGetCreated([FromQuery] string intentId, [FromQuery] uint orderId)  {
         SelectedTab = 4;
         var i= _paymentIntentService.Get(Decrypt(intentId));
         OrderResult = i?.Status switch{
@@ -114,7 +116,9 @@ public class Checkout : BaseModel
                 UserId = i.SellerId,
                 OrderId = order.Id,
                 ProductId = i.ProductId
-            }).ToArray());
+            }).ToArray(), await _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){ Success = true,
+            Message = "Bir ürününüz satıldı! Siparişi onaylamak görüntülemek ve onaylamak için tıklayın.", Title = "Yeni Siparişiniz Var!" , Link = $"/Seller?handler=Order&" + nameof(Orders.OrderId) +$"={order.Id}"
+        }));
         var mailTask = _mailService.SendAsync(order?.Email ?? CurrentCustomer?.Email, "Siparişiniz Alındı",
             "Siparişiniz alınmıştır, sipariş numaranız: " + order.Id + "Sipariş detaylarınızı " +
             Url.Page("/" + nameof(Orders), null, new{ OrderId = order.Id }, Request.Scheme) +

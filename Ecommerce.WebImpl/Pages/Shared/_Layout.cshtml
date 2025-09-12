@@ -1,7 +1,6 @@
 ﻿@using Ecommerce.Bl.Interface
 @using Ecommerce.Entity
 @inject IDictionary<uint,Category> Categories
-@using Ecommerce.WebImpl.Components
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 <!DOCTYPE html>
 <html lang="en">
@@ -15,16 +14,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Ecommerce.WebImpl.styles.css" asp-append-version="true"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
-    <script src="_framework/blazor.server.js" autostart="false"></script>
-    <script>
-      Blazor.start({
-        ssr: { disableDomPreservation: true }
-      });
-    </script>
     @await RenderSectionAsync("Scripts", required: false)
-    <base href="~/" />
-    <component type="typeof(Microsoft.AspNetCore.Components.Web.HeadOutlet)" 
-               render-mode="ServerPrerendered" />
 </head>
 <body>
 <header>
@@ -63,11 +53,10 @@
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script src="https://unpkg.com/htmx.org"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<script>
-    document.addEventListener("DOMContentLoaded", ()=>{
-        document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(e=>new bootstrap.Tooltip(e));
-    })
-</script>
-<persist-component-state persist-mode="PersistenceMode.Server"/>
+@* <script> *@
+@*     document.addEventListener("DOMContentLoaded", ()=>{ *@
+@*         document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(e=>new bootstrap.Tooltip(e)); *@
+@*     }) *@
+@* </script> *@
 </body>
 </html>

@@ -69,7 +69,6 @@ razorPageOptions.Services.AddScoped<AuthorizationFilter>(sp =>
     new AuthorizationFilter(sp.GetRequiredKeyedService<ICartManager>(nameof(AuthorizationFilter)),
         sp.GetRequiredKeyedService<IJwtManager>(nameof(AuthorizationFilter))));
 razorPageOptions.AddMvcOptions(o=>o.Filters.AddService<AuthorizationFilter>());
-builder.Services.AddServerSideBlazor();
 
 builder.Services.AddScoped<DbContext, DefaultDbContext>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(DefaultDbContext));
@@ -132,8 +131,10 @@ new DependencyRegisterer(builder, typeof(DefaultDbContext), blValidators, blEnti
 builder.Services.AddSingleton<GeliverClient>(sp =>
     new GeliverClient(builder.Configuration.GetSection("Shipping")["ApiKey"] ?? throw new ArgumentException("Missing shipping API key"))
 );
+builder.Services.AddSingleton<PartialRenderer>(sp=>
+    new PartialRenderer(sp.GetRequiredService<Microsoft.AspNetCore.Mvc.ViewEngines.ICompositeViewEngine>(),
+        sp.GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataProvider>()));
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddTransient<Ecommerce.WebImpl.Components.NotificationService>();
 builder.Services.AddScoped<JwtMiddleware>();
 builder.Services.AddScoped<IShippingService, GeliverService>();
 builder.Services.AddKeyedScoped<DbContext, DefaultDbContext>(nameof(NotificationService));
@@ -299,8 +300,6 @@ app.MapHub<NotificationHub>("/notifications", options => {
                          Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling ;
     options.AuthorizationData.Add(new AuthorizeAttribute(){AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = nameof(User)});
 });
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
 app.UseMiddleware<GlobalExceptionHandler>();
 // app.UseMiddleware<SessionMiddleware>();
 app.Run();

@@ -57,12 +57,7 @@
                 @if (Model.Registering && Model.User.ProfilePicture != null){
                     <text>profileData['@(prefix).@(nameof(Entity.User.ProfilePicture)).@(nameof(Image.Data))'] = '@Model.User.ProfilePicture.Data';</text>
                 }
-                // Add seller-specific fields
-                @if (seller != null) {
-                <text>
-                profileData['@(prefix).@(nameof(Entity.Seller.ShopName))'] = document.getElementById('p_@(nameof(Entity.Seller.ShopName))').innerHTML;
-                </text>
-                }
+           
                 const userProps = [@Html.Raw(string.Join(',',typeof(Entity.Customer).GetProperties().Select(p => $"'{p.Name}'")))];
                 for (const [k,v] of Object.entries(parent._additionalData ||{})) {
                     profileData[ (userProps.some(p=>p===k)?'@(prefix).':'') + k] = v;
@@ -99,7 +94,7 @@
                 </text>
                 } else if(seller!=null){
                 <text>
-
+                profileData['@(prefix).@(nameof(Entity.Seller)).@(nameof(Seller.ShopName))'] = document.getElementById('shopname').value;
                 const addressContainer = document.getElementById('sellerAddress').querySelector('.address-container');
                 profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line1))'] = addressContainer._line1 || '';
                 profileData['@(prefix).@(nameof(Entity.Seller.Address)).@(nameof(Address.Line2))'] = addressContainer._line2 || '';
@@ -190,10 +185,14 @@
                 <div class="d-flex align-items-center justify-content-between p-3">
                     <h4 class="mb-0 fw-bold text-primary">
                         <i class="bi bi-shop me-3 text-primary"></i>
-                        Mağaza Adresi
+                        Mağaza Bilgileri
                     </h4>
                 </div>
             </div>
+            <div class="d-inline-flex form-check-inline">
+                <label class="fs-4 shadow-sm ms-4 mt-1 rounded-2 bg-light-subtle col-form-label-sm col-2">Mağaza İsmi</label>
+                <input type="text" id="shopname" class="form-control-sm ms-2 rounded-2 border-light-subtle border-opacity-50 shadow-sm border-2" name="@(nameof(Pages.User)).@(nameof(Seller.ShopName))"/>
+                </div>
             <div class="card-body p-4">
                 @await Html.PartialAsync("Shared/_AddressPartial", new _AddressPartial(){
                     Address = seller.Address, Editable = true,

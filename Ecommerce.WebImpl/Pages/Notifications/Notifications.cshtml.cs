@@ -1,18 +1,16 @@
 ﻿using Ecommerce.Notifications;
+using Ecommerce.WebImpl.Pages.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Ecommerce.WebImpl.Pages.Notifications;
 
 [Authorize(Policy = nameof(Entity.User), AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class Notifications : PageModel
+public class Notifications : BaseModel
 {
-    private readonly INotificationService _notificationService;
 
-    public Notifications(INotificationService notificationService) {
-        _notificationService = notificationService;
+    public Notifications(INotificationService notificationService) : base(notificationService) {
     }
     [BindProperty(SupportsGet =true)]
     public ulong NotificationId { get; set; }
@@ -24,18 +22,18 @@ public class Notifications : PageModel
     public int PageSize { get; set; } = 20;
     
     public IActionResult OnGet() {
-        var notifications = _notificationService.Get(UserId, false, PageNumber, PageSize);
-        return Partial(nameof(_NotificationsPartial), new _NotificationsPartial(){
+        var notifications = NotificationService.Get(CurrentUser?.Id ?? throw new UnauthorizedAccessException("Sadece Kayıtlı Kullanıcılar Bildirim Görebilir."), false, PageNumber, PageSize);
+        return Partial("Notifications/" + nameof(_NotificationsPartial), new _NotificationsPartial(){
             Notifications = notifications
         });
     }
     public IActionResult OnGetMarkRead() {
-        _notificationService.MarkAsync(true,NotificationId).Wait();
+        NotificationService.MarkAsync(true,NotificationId).Wait();
         return new OkResult();
     }
 
     public IActionResult OnGetMarkUnRead() {
-        _notificationService.MarkAsync(false, NotificationId).Wait();
+        NotificationService.MarkAsync(false, NotificationId).Wait();
         return new OkResult();
     }
 }

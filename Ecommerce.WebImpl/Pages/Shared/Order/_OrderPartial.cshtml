@@ -25,7 +25,7 @@
                     s.nextElementSibling.lastElementChild.dispatchEvent(new Event('htmx:load', {bubbles:false ,cancelable:true}));
                     const tt = s.nextElementSibling.querySelector('button[data-bs-toggle="tooltip"]');
                     if(!tt) return;
-                    const toggle = new bootstrap.Tooltip(tt, {toggle: false});
+                    const toggle = new bootstrap.Tooltip(tt, {toggle: false, placement: 'top', boundary: document.body, container:tt.parentElement.parentElement.parentElement});
                     tt.addEventListener('mouseover', e=>toggle.show());
                     tt.addEventListener('mouseout', e=>toggle.hide());
                 }
