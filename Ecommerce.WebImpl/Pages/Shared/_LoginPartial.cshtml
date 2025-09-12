@@ -8,7 +8,7 @@
 @using Cart = Ecommerce.WebImpl.Pages.Cart
 @{
     var session = (Session)ViewData[nameof(Session)];
-    var customer = !ViewContext.ViewData.TryGetValue(nameof(Entity.User), out var user) || user is  Entity.Customer;
+    var customer = !ViewContext.ViewData.TryGetValue(nameof(Entity.User), out var user)  || user is null or Entity.Customer;
     var isUser = user != null;
     var seller= user as Seller;
 }
