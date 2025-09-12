@@ -152,7 +152,9 @@ public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
         // Detach(entity);
         TEntity ret;
         try{
-            ret =  _context.Set<TEntity>().Add(entity).Entity;
+            var e = _context.Set<TEntity>().Entry(entity);
+            e.State = EntityState.Added;
+            ret = e.Entity;
             if (flush)
                 _context.SaveChanges();
         }
