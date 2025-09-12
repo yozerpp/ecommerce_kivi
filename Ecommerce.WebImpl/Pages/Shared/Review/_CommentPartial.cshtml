@@ -68,13 +68,17 @@
                             e.detail.target = document.getElementById('commentReplies@(Model.CommentUserView.ReviewComment.Id)');
                         } else e.detail.shouldSwap = true;
                     })
-                    document.getElementById('deleteComment@(Model.CommentUserView.ReviewComment.Id)').addEventListener('htmx:afterRequest', e=>{
-                        if(!e.detail.successful)return; 
-                        e.stopPropagation();
-                        const parent = s.closest('.partial-parent');
-                        parent.dispatchEvent(new Event('commentDeleted', {bubbles:true, cancelable:true}));
-                        parent.remove();
-                    })
+                    @if (editable){
+                        <text>
+                        document.getElementById('deleteComment@(Model.CommentUserView.ReviewComment.Id)').addEventListener('htmx:afterRequest', e => {
+                            if (!e.detail.successful) return;
+                            e.stopPropagation();
+                            const parent  = s.closest('.partial-parent');
+                            parent.dispatchEvent(new Event('commentDeleted', { bubbles: true, cancelable: true }));
+                            parent.remove();
+                        })
+                        </text>
+                    }
                     document.getElementById('commentReplies@(Model.CommentUserView.ReviewComment.Id)').addEventListener('commentDeleted',e=>{
                         e.stopPropagation();
                         const s= document.getElementById('commentRepliesBtn@(Model.CommentUserView.ReviewComment.Id)').nextElementSibling;

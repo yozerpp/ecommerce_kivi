@@ -5,7 +5,10 @@
     @if (Model.Notifications != null){ //not a registered user
         <script>
         ((currentScript) => {
-            document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('DOMContentLoaded',load );
+            currentScript.parentElement.addEventListener('htmx:load', load)
+            function load(e) {
+                if(e.type ==='htmx:load') e.stopPropagation();
                 const connection = new signalR.HubConnectionBuilder()
                     .withUrl("/notifications", {
                         accessTokenFactory: ()=> {
@@ -25,9 +28,20 @@
                         setTimeout(start, 5000);
                     }
                 }
-                connection.on('ReceiveNotification', _=>{
-                    htmx.ajax('GET', '@(Url.Page(nameof(Notifications)))', {
-                        target: 'closest .partial-parent',
+                connection.on('ReceiveNotification', n=>{
+                    console.log('notification received');
+                    const p = document.getElementById('popupResult');
+                    p.innerHTML = n;
+                    void p.innerHTML;
+                    p.firstElementChild.querySelectorAll('script').forEach(s=>{
+                        const cpy = document.createElement('script');
+                        cpy.text= s.text;
+                        p.firstElementChild.insertBefore(cpy, s);
+                        s.remove();
+                    })
+                    p.firstElementChild.dispatchEvent(new Event('htmx:load', {bubbles:true, cancelable:true}));
+                    htmx.ajax('GET', '/@(nameof(Notifications))/@(nameof(Notifications))', {
+                        target: currentScript.parentElement,
                         swap: 'outerHTML',
                     })
                 })
@@ -69,14 +83,14 @@
                         markUnreadBtn.classList.add('d-none');
                         badge.innerHTML = parseInt(badge.innerHTML) + 1;
                         markReadBtns.forEach(b=>b.classList.remove('d-none'));
-                        
+
                         fetch('@(Html.Raw($"/Notifications/{nameof(WebImpl.Pages.Notifications.Notifications)}?handler=markUnRead&{nameof(WebImpl.Pages.Notifications.Notifications.NotificationId)}="))' + notificationId, {
                             method: 'GET'
                         });
                     });
                 });
-                console.log(`Initialized @(nameof(NotificationPartial)) successfully`);
-            });
+                console.log(`Initialized @(nameof(_NotificationsPartial)) from ` + e.type);
+            }
         })(document.currentScript);
         //# sourceURL=NotificationPartial.js
     </script>

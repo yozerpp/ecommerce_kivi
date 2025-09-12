@@ -14,8 +14,7 @@ public class GlobalExceptionHandler(
     RequestDelegate next,
     ILogger<GlobalExceptionHandler> logger,
     IHostEnvironment env,
-    ICompositeViewEngine viewEngine,
-    ITempDataProvider tempDataProvider)
+    PartialRenderer partialRenderer)
 {
     private readonly IHostEnvironment _env = env;
 
@@ -33,7 +32,7 @@ public class GlobalExceptionHandler(
                 logger.LogWarning("Caught: " + e);
                 context.Response.StatusCode = 200;
                 context.Response.ContentType = "text/html";
-                var view = await RenderPartialViewAsync(context, nameof(_InfoPartial), new _InfoPartial(){
+                var view = await partialRenderer.RenderPartialViewAsync(context, nameof(_InfoPartial), new _InfoPartial(){
                     Success = false,
                     Title = "Hata",
                     Message = ex!.Message,
@@ -44,36 +43,6 @@ public class GlobalExceptionHandler(
             else throw;
         }
     }
-    private async Task<string> RenderPartialViewAsync(HttpContext context, string viewName, object? model)
-    {
-        var actionContext = new ActionContext(context, new RouteData(), new ActionDescriptor());
-        await using var sw = new StringWriter();
-
-        var viewResult = viewEngine.FindView(actionContext, viewName, isMainPage: false);
-
-        if (viewResult.View == null)
-        {
-            throw new ArgumentNullException($"Partial view '{viewName}' not found.");
-        }
-
-        var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())
-        {
-            Model = model
-        };
-
-        var tempData = new TempDataDictionary(context, tempDataProvider);
-
-        var viewContext = new ViewContext(
-            actionContext,
-            viewResult.View,
-            viewDictionary,
-            tempData,
-            sw,
-            new HtmlHelperOptions()
-        );
-
-        await viewResult.View.RenderAsync(viewContext);
-        return sw.ToString();
-    }
+  
 
 }

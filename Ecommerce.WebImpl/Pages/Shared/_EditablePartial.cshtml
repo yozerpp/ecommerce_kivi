@@ -3,9 +3,24 @@
     @foreach (var target in Model.Target.Split(',')){ <text>
             {
                 @(Model.OnClick ?? "");
-                const _t= 
-                @if (Model.Target == "previous"){ <text>event.currentTarget.previousElementSibling;</text> }else if (Model.Target == "next"){ <text>event.currentTarget.nextElementSibling;</text> }else if (Model.Target.StartsWith("closest:")){ <text>event.currentTarget.closest('@(Model.Target.Split(":", StringSplitOptions.RemoveEmptyEntries).Last().Trim())');</text> }else{ <text>document.getElementById('@(target)');</text> }
-                _t.setAttribute('contenteditable',true);
+                @{ string selector = null; }
+                let _t= 
+                @if (Model.Target.StartsWith("previous")){
+                    selector = Model.Target.Replace("previous","").Trim();
+                    <text>event.currentTarget.previousElementSibling;</text> 
+                }else if (Model.Target.StartsWith("next")){
+                    selector = Model.Target.Replace("next","").Trim();
+                    <text>event.currentTarget.nextElementSibling.firstElementChild.tagName==='input'?event.currentTarget.nextElementSibling.firstElementChild:event.currentTarget.nextElementSibling;</text> 
+                }else if (Model.Target.StartsWith("closest:")){
+                    <text>event.currentTarget.closest('@(Model.Target.Split(":", StringSplitOptions.RemoveEmptyEntries).Last().Trim())');</text> 
+                }else{
+                    <text>document.getElementById('@(target)');</text>
+                }
+                @if (!string.IsNullOrWhiteSpace(selector) && selector.StartsWith("selector:")){
+                   <text>_t =_t.querySelector('@(selector.Replace("selector:","").Trim())');</text>  
+                }
+                if(_t.tagName==='input') _t.readOnly=false;
+                else _t.setAttribute('contenteditable','true');
                 _t.dispatchEvent(new Event('editChanged', {bubbles:false, cancelable:true}));
                 _t.classList.remove('d-none');
                 if(_t.classList.contains('editable-container')) return;

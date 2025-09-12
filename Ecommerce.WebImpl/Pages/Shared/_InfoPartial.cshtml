@@ -1,7 +1,17 @@
 ﻿@model Ecommerce.WebImpl.Pages.Shared._InfoPartial
 
-<style>
+
+<div
+    class="alert  info-alert @(Model.Redirect != null ? "loading" : "") shadow-lg  alert-@(Model.Link != null ? "white" : Model.Success ? "success" : "danger") alert-dismissible fade show mt-3"
+    role="alert"
+    hx-swap="outerHTML"
+    hx-target="this"
+    hx-include="this">
+    <style>
     .info-alert {
+        @if (Model.Link != null){
+            <text>cursor: pointer;</text>
+        }
         border: none;
         border-radius: 12px;
         backdrop-filter: blur(10px);
@@ -130,72 +140,78 @@
         }
     }
 </style>
-
-<div 
-    class="alert info-alert @(Model.Redirect!=null?"loading":"") shadow-lg alert-@(Model.Success?"success":"danger") alert-dismissible fade show mt-3"
-    role="alert"
-    hx-swap="outerHTML"
-    hx-target="this"
-    hx-include="this"
-    >
     <script>
         ((s)=>{
             document.addEventListener('DOMContentLoaded', load);
             s.parentElement.addEventListener('htmx:load', load);
             function load(e){
-                    @if (Model.Redirect != null)
-                    {
+                if(e.type==='htmx:load') e.stopPropagation();
+                @if (Model.Redirect != null){
 
-                        if (Model.Redirect == "refresh")
-                    {
+                    if (Model.Redirect == "refresh"){
+                        <text>
+                setTimeout(() => window.location.reload(), @Model.TimeOut + 1);
+                </text>
+                    }
+                    else{
+                        <text>
+                setTimeout(()=>window.location.href='@Model.Redirect', @(Model.TimeOut + 1)) ;
+                </text>
+                    }
+
+                }
+                else if (Model.Link != null){
                     <text>
-                    setTimeout(() => window.location.reload(), @Model.TimeOut + 1);
-                    </text>
-                    }
-                    else
-                    {
+                    s.parentElement.style.cursor='pointer';
+                    s.parentElement.classList.add('hover-underline');
+                    s.parentElement.addEventListener('click', _=>{
+                        window.location.href = '@Model.Link';
+                    });
+                    @{ var tout = Model.TimeOut != 3000 ? Model.TimeOut : 10000; }
+                    setTimeout(()=>s.parentElement.classList.add('fade-out'),@(tout - 300));
+                    setTimeout(()=>s.parentElement.remove(),@(tout));
+                </text>
+                }
+                else{
                     <text>
-                    setTimeout(()=>window.location.href='@Model.Redirect', @(Model.TimeOut+ 1)) ;
-                    </text>
-                    }
-          
-                    }
-                    else
-                    {
-                    <text>
-                        setTimeout(()=>this.classList.add('fade-out'), @(Model.TimeOut != 0 ? Model.TimeOut - 300: 1700));
-                        setTimeout(() => this.remove(), @(Model.TimeOut != 0 ? Model.TimeOut: 2000));
-                    </text>    
-                    }
+                    setTimeout(()=>s.parentElement.classList.add('fade-out'), @(Model.TimeOut != 0 ? Model.TimeOut - 300 : 1700));
+                    setTimeout(() => s.parentElement.remove(), @(Model.TimeOut != 0 ? Model.TimeOut : 2000));
+                </text>
+                }
+                console.log('initialized @(nameof(_InfoPartial)) from ' + e.type );
             }
         })(document.currentScript)
+        //# sourceURL=_InfoPartial.js
     </script>
     <div class="d-flex align-items-start p-3">
-        <div class="info-icon @(Model.Success?"success":"danger")">
-            @if (Model.Success)
-            {
-                <span>✓</span>
-            }
-            else
-            {
-                <span>!</span>
-            }
-        </div>
+        @if (Model.Link != null){
+            <div class="bi bi-bell-fill fs-4 me-2 text-warning"></div>
+        }
+        else{
+            <div class="info-icon @(Model.Success ? "success" : "danger")">
+                @if (Model.Success){
+                    <span>✓</span>
+                }
+                else{
+                    <span>!</span>
+                }
+            </div>
+        }
         
         <div class="info-content">
-            @if (Model.Title != null)
-            {
-                <div class="info-title">@Model.Title</div>
+            @if (Model.Title != null){
+                <div class="info-title @(Model.Link!=null?"text-danger-emphasis":"")">@Model.Title</div>
             }
             <div class="info-message">@Model.Message</div>
             @if (Model.Redirect != null){
-             
-                <div class="w-100 d-inline-flex justify-content-end align-items-center align-content-center text-muted py-1 px-2" style="font-size: smaller">
-                    Yükleniyor...
-                </div>   
+                <div class="d-flex align-items-center"><div class="loading-spinner"></div><span>Yükleniyor...</span></div>
+
+                @* <div class="w-100 d-inline-flex justify-content-end align-items-center align-content-center text-muted py-1 px-2" style="font-size: smaller"> *@
+                @*     Yükleniyor... *@
+                @* </div> *@
             }
         </div>
-        
+
         <button type="button" class="info-close" data-bs-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
         </button>

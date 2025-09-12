@@ -27,14 +27,14 @@
 @section Scripts{
     <script>
         if(window.location.hash.match(new RegExp('#review\\d+'))) {
-            document.getElementById('reviewLoadingScreen').classList.remove('d-none');
+            document.getElementById('reviewLoadingScreen')?.classList?.remove('d-none');
             document.addEventListener("reviewsLoaded", function () {
                 document.getElementById('reviewLoadingScreen').remove();
                 document.getElementById(window.location.hash.replace('#','')).scrollIntoView();
             })
         }
         else if(window.location.hash.match(new RegExp('#comment\\d+'))){
-            document.getElementById('reviewLoadingScreen').classList.remove('d-none');
+            document.getElementById('reviewLoadingScreen')?.classList?.remove('d-none');
             document.addEventListener('reviewsLoaded', ()=>{
                 const review = document.getElementById(window.location.hash.replace('#',''));
                 review.querySelector('#commentsBtn' + window.location.hash.replace('#comment', '')).dispatchEvent(new Event('click', {bubbles:true, cancelable:false}))

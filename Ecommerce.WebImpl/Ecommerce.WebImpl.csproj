@@ -48,6 +48,7 @@
     <ItemGroup>
       <_ContentIncludedByDefault Remove="Pages\Account\Seller\Seller.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\CustomerPartials\_CustomerAddressPartial.cshtml" />
+      <_ContentIncludedByDefault Remove="Components\NotificationPartial.razor" />
     </ItemGroup>
 
     <ItemGroup>

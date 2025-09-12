@@ -19,17 +19,19 @@ public class Reviews : BaseModel
     private readonly IReviewManager _reviewManager;
     private readonly INotificationService _notificationService;
     private readonly DbContext _dbContext;
+    private readonly PartialRenderer _partialRenderer;
 
     public Reviews(INotificationService notificationService, IReviewManager reviewManager,
-        [FromKeyedServices("DefaultDbContext")] DbContext dbContext) : base(notificationService) {
+        [FromKeyedServices("DefaultDbContext")] DbContext dbContext, PartialRenderer partialRenderer) : base(notificationService) {
         _notificationService = notificationService;
         _reviewManager = reviewManager;
         _dbContext = dbContext;
+        _partialRenderer = partialRenderer;
     }
 
     [BindProperty] public ProductReview? SentReview { get; set; }
 
-    public IActionResult OnPost() {
+    public async Task<IActionResult> OnPost() {
         try{
             _reviewManager.LeaveReview(CurrentSession, SentReview);
         }
@@ -40,9 +42,13 @@ public class Reviews : BaseModel
                 Message = e.Message,
             });
         }
-        _notificationService.SendSingleAsync(new ReviewNotification(){
-            UserId = SentReview.SellerId, ReviewId = SentReview.Id,ProductId = SentReview.ProductId 
-        }).Wait();
+        await _notificationService.SendSingleAsync(new ReviewNotification(){
+            UserId = SentReview.SellerId, ReviewId = SentReview.Id,ProductId = SentReview.ProductId
+        }, await _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+            Success = true,Message = "Bir alıcı ürününüze değerlendirme yaptı.", 
+            Link = "/Product?" +nameof(Product.ProductId)+"="+SentReview.ProductId + "#review" + SentReview.Id,
+            Title = "Yeni Değerlendirme",
+        }));
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true,
             Message = "Yorumunuz eklendi.",
@@ -77,7 +83,7 @@ public class Reviews : BaseModel
         });
     }
 
-    public IActionResult OnPostComment() {
+    public async Task<IActionResult> OnPostComment() {
         try{
             _reviewManager.CommentReview(CurrentSession, SentComment);
         }
@@ -92,10 +98,14 @@ public class Reviews : BaseModel
         uint? uid;
         uid = GetRepliedUserId(SentComment.ParentId, SentComment.ReviewId);
         if (uid != null){
-            _notificationService.SendSingleAsync(new ReviewCommentNotification(){
+            await _notificationService.SendSingleAsync(new ReviewCommentNotification(){
                 CommentId = SentComment.Id,
                 UserId = uid.Value,
-            }).Wait();
+            }, await _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+                Success = true,Message = "Yorumunuza cevap verildi.", 
+                Link = "/Product?" +nameof(Product.ProductId)+"="+SentReview.ProductId + "#comment" + SentComment.Id,
+                Title = "Yeni Değerlendirme",
+            }));
         }
         ReviewId = SentComment.ReviewId;
         ParentId = SentComment.ParentId;

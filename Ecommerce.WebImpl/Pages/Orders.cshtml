@@ -39,6 +39,7 @@
                         Orders = Model.OrderCollection,
                         Page = Model.PageNumber,
                         Partial = false,
+                        ViewedBySeller = Model.CurrentSeller!=null,
                         PageSize = Model.PageSize,
                         Url = Url.Page(nameof(Orders),null, new {token = Model.Token}),
                         Token = Model.Token,

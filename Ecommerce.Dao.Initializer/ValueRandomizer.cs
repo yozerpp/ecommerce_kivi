@@ -23,9 +23,11 @@ public class ValueRandomizer
     private readonly ILog _logger;
     private readonly ConcurrentDictionary<Type, Func<object>> _constructorCache = new();
     private readonly string[] _preGeneratedNames = Enumerable.Range(0, 10000)
-        .Select(_ => new Person().FirstName).ToArray();
-    private Internet Internet = new();
+        .Select(_ => Person.FirstName).ToArray();
+    private Internet Internet = new("tr");
     private Randomizer Randomizer => new();
+    private static Person Person => new("tr");
+    private static Faker Faker => new("tr");
     private readonly IAddressRandomizer _addressRandomizer;
     public ValueRandomizer(Config config) {
         _config = config;
@@ -97,7 +99,7 @@ public class ValueRandomizer
 
     private object RandomizePhoneNumber(Type propType) {
         object value;
-        var n = new Bogus.Faker("tr").Phone.PhoneNumber().Replace("(","").Replace( ")","").Replace("-", "").Replace("x", "");
+        var n = Faker.Phone.PhoneNumber().Replace("(","").Replace( ")","").Replace("-", "").Replace("x", "");
         if (typeof(PhoneNumber).IsAssignableFrom(propType)) {
             value = new PhoneNumber{CountryCode = Randomizer.Number(999),Number = n};    
         } else value = n;
@@ -115,18 +117,18 @@ public class ValueRandomizer
             }
             else if (property.GetCustomAttribute<ProductNameAttribute>() != null)
             {
-                value = new Faker().Commerce.ProductName();
+                value = Faker.Commerce.ProductName();
             }
             else if (property.GetCustomAttribute<CategoryAttribute>() != null){
-                value = new Faker().Commerce.Categories(1).First();
+                value = Faker.Commerce.Categories(1).First();
             }
             else if (property.GetCustomAttribute<ProductDescriptionAttribute>() != null)
             {
-                value = new Faker().Commerce.ProductDescription();
+                value =  Faker.Commerce.ProductDescription();
             }
             else if (property.GetCustomAttribute<ShopNameAttribute>() != null)
             {
-                value = new Faker().Company.CompanyName();
+                value = Faker.Company.CompanyName();
             }
             else if ( typeof(PhoneNumber).IsAssignableFrom(propType)){
                 value = RandomizePhoneNumber(propType);
@@ -146,7 +148,7 @@ public class ValueRandomizer
                         value = $"{s[0]}{Randomizer.Number(0, 100000000)}@{s[1]}";
                     }
                 } else if (property.GetCustomAttribute<PhoneAttribute>() != null){
-                    value = new Faker().Phone.PhoneNumber();
+                    value = Faker.Phone.PhoneNumber();
                 }
                 else{
                     int max =  (prop is IProperty ip?ip.GetMaxLength():(property.GetCustomAttribute<MaxLengthAttribute>()?.Length))??100;
@@ -165,8 +167,8 @@ public class ValueRandomizer
                 value = enums.GetValue(Randomizer.Number(enums.Length-1)) ?? enums.GetValue(0)!;
             } else if (typeof(DateTime).IsAssignableFrom(propType)){
                 if (propType.GetCustomAttribute<BirthDate>() != null)
-                    value = new Faker().Date.Past(50);
-                else value = new Faker().Date.Recent(60);
+                    value = Faker.Date.Past(50);
+                else value = Faker.Date.Recent(60);
             } 
             else{
                 var positiveAnnotation =

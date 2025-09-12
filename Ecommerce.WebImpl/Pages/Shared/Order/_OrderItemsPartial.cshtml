@@ -194,13 +194,14 @@
                                     </form>
                                 </li>
                             }
-                            @if (item.Status == OrderStatus.Shipped){
+                            @if (item.Status == OrderStatus.Shipped || item.Status == OrderStatus.ReturnApproved){
                                 <li>
                                     <form hx-trigger="click" hx-post="/@(nameof(Orders))?handler=progressShipment" hx-swap="innerHTML" hx-target="#popupResult" class="m-0">
                                         @Html.AntiForgeryToken()
                                         @if (Model.Token != null){
                                             <input type="hidden" name="token" value="@(Model.Token)"/>
                                         }
+                                        <input type="hidden" name="@(nameof(Orders.ReturnShipment))" value="@(item.Status ==OrderStatus.ReturnApproved)"/>
                                         <input type="hidden" name="@(nameof(Orders.ProductId))" value="@item.ProductId"/>
                                         <input type="hidden" name="@(nameof(Orders.SellerId))" value="@item.SellerId"/>
                                         <input type="hidden" name="@nameof(Orders.OrderId)" value="@item.OrderId"/>

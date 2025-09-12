@@ -3,7 +3,6 @@
 @using Ecommerce.Entity
 @using Ecommerce.Entity.Events
 @using Microsoft.AspNetCore.Authentication.JwtBearer
-@using Ecommerce.WebImpl.Components
 @using Ecommerce.WebImpl.Pages.Notifications
 @using Microsoft.EntityFrameworkCore.Metadata.Internal
 @using Cart = Ecommerce.WebImpl.Pages.Cart
@@ -63,7 +62,7 @@
     </li>
     <li class="nav-item d-flex justify-content-center align-items-center">
         @* <component type="typeof(NotificationPartial)"  render-mode="ServerPrerendered" param-Notifications="@((ICollection<Notification>)ViewData[nameof(Notification)])"/> *@
-        @await Html.PartialAsync("Notifications/"+nameof(_NotificationsPartial), new _NotificationsPartial(){Notifications = ViewContext.ViewData[nameof(Notification)] as ICollection<Notification> })
+        <partial name="Notifications/_NotificationsPartial" model="new _NotificationsPartial(){Notifications= ViewContext.ViewData[nameof(Notification)] as ICollection<Notification>}"/>
     </li>
     <li class="nav-item">
         @if (!isUser){

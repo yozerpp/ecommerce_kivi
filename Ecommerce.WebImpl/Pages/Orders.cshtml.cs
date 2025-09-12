@@ -29,8 +29,9 @@ public class Orders : BaseModel
     private readonly StaffBag _staves;
     private readonly DbContext _dbContext;
     private IShippingService _shippingService;
+    private PartialRenderer _partialRenderer;
 
-    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager, IRepository<Order> orderRepository, INotificationService notificationService, IRepository<OrderItem> orderItemRepository, StaffBag staves, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext, ISellerManager sellerManager) : base(notificationService) {
+    public Orders(IMailService mailService, IJwtManager jwtManager, IOrderManager orderManager, IRepository<Order> orderRepository, INotificationService notificationService, IRepository<OrderItem> orderItemRepository, StaffBag staves, IShippingService shippingService, [FromKeyedServices("DefaultDbContext")]DbContext dbContext, ISellerManager sellerManager, PartialRenderer partialRenderer) : base(notificationService) {
         _mailService = mailService;
         _jwtManager = jwtManager;
         _orderManager = orderManager;
@@ -40,12 +41,14 @@ public class Orders : BaseModel
         _shippingService = shippingService;
         _dbContext = dbContext;
         _sellerManager = sellerManager;
+        _partialRenderer = partialRenderer;
     }
     public enum ViewType
     {
         Auth,
         Show,
     }
+    public bool ReturnShipment { get; set; }
     public ViewType View { get; set; }
     public ICollection<Order> OrderCollection { get; set; }
     [BindProperty(SupportsGet = true, Name = "token")]
@@ -115,14 +118,16 @@ public class Orders : BaseModel
                 Message =
                     "Siparişinizdeki bazı ürünler işleme alındığı için iptal edilemiyor. Ürünleri tek, tek iptal etmeyi deneyin."
             });
-        _orderManager.ChangeOrderStatus(new Order(){Id = OrderId}, OrderStatus.CancellationRequested, true);
+        _orderManager.ChangeOrderStatus(new Order(){Id = OrderId}, OrderStatus.Cancelled, true);
         _orderManager.RefreshOrderStatus(OrderId);
-        await NotificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
-            new CancellationRequest(){
-                UserId = s.Id,
-                RequesterId = CurrentCustomer?.Id,
-                OrderId = OrderId,
-            }).ToArray());
+        // await NotificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
+        //     new CancellationRequest(){
+        //         UserId = s.Id,
+        //         RequesterId = CurrentCustomer?.Id,
+        //         OrderId = OrderId,
+        //     }).ToArray(), await _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+        //     Success = true, Link = "/Orders?"+nameof(Token)+"=""&"+nameof(OrderId)+"="+OrderId, Title = "Yeni İptal Talebi", Message = "Yeni bir sipariş iptal talebi var.",
+        // }));
         return Partial(nameof(_InfoPartial),new _InfoPartial(){
             Success = true, TimeOut = 2000, Title = "İptal etme isteğiniz bildirildi.", Redirect = "refresh",
         });
@@ -130,8 +135,10 @@ public class Orders : BaseModel
 
     public IActionResult OnPostProgressShipment() {
         var oit = _orderItemRepository.First(o=>o.OrderId ==OrderId && o.ProductId == ProductId && o.SellerId == SellerId, includes: [[nameof(OrderItem.SentShipment)]], nonTracking:false);
-        var apiShipment = _shippingService.GetStatus(oit.SentShipment.ApiId).Result;
-        if ((oit.SentShipment.Status = apiShipment.ShipmentStatus) == ShipmentStatus.Delivered){
+        var s = ReturnShipment ? oit.RefundShipment : oit.SentShipment;
+        if (s == null) throw new ArgumentException("Bu siparişin gönderisi yok.");
+        var apiShipment = _shippingService.GetStatus(s.ApiId).Result;
+        if ((s.Status = apiShipment.ShipmentStatus) == ShipmentStatus.Delivered && s != oit.RefundShipment){
             oit.Status = OrderStatus.Delivered;
         }
         _dbContext.ChangeTracker.DetectChanges();
@@ -149,7 +156,9 @@ public class Orders : BaseModel
         if (oldStatus > OrderStatus.WaitingConfirmation){
             await NotificationService.SendSingleAsync(new CancellationRequest(){
                 UserId = SellerId, OrderId = OrderId, RequesterId = CurrentCustomer?.Id
-            });
+            }, _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+                Success = false,Link = "/Orders?" + nameof(Orders.OrderId) + "=" + OrderId
+            }));
         }
         else{
             await NotificationService.SendBatchAsync(_staves.WithPermission(Permission.EditOrder).Select(s =>
@@ -177,7 +186,9 @@ public class Orders : BaseModel
         _orderManager.ChangeItemStatus([new OrderItem(){OrderId = OrderId, SellerId = SellerId, ProductId = ProductId, Status = OrderStatus.Complete}]);
         NotificationService.SendSingleAsync(new OrderCompletionNotification(){
             OrderId = OrderId, UserId = SellerId, ProductId = ProductId
-        }).Wait();
+        }, _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+            Success = false, Link = "/Orders?" + nameof(Orders.OrderId) + "=" + OrderId
+        })).Wait();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, TimeOut = 2000, Title = "Sipariş Teslimatı Onaylandı",
             Redirect = "refresh"
@@ -193,7 +204,9 @@ public class Orders : BaseModel
         };
         _dbContext.SaveChanges();
         _orderManager.RefreshOrderStatus(OrderId);
-        NotificationService.SendSingleAsync(r);
+        NotificationService.SendSingleAsync(r, _partialRenderer.RenderPartialViewAsync(HttpContext, nameof(_InfoPartial), new _InfoPartial(){
+            Success = false, Redirect = "/Orders?" + nameof(Orders.OrderId) + "=" + OrderId
+        })).Wait();
         return Partial(nameof(_InfoPartial), new _InfoPartial(){
             Success = true, TimeOut = 2000, Title = "İade Talebiniz Satıcıya İletildi.", Redirect = "refresh"
         });

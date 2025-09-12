@@ -14,5 +14,5 @@ public class _OrderListPartial
     public required ICollection<Entity.Order> Orders { get; set; } 
     public bool Editable { get; set; }
     public required bool Collapsable { get; set; }
-    public bool ViewedBySeller { get; set; } = false;
+    public bool ViewedBySeller { get; init; }
 }

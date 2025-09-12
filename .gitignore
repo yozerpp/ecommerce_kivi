@@ -3,5 +3,8 @@
 **/Debug/
 **/Release/
 **/obj/
+*/obj/
+*/Debug/
+*/Release/
 !**/*.cs
 **/appsettings.Development.json

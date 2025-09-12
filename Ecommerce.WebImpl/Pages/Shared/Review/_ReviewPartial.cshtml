@@ -72,7 +72,9 @@
                     s.closest('.partial-parent').addEventListener('htmx:load', load);
                     function load(e){
                         if(e.type === 'htmx:load' ) e.stopPropagation();
-                        document.getElementById('delete@(Model.Review.Id)').parentElement.addEventListener('htmx:afterRequest', event=>{
+                        @if (editable){
+                            @:document.getElementById('delete@(Model.Review.Id)').parentElement.addEventListener('htmx:afterRequest', event=>{
+                        }
                             if(event.detail.successful){
                                 if(event.detail.xhr.status <200 || event.detail.xhr.status >= 300) event.detail.shouldSwap=true;
                                 const parent = s.closest('.partial-parent');

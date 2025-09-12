@@ -4,63 +4,60 @@
 @{
     if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Create) throw new InvalidEnumArgumentException("Use other one for creation");
 }
-<div class="container partial-parent categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50 p-4 bg-gradient-light rounded-3 shadow-lg border-0" : "container-fluid")">
+<div class="container partial-parent border-bottom-0 categoryProperties @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "h-50 rounded-bottom-0 p-4 bg-gradient-light rounded-3 shadow-lg border-0" : "container-fluid")">
     <style>
-        .categoryProperties.bg-gradient-light {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-            border: 1px solid #e2e8f0 !important;
-        }
+
+
+        /*categoryProperties .text-primary {*/
+        /*    color: #3b82f6 !important;*/
+        /*}*/
         
-        .categoryProperties .text-primary {
-            color: #3b82f6 !important;
-        }
+        /*.categoryProperties .border-bottom {*/
+        /*    border-color: #e5e7eb !important;*/
+        /*}*/
         
-        .categoryProperties .border-bottom {
-            border-color: #e5e7eb !important;
-        }
+        /*.categoryProperties .alert-light {*/
+        /*    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;*/
+        /*    border: 1px solid #e5e7eb !important;*/
+        /*    border-radius: 8px !important;*/
+        /*}*/
         
-        .categoryProperties .alert-light {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-            border: 1px solid #e5e7eb !important;
-            border-radius: 8px !important;
-        }
+        /*.categoryProperties .col-md-6.col-lg-4 {*/
+        /*    margin-bottom: 1rem;*/
+        /*}*/
         
-        .categoryProperties .col-md-6.col-lg-4 {
-            margin-bottom: 1rem;
-        }
+        /*.categoryProperties .form-label {*/
+        /*    color: #374151 !important;*/
+        /*    font-weight: 600 !important;*/
+        /*}*/
         
-        .categoryProperties .form-label {
-            color: #374151 !important;
-            font-weight: 600 !important;
-        }
+        /*.categoryProperties .bg-white {*/
+        /*    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;*/
+        /*    border: 1px solid #d1d5db !important;*/
+        /*    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;*/
+        /*}*/
         
-        .categoryProperties .bg-white {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-            border: 1px solid #d1d5db !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-        }
+        /*.categoryProperties .form-control,*/
+        /*.categoryProperties .form-select {*/
+        /*    border: 1px solid #d1d5db !important;*/
+        /*    transition: all 0.3s ease !important;*/
+        /*}*/
         
-        .categoryProperties .form-control,
-        .categoryProperties .form-select {
-            border: 1px solid #d1d5db !important;
-            transition: all 0.3s ease !important;
-        }
+        /*.categoryProperties .form-control:focus,*/
+        /*.categoryProperties .form-select:focus {*/
+        /*    border-color: #3b82f6 !important;*/
+        /*    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;*/
+        /*}*/
         
-        .categoryProperties .form-control:focus,
-        .categoryProperties .form-select:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-        }
+        /*.categoryProperties .border-primary {*/
+        /*    border-color: #3b82f6 !important;*/
+        /*}*/
         
-        .categoryProperties .border-primary {
-            border-color: #3b82f6 !important;
-        }
-        
-        .categoryProperties .form-select.border-primary:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-        }
+        /*.categoryProperties .form-select.border-primary:focus {*/
+        /*    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;*/
+        /*}.*/
     </style>
-    <h4 class="fw-bold fs-5 @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "mb-4 text-primary border-bottom pb-3" : "")">Ürün Özellikleri</h4>
+    <h4 class="fw-bold fs-5 @(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "mb-4  border-bottom border-info pb-3" : "")">Ürün Özellikleri</h4>
     <script>
             ((s)=>{
                 document.addEventListener("DOMContentLoaded", load);
@@ -130,69 +127,68 @@
             <div class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "d-flex justify-content-between align-items-center py-2 px-3 mb-2 bg-light rounded border" : "col-md-6 col-lg-4")">
                 <label class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "fs-6 fw-semibold text-muted mb-0" : "form-label fw-semibold text-dark mb-2")">@metadata.PropertyName: </label>
                 @if (metadata.IsNumber){
-                    if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary fs-6">@(property.Value)</span>
-                            @if (Model.Editable){
-                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                    Target = "next"
-                                })
-                                <div data-proptype="number" data-propertyid="@metadata.Id" class="col-auto propertyInput d-none">
-                                    <input type="number" min="@(metadata.MinValue ?? -100000)" max="@(metadata.MaxValue ?? 1000000)"/>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else{
-                        <div data-proptype="slider" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
-                            <script>
-                        ((s)=>{
-                            const parent=  s.closest('.partial-parent');
-                            function  load(e){
-                                if(e.type === 'htmx:load'){
-                                    e.stopPropagation();
-                                    s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false}));
-                                }
-                                s.nextElementSibling.addEventListener('change',(e)=>{
-                                    parent._props.set(@(metadata.Id),{min: s.nextElementSibling._min, max: s.nextElementSibling._max});
-                                });
-                            }
-                            document.addEventListener('DOMContentLoaded',load);
-                            parent.addEventListener('htmx:load',load);
-                        })(document.currentScript)
-                    </script>
-                            @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
-                                MaxValue = metadata.MaxValue ?? 100000000m, MinValue = metadata.MinValue ?? 0m
+                    <div class="d-flex align-items-center gap-2">
+                        @if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
+                        <span class="badge bg-primary fs-6">@(property.Value)</span>
+                        @if (Model.Editable){
+                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                Target = "next selector:input"
                             })
-                        </div>
-                    }
+                            <div data-proptype="number" data-propertyid="@metadata.Id" class="col-auto propertyInput ">
+                                <input type="number" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "" : "d-none")" min="@(metadata.MinValue ?? -100000)" max="@(metadata.MaxValue ?? 1000000)"/>
+                            </div>
+                        }
+                        }else{
+                            <div data-proptype="slider" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
+                                <script>
+                            ((s)=>{
+                                const parent=  s.closest('.partial-parent');
+                                    function  load(e){
+                                        if(e.type === 'htmx:load'){
+                                            e.stopPropagation();
+                                            s.nextElementSibling.dispatchEvent(new Event('htmx:load', {bubbles:false}));
+                                        }
+                                        s.nextElementSibling.addEventListener('change',(e)=>{
+                                            parent._props.set(@(metadata.Id),{min: s.nextElementSibling._min, max: s.nextElementSibling._max});
+                                            });
+                                    }
+                                        document.addEventListener('DOMContentLoaded',load);
+                                        parent.addEventListener('htmx:load',load);
+                                    })(document.currentScript)
+                                </script>
+                                @await Html.PartialAsync("Shared/SearchBar/_SliderPartial", new _SliderPartial(){
+                                    MaxValue = metadata.MaxValue ?? 100000000m, MinValue = metadata.MinValue ?? 0m
+                                })
+                            </div>
+                        }
+                    </div>
+                        
                 }
                 else if (metadata.EnumValues != null){
-                    if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-success fs-6">@(property.Value)</span>
-                            @if (Model.Editable){
-                                @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                    Target = "next",
-
-                                })
-                                <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
-                                    <select style="min-width: 0;" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-select border-primary" : "form-select-sm")">
-                                        <option selected>Seçiniz</option>
-                                        @{
-                                            var vals = metadata.EnumValues.Split('|');
-                                            if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter)
-                                                vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
-                                            var i = 0;
-                                        }
-                                        @foreach (var val in vals){
-                                            <option value="@val">@val</option>
-                                        }
-                                    </select>
-                                </div>
-                            }
+                <div class="d-flex align-items-center gap-2">
+                @if (Model.Mode == _CategoryPropertiesPartial.DisplayMode.View){
+                        <span class="badge bg-success fs-6">@(property.Value)</span>
+                        @if (Model.Editable){
+                            @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
+                                Target = "next selector:select",
+                            })
+                        }
+                }
+                        <div data-proptype="enum" data-propertyid="@(metadata.Id)" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "col-auto propertyInput " : "p-1  border-light border-2 border-opacity-50  propertyInput bg-white shadow-sm")">
+                            <select style="min-width: 0;cursor: pointer;" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-select-sm " : "form-select-sm d-none")">
+                                <option class="hover-darken" selected>Seçiniz</option>
+                                @{
+                                    var vals = metadata.EnumValues.Split('|');
+                                    vals = vals.Skip(1).Take(vals.Length - 2).ToArray();
+                                    var i = 0;
+                                }
+                                @foreach (var val in vals){
+                                    <option class="hover-darken" value="@val">@val</option>
+                                }
+                            </select>
                         </div>
-                    }
+
+                    </div>
                 }
                 else{
                     <div class="d-flex align-items-center gap-2">
@@ -200,12 +196,12 @@
                             <span class="badge bg-info text-dark fs-6">@property.Value</span>
                             if (Model.Editable){
                                 @await Html.PartialAsync("Shared/_EditablePartial", new _EditablePartial(){
-                                    Target = "next",
+                                    Target = "next selector:input",
                                 })
                             }
                         }
-                        <div data-proptype="text" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "propertyInput col-auto d-none" : "propertyInput bg-white p-3 rounded-3 border-0 shadow-sm")">
-                            <input class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-control border-primary" : "form-control-sm")" style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
+                        <div data-proptype="text" data-propertyid="@metadata.Id" class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.View ? "propertyInput col-auto" : "propertyInput bg-white p-3 border-light rounded-3 border-0 shadow-sm")">
+                            <input class="@(Model.Mode == _CategoryPropertiesPartial.DisplayMode.Filter ? "form-control-sm  border-2 border-opacity-50" : "form-control-sm d-none") " style="min-width: 0;width: 100%;" id="@(Model.InputNamePrefix)-@(metadata.PropertyName)"
                                    name="@(Model.InputNamePrefix)[@metadata.PropertyName]"
                                    type="@(metadata.IsNumber ? $"number" : $"text")"/>
                         </div>
