@@ -73,8 +73,8 @@
                     function load(e){
                         if(e.type === 'htmx:load' ) e.stopPropagation();
                         @if (editable){
-                            @:document.getElementById('delete@(Model.Review.Id)').parentElement.addEventListener('htmx:afterRequest', event=>{
-                        }
+                         <text>
+                            document.getElementById('delete@(Model.Review.Id)').parentElement.addEventListener('htmx:afterRequest', event=>{
                             if(event.detail.successful){
                                 if(event.detail.xhr.status <200 || event.detail.xhr.status >= 300) event.detail.shouldSwap=true;
                                 const parent = s.closest('.partial-parent');
@@ -82,6 +82,8 @@
                                 parent.remove();
                             }
                         })
+                        </text>
+                        }
                         document.getElementById('comments@(Model.Review.Id)').addEventListener('commentDeleted', e=>{
                             const n = document.getElementById('commentsBtn@(Model.Review.Id)').nextElementSibling;
                             n.innerHTML = (parseInt(n.innerHTML) - 1).toString();
