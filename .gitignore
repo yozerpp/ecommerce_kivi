@@ -1,0 +1,7 @@
+.aider*
+**/bin/
+**/Debug/
+**/Release/
+**/obj/
+!**/*.cs
+**/appsettings.Development.json
