@@ -2,9 +2,9 @@
 @model (bool, ProductWithAggregatesCustomerView)
 
 @if (Model.Item2.CurrentFavored!=null){
-    <form data-favored="@(Model.Item2.CurrentFavored.Value?"1":"0")" hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" 
+    <form data-old="@Model.Item2.Product.Stats.FavorCount" data-favored="@(Model.Item2.CurrentFavored.Value?"1":"0")" hx-post="/@(nameof(Product))?handler=favor" hx-swap="none" 
           hx-on::after-request="if(!event.detail.successful)return; const f = event.detail.elt.querySelector('#favor@(Model.Item2.Product.Id)');
-            f.classList.toggle('bi-heart');f.classList.toggle('bi-heart-fill')">
+            f.classList.toggle('bi-heart');f.classList.toggle('bi-heart-fill');event.currentTarget.dataset.favored=((parseInt(event.currentTarget.dataset.favored)+1)%2).toString();event.currentTarget.nextElementSibling.innerText=parseInt(event.currentTarget.dataset.old)+parseInt(event.currentTarget.dataset.favored);">
         @Html.AntiForgeryToken()
         <input type="hidden" name="@nameof(Product.ProductId)" value="@Model.Item2.Product.Id"/>
         <button type="button" class="btn d-flex justify-content-center align-content-center align-items-center btn-link p-0" onclick="event.currentTarget.parentElement.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));">
