@@ -404,7 +404,7 @@ public class DependencyRegisterer(
     private void CreateManagerDeps(string serviceKey) {
         builder.Services.AddKeyedScoped(typeof(DbContext),serviceKey, contextType);
         builder.Services.AddScoped(typeof(DbContext), contextType);
-        builder.Services.AddSingleton<IModel>(sp => ((DbContext)sp.GetRequiredService(contextType)).Model);
+        builder.Services.AddScoped<IModel>(sp => ((DbContext)sp.GetRequiredService(contextType)).Model);
         //Validators
         foreach (var validatorType in validators){
             // builder.Services.AddScoped(validatorType.GetInterfaces().First(i=>i.GetGenericTypeDefinition()==typeof(IValidator<>)), (sp) => {
